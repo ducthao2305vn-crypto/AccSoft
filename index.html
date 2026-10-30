@@ -35,6 +35,23 @@ button.b{cursor:pointer}button.b.p{background:var(--acc);color:#fff;border-color
 .cv{position:relative;height:360px}
 .drop{border:2px dashed var(--line);border-radius:10px;padding:30px;text-align:center;color:var(--mut)}
 .hide{display:none}
+tr.rH td{background:color-mix(in srgb,var(--bad) 9%,transparent)}tr.rH td:first-child{box-shadow:inset 4px 0 var(--bad)}
+tr.rM td:first-child{box-shadow:inset 4px 0 var(--warn)}tr.rL td:first-child{box-shadow:inset 4px 0 var(--info)}
+#tErr tr[data-i]{cursor:pointer}#tErr tr[data-i]:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
+tr.done td{opacity:.55}
+.st{padding:1px 6px;border-radius:10px;font-size:11px;border:1px solid var(--line);white-space:nowrap}
+.st.open{color:var(--bad);border-color:var(--bad)}.st.doing{color:var(--warn);border-color:var(--warn)}.st.fixed{color:var(--ok);border-color:var(--ok)}.st.ignore{color:var(--mut)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.chip{border:1px solid var(--line);border-radius:20px;padding:4px 12px;cursor:pointer;background:var(--card);color:var(--fg);font:inherit}
+.chip.on{background:var(--acc);color:#fff;border-color:var(--acc)}.chip b{margin-left:4px}
+.filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-bottom:10px}.filters>*{width:100%}
+th{white-space:nowrap}#tErr td:nth-child(-n+3){white-space:nowrap}th.sort{cursor:pointer;user-select:none}th.sort:after{content:' ⇅';color:var(--mut)}
+#drawer{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;justify-content:flex-end;z-index:20}
+#drawer.hide{display:none}#drawer .pane{background:var(--bg);width:min(1100px,100%);height:100%;overflow:auto;padding:16px;box-shadow:-4px 0 20px rgba(0,0,0,.3)}
+.fix{border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,var(--card));padding:10px 12px;border-radius:6px;margin:8px 0}
+.fix.H{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 8%,var(--card))}
+tr.cur td{outline:2px solid var(--acc);outline-offset:-2px}
+.kv{display:grid;grid-template-columns:180px 1fr;gap:2px 10px;font-size:13px}.kv div:nth-child(odd){color:var(--mut)}
+textarea{font:inherit;width:100%;min-height:70px;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
 </style>
 </head>
 <body>
@@ -66,16 +83,30 @@ button.b{cursor:pointer}button.b.p{background:var(--acc);color:#fff;border-color
 
   <section id="errors" class="hide">
     <div class="card">
-      <div class="row">
+      <div class="chips" id="stChips"></div>
+      <div class="filters">
+        <select id="fSev"><option value="">Mọi mức độ</option><option value="H">🔴 Cao</option><option value="M">🟠 Trung bình</option><option value="L">🔵 Thấp / cần xem</option></select>
         <select id="fRule"><option value="">Tất cả loại lỗi</option></select>
-        <select id="fSev"><option value="">Mọi mức độ</option><option value="H">Cao</option><option value="M">Trung bình</option><option value="L">Thấp / cần xem</option></select>
         <select id="fUser"><option value="">Tất cả người nhập</option></select>
-        <input id="fText" placeholder="Tìm chứng từ, diễn giải, đối tượng…" size="30">
+        <select id="fMonth"><option value="">Tất cả tháng</option></select>
+        <select id="fDept"><option value="">Tất cả bộ phận</option></select>
+        <input id="fAcc" placeholder="Tài khoản (vd 627, 331)">
+        <input id="fMin" type="number" placeholder="Số tiền từ">
+        <input id="fMax" type="number" placeholder="Số tiền đến">
+        <input id="fText" placeholder="Tìm chứng từ, diễn giải, đối tượng, ghi chú…">
+        <select id="fGroup"><option value="">Hiển thị từng dòng lỗi</option><option value="doc">Gộp theo chứng từ</option></select>
+      </div>
+      <div class="row">
+        <button class="b" id="fReset">Xoá bộ lọc</button>
+        <select id="bulkSt"><option value="">Đổi trạng thái các dòng đang lọc…</option><option value="open">→ Chưa xử lý</option><option value="doing">→ Đang xử lý</option><option value="fixed">→ Đã khắc phục</option><option value="ignore">→ Không phải lỗi</option></select>
         <button class="b p" id="expErr">Xuất Excel</button>
         <span id="errCount" class="mut"></span>
       </div>
+      <p class="mut" style="margin:0 0 8px">Bấm vào một dòng để xem toàn bộ chứng từ, hướng dẫn khắc phục, cập nhật trạng thái và ghi chú. Bấm tiêu đề cột để sắp xếp.</p>
       <div class="tbl"><table id="tErr"></table></div>
     </div>
+    <div class="card hide" id="goneCard"><h3>Lỗi không còn phát hiện trong dữ liệu (đã được sửa trong ERP)</h3>
+      <p class="mut">Các cảnh báo đã từng ghi nhận trạng thái/ghi chú nhưng dữ liệu nạp lại không còn lỗi này.</p><div class="tbl"><table id="tGone"></table></div></div>
     <div class="card"><h3>Mô tả các quy tắc kiểm tra</h3><div class="tbl"><table id="tRules"></table></div></div>
   </section>
 
@@ -132,6 +163,7 @@ button.b{cursor:pointer}button.b.p{background:var(--acc);color:#fff;border-color
     </div>
   </section>
 </main>
+<div id="drawer" class="hide"><div class="pane" id="dPane"></div></div>
 
 <script>
 "use strict";
@@ -289,11 +321,51 @@ const SET_RULES=[ // quy tắc cần nhìn toàn bộ tập dữ liệu
 ];
 const ALL_RULES=[...RULES,...SET_RULES], RULE=Object.fromEntries(ALL_RULES.map(x=>[x.k,x]));
 
+const FIX={
+ ACC_INVALID:'Chọn lại tài khoản Nợ/Có đúng theo hệ thống tài khoản. Không dùng mã 000; nếu là bút toán tạm thì phải có TK tạm (vd 1388/3388) và kế hoạch kết chuyển.',
+ SAME_ACC:'Nếu là chuyển giữa hai tài khoản ngân hàng: kiểm tra đã ghi đúng Bank Account Nợ/Có. Nếu không: sửa lại TK đối ứng đúng bản chất nghiệp vụ.',
+ AMT_ZERO:'Xoá dòng số tiền 0 hoặc nhập lại số tiền đúng theo chứng từ gốc.',
+ AMT_NEG:'Thay vì ghi số âm, lập bút toán đảo (đổi Nợ/Có) có diễn giải lý do điều chỉnh và tham chiếu chứng từ gốc; lưu phê duyệt.',
+ REV_REVERSED:'Doanh thu bị ghi Nợ: nếu là giảm trừ doanh thu thì dùng TK 521 kèm chứng từ (biên bản/HĐ điều chỉnh); nếu nhập nhầm chiều thì đảo Nợ/Có.',
+ REV_NO_TYPE:'Bổ sung trường "Type of revenue" đúng loại dịch vụ để báo cáo doanh thu theo dịch vụ chính xác.',
+ REV_NO_BP:'Bổ sung khách hàng (Business Partner) để theo dõi công nợ và đối chiếu.',
+ EXP_REVERSED:'Chi phí ghi Có: kiểm tra chứng từ giảm chi phí (hoàn tiền, chiết khấu). Nếu là kết chuyển/phân bổ thì đối ứng phải là 154/911/242; nếu nhầm chiều thì đảo lại.',
+ EXP_NO_TYPE:'Bổ sung "Type of cost" (khoản mục chi phí) để báo cáo quản trị chi phí đúng.',
+ DESC_EMPTY:'Viết diễn giải đủ: nội dung nghiệp vụ + đối tượng + kỳ phát sinh + số chứng từ/hợp đồng tham chiếu.',
+ DESC_MATH:'Đối chiếu lại đơn giá × số kỳ với hợp đồng. Sửa diễn giải hoặc số tiền cho khớp; nếu trả tỷ lệ (kỳ lẻ) thì ghi rõ cách tính.',
+ QTY_PRICE:'Sửa số lượng/đơn giá hoặc số tiền cho khớp hoá đơn; nếu có thuế/phí/chiết khấu thì tách dòng riêng.',
+ PREPAID_EXPENSED:'Chi phí cho nhiều kỳ: hạch toán Nợ 242 khi thanh toán, sau đó phân bổ hằng tháng vào chi phí (Nợ 627/641/642 – Có 242) theo số tháng hưởng lợi.',
+ CUTOFF:'Chi phí/doanh thu kỳ trước: lẽ ra phải trích trước (335/338) ở kỳ phát sinh. Bổ sung trích trước cho các kỳ sau, đánh giá ảnh hưởng nếu trọng yếu.',
+ PARTNER_MISSING:'Bổ sung đối tượng công nợ (khách hàng/nhà cung cấp/nhân viên) – thiếu đối tượng sẽ làm sai sổ chi tiết và tuổi nợ.',
+ DUE_BEFORE_DOC:'Kiểm tra lại hạn thanh toán; nếu hạch toán chậm so với ngày chứng từ thì nhắc bộ phận chuyển chứng từ đúng hạn.',
+ WEEKEND:'Xác nhận nghiệp vụ có thực sự phát sinh ngày nghỉ; nếu nhập nhầm ngày thì sửa Account Date.',
+ CASH_ROUND:'Kiểm tra chứng từ gốc, phê duyệt và mục đích chi; tạm ứng số tròn lớn phải có kế hoạch quyết toán.',
+ DUPLICATE:'So sánh các chứng từ trùng: nếu thanh toán/hạch toán hai lần thì huỷ một chứng từ và thu hồi tiền nếu đã chi.',
+ OUTLIER:'Kiểm tra nhầm đơn vị/thừa số 0 so với chứng từ gốc; nếu đúng thì ghi chú lý do số tiền lớn bất thường.',
+};
+const ST={open:'Chưa xử lý',doing:'Đang xử lý',fixed:'Đã khắc phục',ignore:'Không phải lỗi'};
+let REV=new Map(), SORT={k:'sev',d:1}, CUR=-1, VIEW=[];
+const errKey=e=>[e.k,e.r.doc,e.r.line,e.r.dr,e.r.cr,e.r.amt].join('|');
+const stOf=e=>(REV.get(e.key)||{}).status||'open';
+const snap=x=>JSON.stringify({m:ym(x.r.date),amt:x.r.amt,desc:String(x.r.desc).slice(0,200)});
+async function loadReviews(){
+  let list=[];
+  if(DB)list=await DB.getReviews();else try{list=JSON.parse(localStorage.getItem('accsoft.reviews')||'[]')}catch(e){}
+  REV=new Map(list.map(r=>[r.key,r]));
+}
+async function saveReviews(list){
+  for(const r of list){if(!r.status&&!r.note)REV.delete(r.key);else REV.set(r.key,{...r,at:new Date().toLocaleString('vi')})}
+  if(DB)await DB.setReviews(list);else try{localStorage.setItem('accsoft.reviews',JSON.stringify([...REV.values()]))}catch(e){}
+}
 function runChecks(){
   ERRS=[];const add=(r,k,msg)=>ERRS.push({r,k,msg});
   for(const r of ROWS)for(const ru of RULES){let m;try{m=ru.f(r)}catch(e){m=false}if(m)add(r,ru.k,m)}
   for(const ru of SET_RULES)ru.run(ROWS,(r,m)=>add(r,ru.k,m));
+  const sevN={H:0,M:1,L:2};ERRS.forEach(e=>{e.key=errKey(e);e.sev=RULE[e.k].s;e.sn=sevN[e.sev]});
+  DOCS=new Map();for(const r of ROWS)(DOCS.get(r.doc)||DOCS.set(r.doc,[]).get(r.doc)).push(r);
+  ERR_BY_ROW=new Map();for(const e of ERRS)(ERR_BY_ROW.get(e.r.id)||ERR_BY_ROW.set(e.r.id,[]).get(e.r.id)).push(e);
 }
+let DOCS=new Map(), ERR_BY_ROW=new Map();
 
 /* ---------- Công nợ – tuổi nợ (FIFO) ---------- */
 const AG_ACC=[['131','Phải thu khách hàng',1],['1388','Phải thu khác',1],['141','Tạm ứng nhân viên',1],['331','Phải trả người bán',-1],['3388','Phải trả khác',-1]];
@@ -361,21 +433,88 @@ function renderOverview(){
     options:{plugins:{tooltip:{callbacks:{afterBody:i=>'Tỷ lệ lỗi: '+pct((bad[us[i[0].dataIndex]]||0)/tot[us[i[0].dataIndex]])}}}}});
 }
 function filteredErrs(){
-  const R=$('#fRule').value,S=$('#fSev').value,U=$('#fUser').value,T=$('#fText').value.toLowerCase();
-  return ERRS.filter(e=>(!R||e.k===R)&&(!S||RULE[e.k].s===S)&&(!U||e.r.user===U)&&(!T||[e.r.doc,e.r.desc,e.r.bp,e.r.bpCr,e.msg].join(' ').toLowerCase().includes(T)));
+  const v=id=>$(id).value,R=v('#fRule'),S=v('#fSev'),U=v('#fUser'),M=v('#fMonth'),D=v('#fDept'),A=v('#fAcc').trim(),
+    mn=v('#fMin')===''?null:+v('#fMin'),mx=v('#fMax')===''?null:+v('#fMax'),T=v('#fText').toLowerCase(),SF=$('#stChips').dataset.f||'';
+  const out=ERRS.filter(e=>{const r=e.r;return (!R||e.k===R)&&(!S||e.sev===S)&&(!U||r.user===U)&&(!M||ym(r.date)===M)&&(!D||r.dept===D)
+    &&(!A||r.dr.startsWith(A)||r.cr.startsWith(A))&&(mn==null||Math.abs(r.amt)>=mn)&&(mx==null||Math.abs(r.amt)<=mx)&&(!SF||stOf(e)===SF)
+    &&(!T||[r.doc,r.desc,r.bp,r.bpCr,e.msg,(REV.get(e.key)||{}).note].join(' ').toLowerCase().includes(T))});
+  const f={sev:e=>e.sn,date:e=>+e.r.date||0,amt:e=>Math.abs(e.r.amt),doc:e=>e.r.doc||'',rule:e=>RULE[e.k].n,user:e=>e.r.user,st:e=>stOf(e)}[SORT.k];
+  return out.sort((a,b)=>{const x=f(a),y=f(b);return (x<y?-1:x>y?1:0)*SORT.d||a.sn-b.sn});
 }
+const sevLbl={H:'Cao',M:'TB',L:'Thấp'};
 function renderErrors(){
   const keep=(sel,opts)=>{const v=$(sel).value;$(sel).innerHTML=$(sel).options[0].outerHTML+opts;$(sel).value=v};
   const cnt={};ERRS.forEach(e=>cnt[e.k]=(cnt[e.k]||0)+1);
   keep('#fRule',ALL_RULES.filter(r=>cnt[r.k]).map(r=>`<option value="${r.k}">${esc(r.n)} (${cnt[r.k]})</option>`).join(''));
   keep('#fUser',[...new Set(ERRS.map(e=>e.r.user))].sort().map(u=>`<option>${esc(u)}</option>`).join(''));
-  const list=filteredErrs(),L=list.slice(0,1500);
-  $('#errCount').textContent=`${list.length.toLocaleString()} cảnh báo`+(list.length>L.length?' (hiển thị 1.500 dòng đầu, xuất Excel để xem đủ)':'');
-  $('#tErr').innerHTML='<tr><th>Mức</th><th>Loại lỗi</th><th>Chi tiết</th><th>Ngày</th><th>Chứng từ</th><th>Nợ</th><th>Có</th><th class=n>Số tiền</th><th>Diễn giải</th><th>Người nhập</th></tr>'+
-   L.map(e=>{const r=e.r,ru=RULE[e.k];return `<tr><td><span class="sev ${ru.s}">${{H:'Cao',M:'TB',L:'Thấp'}[ru.s]}</span></td><td>${esc(ru.n)}</td><td>${esc(e.msg)}</td><td>${r.date?r.date.toLocaleDateString('vi'):''}</td><td>${esc(r.doc)}</td><td>${esc(r.dr)}</td><td>${esc(r.cr)}</td><td class=n>${fmt2(r.amt)}</td><td>${esc(String(r.desc).slice(0,140))}</td><td>${esc(String(r.user).split('_')[0])}</td></tr>`}).join('');
-  $('#tRules').innerHTML='<tr><th>Mã</th><th>Mức</th><th>Quy tắc</th><th>Ý nghĩa / rủi ro</th><th class=n>Số cảnh báo</th></tr>'+
-   ALL_RULES.map(r=>`<tr><td>${r.k}</td><td><span class="sev ${r.s}">${r.s}</span></td><td>${esc(r.n)}</td><td>${esc(r.d)}</td><td class=n>${cnt[r.k]||0}</td></tr>`).join('');
+  keep('#fMonth',[...new Set(ERRS.map(e=>ym(e.r.date)).filter(Boolean))].sort().map(m=>`<option>${m}</option>`).join(''));
+  keep('#fDept',[...new Set(ERRS.map(e=>e.r.dept).filter(Boolean))].sort().map(d=>`<option>${esc(d)}</option>`).join(''));
+  // Thẻ trạng thái
+  const sc={open:0,doing:0,fixed:0,ignore:0};ERRS.forEach(e=>sc[stOf(e)]++);
+  const cur=new Set(ERRS.map(e=>e.key)),months=new Set(ROWS.map(r=>ym(r.date)));
+  const gone=[...REV.values()].filter(r=>{if(cur.has(r.key)||!r.snapshot)return false;try{return months.has(JSON.parse(r.snapshot).m)}catch(e){return false}});
+  const f=$('#stChips').dataset.f||'';
+  $('#stChips').innerHTML=[['','Tất cả',ERRS.length],...Object.entries(ST).map(([k,n])=>[k,n,sc[k]])]
+    .map(([k,n,c])=>`<button class="chip ${f===k?'on':''}" data-st="${k}">${n}<b>${c.toLocaleString()}</b></button>`).join('')+
+    (gone.length?`<span class="chip" style="cursor:default">✔ Đã sửa trong ERP<b>${gone.length}</b></span>`:'');
+  const list=filteredErrs();VIEW=list;
+  const H=(k,t,c='')=>`<th class="sort ${c}" data-s="${k}">${t}</th>`;
+  if($('#fGroup').value==='doc'){
+    const g=new Map();
+    for(const [i,e] of list.entries()){const o=g.get(e.r.doc)||g.set(e.r.doc,{e,i,n:0,H:0,rules:new Set(),open:0}).get(e.r.doc);o.n++;if(e.sev==='H')o.H++;o.rules.add(RULE[e.k].n);if(['open','doing'].includes(stOf(e)))o.open++}
+    const G=[...g.values()].slice(0,2000);
+    $('#errCount').textContent=`${g.size.toLocaleString()} chứng từ · ${list.length.toLocaleString()} cảnh báo`;
+    $('#tErr').innerHTML='<tr><th>Chứng từ</th><th>Ngày</th><th class=n>Số cảnh báo</th><th class=n>Mức cao</th><th class=n>Chưa xử lý</th><th>Các loại lỗi</th><th>Người nhập</th></tr>'+
+      G.map(o=>`<tr data-i="${o.i}" class="r${o.H?'H':o.e.sev}"><td><b>${esc(o.e.r.doc)}</b></td><td>${o.e.r.date?o.e.r.date.toLocaleDateString('vi'):''}</td><td class=n>${o.n}</td><td class="n ${o.H?'neg':''}">${o.H||''}</td><td class=n>${o.open||'✔'}</td><td>${esc([...o.rules].join(' · '))}</td><td>${esc(String(o.e.r.user).split('_')[0])}</td></tr>`).join('');
+  }else{
+    const L=list.slice(0,2000);
+    $('#errCount').textContent=`${list.length.toLocaleString()} cảnh báo`+(list.length>L.length?' (hiển thị 2.000 dòng đầu – lọc thêm hoặc xuất Excel)':'');
+    $('#tErr').innerHTML='<tr>'+H('sev','Mức')+H('st','Trạng thái')+H('rule','Loại lỗi')+'<th>Chi tiết</th>'+H('date','Ngày')+H('doc','Chứng từ')+'<th>Nợ</th><th>Có</th>'+H('amt','Số tiền','n')+'<th>Diễn giải</th>'+H('user','Người nhập')+'<th>Ghi chú</th></tr>'+
+     L.map((e,i)=>{const r=e.r,st=stOf(e),note=(REV.get(e.key)||{}).note;
+      return `<tr data-i="${i}" class="r${e.sev} ${st==='fixed'||st==='ignore'?'done':''}"><td><span class="sev ${e.sev}">${sevLbl[e.sev]}</span></td><td><span class="st ${st}">${ST[st]}</span></td><td>${esc(RULE[e.k].n)}</td><td>${esc(e.msg)}</td><td>${r.date?r.date.toLocaleDateString('vi'):''}</td><td>${esc(r.doc)}</td><td>${esc(r.dr)}</td><td>${esc(r.cr)}</td><td class=n>${fmt2(r.amt)}</td><td>${esc(String(r.desc).slice(0,110))}</td><td>${esc(String(r.user).split('_')[0])}</td><td title="${esc(note||'')}">${note?'📝 '+esc(note.slice(0,30)):''}</td></tr>`}).join('');
+  }
+  $('#goneCard').classList.toggle('hide',!gone.length);
+  $('#tGone').innerHTML='<tr><th>Loại lỗi</th><th>Chứng từ</th><th>Trạng thái đã ghi</th><th>Ghi chú</th><th>Cập nhật</th></tr>'+gone.map(r=>`<tr><td>${esc((RULE[r.rule]||{}).n||r.rule)}</td><td>${esc(r.doc)}</td><td>${ST[r.status]||''}</td><td>${esc(r.note)}</td><td>${esc(r.at)}</td></tr>`).join('');
+  $('#tRules').innerHTML='<tr><th>Mã</th><th>Mức</th><th>Quy tắc</th><th>Ý nghĩa / rủi ro</th><th>Cách khắc phục</th><th class=n>Số cảnh báo</th></tr>'+
+   ALL_RULES.map(r=>`<tr class="r${r.s}"><td>${r.k}</td><td><span class="sev ${r.s}">${r.s}</span></td><td>${esc(r.n)}</td><td>${esc(r.d)}</td><td>${esc(FIX[r.k]||'')}</td><td class=n>${cnt[r.k]||0}</td></tr>`).join('');
 }
+const FIELDS=[['doc','Chứng từ'],['line','Line No'],['date','Ngày hạch toán'],['due','Hạn thanh toán'],['drName','TK Nợ'],['crName','TK Có'],['amt','Số tiền'],['qty','Số lượng'],['price','Đơn giá'],
+  ['bp','Đối tượng Nợ'],['bpCr','Đối tượng Có'],['desc','Diễn giải'],['descP','Diễn giải chứng từ'],['dept','Bộ phận'],['deptSub','Bộ phận con'],['tcost','Khoản mục chi phí'],['trev','Loại doanh thu'],
+  ['inv','Invoice'],['adv','Advance Request'],['contract','Hợp đồng'],['table','Nguồn (Table)'],['cf','Lưu chuyển tiền'],['user','Người tạo'],['updUser','Người sửa'],['file','File']];
+function showDetail(i){
+  const e=VIEW[i];if(!e)return;CUR=i;
+  const r=e.r,lines=DOCS.get(r.doc)||[r],rv=REV.get(e.key)||{},st=rv.status||'open';
+  const rowErrs=ERR_BY_ROW.get(r.id)||[e],docErrs=lines.flatMap(l=>ERR_BY_ROW.get(l.id)||[]);
+  const total=lines.reduce((s,l)=>s+l.amt,0);
+  const fv=k=>{const v=r[k];return v instanceof Date?v.toLocaleDateString('vi'):typeof v==='number'?fmt2(v):v??''};
+  $('#dPane').innerHTML=`
+   <div class="row" style="justify-content:space-between"><h2 style="margin:0">Chứng từ ${esc(r.doc)}</h2>
+     <div class="row" style="margin:0"><button class="b" id="dPrev">◀ Trước</button><span class="mut">${i+1}/${VIEW.length}</span><button class="b" id="dNext">Sau ▶</button><button class="b" id="dClose">✕ Đóng (Esc)</button></div></div>
+   <div class="card"><h3>Cảnh báo của dòng đang chọn (line ${esc(r.line)})</h3>
+     ${rowErrs.map(x=>`<div class="fix ${x.sev}"><span class="sev ${x.sev}">${sevLbl[x.sev]}</span> <b>${esc(RULE[x.k].n)}</b> – ${esc(x.msg)}
+       <div class="mut" style="margin-top:4px">${esc(RULE[x.k].d)}</div><div style="margin-top:6px">🛠 <b>Cần chỉnh sửa:</b> ${esc(FIX[x.k]||'Kiểm tra lại chứng từ gốc.')}</div></div>`).join('')}
+   </div>
+   <div class="card"><h3>Xử lý cảnh báo: ${esc(RULE[e.k].n)}</h3>
+     <div class="row"><label>Trạng thái</label><select id="dSt">${Object.entries(ST).map(([k,n])=>`<option value="${k}" ${k===st?'selected':''}>${n}</option>`).join('')}</select>
+       <label><input type="checkbox" id="dAll"> Áp dụng cho tất cả ${docErrs.length} cảnh báo của chứng từ này</label>
+       ${rv.at?`<span class="mut">Cập nhật: ${esc(rv.at)}</span>`:''}</div>
+     <textarea id="dNote" placeholder="Ghi chú: đã yêu cầu ai sửa, cách sửa, số chứng từ điều chỉnh…">${esc(rv.note||'')}</textarea>
+     <div class="row" style="margin-top:8px"><button class="b p" id="dSave">Lưu</button><button class="b" id="dSaveNext">Lưu & sang lỗi tiếp ▶</button><span class="mut" id="dMsg"></span></div>
+   </div>
+   <div class="card"><h3>Toàn bộ bút toán của chứng từ (${lines.length} dòng · tổng ${fmt2(total)})</h3>
+     <div class="tbl" style="max-height:380px"><table><tr><th>Line</th><th>Cảnh báo</th><th>Ngày</th><th>TK Nợ</th><th>TK Có</th><th class=n>Số tiền</th><th>Đối tượng Nợ</th><th>Đối tượng Có</th><th>Diễn giải</th><th>Khoản mục</th></tr>
+     ${lines.map(l=>{const le=ERR_BY_ROW.get(l.id)||[],worst=le.length?le.reduce((a,b)=>a.sn<b.sn?a:b).sev:'';
+       return `<tr class="${worst?'r'+worst:''} ${l.id===r.id?'cur':''}"><td>${esc(l.line)}</td><td>${le.map(x=>`<span class="sev ${x.sev}" title="${esc(x.msg)}">${esc(RULE[x.k].n)}</span>`).join(' ')}</td><td>${l.date?l.date.toLocaleDateString('vi'):''}</td><td>${esc(l.drName)}</td><td>${esc(l.crName)}</td><td class=n>${fmt2(l.amt)}</td><td>${esc(l.bp)}</td><td>${esc(l.bpCr)}</td><td>${esc(l.desc)}</td><td>${esc(l.tcost)}</td></tr>`}).join('')}
+     </table></div></div>
+   <div class="card"><h3>Chi tiết đầy đủ dòng đang chọn</h3><div class="kv">${FIELDS.map(([k,n])=>`<div>${n}</div><div>${esc(fv(k))}</div>`).join('')}</div></div>`;
+  $('#drawer').classList.remove('hide');$('#dPane').scrollTop=0;
+  const save=async()=>{const status=$('#dSt').value,note=$('#dNote').value.trim(),targets=$('#dAll').checked?docErrs:[e];
+    await saveReviews(targets.map(x=>({key:x.key,rule:x.k,doc:x.r.doc,status,note,snapshot:snap(x)})));renderErrors()};
+  $('#dClose').onclick=closeDetail;$('#dPrev').onclick=()=>showDetail(Math.max(0,CUR-1));$('#dNext').onclick=()=>showDetail(Math.min(VIEW.length-1,CUR+1));
+  $('#dSave').onclick=async()=>{await save();const j=VIEW.indexOf(e);showDetail(j>=0?j:Math.min(i,VIEW.length-1));$('#dMsg').textContent='✔ Đã lưu'};
+  $('#dSaveNext').onclick=async()=>{await save();const j=VIEW.indexOf(e);showDetail(j>=0?j+1:Math.min(i,VIEW.length-1))};
+}
+function closeDetail(){$('#drawer').classList.add('hide');CUR=-1}
 function renderAging(){
   computeAging();
   const accs=[...new Set(AG.map(o=>o.acc))];const cur=$('#agAcc').value;
@@ -428,7 +567,7 @@ function renderCost(){
 
 /* ---------- Xuất Excel ---------- */
 function exportErr(){
-  const data=filteredErrs().map(e=>{const r=e.r,ru=RULE[e.k];return {'Mức':ru.s,'Mã lỗi':e.k,'Loại lỗi':ru.n,'Chi tiết':e.msg,'Ngày HT':r.date,'Chứng từ':r.doc,'Line':r.line,
+  const data=filteredErrs().map(e=>{const r=e.r,ru=RULE[e.k],rv=REV.get(e.key)||{};return {'Mức':ru.s,'Trạng thái':ST[stOf(e)],'Ghi chú':rv.note||'','Mã lỗi':e.k,'Loại lỗi':ru.n,'Chi tiết':e.msg,'Cần chỉnh sửa':FIX[e.k]||'','Ngày HT':r.date,'Chứng từ':r.doc,'Line':r.line,
     'TK Nợ':r.drName,'TK Có':r.crName,'Số tiền':r.amt,'Đối tượng Nợ':r.bp,'Đối tượng Có':r.bpCr,'Diễn giải':r.desc,'Bộ phận':r.dept,'Người nhập':r.user,'File':r.file}});
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Loi nhap lieu');
   const by={};ERRS.forEach(e=>{const k=e.r.user+'|'+e.k;by[k]=(by[k]||0)+1});
@@ -460,7 +599,19 @@ if(DB){
   $('#tImports').onclick=async e=>{const id=e.target.dataset.del;if(!id||!confirm('Xoá dữ liệu của lần nạp này?'))return;await DB.deleteImport(+id);reloadFromDb()};
   reloadFromDb();
 }
-['#fRule','#fSev','#fUser'].forEach(s=>$(s).onchange=renderErrors);$('#fText').oninput=renderErrors;
+['#fRule','#fSev','#fUser','#fMonth','#fDept','#fGroup'].forEach(s=>$(s).onchange=renderErrors);['#fText','#fAcc','#fMin','#fMax'].forEach(s=>$(s).oninput=renderErrors);
+$('#fReset').onclick=()=>{document.querySelectorAll('.filters select,.filters input').forEach(x=>x.value='');$('#stChips').dataset.f='';renderErrors()};
+$('#stChips').onclick=e=>{const b=e.target.closest('[data-st]');if(!b)return;$('#stChips').dataset.f=b.dataset.st;renderErrors()};
+$('#tErr').onclick=e=>{const th=e.target.closest('th[data-s]');if(th){SORT=SORT.k===th.dataset.s?{k:SORT.k,d:-SORT.d}:{k:th.dataset.s,d:1};return renderErrors()}
+  const tr=e.target.closest('tr[data-i]');if(tr)showDetail(+tr.dataset.i)};
+$('#drawer').onclick=e=>{if(e.target.id==='drawer')closeDetail()};
+document.addEventListener('keydown',e=>{if($('#drawer').classList.contains('hide')||/TEXTAREA|INPUT|SELECT/.test(e.target.tagName))return;
+  if(e.key==='Escape')closeDetail();if(e.key==='ArrowDown'||e.key==='ArrowRight')showDetail(Math.min(VIEW.length-1,CUR+1));if(e.key==='ArrowUp'||e.key==='ArrowLeft')showDetail(Math.max(0,CUR-1))});
+$('#bulkSt').onchange=async e=>{const st=e.target.value;e.target.value='';if(!st)return;const L=filteredErrs();
+  if(!confirm(`Đặt trạng thái "${ST[st]}" cho ${L.length.toLocaleString()} cảnh báo đang lọc?`))return;
+  await saveReviews(L.map(x=>({key:x.key,rule:x.k,doc:x.r.doc,status:st,note:(REV.get(x.key)||{}).note||'',snapshot:snap(x)})));renderErrors()};
+loadReviews().then(()=>{if(ERRS.length)renderErrors()});
+
 ['#asOf','#term','#agAcc'].forEach(s=>$(s).onchange=renderAging);
 $('#expErr').onclick=exportErr;$('#expAg').onclick=exportAg;
 </script>

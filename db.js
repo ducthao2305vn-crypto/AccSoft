@@ -26,7 +26,9 @@ class Store {
       CREATE TABLE IF NOT EXISTS entries(id INTEGER PRIMARY KEY, import_id INTEGER NOT NULL REFERENCES imports(id) ON DELETE CASCADE,
         ${COLS.map(c => c[1] + ' ' + c[2]).join(', ')});
       CREATE INDEX IF NOT EXISTS ix_entries_date ON entries(account_date);
-      CREATE INDEX IF NOT EXISTS ix_entries_import ON entries(import_id);`);
+      CREATE INDEX IF NOT EXISTS ix_entries_import ON entries(import_id);
+      CREATE TABLE IF NOT EXISTS reviews(err_key TEXT PRIMARY KEY, rule TEXT, document_no TEXT, status TEXT, note TEXT,
+        snapshot TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')));`);
     s.save();
     return s;
   }
@@ -87,6 +89,21 @@ class Store {
       date_to=(SELECT max(account_date) FROM entries WHERE import_id=imports.id)`);
     this.db.run('DELETE FROM imports WHERE row_count=0');
     if (save) this.save();
+  }
+  getReviews() {
+    const res = this.db.exec('SELECT err_key,rule,document_no,status,note,snapshot,updated_at FROM reviews');
+    return res.length ? res[0].values.map(([key, rule, doc, status, note, snapshot, at]) => ({ key, rule, doc, status, note, snapshot, at })) : [];
+  }
+  setReviews(list) {
+    this.db.run('BEGIN');
+    for (const r of list) {
+      if (!r.status && !r.note) this.db.run('DELETE FROM reviews WHERE err_key=?', [r.key]);
+      else this.db.run(`INSERT INTO reviews(err_key,rule,document_no,status,note,snapshot,updated_at) VALUES(?,?,?,?,?,?,datetime('now','localtime'))
+        ON CONFLICT(err_key) DO UPDATE SET status=excluded.status,note=excluded.note,snapshot=excluded.snapshot,updated_at=excluded.updated_at`,
+        [r.key, r.rule, r.doc, r.status || '', r.note || '', r.snapshot || '']);
+    }
+    this.db.run('COMMIT');
+    this.save();
   }
   deleteImport(id) { this.db.run('DELETE FROM imports WHERE id=?', [id]); this.save(); }
   clear() { this.db.run('DELETE FROM imports'); this.db.run('VACUUM'); this.save(); }

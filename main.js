@@ -14,6 +14,8 @@ async function initDb() {
   ipcMain.handle('db:delete', (_e, id) => store.deleteImport(id));
   ipcMain.handle('db:clear', () => store.clear());
   ipcMain.handle('db:path', () => file);
+  ipcMain.handle('db:getReviews', () => store.getReviews());
+  ipcMain.handle('db:setReviews', (_e, list) => store.setReviews(list));
   ipcMain.handle('app:version', () => app.getVersion());
   ipcMain.handle('db:openFolder', () => shell.showItemInFolder(file));
 }
