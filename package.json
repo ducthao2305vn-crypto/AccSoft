@@ -1,0 +1,57 @@
+{
+  "name": "accsoft",
+  "productName": "AccSoft",
+  "version": "1.0.0",
+  "description": "Phân tích sổ hạch toán ERP: lỗi nhập liệu, tuổi nợ, kết quả kinh doanh",
+  "main": "main.js",
+  "author": "AccSoft",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "vn.accsoft.app",
+    "productName": "AccSoft",
+    "files": [
+      "main.js",
+      "index.html",
+      "vendor/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "AccSoft"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.finance"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
+    }
+  },
+  "dependencies": {
+    "sql.js": "^1.11.0"
+  }
+}

@@ -1,0 +1,41 @@
+const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
+const path = require('path');
+const { Store } = require('./db');
+
+let store;
+async function initDb() {
+  const file = path.join(app.getPath('userData'), 'accsoft.db');
+  store = await Store.open(file);
+  ipcMain.handle('db:import', (_e, name, hash, rows) => store.importRows(name, hash, rows));
+  ipcMain.handle('db:load', () => store.loadAll());
+  ipcMain.handle('db:list', () => store.listImports());
+  ipcMain.handle('db:delete', (_e, id) => store.deleteImport(id));
+  ipcMain.handle('db:clear', () => store.clear());
+  ipcMain.handle('db:path', () => file);
+  ipcMain.handle('db:openFolder', () => shell.showItemInFolder(file));
+}
+
+function createWindow() {
+  const win = new BrowserWindow({
+    width: 1400, height: 900, minWidth: 900, minHeight: 600,
+    title: 'AccSoft – Phân tích sổ hạch toán',
+    icon: path.join(__dirname, 'build', 'icon.png'),
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  win.loadFile(path.join(__dirname, 'index.html'));
+  // Liên kết ngoài mở bằng trình duyệt mặc định, không mở trong app
+  win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+}
+
+Menu.setApplicationMenu(Menu.buildFromTemplate([
+  { label: 'Tệp', submenu: [{ role: 'reload', label: 'Tải lại' }, { type: 'separator' }, { role: 'quit', label: 'Thoát' }] },
+  { label: 'Xem', submenu: [{ role: 'zoomIn', label: 'Phóng to' }, { role: 'zoomOut', label: 'Thu nhỏ' }, { role: 'resetZoom', label: 'Cỡ gốc' },
+    { type: 'separator' }, { role: 'togglefullscreen', label: 'Toàn màn hình' }, { role: 'toggleDevTools', label: 'Công cụ phát triển' }] },
+]));
+
+app.whenReady().then(initDb).then(createWindow).catch(err => {
+  dialog.showErrorBox('AccSoft – lỗi mở cơ sở dữ liệu', String(err && err.stack || err));
+  app.quit();
+});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });

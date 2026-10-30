@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AccSoft – Phân tích sổ hạch toán</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/chart.umd.min.js"></script>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--fg:#1d2330;--mut:#6b7280;--line:#e3e6eb;--acc:#2563eb;--bad:#dc2626;--warn:#d97706;--ok:#059669;--info:#6366f1}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11141a;--card:#1a1f28;--fg:#e6e9ef;--mut:#9aa3b2;--line:#2b323e;--acc:#60a5fa}}
@@ -50,6 +50,7 @@ button.b{cursor:pointer}button.b.p{background:var(--acc);color:#fff;border-color
   <button data-t="aging">Công nợ & tuổi nợ</button>
   <button data-t="pl">Kết quả kinh doanh</button>
   <button data-t="cost">Cơ cấu chi phí</button>
+  <button data-t="data" id="tabData" class="hide">Dữ liệu (SQLite)</button>
 </nav>
 <main>
   <section id="overview">
@@ -112,6 +113,14 @@ button.b{cursor:pointer}button.b.p{background:var(--acc);color:#fff;border-color
     </div>
     <div class="card"><h3>Biến động chi phí theo năm</h3><div class="tbl"><table id="tCost"></table></div></div>
   </section>
+  <section id="data" class="hide">
+    <div class="card">
+      <h3>Các file đã nạp vào cơ sở dữ liệu</h3>
+      <div class="row"><span class="mut">CSDL: <code id="dbPath"></code></span><button class="b" id="openDb">Mở thư mục</button></div>
+      <div class="tbl"><table id="tImports"></table></div>
+      <p class="mut">Mỗi file chỉ nạp một lần (kiểm tra theo mã băm nội dung). Xoá một lần nạp sẽ xoá toàn bộ dòng hạch toán của file đó. Có thể sao lưu bằng cách chép file accsoft.db.</p>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -136,18 +145,42 @@ function parseDate(v){
 const num=v=>{if(v==null||v==='')return null;const n=typeof v==='number'?v:parseFloat(String(v).replace(/,/g,''));return isNaN(n)?null:n};
 
 /* ---------- Nạp dữ liệu ---------- */
+const DB=window.accsoft; // có khi chạy bản desktop (Electron + SQLite)
+const isoDate=d=>d?d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'):null;
 async function loadFiles(files){
+  const msgs=[];
   for(const f of files){
     $('#status').textContent='Đang đọc '+f.name+'…';
-    const wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:false,dense:true});
+    const buf=await f.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:false,dense:true});
+    const rows=[];
     for(const sn of wb.SheetNames){
       const raw=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:null,raw:true});
       if(!raw.length||!('Account' in raw[0])||!('Accounted Amount' in raw[0]))continue;
-      for(const r of raw)ROWS.push(normalize(r,f.name));
+      for(const r of raw)rows.push(normalize(r,f.name));
     }
+    if(!rows.length){msgs.push(f.name+': không đúng định dạng file hạch toán');continue}
+    if(DB){
+      $('#status').textContent='Đang lưu '+f.name+' vào SQLite…';
+      const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',buf))].map(b=>b.toString(16).padStart(2,'0')).join('');
+      const res=await DB.importRows(f.name,hash,rows.map(r=>({...r,date:isoDate(r.date),due:isoDate(r.due)})));
+      if(!res.ok)msgs.push(f.name+': '+res.reason);
+    }else ROWS.push(...rows);
   }
-  ROWS.forEach((r,i)=>r.id=i+1);
-  analyze();
+  if(DB)await reloadFromDb();else{ROWS.forEach((r,i)=>r.id=i+1);analyze()}
+  if(msgs.length)alert(msgs.join('\n'));
+}
+async function reloadFromDb(){
+  $('#status').textContent='Đang đọc cơ sở dữ liệu…';
+  ROWS=(await DB.loadAll()).map((r,i)=>({...r,id:i+1,date:r.date?parseDate(r.date.split('-').reverse().join('/')):null,due:r.due?parseDate(r.due.split('-').reverse().join('/')):null}));
+  $('#asOf').value='';
+  analyze();renderImports();
+  if(!ROWS.length)$('#status').textContent='Cơ sở dữ liệu trống – hãy nạp file.';
+}
+async function renderImports(){
+  const list=await DB.listImports();
+  $('#tImports').innerHTML='<tr><th>File</th><th class=n>Số dòng</th><th>Từ ngày</th><th>Đến ngày</th><th>Nạp lúc</th><th></th></tr>'+
+    list.map(i=>`<tr><td>${esc(i.file)}</td><td class=n>${i.rows.toLocaleString()}</td><td>${i.from||''}</td><td>${i.to||''}</td><td>${esc(i.at)}</td><td><button class="b" data-del="${i.id}">Xoá</button></td></tr>`).join('');
 }
 function normalize(r,file){
   const amt=num(r['Accounted Amount'])??0;
@@ -378,7 +411,14 @@ $('#tabs').onclick=e=>{const t=e.target.dataset.t;if(!t)return;document.querySel
   document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide',s.id!==t));Object.values(charts).forEach(c=>c.resize())};
 $('#file').onchange=e=>loadFiles([...e.target.files]).catch(err=>$('#status').textContent='Lỗi đọc file: '+err.message);
 const drop=$('#drop');drop.ondragover=e=>e.preventDefault();drop.ondrop=e=>{e.preventDefault();loadFiles([...e.dataTransfer.files])};
-$('#clear').onclick=()=>{ROWS=[];ERRS=[];$('#asOf').value='';$('#status').textContent='Đã xoá dữ liệu.';analyze()};
+$('#clear').onclick=async()=>{if(DB){if(!confirm('Xoá toàn bộ dữ liệu trong cơ sở dữ liệu SQLite?'))return;await DB.clear();return reloadFromDb()}
+  ROWS=[];ERRS=[];$('#asOf').value='';$('#status').textContent='Đã xoá dữ liệu.';analyze()};
+if(DB){
+  $('#tabData').classList.remove('hide');
+  DB.dbPath().then(p=>$('#dbPath').textContent=p);$('#openDb').onclick=()=>DB.openDbFolder();
+  $('#tImports').onclick=async e=>{const id=e.target.dataset.del;if(!id||!confirm('Xoá dữ liệu của lần nạp này?'))return;await DB.deleteImport(+id);reloadFromDb()};
+  reloadFromDb();
+}
 ['#fRule','#fSev','#fUser'].forEach(s=>$(s).onchange=renderErrors);$('#fText').oninput=renderErrors;
 ['#asOf','#term','#agAcc'].forEach(s=>$(s).onchange=renderAging);
 $('#expErr').onclick=exportErr;$('#expAg').onclick=exportAg;
