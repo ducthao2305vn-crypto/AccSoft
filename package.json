@@ -21,8 +21,12 @@
     "productName": "AccSoft",
     "files": [
       "main.js",
+      "preload.js",
+      "db.js",
       "index.html",
-      "vendor/**"
+      "vendor/**",
+      "!node_modules/sql.js/{.devcontainer,documentation_index.md,logo.svg,*.md}",
+      "!node_modules/sql.js/dist/!(sql-wasm.js|sql-wasm.wasm)"
     ],
     "directories": {
       "output": "dist"
@@ -49,7 +53,11 @@
         "AppImage"
       ],
       "category": "Office"
-    }
+    },
+    "electronLanguages": [
+      "vi",
+      "en-US"
+    ]
   },
   "dependencies": {
     "sql.js": "^1.11.0"

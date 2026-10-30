@@ -19,3 +19,8 @@
 - Chạy thử: `npm install` rồi `npm start`.
 - Đóng gói: GitHub → Actions → **Build desktop app** → Run workflow (hoặc push tag `v1.0.0`); tải file `.exe` (bộ cài + bản portable), `.dmg`, `.AppImage` ở mục Artifacts. Trên Windows có thể build trực tiếp: `npm run dist:win`.
 - Chạy offline hoàn toàn (thư viện nằm trong `vendor/`).
+
+## Tải về dùng ngay (Windows 64-bit)
+1. Tải file [`release/AccSoft-Windows-x64.7z`](release/AccSoft-Windows-x64.7z) (bấm **Download raw**).
+2. Giải nén: Windows 11 bấm chuột phải → *Extract All*; Windows 10 dùng 7-Zip (https://7-zip.org).
+3. Mở thư mục `AccSoft` → chạy `AccSoft.exe`. Nếu SmartScreen cảnh báo: *More info* → *Run anyway*.
