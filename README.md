@@ -26,7 +26,6 @@ Vào trang **[Releases](https://github.com/ducthao2305vn-crypto/AccSoft/releases
 - `AccSoft-Portable-x.y.z.exe` – chạy ngay không cần cài.
 
 Nếu SmartScreen cảnh báo: *More info* → *Run anyway* (ứng dụng chưa ký số).
-Dự phòng: bản nén `release/AccSoft-Windows-x64.7z` trong repo.
 
 ### Phát hành phiên bản mới
 1. Sửa `version` trong `package.json` (vd. `1.1.0`) và thêm mục `## v1.1.0` vào `CHANGELOG.md`.
