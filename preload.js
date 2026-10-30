@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   q: (name, ...args) => ipcRenderer.invoke('q', name, ...args),
+  logError: (msg, stack) => ipcRenderer.invoke('log:renderer', msg, stack),
+  openLogs: () => ipcRenderer.invoke('log:open'),
   info: () => ipcRenderer.invoke('app:info'),
   pickAndImport: () => ipcRenderer.invoke('import:pick'),
   importFiles: files => ipcRenderer.invoke('import:files', files.map(f => webUtils.getPathForFile(f))),

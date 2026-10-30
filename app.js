@@ -1,6 +1,9 @@
 "use strict";
 // Logic giao diện AccSoft – mọi dữ liệu lấy qua window.api (SQLite ở tiến trình chính)
 // window.api do preload.js cung cấp
+// Mọi lỗi giao diện đều ghi vào nhật ký
+window.addEventListener('error',e=>api.logError(e.message,e.error&&e.error.stack||`${e.filename}:${e.lineno}`));
+window.addEventListener('unhandledrejection',e=>api.logError(String(e.reason&&e.reason.message||e.reason),e.reason&&e.reason.stack));
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const fmt=v=>v==null||isNaN(v)?'':Math.round(v).toLocaleString('en-US');
 const fmt2=v=>v==null?'':(+v).toLocaleString('en-US',{maximumFractionDigits:2});
@@ -29,7 +32,7 @@ async function go(p){
   PAGE=p;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   $$('.content>section').forEach(s=>s.classList.toggle('hide',s.id!==p));
   $('#pTitle').textContent=TITLES[p][0];$('#pSub').textContent=TITLES[p][1];$('#content').scrollTop=0;
-  try{await VIEWS[p]()}catch(e){console.error(e)}
+  try{await VIEWS[p]()}catch(e){console.error(e);api.logError(`Mở trang ${p}: ${e.message}`,e.stack)}
 }
 $('#nav').onclick=e=>{const b=e.target.closest('[data-p]');if(b)go(b.dataset.p)};
 document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g)go(g.dataset.go);if(e.target.closest('[data-act=import]'))doImport()});
@@ -328,7 +331,7 @@ $('#months').onchange=async e=>{const m=e.target.dataset.m;if(!m)return;await ap
 $('#months').onclick=e=>{const m=e.target.dataset.delm;if(m&&confirm(`Xoá hẳn toàn bộ dữ liệu tháng ${m}?`))runT('deleteMonth',{ym:m})};
 $('#tImports').onclick=e=>{const id=e.target.closest('[data-deli]')?.dataset.deli;if(id&&confirm('Xoá toàn bộ dữ liệu của lần nạp này?'))runT('deleteImport',{id:+id})};
 $('#mAll').onclick=async()=>{await api.q('setAllMonths',true);await refreshSide();vData()};$('#mNone').onclick=async()=>{await api.q('setAllMonths',false);await refreshSide();vData()};
-$('#openDb').onclick=()=>api.openDbFolder();
+$('#openDb').onclick=()=>api.openDbFolder();$('#btnLogs').onclick=()=>api.openLogs();
 $('#btnRecheck').onclick=()=>runT('recheck',{},'Đã kiểm tra lại toàn bộ dữ liệu.');
 $('#btnClear').onclick=()=>{if(confirm('Xoá TOÀN BỘ dữ liệu hạch toán và cảnh báo? (giữ lại trạng thái/ghi chú và cấu hình mail)'))runT('clear',{})};
 

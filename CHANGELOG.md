@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v2.2.1 – 30/10/2026
+- **Sửa lỗi** nạp file Excel trên bản Windows: `Cannot find module 'call-bind-apply-helpers'` (bản đóng gói thiếu thư viện phụ của exceljs). Mã nguồn và thư viện giờ được gộp sẵn (esbuild), bản đóng gói không còn phụ thuộc node_modules.
+- **Nhật ký lỗi** tại `AccSoft_Data\logs\accsoft-YYYY-MM-DD.log` (giữ 60 ngày): ghi khởi động, từng lần nạp file (thành công/thất bại kèm stack đầy đủ), lỗi xử lý, lỗi giao diện.
+- Thông báo kết quả nạp gọn: ✓/✗ từng file và một dòng lỗi; chi tiết xem trong nhật ký (menu Tệp → Mở nhật ký lỗi, hoặc nút trong tab Quản lý dữ liệu).
+
 ## v2.2.0 – 30/10/2026
 - Cơ sở dữ liệu lưu tại **thư mục ứng dụng**: `<thư mục chứa AccSoft>\AccSoft_Data\accsoft.db` (bản Portable: cạnh file .exe; bản cài: thư mục cài đặt).
 - Lần chạy đầu tự chuyển dữ liệu cũ từ `%APPDATA%\AccSoft` sang (bản cũ được giữ làm dự phòng).

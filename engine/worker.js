@@ -200,6 +200,6 @@ const TASKS = {
 };
 (async () => {
   try { post({ type: 'done', result: await TASKS[workerData.task](workerData.args || {}) }); }
-  catch (e) { post({ type: 'error', error: String(e && e.message || e) }); }
+  catch (e) { post({ type: 'error', error: String(e && e.message || e), stack: String(e && e.stack || e) }); }
   finally { db.close(); }
 })();
