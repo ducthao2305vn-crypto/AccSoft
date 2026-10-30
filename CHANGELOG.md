@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v2.0.0 – 30/10/2026
+**Xử lý dữ liệu lớn (hàng trăm MB, hàng triệu dòng)** và **giao diện mới theo TLM Design System**.
+- Nạp file dạng luồng (streaming) xlsx và CSV trong tiến trình nền, có thanh tiến độ; RAM ổn định bất kể kích thước file.
+- SQLite ghi trực tiếp trên đĩa (WAL) thay cho sql.js trong RAM; cảnh báo lỗi được tính khi nạp và lưu thành bảng có chỉ mục.
+- Tổng quan, kết quả kinh doanh, chi phí, tuổi nợ, báo cáo tính bằng SQL; bảng lỗi phân trang 200 dòng, lọc/sắp xếp bằng SQL.
+- Xuất Excel và soạn email chạy ở tiến trình chính, lấy dữ liệu thẳng từ CSDL.
+- Giao diện mới: thanh điều hướng bên trái với logo Telemor, màu cam thương hiệu (#FA4700) làm chủ đạo, thẻ KPI, nhãn mức độ/trạng thái theo bảng màu TLM, kéo-thả file vào cửa sổ.
+- Tự nâng cấp CSDL từ bản 1.x (giữ dữ liệu, trạng thái và ghi chú; tính lại bảng lỗi một lần).
+- Bản web (mở index.html bằng trình duyệt) ngừng hỗ trợ – dùng bản desktop.
+
 ## v1.2.0 – 30/10/2026
 Tab mới **Báo cáo & Thông báo**:
 - Báo cáo kết quả kiểm tra: tổng hợp theo loại lỗi và theo người nhập (đã khắc phục / không phải lỗi / còn tồn, % hoàn thành); in hoặc lưu PDF, xuất Excel.

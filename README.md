@@ -1,32 +1,26 @@
 # AccSoft – Phân tích sổ hạch toán ERP
 
-Ứng dụng web 1 file (`index.html`), mở trực tiếp bằng trình duyệt, dữ liệu xử lý hoàn toàn trên máy (không upload).
-Đầu vào: file xuất `Export_Accounts_DuLieuHachToan` (cột Account, Account credit, Accounted Amount, Business Partner, Bpartner credit, Description, Type of cost, Created By…). Có thể nạp nhiều file để gộp nhiều tháng/năm.
+Ứng dụng desktop (Windows/macOS/Linux) phân tích file xuất `Export_Accounts_DuLieuHachToan` từ ERP: phát hiện lỗi nhập liệu, theo dõi khắc phục, công nợ & tuổi nợ, kết quả kinh doanh, cơ cấu chi phí, báo cáo kiểm tra và gửi email yêu cầu khắc phục cho nhân viên.
+
+## Tải về
+Trang **[Releases](https://github.com/ducthao2305vn-crypto/AccSoft/releases/latest)**:
+- `AccSoft-Setup-x.y.z.exe` – bộ cài Windows, hoặc `AccSoft-Portable-x.y.z.exe` – chạy ngay không cần cài.
+- Ứng dụng chưa ký số: nếu SmartScreen cảnh báo chọn *More info* → *Run anyway*.
+
+## Dữ liệu lớn
+- Đọc file dạng luồng (xlsx, csv) trong tiến trình nền; dữ liệu lưu SQLite trên đĩa tại `%APPDATA%\AccSoft\accsoft.db`.
+- Khuyến nghị: RAM ≥ 8 GB, ổ trống ≥ 3 lần dung lượng file nạp. CSV nạp nhanh hơn xlsx đáng kể – nên xuất CSV từ ERP với file rất lớn.
+- Dữ liệu quản lý theo tháng: bật/tắt tháng khỏi phân tích, xoá tháng, nạp lại tháng (hỏi thay thế).
 
 ## Chức năng
-- **Lỗi nhập liệu**: 20 quy tắc kiểm tra (tài khoản sai, doanh thu/chi phí ghi sai chiều, thiếu khoản mục/đối tượng, diễn giải trống, diễn giải tính sai, SL×ĐG ≠ thành tiền, chi phí nhiều kỳ không qua 242, sai kỳ cut-off, nghi trùng, số tiền bất thường, …). Thống kê theo người nhập, xuất Excel.
-- **Công nợ & tuổi nợ**: 131, 1388, 141, 331, 3388 theo đối tượng, phân bổ FIFO vào 7 nhóm tuổi; phát hiện dư ngược chiều. Xuất Excel.
-- **Kết quả kinh doanh**: P&L theo năm, so sánh năm trước, biên lợi nhuận, xu hướng tháng, nhận xét tự động.
-- **Cơ cấu chi phí**: theo Type of cost, bộ phận, biến động theo năm.
+- **Lỗi nhập liệu**: 20 quy tắc (sai chiều doanh thu/chi phí, thiếu khoản mục/đối tượng, diễn giải trống hoặc tính sai, SL×ĐG ≠ thành tiền, chi phí nhiều kỳ không qua 242, sai kỳ, nghi trùng, số tiền bất thường…); hướng dẫn "Cần chỉnh sửa"; xem toàn bộ chứng từ; trạng thái + ghi chú; lọc/sắp xếp; xuất Excel.
+- **Công nợ & tuổi nợ** 131, 1388, 141, 331, 3388 (FIFO), dư ngược chiều.
+- **Kết quả kinh doanh** theo năm/tháng, **cơ cấu chi phí**.
+- **Báo cáo & Thông báo**: báo cáo kết quả kiểm tra (in/PDF/Excel), danh sách lỗi cần khắc phục theo nhân viên, gửi email qua SMTP kèm Excel.
 
-## Hạn chế
-- Tuổi nợ chính xác cần đủ lịch sử phát sinh hoặc số dư đầu kỳ.
-- Doanh thu viễn thông ghi nhận từ BCCS nếu không có trong file xuất thì P&L sẽ thiếu doanh thu.
-
-## Bản desktop (Electron + SQLite)
-- Dữ liệu nạp vào được lưu vĩnh viễn trong file SQLite `accsoft.db` (Windows: `%APPDATA%\AccSoft\accsoft.db`). Tab **Quản lý dữ liệu**: danh sách tháng theo năm – bỏ tích để loại tháng khỏi phân tích, Xoá để xoá hẳn tháng, "Thêm tháng" để nạp file; tháng đã có sẽ được hỏi thay thế.
-- Bảng `imports` lưu các lần nạp, bảng `entries` lưu dòng hạch toán – có thể truy vấn bằng DB Browser for SQLite / Excel ODBC.
-- Chạy thử: `npm install` rồi `npm start`.
-- Đóng gói: GitHub → Actions → **Build desktop app** → Run workflow (hoặc push tag `v1.0.0`); tải file `.exe` (bộ cài + bản portable), `.dmg`, `.AppImage` ở mục Artifacts. Trên Windows có thể build trực tiếp: `npm run dist:win`.
-- Chạy offline hoàn toàn (thư viện nằm trong `vendor/`).
-
-## Tải về dùng ngay (Windows 64-bit)
-Vào trang **[Releases](https://github.com/ducthao2305vn-crypto/AccSoft/releases/latest)**, tải:
-- `AccSoft-Setup-x.y.z.exe` – bộ cài đặt (có shortcut, gỡ cài đặt trong Control Panel), hoặc
-- `AccSoft-Portable-x.y.z.exe` – chạy ngay không cần cài.
-
-Nếu SmartScreen cảnh báo: *More info* → *Run anyway* (ứng dụng chưa ký số).
-
-### Phát hành phiên bản mới
-1. Sửa `version` trong `package.json` (vd. `1.1.0`) và thêm mục `## v1.1.0` vào `CHANGELOG.md`.
-2. Commit và push → GitHub Actions tự build, tạo tag `v1.1.0` và Release kèm file cài (bỏ qua nếu Release của version đó đã có).
+## Phát triển
+```
+npm install
+npm start
+```
+Phát hành: sửa `version` trong `package.json`, thêm mục vào `CHANGELOG.md`, push → GitHub Actions tự build và tạo Release.
