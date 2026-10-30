@@ -226,20 +226,24 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
 
   <section id="aging" class="hide">
     <div class="card">
-      <div class="row">
+      <div class="row" style="align-items:flex-end">
         <label class="field">Ngày báo cáo<input class="input" type="date" id="asOf"></label>
-        <label class="field">Thời hạn mặc định (ngày)<input class="input" type="number" id="term" value="30" style="width:120px"></label>
+        <label class="field">Nhóm<select class="input" id="agGrp"><option value="">Phải thu & phải trả</option><option value="thu">Phải thu</option><option value="tra">Phải trả</option></select></label>
+        <label class="field">Cấp tài khoản<select class="input" id="agLevel"><option value="l1">Tài khoản tổng hợp</option><option value="detail">Tài khoản chi tiết</option></select></label>
         <label class="field">Tài khoản<select class="input" id="agAcc"></select></label>
-        <div class="sp"></div><button class="btn" id="expAg" style="align-self:flex-end"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
+        <label class="field">Hạn mặc định (ngày)<input class="input" type="number" id="term" value="30" style="width:110px"></label>
+        <div class="sp"></div><button class="btn" id="expAg"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
       </div>
-      <div class="note brand" style="margin-top:14px">Phương pháp FIFO: số dư của từng đối tượng được phân bổ cho các phát sinh tăng gần nhất; tuổi nợ tính từ Due Date (hoặc ngày hạch toán + thời hạn mặc định). Cần nạp đủ lịch sử để tuổi nợ chính xác.</div>
+      <div class="note brand" style="margin-top:14px"><b>Đối tượng công nợ theo phía hạch toán:</b> tài khoản ghi <b>Nợ</b> lấy <b>Đối tượng Nợ</b> (Business Partner), tài khoản ghi <b>Có</b> lấy <b>Đối tượng Có</b> (Bpartner credit) – không lấy thay đối tượng phía kia.
+        Tuổi nợ theo FIFO: số dư phân bổ cho các phát sinh tăng gần nhất, tính từ Due Date (hoặc ngày hạch toán + hạn mặc định).</div>
     </div>
     <div class="kpis" id="agKpi"></div>
+    <div class="card"><div class="card-h"><h3>Tổng hợp tuổi nợ theo tài khoản</h3><span class="hint">bấm một dòng để lọc chi tiết theo tài khoản</span></div><div class="tbl"><table id="tAgSum"></table></div></div>
     <div class="grid g2">
-      <div class="card"><div class="card-h"><h3>Cơ cấu tuổi nợ</h3></div><div class="cv"><canvas id="chAging"></canvas></div></div>
-      <div class="card"><div class="card-h"><h3>Dư ngược chiều</h3><span class="hint">cần đối chiếu</span></div><div class="tbl" style="max-height:320px"><table id="tAbn"></table></div></div>
+      <div class="card"><div class="card-h"><h3>Cơ cấu tuổi nợ theo tài khoản</h3></div><div class="cv" style="height:360px"><canvas id="chAging"></canvas></div></div>
+      <div class="card"><div class="card-h"><h3>Dư ngược chiều</h3><span class="hint">phải thu dư Có / phải trả dư Nợ – cần đối chiếu</span></div><div class="tbl" style="max-height:360px"><table id="tAbn"></table></div></div>
     </div>
-    <div class="card"><div class="card-h"><h3>Chi tiết theo đối tượng</h3></div><div class="tbl"><table id="tAging"></table></div></div>
+    <div class="card"><div class="card-h"><h3>Chi tiết theo đối tượng</h3><div class="sp"></div><input class="input" id="agFind" placeholder="Tìm đối tượng…" style="width:260px"></div><div class="tbl"><table id="tAging"></table></div></div>
   </section>
 
   <section id="pl" class="hide">

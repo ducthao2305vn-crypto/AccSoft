@@ -141,18 +141,30 @@ function make(db) {
   }
 
   /* ---------- Công nợ – tuổi nợ (FIFO) ---------- */
-  const AG_ACC = [['131', 'Phải thu khách hàng', 1], ['1388', 'Phải thu khác', 1], ['141', 'Tạm ứng nhân viên', 1], ['331', 'Phải trả người bán', -1], ['3388', 'Phải trả khác', -1]];
-  function aging(asOf, term = 30) {
+  // Tài khoản công nợ: [mã cấp 1, tên, nhóm, chiều số dư tự nhiên (1 = dư Nợ, -1 = dư Có)]
+  const AG_ACC = [
+    ['131', 'Phải thu khách hàng', 'thu', 1], ['136', 'Phải thu nội bộ', 'thu', 1], ['1388', 'Phải thu khác', 'thu', 1], ['141', 'Tạm ứng', 'thu', 1],
+    ['331', 'Phải trả người bán', 'tra', -1], ['336', 'Phải trả nội bộ', 'tra', -1], ['334', 'Phải trả người lao động', 'tra', -1], ['3388', 'Phải trả, phải nộp khác', 'tra', -1]];
+  const NO_BP = '(không có đối tượng)';
+  // Đối tượng gắn theo phía hạch toán: TK bên Nợ ↔ Đối tượng Nợ (Business Partner), TK bên Có ↔ Đối tượng Có (Bpartner credit)
+  function aging(asOf, term = 30, level = 'l1') {
     const asD = new Date(asOf), map = new Map();
     const pres = AG_ACC.map(a => a[0]);
-    const rows = all(`SELECT e.account_date date, e.due_date due, e.acc_debit dr, e.acc_credit cr, e.amount amt, e.partner_debit bp, e.partner_credit bpCr, e.document_no doc
-      FROM entries e WHERE ${INC} AND e.account_date<=? AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)})`, asOf);
+    const rows = all(`SELECT e.account_date date, e.due_date due, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName,
+        e.amount amt, e.partner_debit bp, e.partner_credit bpCr FROM entries e
+      WHERE ${INC} AND e.account_date<=? AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)})`, asOf);
     for (const r of rows) {
-      for (const [pre, name, nat] of AG_ACC) for (const side of ['dr', 'cr']) {
-        if (!String(r[side] || '').startsWith(pre)) continue;
-        const bp = (side === 'dr' ? r.bp : (r.bpCr || r.bp)) || '(không có đối tượng)';
-        const key = pre + '|' + bp; let o = map.get(key);
-        if (!o) map.set(key, o = { acc: pre, accName: name, bp, bal: 0, inc: [] });
+      for (const side of ['dr', 'cr']) {
+        const accCode = String(r[side] || '');
+        const def = AG_ACC.find(a => accCode.startsWith(a[0]));
+        if (!def) continue;
+        const [pre, name, grp, nat] = def;
+        const bp = (side === 'dr' ? r.bp : r.bpCr) || NO_BP;
+        const acc = level === 'detail' ? accCode : pre;
+        const accName = level === 'detail' ? (String(side === 'dr' ? r.drName : r.crName).split('_').slice(1).join('_') || name) : name;
+        const key = acc + '|' + bp; let o = map.get(key);
+        if (!o) map.set(key, o = { acc, accName, parent: pre, grp, bp, bal: 0, dr: 0, cr: 0, inc: [] });
+        if (side === 'dr') o.dr += r.amt; else o.cr += r.amt;
         const v = (side === 'dr' ? 1 : -1) * nat * r.amt; o.bal += v;
         if (v > 0) { const d = r.due ? new Date(r.due) : new Date(new Date(r.date).getTime() + term * 864e5); o.inc.push({ d, v }); }
       }
@@ -167,9 +179,10 @@ function make(db) {
         for (const it of o.inc) { if (rem <= 0) break; const take = Math.min(rem, it.v); rem -= take; const age = Math.floor((asD - it.d) / 864e5); b[bucket(age)] += take; maxAge = Math.max(maxAge, age); }
         if (rem > 0) b[6] += rem;
       }
-      out.push({ acc: o.acc, accName: o.accName, bp: o.bp, bal: o.bal, b, maxAge });
+      const { inc, ...rest } = o; void inc;
+      out.push({ ...rest, b, maxAge });
     }
-    return { accounts: AG_ACC.map(a => ({ k: a[0], n: a[1] })), items: out };
+    return { accounts: AG_ACC.map(a => ({ k: a[0], n: a[1], grp: a[2] })), items: out };
   }
 
   /* ---------- Báo cáo & thông báo ---------- */

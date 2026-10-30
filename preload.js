@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   importFiles: files => ipcRenderer.invoke('import:files', files.map(f => webUtils.getPathForFile(f))),
   task: (name, args) => ipcRenderer.invoke('task', name, args),
   exportErrors: (f, sort) => ipcRenderer.invoke('export:errors', f, sort),
-  exportAging: (asOf, term, acc) => ipcRenderer.invoke('export:aging', asOf, term, acc),
+  exportAging: (asOf, term, level, grp, acc) => ipcRenderer.invoke('export:aging', asOf, term, level, grp, acc),
   exportReport: minSev => ipcRenderer.invoke('export:report', minSev),
   exportEmployee: (u, minSev) => ipcRenderer.invoke('export:employee', u, minSev),
   mailPreview: (u, o) => ipcRenderer.invoke('mail:preview', u, o),

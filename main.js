@@ -86,7 +86,7 @@ async function init() {
     const byUser = Object.entries(by).map(([k, n]) => { const [u, c] = k.split('|'); return { 'Người nhập': u, 'Mã lỗi': c, 'Số lượng': n }; });
     return saveXlsx('AccSoft_LoiNhapLieu.xlsx', R.errorsBook(rows, byUser));
   });
-  ipcMain.handle('export:aging', (_e, asOf, term, acc) => saveXlsx('AccSoft_TuoiNo.xlsx', R.agingBook(Q.aging(asOf, term).items.filter(o => !acc || o.acc === acc))));
+  ipcMain.handle('export:aging', (_e, asOf, term, level, grp, acc) => saveXlsx('AccSoft_TuoiNo.xlsx', R.agingBook(Q.aging(asOf, term, level).items.filter(o => (!grp || o.grp === grp) && (!acc || o.acc === acc)))));
   ipcMain.handle('export:report', (_e, minSev) => saveXlsx('AccSoft_BaoCaoKiemTra.xlsx',
     R.reportBook(Q.report(), Q.errors({ statusIn: ['fixed', 'ignore'] }, { k: 'user', d: 1 }, 0, 2e6).rows, Q.errors({ minSev, statusIn: ['open', 'doing'] }, { k: 'user', d: 1 }, 0, 2e6).rows)));
   ipcMain.handle('export:employee', (_e, user, minSev) => saveXlsx(`AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, R.book([['Can khac phuc', Q.employeeErrors(user, minSev).map(R.errRow)]])));

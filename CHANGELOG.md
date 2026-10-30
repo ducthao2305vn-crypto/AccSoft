@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v2.1.0 – 30/10/2026
+Phân tích **tuổi nợ phải thu – phải trả** làm lại:
+- Đối tượng công nợ lấy đúng theo phía hạch toán: TK ghi Nợ ↔ Đối tượng Nợ (Business Partner), TK ghi Có ↔ Đối tượng Có (Bpartner credit); không lấy thay đối tượng phía kia (thiếu thì ghi "không có đối tượng" và cảnh báo).
+- Mở rộng tài khoản: phải thu 131, 136, 1388, 141; phải trả 331, 336, 334, 3388.
+- Xem theo tài khoản tổng hợp hoặc tài khoản chi tiết; lọc nhóm phải thu / phải trả; bảng tổng hợp tuổi nợ theo tài khoản có dòng cộng từng nhóm.
+- Biểu đồ cơ cấu tuổi nợ xếp chồng theo tài khoản; chi tiết đối tượng kèm phát sinh Nợ/Có, đánh giá (đôn đốc thu, xem xét dự phòng, ưu tiên thanh toán).
+- Xuất Excel 3 sheet: tổng hợp theo TK, chi tiết đối tượng, dư ngược chiều.
+
 ## v2.0.0 – 30/10/2026
 **Xử lý dữ liệu lớn (hàng trăm MB, hàng triệu dòng)** và **giao diện mới theo TLM Design System**.
 - Nạp file dạng luồng (streaming) xlsx và CSV trong tiến trình nền, có thanh tiến độ; RAM ổn định bất kể kích thước file.

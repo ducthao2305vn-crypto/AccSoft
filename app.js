@@ -177,21 +177,48 @@ document.addEventListener('keydown',e=>{if($('#drawer').classList.contains('hide
 
 /* ---------- Công nợ ---------- */
 const BUCKETS=['Chưa đến hạn','1–30','31–60','61–90','91–180','181–365','> 365'];
-async function vAging(){
+const BCOL=[C.ok,'#FFD4BD','#FF9C6B','#FF6929','#FA4700','#D63600','#8A2200'];
+const GRPN={thu:'Phải thu',tra:'Phải trả'};
+let AGDATA=null;
+async function vAging(reload=true){
   if(!$('#asOf').value){const s=await api.q('overview');if(s.dmax)$('#asOf').value=s.dmax}if(!$('#asOf').value)return;
-  const r=await api.q('aging',$('#asOf').value,+$('#term').value||0);const cur=$('#agAcc').value;
-  const accs=new Set(r.items.map(o=>o.acc));fillSel('#agAcc',r.accounts.filter(a=>accs.has(a.k)).map(a=>[a.k,`${a.k} – ${a.n}`]),'Tất cả tài khoản',cur);
-  const sel=r.items.filter(o=>!$('#agAcc').value||o.acc===$('#agAcc').value),pos=sel.filter(o=>o.bal>0),abn=sel.filter(o=>o.bal<0);
-  const tb=Array(7).fill(0);pos.forEach(o=>o.b.forEach((v,i)=>tb[i]+=v));const tot=tb.reduce((a,b)=>a+b,0),over=tot-tb[0],o90=tb[4]+tb[5]+tb[6];
-  $('#agKpi').innerHTML=kpi('','wallet','Tổng số dư',fmt(tot),pos.length+' đối tượng')+kpi('','alert','Quá hạn',fmt(over),pct(over/tot))+kpi('red','alert','Quá hạn > 90 ngày',fmt(o90),pct(o90/tot))+kpi('blue','users','Dư ngược chiều',abn.length,'đối tượng cần đối chiếu');
-  chart('chAging',{type:'bar',data:{labels:BUCKETS,datasets:[{data:tb,backgroundColor:[C.ok,'#FFD4BD','#FF9C6B','#FF6929','#FA4700','#D63600','#8A2200'],barThickness:36}]},options:{plugins:{legend:{display:false}}}});
-  $('#tAbn').innerHTML='<thead><tr><th>TK</th><th>Đối tượng</th><th class=n>Số dư</th></tr></thead><tbody>'+abn.sort((a,b)=>a.bal-b.bal).map(o=>`<tr><td>${o.acc}</td><td>${esc(o.bp)}</td><td class="n neg">${fmt2(o.bal)}</td></tr>`).join('')+'</tbody>';
-  $('#tAging').innerHTML='<thead><tr><th>TK</th><th>Đối tượng</th><th class=n>Số dư</th>'+BUCKETS.map(b=>`<th class=n>${b}</th>`).join('')+'<th class=n>Tuổi tối đa</th><th>Đánh giá</th></tr></thead><tbody>'+
-   pos.sort((a,b)=>b.bal-a.bal).slice(0,3000).map(o=>{const o90=o.b[4]+o.b[5]+o.b[6];const risk=o.b[6]>0?'<span class="badge b-H">Xem xét dự phòng</span>':o90>0?'<span class="badge b-M">Đôn đốc</span>':'';
-    return `<tr><td>${o.acc}</td><td>${esc(o.bp)}</td><td class=n><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${v?fmt2(v):''}</td>`).join('')}<td class=n>${o.maxAge}</td><td>${risk}</td></tr>`}).join('')+'</tbody>';
+  if(reload||!AGDATA)AGDATA=await api.q('aging',$('#asOf').value,+$('#term').value||0,$('#agLevel').value);
+  const grp=$('#agGrp').value,cur=$('#agAcc').value,find=$('#agFind').value.trim().toLowerCase();
+  const inGrp=AGDATA.items.filter(o=>!grp||o.grp===grp);
+  const accs=[...new Map(inGrp.map(o=>[o.acc,o])).values()].sort((a,b)=>a.acc.localeCompare(b.acc));
+  fillSel('#agAcc',accs.map(o=>[o.acc,`${o.acc} – ${o.accName}`]),'Tất cả tài khoản',accs.some(o=>o.acc===cur)?cur:'');
+  const sel=inGrp.filter(o=>!$('#agAcc').value||o.acc===$('#agAcc').value),pos=sel.filter(o=>o.bal>0),abn=sel.filter(o=>o.bal<0);
+  // KPI theo nhóm
+  const tot=g=>{const L=pos.filter(o=>o.grp===g),b=Array(7).fill(0);L.forEach(o=>o.b.forEach((v,i)=>b[i]+=v));const t=b.reduce((x,y)=>x+y,0);return {t,over:t-b[0],o90:b[4]+b[5]+b[6],n:L.length}};
+  const T=tot('thu'),P=tot('tra');
+  $('#agKpi').innerHTML=(grp!=='tra'?kpi('blue','wallet','Tổng phải thu',fmt(T.t),`${num(T.n)} đối tượng · quá hạn ${pct(T.over/T.t)}`)+kpi('red','alert','Phải thu quá hạn > 90 ngày',fmt(T.o90),pct(T.o90/T.t)+' tổng phải thu'):'')
+    +(grp!=='thu'?kpi('','coins','Tổng phải trả',fmt(P.t),`${num(P.n)} đối tượng · quá hạn ${pct(P.over/P.t)}`)+kpi('red','alert','Phải trả quá hạn > 90 ngày',fmt(P.o90),pct(P.o90/P.t)+' tổng phải trả'):'')
+    +kpi('','users','Dư ngược chiều',num(abn.length),'đối tượng cần đối chiếu');
+  // Tổng hợp theo tài khoản
+  const S=new Map();
+  for(const o of sel){const x=S.get(o.acc)||S.set(o.acc,{acc:o.acc,name:o.accName,grp:o.grp,n:0,bal:0,b:Array(7).fill(0),abn:0}).get(o.acc);
+    if(o.bal>0){x.n++;x.bal+=o.bal;o.b.forEach((v,i)=>x.b[i]+=v)}else x.abn+=o.bal}
+  const SL=[...S.values()].sort((a,b)=>a.grp.localeCompare(b.grp)*-1||a.acc.localeCompare(b.acc));
+  const sub=g=>{const L=SL.filter(x=>x.grp===g);if(!L.length)return '';const b=Array(7).fill(0);L.forEach(x=>x.b.forEach((v,i)=>b[i]+=v));const t=b.reduce((p,q)=>p+q,0),ab=L.reduce((p,x)=>p+x.abn,0);
+    return `<tr style="background:var(--brand-25)"><td colspan=2><b>Cộng ${GRPN[g].toLowerCase()}</b></td><td class=n><b>${num(L.reduce((p,x)=>p+x.n,0))}</b></td><td class=n><b>${fmt2(t)}</b></td>${b.map(v=>`<td class=n><b>${Math.abs(v)>=0.005?fmt2(v):''}</b></td>`).join('')}<td class=n><b>${pct((t-b[0])/t)}</b></td><td class="n neg">${ab?fmt2(ab):''}</td></tr>`};
+  const row=x=>{const t=x.bal;return `<tr class="click" data-acc="${esc(x.acc)}"><td class=nw><b>${esc(x.acc)}</b></td><td style="min-width:240px">${esc(x.name)}</td><td class=n>${num(x.n)}</td><td class=n><b>${fmt2(t)}</b></td>${x.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${pct((t-x.b[0])/t)}</td><td class="n neg">${Math.abs(x.abn)>=0.005?fmt2(x.abn):''}</td></tr>`};
+  $('#tAgSum').innerHTML='<thead><tr><th>TK</th><th>Tên tài khoản</th><th class=n>Đối tượng</th><th class=n>Số dư</th>'+BUCKETS.map(b=>`<th class=n>${b}</th>`).join('')+'<th class=n>% quá hạn</th><th class=n>Dư ngược chiều</th></tr></thead><tbody>'+
+    ['thu','tra'].map(g=>SL.filter(x=>x.grp===g).map(row).join('')+sub(g)).join('')+'</tbody>';
+  chart('chAging',{type:'bar',data:{labels:SL.map(x=>x.acc),datasets:BUCKETS.map((b,i)=>({label:b,data:SL.map(x=>x.b[i]),backgroundColor:BCOL[i],borderRadius:0,maxBarThickness:48}))},
+    options:{scales:{x:{stacked:true},y:{stacked:true}},plugins:{tooltip:{callbacks:{title:i=>{const x=SL[i[0].dataIndex];return x.acc+' – '+x.name}}}}}});
+  $('#tAbn').innerHTML='<thead><tr><th>TK</th><th>Đối tượng</th><th class=n>PS Nợ</th><th class=n>PS Có</th><th class=n>Dư ngược</th></tr></thead><tbody>'+
+    abn.sort((a,b)=>a.bal-b.bal).map(o=>`<tr><td title="${esc(o.accName)}">${esc(o.acc)}</td><td>${esc(o.bp)}</td><td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class="n neg">${fmt2(o.bal)}</td></tr>`).join('')+'</tbody>';
+  const det=pos.filter(o=>!find||o.bp.toLowerCase().includes(find)).sort((a,b)=>b.bal-a.bal);
+  $('#tAging').innerHTML='<thead><tr><th>Nhóm</th><th>TK</th><th>Đối tượng</th><th class=n>PS Nợ</th><th class=n>PS Có</th><th class=n>Số dư</th>'+BUCKETS.map(b=>`<th class=n>${b}</th>`).join('')+'<th class=n>Tuổi tối đa</th><th>Đánh giá</th></tr></thead><tbody>'+
+   det.slice(0,3000).map(o=>{const o90=o.b[4]+o.b[5]+o.b[6];
+    const risk=o.bp.startsWith('(không')?'<span class="badge b-H">Thiếu đối tượng</span>':o.b[6]>0?`<span class="badge b-H">${o.grp==='thu'?'Xem xét dự phòng':'Quá hạn > 1 năm'}</span>`:o90>0?`<span class="badge b-M">${o.grp==='thu'?'Đôn đốc thu':'Ưu tiên thanh toán'}</span>`:'';
+    return `<tr><td><span class="badge ${o.grp==='thu'?'b-L':'s-doing'}">${GRPN[o.grp]}</span></td><td class=nw title="${esc(o.accName)}">${esc(o.acc)}</td><td>${esc(o.bp)}</td><td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class=n><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${o.maxAge}</td><td>${risk}</td></tr>`}).join('')+'</tbody>';
 }
-['#asOf','#term','#agAcc'].forEach(s=>$(s).onchange=vAging);
-$('#expAg').onclick=()=>api.exportAging($('#asOf').value,+$('#term').value||0,$('#agAcc').value);
+['#asOf','#term','#agLevel'].forEach(s=>$(s).onchange=()=>{if(s==='#agLevel')$('#agAcc').value='';vAging(true)});
+['#agGrp','#agAcc'].forEach(s=>$(s).onchange=()=>vAging(false));
+$('#agFind').oninput=()=>vAging(false);
+$('#tAgSum').onclick=e=>{const tr=e.target.closest('[data-acc]');if(tr){$('#agAcc').value=tr.dataset.acc;vAging(false);$('#tAging').scrollIntoView({behavior:'smooth'})}};
+$('#expAg').onclick=()=>api.exportAging($('#asOf').value,+$('#term').value||0,$('#agLevel').value,$('#agGrp').value,$('#agAcc').value);
 
 /* ---------- Kết quả kinh doanh ---------- */
 async function vPL(){
@@ -305,7 +332,7 @@ $('#openDb').onclick=()=>api.openDbFolder();
 $('#btnRecheck').onclick=()=>runT('recheck',{},'Đã kiểm tra lại toàn bộ dữ liệu.');
 $('#btnClear').onclick=()=>{if(confirm('Xoá TOÀN BỘ dữ liệu hạch toán và cảnh báo? (giữ lại trạng thái/ghi chú và cấu hình mail)'))runT('clear',{})};
 
-const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:vAging,pl:vPL,cost:vCost,report:vReport,data:vData};
+const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),pl:vPL,cost:vCost,report:vReport,data:vData};
 (async()=>{
   META=await api.q('meta');RULE=Object.fromEntries(META.rules.map(r=>[r.k,r]));
   const info=await api.info();$('#ver').textContent='v'+info.version;

@@ -27,8 +27,16 @@ function errorsBook(rows, byUser) {
   return book([['Loi nhap lieu', rows.map(errRow)], ['Theo nguoi nhap', byUser]]);
 }
 function agingBook(items) {
-  return book([['Tuoi no', items.map(o => Object.assign({ 'TK': o.acc, 'Loại': o.accName, 'Đối tượng': o.bp, 'Số dư': o.bal },
-    ...BUCKETS.map((b, i) => ({ [b]: o.b[i] })), { 'Tuổi tối đa': o.maxAge }))]]);
+  const GRP = { thu: 'Phải thu', tra: 'Phải trả' };
+  const sum = new Map();
+  for (const o of items) {
+    const s = sum.get(o.acc) || sum.set(o.acc, { 'Nhóm': GRP[o.grp], 'TK': o.acc, 'Tên TK': o.accName, 'Số đối tượng': 0, 'Số dư': 0, ...Object.fromEntries(BUCKETS.map(b => [b, 0])), 'Dư ngược chiều': 0 }).get(o.acc);
+    if (o.bal > 0) { s['Số đối tượng']++; s['Số dư'] += o.bal; BUCKETS.forEach((b, i) => { s[b] += o.b[i]; }); } else s['Dư ngược chiều'] += o.bal;
+  }
+  const detail = items.filter(o => o.bal > 0).sort((a, c) => a.acc.localeCompare(c.acc) || c.bal - a.bal).map(o => Object.assign({ 'Nhóm': GRP[o.grp], 'TK': o.acc, 'Tên TK': o.accName, 'Đối tượng': o.bp,
+    'PS Nợ': o.dr, 'PS Có': o.cr, 'Số dư': o.bal }, ...BUCKETS.map((b, i) => ({ [b]: o.b[i] })), { 'Tuổi tối đa (ngày)': o.maxAge }));
+  const abn = items.filter(o => o.bal < 0).map(o => ({ 'Nhóm': GRP[o.grp], 'TK': o.acc, 'Tên TK': o.accName, 'Đối tượng': o.bp, 'PS Nợ': o.dr, 'PS Có': o.cr, 'Số dư ngược chiều': o.bal }));
+  return book([['Tong hop theo TK', [...sum.values()]], ['Chi tiet doi tuong', detail], ['Du nguoc chieu', abn]]);
 }
 function reportBook(rep, checked, todo) {
   const cross = (rows, label, name) => rows.map(r => ({ [label]: name(r.k), 'Tổng': r.n, 'Mức cao': r.high, 'Chưa xử lý': r.open, 'Đang xử lý': r.doing,
