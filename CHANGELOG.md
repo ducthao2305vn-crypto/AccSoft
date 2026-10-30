@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v1.2.0 – 30/10/2026
+Tab mới **Báo cáo & Thông báo**:
+- Báo cáo kết quả kiểm tra: tổng hợp theo loại lỗi và theo người nhập (đã khắc phục / không phải lỗi / còn tồn, % hoàn thành); in hoặc lưu PDF, xuất Excel.
+- Báo cáo lỗi cần khắc phục theo từng nhân viên, chọn mức độ tối thiểu và hạn khắc phục.
+- Gửi email thông báo qua SMTP (Office 365, Gmail, máy chủ nội bộ): nội dung HTML liệt kê lỗi + hướng dẫn chỉnh sửa, đính kèm file Excel riêng của từng người; email lấy tự động từ cột Created By, sửa được.
+- Gửi thử, xem trước email, lịch sử gửi; tuỳ chọn tự chuyển lỗi sang "Đang xử lý" sau khi gửi.
+- Mật khẩu SMTP được mã hoá bằng kho khoá của hệ điều hành.
+
 ## v1.1.0 – 30/10/2026
 Làm lại màn hình **Lỗi nhập liệu**:
 - Highlight theo mức độ: dòng lỗi Cao nền đỏ, viền màu theo mức; lỗi đã xử lý được làm mờ.

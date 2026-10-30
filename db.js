@@ -27,6 +27,9 @@ class Store {
         ${COLS.map(c => c[1] + ' ' + c[2]).join(', ')});
       CREATE INDEX IF NOT EXISTS ix_entries_date ON entries(account_date);
       CREATE INDEX IF NOT EXISTS ix_entries_import ON entries(import_id);
+      CREATE TABLE IF NOT EXISTS settings(k TEXT PRIMARY KEY, v TEXT);
+      CREATE TABLE IF NOT EXISTS mail_log(id INTEGER PRIMARY KEY, sent_at TEXT DEFAULT (datetime('now','localtime')), employee TEXT,
+        to_addr TEXT, subject TEXT, error_count INTEGER, status TEXT, info TEXT);
       CREATE TABLE IF NOT EXISTS reviews(err_key TEXT PRIMARY KEY, rule TEXT, document_no TEXT, status TEXT, note TEXT,
         snapshot TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')));`);
     s.save();
@@ -89,6 +92,16 @@ class Store {
       date_to=(SELECT max(account_date) FROM entries WHERE import_id=imports.id)`);
     this.db.run('DELETE FROM imports WHERE row_count=0');
     if (save) this.save();
+  }
+  getSetting(k) { const r = this.db.exec('SELECT v FROM settings WHERE k=?', [k]); return r.length ? r[0].values[0][0] : null; }
+  setSetting(k, v) { this.db.run('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v', [k, v]); this.save(); }
+  logMail(employee, to, subject, count, status, info) {
+    this.db.run('INSERT INTO mail_log(employee,to_addr,subject,error_count,status,info) VALUES(?,?,?,?,?,?)', [employee, to, subject, count, status, info]);
+    this.save();
+  }
+  mailLog() {
+    const r = this.db.exec('SELECT sent_at,employee,to_addr,error_count,status,info FROM mail_log ORDER BY id DESC LIMIT 500');
+    return r.length ? r[0].values.map(([at, employee, to, count, status, info]) => ({ at, employee, to, count, status, error: status === 'ok' ? '' : info })) : [];
   }
   getReviews() {
     const res = this.db.exec('SELECT err_key,rule,document_no,status,note,snapshot,updated_at FROM reviews');

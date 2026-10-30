@@ -1,7 +1,7 @@
 {
   "name": "accsoft",
   "productName": "AccSoft",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Phân tích sổ hạch toán ERP: lỗi nhập liệu, tuổi nợ, kết quả kinh doanh",
   "main": "main.js",
   "author": "AccSoft",
@@ -23,6 +23,7 @@
       "main.js",
       "preload.js",
       "db.js",
+      "mailer.js",
       "index.html",
       "vendor/**",
       "!node_modules/sql.js/{.devcontainer,documentation_index.md,logo.svg,*.md}",
@@ -66,6 +67,7 @@
     }
   },
   "dependencies": {
+    "nodemailer": "^6.9.16",
     "sql.js": "^1.11.0"
   }
 }

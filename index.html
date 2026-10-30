@@ -52,6 +52,8 @@ th{white-space:nowrap}#tErr td:nth-child(-n+3){white-space:nowrap}th.sort{cursor
 tr.cur td{outline:2px solid var(--acc);outline-offset:-2px}
 .kv{display:grid;grid-template-columns:180px 1fr;gap:2px 10px;font-size:13px}.kv div:nth-child(odd){color:var(--mut)}
 textarea{font:inherit;width:100%;min-height:70px;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
+@media print{header,nav,.noprint,#drawer{display:none!important}main>section{display:none}main>section#report{display:block!important}body{background:#fff;color:#000}.card{border:0}.tbl{max-height:none;overflow:visible}}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mut)}label:has(input[type=checkbox]){flex-direction:row;align-items:center;font-size:13px;color:var(--fg)}
 </style>
 </head>
 <body>
@@ -67,6 +69,7 @@ textarea{font:inherit;width:100%;min-height:70px;padding:6px;border:1px solid va
   <button data-t="aging">Công nợ & tuổi nợ</button>
   <button data-t="pl">Kết quả kinh doanh</button>
   <button data-t="cost">Cơ cấu chi phí</button>
+  <button data-t="report">Báo cáo & Thông báo</button>
   <button data-t="data">Quản lý dữ liệu</button>
 </nav>
 <main>
@@ -144,6 +147,43 @@ textarea{font:inherit;width:100%;min-height:70px;padding:6px;border:1px solid va
     </div>
     <div class="card"><h3>Biến động chi phí theo năm</h3><div class="tbl"><table id="tCost"></table></div></div>
   </section>
+  <section id="report" class="hide">
+    <div id="repBody"></div>
+    <div class="card printable">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">Báo cáo kết quả kiểm tra bút toán</h3>
+        <div class="row noprint" style="margin:0"><button class="b" id="repPrint">🖨 In / Lưu PDF</button><button class="b p" id="repXls">Xuất Excel</button></div></div>
+      <p class="mut" id="repPeriod"></p>
+      <div class="kpis" id="repKpi"></div>
+      <h4>Theo loại lỗi</h4><div class="tbl"><table id="tRepRule"></table></div>
+      <h4>Theo người nhập liệu</h4><div class="tbl"><table id="tRepUser"></table></div>
+    </div>
+    <div class="card noprint">
+      <h3>Báo cáo lỗi cần khắc phục & gửi thông báo</h3>
+      <div class="filters">
+        <label>Mức độ từ<select id="rSev"><option value="L">Tất cả mức</option><option value="M">Trung bình trở lên</option><option value="H">Chỉ mức cao</option></select></label>
+        <label>Hạn khắc phục<input type="date" id="rDeadline"></label>
+        <label style="grid-column:span 2"><input type="checkbox" id="rMark" checked> Sau khi gửi, chuyển lỗi "Chưa xử lý" → "Đang xử lý"</label>
+      </div>
+      <div class="grid2"><label>Nội dung mở đầu<textarea id="rIntro">Qua kiểm tra dữ liệu hạch toán, bộ phận kiểm soát phát hiện các bút toán dưới đây do bạn nhập cần được xem xét và chỉnh sửa. Vui lòng khắc phục theo hướng dẫn ở cột "Cần chỉnh sửa".</textarea></label>
+        <label>Chữ ký<textarea id="rSign">Trân trọng,
+Bộ phận Kế toán – Kiểm soát nội bộ</textarea></label></div>
+      <div class="row" style="margin-top:10px"><button class="b p" id="mSend">✉ Gửi email cho nhân viên đã chọn</button><button class="b" id="mTest">Gửi thử cho tôi</button><button class="b" id="mXlsAll">Xuất Excel tất cả</button><span id="mailState" class="mut"></span></div>
+      <div class="tbl"><table id="tTodo"></table></div>
+    </div>
+    <div class="grid2 noprint">
+      <div class="card" id="smtpCard"><h3>Cấu hình máy chủ gửi mail (SMTP)</h3>
+        <div class="filters" style="grid-template-columns:1fr 1fr">
+          <input id="s_host" placeholder="Máy chủ (vd smtp.office365.com)"><input id="s_port" placeholder="Cổng (587)">
+          <input id="s_user" placeholder="Tài khoản đăng nhập"><input id="s_pass" type="password">
+          <input id="s_from" placeholder="Người gửi (From)"><input id="s_cc" placeholder="CC mặc định (vd kế toán trưởng)">
+          <label><input type="checkbox" id="s_secure"> SSL (cổng 465)</label><label><input type="checkbox" id="s_self"> Chấp nhận chứng chỉ tự ký</label>
+        </div>
+        <div class="row"><button class="b p" id="s_save">Lưu & kiểm tra kết nối</button><span id="smtpMsg" class="mut"></span></div>
+        <p class="mut">Gmail/Office 365 cần dùng "App password". Mật khẩu được mã hoá bằng kho khoá của hệ điều hành.</p></div>
+      <div class="card"><h3>Lịch sử gửi email</h3><div class="tbl" style="max-height:300px"><table id="tMailLog"></table></div></div>
+    </div>
+  </section>
+
   <section id="data" class="hide">
     <div class="card">
       <h3>Dữ liệu theo tháng</h3>
@@ -565,6 +605,100 @@ function renderCost(){
    top(tc,60).map(([t,v])=>{const a=ty[t]||{},l=a[ys.at(-1)]||0,p=a[ys.at(-2)]||0;return `<tr><td>${esc(t)}</td>${ys.map(y=>`<td class=n>${fmt(a[y]||0)}</td>`).join('')}<td class=n>${pct(v/tot)}</td>`+(ys.length>1?`<td class=n>${p?pct((l-p)/Math.abs(p)):'mới'}</td>`:'')+'</tr>'}).join('');
 }
 
+/* ---------- Báo cáo & thông báo ---------- */
+const emailOf=u=>String(u||'').split(/[_\s]/).find(x=>/^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(x))||''; // 'ROSE_roselia.pinto@telemor.tl' → roselia.pinto@telemor.tl
+const shortName=u=>String(u||'').split('_')[0];
+let MAILTO={}; // email nhân viên người dùng đã sửa tay
+try{MAILTO=JSON.parse(localStorage.getItem('accsoft.mailto')||'{}')}catch(e){}
+const sevOK=(e,min)=>({H:0,M:1,L:2}[e.sev])<=({H:0,M:1,L:2}[min]);
+function todoErrs(){const min=$('#rSev').value;return ERRS.filter(e=>['open','doing'].includes(stOf(e))&&sevOK(e,min))}
+function byEmployee(list){const g=new Map();for(const e of list)(g.get(e.r.user)||g.set(e.r.user,[]).get(e.r.user)).push(e);return [...g.entries()].sort((a,b)=>b[1].length-a[1].length)}
+function renderReports(){
+  if(!ERRS.length){$('#repBody').innerHTML='<p class=mut>Chưa có dữ liệu.</p>';return}
+  const sc={open:0,doing:0,fixed:0,ignore:0};ERRS.forEach(e=>sc[stOf(e)]++);
+  const done=sc.fixed+sc.ignore,period=[...new Set(ROWS.map(r=>ym(r.date)).filter(Boolean))].sort();
+  $('#repKpi').innerHTML=[[ERRS.length.toLocaleString(),'Cảnh báo đã phát hiện'],[done.toLocaleString()+` (${pct(done/ERRS.length)})`,'Đã kiểm tra xong'],
+    [sc.fixed.toLocaleString(),'Đã khắc phục'],[sc.ignore.toLocaleString(),'Không phải lỗi'],[(sc.open+sc.doing).toLocaleString(),'Còn phải khắc phục'],
+    [ERRS.filter(e=>e.sev==='H'&&['open','doing'].includes(stOf(e))).length.toLocaleString(),'Lỗi mức cao chưa xử lý']].map(([b,s])=>`<div class="kpi"><b>${b}</b><span>${s}</span></div>`).join('');
+  $('#repPeriod').textContent=`Kỳ dữ liệu: ${period[0]||''} → ${period.at(-1)||''} · Lập ngày ${new Date().toLocaleDateString('vi')}`;
+  const cross=(keyFn,label)=>{const g=new Map();for(const e of ERRS){const k=keyFn(e);const o=g.get(k)||g.set(k,{n:0,H:0,open:0,doing:0,fixed:0,ignore:0}).get(k);o.n++;o[stOf(e)]++;if(e.sev==='H')o.H++}
+    return `<tr><th>${label}</th><th class=n>Tổng</th><th class=n>Mức cao</th><th class=n>Chưa xử lý</th><th class=n>Đang xử lý</th><th class=n>Đã khắc phục</th><th class=n>Không phải lỗi</th><th class=n>% hoàn thành</th></tr>`+
+      [...g.entries()].sort((a,b)=>b[1].n-a[1].n).map(([k,o])=>`<tr><td>${esc(k)}</td><td class=n>${o.n}</td><td class="n ${o.H?'neg':''}">${o.H}</td><td class=n>${o.open}</td><td class=n>${o.doing}</td><td class="n pos">${o.fixed}</td><td class=n>${o.ignore}</td><td class=n><b>${pct((o.fixed+o.ignore)/o.n)}</b></td></tr>`).join('')};
+  $('#tRepRule').innerHTML=cross(e=>RULE[e.k].n,'Loại lỗi');
+  $('#tRepUser').innerHTML=cross(e=>shortName(e.r.user),'Người nhập');
+  // Báo cáo cần khắc phục theo nhân viên
+  const groups=byEmployee(todoErrs()),log=REPLOG;
+  $('#tTodo').innerHTML='<tr><th><input type="checkbox" id="mAllEmp" checked></th><th>Nhân viên</th><th>Email</th><th class=n>Cần khắc phục</th><th class=n>Mức cao</th><th class=n>Chứng từ</th><th>Gửi lần cuối</th><th></th></tr>'+
+    groups.map(([u,L])=>{const em=MAILTO[u]??emailOf(u),last=log.find(x=>x.employee===u);
+      return `<tr><td><input type="checkbox" class="empChk" data-u="${esc(u)}" ${em?'checked':''}></td><td><b>${esc(shortName(u))}</b><div class=mut style="font-size:12px">${esc(u)}</div></td>
+      <td><input class="empMail" data-u="${esc(u)}" value="${esc(em)}" placeholder="nhập email" style="width:230px"></td><td class=n>${L.length}</td><td class="n neg">${L.filter(e=>e.sev==='H').length||''}</td>
+      <td class=n>${new Set(L.map(e=>e.r.doc)).size}</td><td class=mut>${last?esc(last.at)+(last.status==='ok'?' ✔':' ✖ '+esc(last.error||'')):''}</td>
+      <td><button class="b" data-prev="${esc(u)}">Xem email</button> <button class="b" data-xls="${esc(u)}">Excel</button></td></tr>`}).join('')||'<tr><td colspan=8 class=mut>Không còn lỗi cần khắc phục 🎉</td></tr>';
+  if(!DB)$('#mailState').textContent='Bản web không gửi được email trực tiếp – dùng nút "Mở trong ứng dụng email" hoặc tải Excel để gửi thủ công.';
+}
+const FIXCOLS=e=>{const r=e.r,rv=REV.get(e.key)||{};return {'Mức':{H:'Cao',M:'Trung bình',L:'Thấp'}[e.sev],'Loại lỗi':RULE[e.k].n,'Chi tiết':e.msg,'Cần chỉnh sửa':FIX[e.k]||'',
+  'Ngày HT':r.date?r.date.toLocaleDateString('vi'):'','Chứng từ':r.doc,'Line':r.line,'TK Nợ':r.drName,'TK Có':r.crName,'Số tiền':r.amt,'Diễn giải':r.desc,'Trạng thái':ST[stOf(e)],'Ghi chú kiểm soát':rv.note||''}};
+function employeeXlsx(u,L,asBase64){
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(L.map(FIXCOLS)),'Can khac phuc');
+  const name=`AccSoft_CanKhacPhuc_${shortName(u)}.xlsx`;
+  return asBase64?{name,base64:XLSX.write(wb,{type:'base64',bookType:'xlsx'})}:XLSX.writeFile(wb,name);
+}
+function mailHtml(u,L){
+  const dl=$('#rDeadline').value?new Date($('#rDeadline').value).toLocaleDateString('vi'):'',max=150,sorted=[...L].sort((a,b)=>a.sn-b.sn);
+  const td='style="border:1px solid #ddd;padding:4px 6px;vertical-align:top"',th='style="border:1px solid #ddd;padding:4px 6px;background:#f3f4f6;text-align:left"';
+  const sevCol={H:'#dc2626',M:'#d97706',L:'#6366f1'};
+  return `<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#111">
+  <p>Chào ${esc(shortName(u))},</p>
+  <p>${esc($('#rIntro').value).replace(/\n/g,'<br>')}</p>
+  <p>Tổng số bút toán cần khắc phục: <b>${L.length}</b> (mức cao: <b style="color:#dc2626">${L.filter(e=>e.sev==='H').length}</b>) trên <b>${new Set(L.map(e=>e.r.doc)).size}</b> chứng từ.${dl?` Hạn hoàn thành: <b>${dl}</b>.`:''}</p>
+  <table style="border-collapse:collapse;font-size:12px"><tr><th ${th}>Mức</th><th ${th}>Chứng từ</th><th ${th}>Ngày</th><th ${th}>Số tiền</th><th ${th}>Lỗi</th><th ${th}>Cần chỉnh sửa</th><th ${th}>Diễn giải</th><th ${th}>Ghi chú</th></tr>
+  ${sorted.slice(0,max).map(e=>`<tr><td ${td}><b style="color:${sevCol[e.sev]}">${{H:'Cao',M:'TB',L:'Thấp'}[e.sev]}</b></td><td ${td}>${esc(e.r.doc)}<br><small>line ${esc(e.r.line)}</small></td><td ${td}>${e.r.date?e.r.date.toLocaleDateString('vi'):''}</td><td ${td} align=right>${fmt2(e.r.amt)}</td><td ${td}><b>${esc(RULE[e.k].n)}</b><br>${esc(e.msg)}</td><td ${td}>${esc(FIX[e.k]||'')}</td><td ${td}>${esc(String(e.r.desc).slice(0,160))}</td><td ${td}>${esc((REV.get(e.key)||{}).note||'')}</td></tr>`).join('')}
+  </table>${L.length>max?`<p><i>… và ${L.length-max} dòng khác – xem file Excel đính kèm.</i></p>`:'<p>Danh sách đầy đủ trong file Excel đính kèm.</p>'}
+  <p>Sau khi chỉnh sửa trên ERP, vui lòng phản hồi email này để bộ phận kiểm soát cập nhật trạng thái.</p>
+  <p>${esc($('#rSign').value).replace(/\n/g,'<br>')}</p></div>`;
+}
+const mailSubject=u=>`[AccSoft] Danh sách bút toán cần khắc phục – ${shortName(u)}`;
+let REPLOG=[];
+async function refreshMailLog(){if(DB){REPLOG=await DB.mailLog();$('#tMailLog').innerHTML='<tr><th>Thời gian</th><th>Nhân viên</th><th>Email</th><th class=n>Số lỗi</th><th>Kết quả</th></tr>'+
+  REPLOG.slice(0,100).map(x=>`<tr><td>${esc(x.at)}</td><td>${esc(shortName(x.employee))}</td><td>${esc(x.to)}</td><td class=n>${x.count}</td><td class="${x.status==='ok'?'pos':'neg'}">${x.status==='ok'?'Đã gửi':'Lỗi: '+esc(x.error)}</td></tr>`).join('')}}
+function exportReport(){
+  const wb=XLSX.utils.book_new(),tbl=id=>XLSX.utils.table_to_sheet($(id));
+  XLSX.utils.book_append_sheet(wb,tbl('#tRepRule'),'Theo loai loi');XLSX.utils.book_append_sheet(wb,tbl('#tRepUser'),'Theo nguoi nhap');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(ERRS.filter(e=>['fixed','ignore'].includes(stOf(e))).map(e=>({...FIXCOLS(e),'Cập nhật':(REV.get(e.key)||{}).at||''}))),'Da kiem tra');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(todoErrs().map(e=>({'Nhân viên':e.r.user,...FIXCOLS(e)}))),'Can khac phuc');
+  XLSX.writeFile(wb,'AccSoft_BaoCaoKiemTra.xlsx');
+}
+function selectedEmployees(){const groups=new Map(byEmployee(todoErrs()));
+  return [...document.querySelectorAll('.empChk:checked')].map(c=>c.dataset.u).map(u=>({u,L:groups.get(u)||[],to:(MAILTO[u]??emailOf(u)).trim()})).filter(x=>x.L.length)}
+async function sendMails(test){
+  let list=selectedEmployees();if(!list.length)return alert('Chưa chọn nhân viên nào.');
+  if(test){const me=prompt('Gửi thử email của nhân viên đầu tiên đến địa chỉ:',(await DB.getSmtp()).from||'');if(!me)return;list=[{...list[0],to:me}]}
+  const bad=list.filter(x=>!/@/.test(x.to));if(bad.length)return alert('Thiếu email: '+bad.map(x=>shortName(x.u)).join(', '));
+  if(!test&&!confirm(`Gửi email cho ${list.length} nhân viên?\n`+list.map(x=>`• ${shortName(x.u)} <${x.to}> – ${x.L.length} lỗi`).join('\n')))return;
+  $('#mailState').textContent='Đang gửi…';
+  const res=await DB.sendMails(list.map(x=>({to:x.to,subject:mailSubject(x.u)+(test?' (THỬ)':''),html:mailHtml(x.u,x.L),attachment:employeeXlsx(x.u,x.L,true),employee:x.u,count:x.L.length})));
+  const ok=res.filter(r=>r.ok).length;$('#mailState').textContent=`Đã gửi ${ok}/${res.length}`+(ok<res.length?' – lỗi: '+res.filter(r=>!r.ok).map(r=>r.to+': '+r.error).join('; '):'');
+  if(!test&&$('#rMark').checked){const sent=new Set(res.filter(r=>r.ok).map(r=>r.to));
+    await saveReviews(list.filter(x=>sent.has(x.to)).flatMap(x=>x.L.filter(e=>stOf(e)==='open').map(e=>({key:e.key,rule:e.k,doc:e.r.doc,status:'doing',note:(REV.get(e.key)||{}).note||'',snapshot:snap(e)}))));renderErrors()}
+  await refreshMailLog();renderReports();
+}
+function previewMail(u){const L=new Map(byEmployee(todoErrs())).get(u)||[];
+  $('#dPane').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Xem trước email</h2><button class="b" id="dClose">✕ Đóng</button></div>
+   <div class="card"><div class="kv"><div>Đến</div><div>${esc((MAILTO[u]??emailOf(u)))}</div><div>Tiêu đề</div><div>${esc(mailSubject(u))}</div><div>Đính kèm</div><div>AccSoft_CanKhacPhuc_${esc(shortName(u))}.xlsx (${L.length} dòng)</div></div></div>
+   <div class="card" style="background:#fff;color:#111">${mailHtml(u,L)}</div>
+   <div class="row"><button class="b" id="pMailto">Mở trong ứng dụng email (không kèm file)</button></div>`;
+  $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
+  $('#pMailto').onclick=()=>{const body=`Chào ${shortName(u)},\n\n${$('#rIntro').value}\n\nSố bút toán cần khắc phục: ${L.length}. Chi tiết trong file Excel đính kèm.\n\n${$('#rSign').value}`;
+    employeeXlsx(u,L,false);location.href=`mailto:${encodeURIComponent(MAILTO[u]??emailOf(u))}?subject=${encodeURIComponent(mailSubject(u))}&body=${encodeURIComponent(body)}`};
+}
+async function loadSmtpForm(){if(!DB)return;const c=await DB.getSmtp();
+  for(const k of ['host','port','user','from','cc'])$('#s_'+k).value=c[k]||'';$('#s_secure').checked=!!c.secure;$('#s_self').checked=!!c.allowSelfSigned;
+  $('#s_pass').placeholder=c.hasPass?'•••••• (để trống = giữ nguyên)':'Mật khẩu / App password'}
+async function saveSmtpForm(){const v=k=>$('#s_'+k).value.trim();
+  await DB.setSmtp({host:v('host'),port:v('port')||'587',user:v('user'),pass:$('#s_pass').value,from:v('from'),cc:v('cc'),secure:$('#s_secure').checked,allowSelfSigned:$('#s_self').checked});
+  $('#s_pass').value='';await loadSmtpForm();
+  $('#smtpMsg').textContent='Đang kiểm tra kết nối…';const r=await DB.verifySmtp();$('#smtpMsg').textContent=r.ok?'✔ Kết nối SMTP thành công':'✖ '+r.error}
+
 /* ---------- Xuất Excel ---------- */
 function exportErr(){
   const data=filteredErrs().map(e=>{const r=e.r,ru=RULE[e.k],rv=REV.get(e.key)||{};return {'Mức':ru.s,'Trạng thái':ST[stOf(e)],'Ghi chú':rv.note||'','Mã lỗi':e.k,'Loại lỗi':ru.n,'Chi tiết':e.msg,'Cần chỉnh sửa':FIX[e.k]||'','Ngày HT':r.date,'Chứng từ':r.doc,'Line':r.line,
@@ -581,7 +715,7 @@ function exportAg(){
 
 /* ---------- Sự kiện ---------- */
 $('#tabs').onclick=e=>{const t=e.target.dataset.t;if(!t)return;document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b===e.target));
-  document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide',s.id!==t));Object.values(charts).forEach(c=>c.resize())};
+  document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide',s.id!==t));if(t==='report')renderReports();Object.values(charts).forEach(c=>c.resize())};
 $('#file').onchange=e=>loadFiles([...e.target.files]).catch(err=>$('#status').textContent='Lỗi đọc file: '+err.message);
 const drop=$('#drop');drop.ondragover=e=>e.preventDefault();drop.ondrop=e=>{e.preventDefault();loadFiles([...e.dataTransfer.files])};
 $('#clear').onclick=async()=>{if(DB){if(!confirm('Xoá toàn bộ dữ liệu trong cơ sở dữ liệu SQLite?'))return;await DB.clear();return reloadFromDb()}
@@ -611,6 +745,15 @@ $('#bulkSt').onchange=async e=>{const st=e.target.value;e.target.value='';if(!st
   if(!confirm(`Đặt trạng thái "${ST[st]}" cho ${L.length.toLocaleString()} cảnh báo đang lọc?`))return;
   await saveReviews(L.map(x=>({key:x.key,rule:x.k,doc:x.r.doc,status:st,note:(REV.get(x.key)||{}).note||'',snapshot:snap(x)})));renderErrors()};
 loadReviews().then(()=>{if(ERRS.length)renderErrors()});
+['rIntro','rSign','rDeadline','rSev'].forEach(id=>{try{const v=localStorage.getItem('accsoft.'+id);if(v!=null)$('#'+id).value=v}catch(e){}
+  $('#'+id).addEventListener('change',()=>{try{localStorage.setItem('accsoft.'+id,$('#'+id).value)}catch(e){};renderReports()})});
+$('#repPrint').onclick=()=>window.print();$('#repXls').onclick=exportReport;
+$('#tTodo').onchange=e=>{if(e.target.id==='mAllEmp')document.querySelectorAll('.empChk').forEach(c=>c.checked=e.target.checked);
+  if(e.target.classList.contains('empMail')){MAILTO[e.target.dataset.u]=e.target.value.trim();try{localStorage.setItem('accsoft.mailto',JSON.stringify(MAILTO))}catch(_){}}};
+$('#tTodo').onclick=e=>{const p=e.target.dataset.prev,x=e.target.dataset.xls;if(p)previewMail(p);if(x)employeeXlsx(x,new Map(byEmployee(todoErrs())).get(x)||[],false)};
+$('#mXlsAll').onclick=()=>{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(todoErrs().map(e=>({'Nhân viên':e.r.user,...FIXCOLS(e)}))),'Can khac phuc');XLSX.writeFile(wb,'AccSoft_CanKhacPhuc_TatCa.xlsx')};
+if(DB){$('#mSend').onclick=()=>sendMails(false);$('#mTest').onclick=()=>sendMails(true);$('#s_save').onclick=saveSmtpForm;loadSmtpForm();refreshMailLog()}
+else{['#mSend','#mTest'].forEach(s=>$(s).disabled=true);$('#smtpCard').classList.add('hide')}
 
 ['#asOf','#term','#agAcc'].forEach(s=>$(s).onchange=renderAging);
 $('#expErr').onclick=exportErr;$('#expAg').onclick=exportAg;

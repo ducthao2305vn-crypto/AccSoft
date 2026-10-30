@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { Store } = require('./db');
+const mailer = require('./mailer');
 
 let store;
 async function initDb() {
@@ -16,6 +17,11 @@ async function initDb() {
   ipcMain.handle('db:path', () => file);
   ipcMain.handle('db:getReviews', () => store.getReviews());
   ipcMain.handle('db:setReviews', (_e, list) => store.setReviews(list));
+  ipcMain.handle('smtp:get', () => mailer.getConfig(store));
+  ipcMain.handle('smtp:set', (_e, cfg) => mailer.setConfig(store, cfg));
+  ipcMain.handle('smtp:verify', () => mailer.verify(store).then(() => ({ ok: true }), e => ({ ok: false, error: String(e.message || e) })));
+  ipcMain.handle('mail:send', (_e, msgs) => mailer.sendAll(store, msgs));
+  ipcMain.handle('mail:log', () => store.mailLog());
   ipcMain.handle('app:version', () => app.getVersion());
   ipcMain.handle('db:openFolder', () => shell.showItemInFolder(file));
 }
