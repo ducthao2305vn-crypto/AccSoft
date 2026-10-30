@@ -1,12 +1,29 @@
 name: Build & release desktop app
+# Tự phát hành khi version trong package.json chưa có Release tương ứng
 on:
   push:
-    tags: ['v*']
+    branches: [main, 'claude/**']
+    paths: [package.json, CHANGELOG.md, '.github/workflows/build-desktop.yml']
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      exists: ${{ steps.v.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
   build:
+    needs: check
+    if: needs.check.outputs.exists == 'false'
     strategy:
       fail-fast: false
       matrix:
@@ -33,17 +50,19 @@ jobs:
             dist/*.dmg
             dist/*.AppImage
   release:
-    needs: build
-    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/v') }}
+    needs: [check, build]
+    if: ${{ !cancelled() && needs.check.outputs.exists == 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with: { path: out, merge-multiple: true }
       - name: Release notes from CHANGELOG
-        run: awk -v t="## ${GITHUB_REF_NAME}" '$0 ~ "^## " {p = index($0, t) == 1} p' CHANGELOG.md > notes.md
+        run: awk -v t="## ${{ needs.check.outputs.tag }}" '$0 ~ "^## " {p = index($0, t) == 1} p' CHANGELOG.md > notes.md
       - uses: softprops/action-gh-release@v2
         with:
-          name: AccSoft ${{ github.ref_name }}
+          tag_name: ${{ needs.check.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: AccSoft ${{ needs.check.outputs.tag }}
           body_path: notes.md
           files: out/*
