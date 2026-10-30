@@ -39,7 +39,7 @@ button.b{cursor:pointer}button.b.p{background:var(--acc);color:#fff;border-color
 </head>
 <body>
 <header>
-  <h1>AccSoft · Phân tích dữ liệu hạch toán</h1>
+  <h1>AccSoft · Phân tích dữ liệu hạch toán <small class="mut" id="ver"></small></h1>
   <label class="b">📂 Nạp file Excel/CSV <input id="file" type="file" accept=".xlsx,.xls,.csv" multiple hidden></label>
   <span id="status" class="mut">Chưa có dữ liệu. Có thể nạp nhiều file (nhiều tháng/năm) – dữ liệu được gộp, xử lý hoàn toàn trên máy bạn.</span>
   <button class="b" id="clear">Xoá dữ liệu</button>
@@ -455,6 +455,7 @@ $('#mAll').onclick=()=>{EXCL.clear();applyMonths()};
 $('#mNone').onclick=()=>{ALL.forEach(r=>EXCL.add(ym(r.date)));applyMonths()};
 if(!DB)$('#dbCard').classList.add('hide');
 if(DB){
+  DB.version().then(v=>$('#ver').textContent='v'+v);
   DB.dbPath().then(p=>$('#dbPath').textContent=p);$('#openDb').onclick=()=>DB.openDbFolder();
   $('#tImports').onclick=async e=>{const id=e.target.dataset.del;if(!id||!confirm('Xoá dữ liệu của lần nạp này?'))return;await DB.deleteImport(+id);reloadFromDb()};
   reloadFromDb();

@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('accsoft', {
   listImports: () => ipcRenderer.invoke('db:list'),
   deleteImport: id => ipcRenderer.invoke('db:delete', id),
   clear: () => ipcRenderer.invoke('db:clear'),
+  version: () => ipcRenderer.invoke('app:version'),
   dbPath: () => ipcRenderer.invoke('db:path'),
   openDbFolder: () => ipcRenderer.invoke('db:openFolder'),
 });

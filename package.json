@@ -40,24 +40,30 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "AccSoft"
+      "shortcutName": "AccSoft",
+      "artifactName": "AccSoft-Setup-${version}.${ext}"
     },
     "mac": {
       "target": [
         "dmg"
       ],
-      "category": "public.app-category.finance"
+      "category": "public.app-category.finance",
+      "artifactName": "AccSoft-${version}-mac.${ext}"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "Office"
+      "category": "Office",
+      "artifactName": "AccSoft-${version}-linux.${ext}"
     },
     "electronLanguages": [
       "vi",
       "en-US"
-    ]
+    ],
+    "portable": {
+      "artifactName": "AccSoft-Portable-${version}.${ext}"
+    }
   },
   "dependencies": {
     "sql.js": "^1.11.0"

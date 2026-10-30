@@ -14,13 +14,14 @@ async function initDb() {
   ipcMain.handle('db:delete', (_e, id) => store.deleteImport(id));
   ipcMain.handle('db:clear', () => store.clear());
   ipcMain.handle('db:path', () => file);
+  ipcMain.handle('app:version', () => app.getVersion());
   ipcMain.handle('db:openFolder', () => shell.showItemInFolder(file));
 }
 
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400, height: 900, minWidth: 900, minHeight: 600,
-    title: 'AccSoft – Phân tích sổ hạch toán',
+    title: `AccSoft ${app.getVersion()} – Phân tích sổ hạch toán`,
     icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true },
   });

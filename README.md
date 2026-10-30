@@ -21,6 +21,13 @@
 - Chạy offline hoàn toàn (thư viện nằm trong `vendor/`).
 
 ## Tải về dùng ngay (Windows 64-bit)
-1. Tải file [`release/AccSoft-Windows-x64.7z`](release/AccSoft-Windows-x64.7z) (bấm **Download raw**).
-2. Giải nén: Windows 11 bấm chuột phải → *Extract All*; Windows 10 dùng 7-Zip (https://7-zip.org).
-3. Mở thư mục `AccSoft` → chạy `AccSoft.exe`. Nếu SmartScreen cảnh báo: *More info* → *Run anyway*.
+Vào trang **[Releases](https://github.com/ducthao2305vn-crypto/AccSoft/releases/latest)**, tải:
+- `AccSoft-Setup-x.y.z.exe` – bộ cài đặt (có shortcut, gỡ cài đặt trong Control Panel), hoặc
+- `AccSoft-Portable-x.y.z.exe` – chạy ngay không cần cài.
+
+Nếu SmartScreen cảnh báo: *More info* → *Run anyway* (ứng dụng chưa ký số).
+Dự phòng: bản nén `release/AccSoft-Windows-x64.7z` trong repo.
+
+### Phát hành phiên bản mới
+1. Sửa `version` trong `package.json` (vd. `1.1.0`) và thêm mục `## v1.1.0` vào `CHANGELOG.md`.
+2. Commit, tạo tag `v1.1.0` và push tag → GitHub Actions tự build và tạo Release kèm file cài.
