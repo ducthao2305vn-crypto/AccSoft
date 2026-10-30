@@ -6,7 +6,9 @@ let store;
 async function initDb() {
   const file = path.join(app.getPath('userData'), 'accsoft.db');
   store = await Store.open(file);
-  ipcMain.handle('db:import', (_e, name, hash, rows) => store.importRows(name, hash, rows));
+  ipcMain.handle('db:import', (_e, name, hash, rows, replace) => store.importRows(name, hash, rows, replace));
+  ipcMain.handle('db:months', () => store.listMonths());
+  ipcMain.handle('db:deleteMonth', (_e, ym) => store.deleteMonth(ym));
   ipcMain.handle('db:load', () => store.loadAll());
   ipcMain.handle('db:list', () => store.listImports());
   ipcMain.handle('db:delete', (_e, id) => store.deleteImport(id));

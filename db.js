@@ -35,9 +35,13 @@ class Store {
     fs.writeFileSync(tmp, Buffer.from(this.db.export()));
     fs.renameSync(tmp, this.file);
   }
-  importRows(fileName, hash, rows) {
-    const dup = this.db.exec('SELECT file_name, imported_at FROM imports WHERE file_hash=?', [hash]);
-    if (dup.length) return { ok: false, reason: `File đã được nạp trước đó (${dup[0].values[0][0]}, lúc ${dup[0].values[0][1]}).` };
+  importRows(fileName, hash, rows, replace) {
+    // Chống trùng theo tháng: tháng đã có dữ liệu thì phải xoá (thay thế) trước khi nạp
+    const months = [...new Set(rows.map(r => r.date && r.date.slice(0, 7)).filter(Boolean))];
+    const exist = months.filter(m => this.monthRows(m) > 0);
+    if (exist.length && !replace) return { ok: false, conflict: exist };
+    exist.forEach(m => this.deleteMonth(m, false));
+    this.db.run('DELETE FROM imports WHERE file_hash=?', [hash]);
     const dates = rows.map(r => r.date).filter(Boolean).sort();
     this.db.run('BEGIN');
     try {
@@ -66,6 +70,23 @@ class Store {
   listImports() {
     const res = this.db.exec('SELECT id,file_name,row_count,date_from,date_to,imported_at FROM imports ORDER BY date_from, id');
     return res.length ? res[0].values.map(([id, file, rows, from, to, at]) => ({ id, file, rows, from, to, at })) : [];
+  }
+  monthRows(ym) {
+    return this.db.exec('SELECT count(*) FROM entries WHERE substr(account_date,1,7)=?', [ym])[0].values[0][0];
+  }
+  listMonths() {
+    const res = this.db.exec(`SELECT substr(e.account_date,1,7) ym, count(*), group_concat(DISTINCT i.file_name)
+      FROM entries e JOIN imports i ON i.id=e.import_id WHERE e.account_date IS NOT NULL GROUP BY ym ORDER BY ym`);
+    return res.length ? res[0].values.map(([ym, rows, files]) => ({ ym, rows, files })) : [];
+  }
+  deleteMonth(ym, save = true) {
+    this.db.run('DELETE FROM entries WHERE substr(account_date,1,7)=?', [ym]);
+    // Cập nhật lại các lần nạp bị ảnh hưởng; lần nạp không còn dòng nào thì xoá
+    this.db.run(`UPDATE imports SET row_count=(SELECT count(*) FROM entries WHERE import_id=imports.id),
+      date_from=(SELECT min(account_date) FROM entries WHERE import_id=imports.id),
+      date_to=(SELECT max(account_date) FROM entries WHERE import_id=imports.id)`);
+    this.db.run('DELETE FROM imports WHERE row_count=0');
+    if (save) this.save();
   }
   deleteImport(id) { this.db.run('DELETE FROM imports WHERE id=?', [id]); this.save(); }
   clear() { this.db.run('DELETE FROM imports'); this.db.run('VACUUM'); this.save(); }

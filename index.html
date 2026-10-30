@@ -50,7 +50,7 @@ button.b{cursor:pointer}button.b.p{background:var(--acc);color:#fff;border-color
   <button data-t="aging">Công nợ & tuổi nợ</button>
   <button data-t="pl">Kết quả kinh doanh</button>
   <button data-t="cost">Cơ cấu chi phí</button>
-  <button data-t="data" id="tabData" class="hide">Dữ liệu (SQLite)</button>
+  <button data-t="data">Quản lý dữ liệu</button>
 </nav>
 <main>
   <section id="overview">
@@ -115,17 +115,28 @@ button.b{cursor:pointer}button.b.p{background:var(--acc);color:#fff;border-color
   </section>
   <section id="data" class="hide">
     <div class="card">
+      <h3>Dữ liệu theo tháng</h3>
+      <div class="row">
+        <label class="b p">➕ Thêm tháng (nạp file) <input id="file2" type="file" accept=".xlsx,.xls,.csv" multiple hidden></label>
+        <button class="b" id="mAll">Chọn tất cả</button><button class="b" id="mNone">Bỏ chọn tất cả</button>
+        <span class="mut" id="mInfo"></span>
+      </div>
+      <p class="mut">Bỏ tích một tháng để loại tháng đó khỏi phân tích (dữ liệu vẫn được giữ). Nút <b>Xoá</b> xoá hẳn dữ liệu tháng đó. Nạp file có tháng đã tồn tại sẽ được hỏi để thay thế.</p>
+      <div id="months"></div>
+    </div>
+    <div class="card" id="dbCard">
       <h3>Các file đã nạp vào cơ sở dữ liệu</h3>
       <div class="row"><span class="mut">CSDL: <code id="dbPath"></code></span><button class="b" id="openDb">Mở thư mục</button></div>
       <div class="tbl"><table id="tImports"></table></div>
-      <p class="mut">Mỗi file chỉ nạp một lần (kiểm tra theo mã băm nội dung). Xoá một lần nạp sẽ xoá toàn bộ dòng hạch toán của file đó. Có thể sao lưu bằng cách chép file accsoft.db.</p>
+      <p class="mut">Mỗi tháng chỉ có một bộ dữ liệu (nạp lại sẽ hỏi thay thế). Xoá một lần nạp sẽ xoá toàn bộ dòng hạch toán của file đó. Có thể sao lưu bằng cách chép file accsoft.db.</p>
     </div>
   </section>
 </main>
 
 <script>
 "use strict";
-let ROWS=[], ERRS=[], AG=[], charts={};
+let ALL=[], ROWS=[], ERRS=[], AG=[], charts={};
+let EXCL=new Set();try{EXCL=new Set(JSON.parse(localStorage.getItem('accsoft.excl')||'[]'))}catch(e){}
 const $=s=>document.querySelector(s);
 const fmt=v=>v==null||isNaN(v)?'':Math.round(v).toLocaleString('en-US');
 const fmt2=v=>(+v).toLocaleString('en-US',{maximumFractionDigits:2});
@@ -163,19 +174,42 @@ async function loadFiles(files){
     if(DB){
       $('#status').textContent='Đang lưu '+f.name+' vào SQLite…';
       const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',buf))].map(b=>b.toString(16).padStart(2,'0')).join('');
-      const res=await DB.importRows(f.name,hash,rows.map(r=>({...r,date:isoDate(r.date),due:isoDate(r.due)})));
-      if(!res.ok)msgs.push(f.name+': '+res.reason);
-    }else ROWS.push(...rows);
+      const data=rows.map(r=>({...r,date:isoDate(r.date),due:isoDate(r.due)}));
+      let res=await DB.importRows(f.name,hash,data,false);
+      if(res.conflict){
+        if(confirm(`${f.name}: các tháng ${res.conflict.join(', ')} đã có dữ liệu.\nOK = thay thế dữ liệu các tháng này · Huỷ = bỏ qua file`))res=await DB.importRows(f.name,hash,data,true);
+        else{msgs.push(f.name+': bỏ qua');continue}
+      }
+    }else{
+      const ms=new Set(rows.map(r=>ym(r.date)).filter(Boolean)),ex=[...ms].filter(m=>ALL.some(r=>ym(r.date)===m));
+      if(ex.length){if(!confirm(`${f.name}: các tháng ${ex.join(', ')} đã có dữ liệu.\nOK = thay thế · Huỷ = bỏ qua file`)){msgs.push(f.name+': bỏ qua');continue}
+        ALL=ALL.filter(r=>!ex.includes(ym(r.date)))}
+      ALL.push(...rows);
+    }
+    rows.forEach(r=>EXCL.delete(ym(r.date)));
   }
-  if(DB)await reloadFromDb();else{ROWS.forEach((r,i)=>r.id=i+1);analyze()}
+  if(DB)await reloadFromDb();else applyMonths()
   if(msgs.length)alert(msgs.join('\n'));
 }
 async function reloadFromDb(){
   $('#status').textContent='Đang đọc cơ sở dữ liệu…';
-  ROWS=(await DB.loadAll()).map((r,i)=>({...r,id:i+1,date:r.date?parseDate(r.date.split('-').reverse().join('/')):null,due:r.due?parseDate(r.due.split('-').reverse().join('/')):null}));
-  $('#asOf').value='';
-  analyze();renderImports();
-  if(!ROWS.length)$('#status').textContent='Cơ sở dữ liệu trống – hãy nạp file.';
+  ALL=(await DB.loadAll()).map((r,i)=>({...r,id:i+1,date:r.date?parseDate(r.date.split('-').reverse().join('/')):null,due:r.due?parseDate(r.due.split('-').reverse().join('/')):null}));
+  applyMonths();renderImports();
+  if(!ALL.length)$('#status').textContent='Cơ sở dữ liệu trống – hãy nạp file.';
+}
+function applyMonths(){
+  try{localStorage.setItem('accsoft.excl',JSON.stringify([...EXCL]))}catch(e){}
+  ROWS=ALL.filter(r=>!EXCL.has(ym(r.date)));ROWS.forEach((r,i)=>r.id=i+1);
+  $('#asOf').value='';analyze();renderMonths();
+}
+function renderMonths(){
+  const g={};for(const r of ALL){const m=ym(r.date)||'(không ngày)';(g[m]??={rows:0,amt:0,files:new Set()});g[m].rows++;g[m].files.add(r.file)}
+  const years={};Object.keys(g).sort().forEach(m=>(years[m.slice(0,4)]??=[]).push(m));
+  const on=Object.keys(g).filter(m=>!EXCL.has(m));
+  $('#mInfo').textContent=`Đang phân tích ${on.length}/${Object.keys(g).length} tháng · ${ROWS.length.toLocaleString()} dòng`;
+  $('#months').innerHTML=Object.entries(years).map(([y,ms])=>`<h4>Năm ${y}</h4><div class="tbl"><table><tr><th>Phân tích</th><th>Tháng</th><th class=n>Số dòng</th><th>File nguồn</th><th></th></tr>`+
+    ms.map(m=>`<tr><td><input type="checkbox" data-m="${m}" ${EXCL.has(m)?'':'checked'}></td><td>${m}</td><td class=n>${g[m].rows.toLocaleString()}</td><td class=mut>${esc([...g[m].files].join(', '))}</td><td><button class="b" data-delm="${m}">Xoá</button></td></tr>`).join('')+'</table></div>').join('')
+    ||'<p class=mut>Chưa có dữ liệu.</p>';
 }
 async function renderImports(){
   const list=await DB.listImports();
@@ -412,9 +446,15 @@ $('#tabs').onclick=e=>{const t=e.target.dataset.t;if(!t)return;document.querySel
 $('#file').onchange=e=>loadFiles([...e.target.files]).catch(err=>$('#status').textContent='Lỗi đọc file: '+err.message);
 const drop=$('#drop');drop.ondragover=e=>e.preventDefault();drop.ondrop=e=>{e.preventDefault();loadFiles([...e.dataTransfer.files])};
 $('#clear').onclick=async()=>{if(DB){if(!confirm('Xoá toàn bộ dữ liệu trong cơ sở dữ liệu SQLite?'))return;await DB.clear();return reloadFromDb()}
-  ROWS=[];ERRS=[];$('#asOf').value='';$('#status').textContent='Đã xoá dữ liệu.';analyze()};
+  ALL=[];applyMonths();$('#status').textContent='Đã xoá dữ liệu.'};
+$('#file2').onchange=e=>loadFiles([...e.target.files]).catch(err=>alert('Lỗi đọc file: '+err.message));
+$('#months').onchange=e=>{const m=e.target.dataset.m;if(!m)return;e.target.checked?EXCL.delete(m):EXCL.add(m);applyMonths()};
+$('#months').onclick=async e=>{const m=e.target.dataset.delm;if(!m||!confirm(`Xoá hẳn toàn bộ dữ liệu tháng ${m}?`))return;
+  EXCL.delete(m);if(DB){await DB.deleteMonth(m);reloadFromDb()}else{ALL=ALL.filter(r=>ym(r.date)!==m);applyMonths()}};
+$('#mAll').onclick=()=>{EXCL.clear();applyMonths()};
+$('#mNone').onclick=()=>{ALL.forEach(r=>EXCL.add(ym(r.date)));applyMonths()};
+if(!DB)$('#dbCard').classList.add('hide');
 if(DB){
-  $('#tabData').classList.remove('hide');
   DB.dbPath().then(p=>$('#dbPath').textContent=p);$('#openDb').onclick=()=>DB.openDbFolder();
   $('#tImports').onclick=async e=>{const id=e.target.dataset.del;if(!id||!confirm('Xoá dữ liệu của lần nạp này?'))return;await DB.deleteImport(+id);reloadFromDb()};
   reloadFromDb();

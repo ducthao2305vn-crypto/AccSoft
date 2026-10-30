@@ -14,8 +14,8 @@
 - Doanh thu viễn thông ghi nhận từ BCCS nếu không có trong file xuất thì P&L sẽ thiếu doanh thu.
 
 ## Bản desktop (Electron + SQLite)
-- Dữ liệu nạp vào được lưu vĩnh viễn trong file SQLite `accsoft.db` (Windows: `%APPDATA%\AccSoft\accsoft.db`). Tab **Dữ liệu (SQLite)** liệt kê các lần nạp, cho xoá từng lần, mở thư mục để sao lưu.
-- Mỗi file chỉ nạp một lần (chống trùng theo SHA-256). Bảng `imports` lưu các lần nạp, bảng `entries` lưu dòng hạch toán – có thể truy vấn bằng DB Browser for SQLite / Excel ODBC.
+- Dữ liệu nạp vào được lưu vĩnh viễn trong file SQLite `accsoft.db` (Windows: `%APPDATA%\AccSoft\accsoft.db`). Tab **Quản lý dữ liệu**: danh sách tháng theo năm – bỏ tích để loại tháng khỏi phân tích, Xoá để xoá hẳn tháng, "Thêm tháng" để nạp file; tháng đã có sẽ được hỏi thay thế.
+- Bảng `imports` lưu các lần nạp, bảng `entries` lưu dòng hạch toán – có thể truy vấn bằng DB Browser for SQLite / Excel ODBC.
 - Chạy thử: `npm install` rồi `npm start`.
 - Đóng gói: GitHub → Actions → **Build desktop app** → Run workflow (hoặc push tag `v1.0.0`); tải file `.exe` (bộ cài + bản portable), `.dmg`, `.AppImage` ở mục Artifacts. Trên Windows có thể build trực tiếp: `npm run dist:win`.
 - Chạy offline hoàn toàn (thư viện nằm trong `vendor/`).
