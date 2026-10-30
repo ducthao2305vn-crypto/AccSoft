@@ -3,7 +3,7 @@
 const { parentPort, workerData } = require('worker_threads');
 const fs = require('fs');
 const { open, COLS, SEL_ENTRY, rowFromDb } = require('./db');
-const { checkRow, errKey, code, fmt2 } = require('./rules');
+const { checkRow, errKey, code, fmt2, RULES_VERSION } = require('./rules');
 
 const { db } = open(workerData.dbPath);
 const post = m => parentPort.postMessage(m);
@@ -62,12 +62,10 @@ function normalize(vals, map) {
 
 /* ---------- Ghi CSDL ---------- */
 const insEntry = db.prepare(`INSERT INTO entries(import_id, ym, ${COLS.map(c => c[1]).join(',')}) VALUES(?,?${',?'.repeat(COLS.length)})`);
-const insErr = db.prepare('INSERT INTO errors(entry_id, rule, sev, msg, err_key) VALUES(?,?,?,?,?)');
-const toDate = s => { if (!s) return null; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const insErrRaw = db.prepare('INSERT INTO errors(entry_id, rule, sev, msg, err_key) VALUES(?,?,?,?,?)'), insErr = insErrRaw;
 function writeRow(importId, r) {
   const { lastInsertRowid: id } = insEntry.run(importId, r.date ? r.date.slice(0, 7) : null, ...COLS.map(([k]) => r[k] ?? null));
-  const rr = { ...r, date: toDate(r.date), due: toDate(r.due), _schema: 2 };
-  for (const e of checkRow(rr)) insErr.run(id, e.k, e.s, e.msg, errKey(e.k, rr));
+  void id; // nạp nhanh: không chạy quy tắc – phân tích riêng bằng nút "Phân tích dữ liệu"
 }
 
 /* ---------- Đọc file dạng luồng ---------- */
@@ -132,97 +130,148 @@ function deleteMonths(months, exceptImport = -1) {
 }
 
 /* ---------- Quy tắc toàn cục (trùng lặp, bất thường) ---------- */
-function setRules() {
-  post({ type: 'progress', label: 'Đang rà soát toàn bộ dữ liệu (trùng lặp, bất thường, chứng từ, chia nhỏ khoản chi)…' });
+// scope = {from,to}: so sánh trên toàn bộ dữ liệu đã nạp nhưng chỉ gắn lỗi cho bút toán trong kỳ
+function setRules(scope = {}) {
+  post({ type: 'progress', label: 'Đang rà soát trùng lặp, bất thường, chứng từ, chia nhỏ khoản chi, tồn kho…' });
   db.exec('BEGIN');
-  db.exec(`DELETE FROM errors WHERE rule IN ('DUPLICATE','OUTLIER','DOC_MULTI_MONTH','SPLIT_PAYMENT','RARE_PAIR','INV_NEGATIVE')`);
+  // Điều kiện kỳ đưa thẳng vào truy vấn: chỉ lấy ứng viên trong kỳ, phép so sánh vẫn dựa trên toàn bộ dữ liệu
+  const S = t => (scope.from ? ` AND ${t}ym>='${scope.from}'` : '') + (scope.to ? ` AND ${t}ym<='${scope.to}'` : '');
+  const inYm = y => (!scope.from || y >= scope.from) && (!scope.to || y <= scope.to);
+  if (!scope.from && !scope.to) db.exec(`DELETE FROM errors WHERE rule IN ('DUPLICATE','OUTLIER','DOC_MULTI_MONTH','SPLIT_PAYMENT','RARE_PAIR','INV_NEGATIVE')`);
   const keyOf = (k, r) => errKey(k, { doc: r.doc, line: r.line, dr: r.dr, cr: r.cr, amt: r.amt });
   const F = (t = '') => `${t}amount<>0 AND ifnull(${t}source_table,'') NOT LIKE '%Depreciation%' AND ifnull(${t}source_table,'') NOT LIKE '%Distribution%' AND ifnull(${t}source_table,'') NOT LIKE '%CIP%'`;
   db.exec(`DROP TABLE IF EXISTS temp.dg;
     CREATE TEMP TABLE dg AS SELECT acc_debit a, acc_credit b, ifnull(partner_debit,'') p, ifnull(partner_credit,'') q, amount m, lower(trim(ifnull(description,''))) d
-      FROM entries WHERE ${F()} GROUP BY 1,2,3,4,5,6 HAVING count(DISTINCT document_no)>1;
+      FROM entries WHERE ${F()} GROUP BY 1,2,3,4,5,6 HAVING count(DISTINCT document_no)>1${scope.from || scope.to ? ` AND sum(1${S('')})>0` : ''};
     CREATE INDEX temp.ix_dg ON dg(a,b,m);`);
   const dups = db.prepare(`SELECT e.id, e.document_no doc, e.line_no line, e.acc_debit dr, e.acc_credit cr, e.amount amt, dg.rowid grp
     FROM entries e JOIN dg ON dg.a=e.acc_debit AND dg.b=e.acc_credit AND dg.m=e.amount AND dg.p=ifnull(e.partner_debit,'')
       AND dg.q=ifnull(e.partner_credit,'') AND dg.d=lower(trim(ifnull(e.description,''))) WHERE ${F('e.')}`).all();
+  const dupIn = db.prepare('SELECT ym FROM entries WHERE id=?');
   const groups = new Map();
   for (const r of dups) (groups.get(r.grp) || groups.set(r.grp, []).get(r.grp)).push(r);
   for (const arr of groups.values()) {
     const docs = [...new Set(arr.map(x => x.doc))];
-    for (const r of arr) insErr.run(r.id, 'DUPLICATE', 'H', `${docs.length} chứng từ: ${docs.slice(0, 4).join(', ')}`, keyOf('DUPLICATE', r));
+    for (const r of arr) if (inYm(dupIn.get(r.id).ym)) insErr.run(r.id, 'DUPLICATE', 'H', `${docs.length} chứng từ: ${docs.slice(0, 4).join(', ')}`, keyOf('DUPLICATE', r));
   }
   const EXP = `substr(acc_debit,1,1) IN ('6','8') AND acc_debit NOT LIKE '911%' AND type_of_cost IS NOT NULL AND amount>0
     AND ifnull(source_table,'') NOT LIKE '%Depreciation%' AND ifnull(source_table,'') NOT LIKE '%Distribution%' AND ifnull(source_table,'') NOT LIKE '%CIP%'`;
-  for (const { t } of db.prepare(`SELECT type_of_cost t FROM entries WHERE ${EXP} GROUP BY type_of_cost HAVING count(*)>=10`).all()) {
-    const c = db.prepare(`SELECT count(*) n FROM entries WHERE ${EXP} AND type_of_cost=?`).get(t).n;
-    const med = db.prepare(`SELECT amount FROM entries WHERE ${EXP} AND type_of_cost=? ORDER BY amount LIMIT 1 OFFSET ?`).get(t, c >> 1).amount;
-    for (const r of db.prepare(`SELECT id, document_no doc, line_no line, acc_debit dr, acc_credit cr, amount amt FROM entries WHERE ${EXP} AND type_of_cost=? AND amount>? AND amount>100`).all(t, 10 * med))
-      insErr.run(r.id, 'OUTLIER', 'M', `${fmt2(r.amt)} so với trung vị ${fmt2(med)}`, keyOf('OUTLIER', r));
+  // Trung vị theo khoản mục: một lượt đọc đã sắp xếp (nhanh hơn nhiều so với truy vấn từng khoản mục)
+  const med = new Map(); let curT = null, buf = [];
+  const flush = () => { if (curT != null && buf.length >= 10) med.set(curT, buf[buf.length >> 1]); };
+  for (const r of db.prepare(`SELECT type_of_cost t, amount a FROM entries WHERE ${EXP} ORDER BY type_of_cost, amount`).iterate()) {
+    if (r.t !== curT) { flush(); curT = r.t; buf = []; }
+    buf.push(r.a);
+  }
+  flush();
+  for (const r of db.prepare(`SELECT id, document_no doc, line_no line, acc_debit dr, acc_credit cr, amount amt, type_of_cost t FROM entries WHERE ${EXP} AND amount>100${S('')}`).iterate()) {
+    const m = med.get(r.t);
+    if (m != null && r.amt > 10 * m) insErr.run(r.id, 'OUTLIER', 'M', `${fmt2(r.amt)} so với trung vị ${fmt2(m)}`, keyOf('OUTLIER', r));
   }
   const SELR = `e.id, e.document_no doc, e.line_no line, e.acc_debit dr, e.acc_credit cr, e.amount amt, e.quantity qty`;
   // Chứng từ có dòng thuộc nhiều tháng
   for (const r of db.prepare(`SELECT ${SELR}, d.ms FROM entries e JOIN (SELECT document_no, group_concat(DISTINCT ym) ms FROM entries
-      WHERE document_no IS NOT NULL GROUP BY document_no HAVING count(DISTINCT ym)>1) d ON d.document_no=e.document_no`).all())
+      WHERE document_no IS NOT NULL GROUP BY document_no HAVING count(DISTINCT ym)>1) d ON d.document_no=e.document_no WHERE 1${S('e.')}`).all())
     insErr.run(r.id, 'DOC_MULTI_MONTH', 'M', `Các tháng: ${r.ms}`, keyOf('DOC_MULTI_MONTH', r));
   // Nhiều khoản chi tiền cho cùng đối tượng trong một ngày
   for (const r of db.prepare(`SELECT ${SELR}, g.n, g.tot FROM entries e JOIN (SELECT partner_debit p, account_date d, count(DISTINCT document_no) n, sum(amount) tot FROM entries
-      WHERE (acc_credit LIKE '111%' OR acc_credit LIKE '112%') AND partner_debit IS NOT NULL AND amount>0 GROUP BY partner_debit, account_date HAVING count(DISTINCT document_no)>=3) g
-      ON g.p=e.partner_debit AND g.d=e.account_date WHERE (e.acc_credit LIKE '111%' OR e.acc_credit LIKE '112%') AND e.amount>0`).all())
+      WHERE (acc_credit LIKE '111%' OR acc_credit LIKE '112%') AND partner_debit IS NOT NULL AND amount>0${S('')} GROUP BY partner_debit, account_date HAVING count(DISTINCT document_no)>=3) g
+      ON g.p=e.partner_debit AND g.d=e.account_date WHERE (e.acc_credit LIKE '111%' OR e.acc_credit LIKE '112%') AND e.amount>0${S('e.')}`).all())
     insErr.run(r.id, 'SPLIT_PAYMENT', 'M', `${r.n} chứng từ chi trong ngày, tổng ${fmt2(r.tot)}`, keyOf('SPLIT_PAYMENT', r));
   // Xuất kho vượt tồn: luỹ kế giá trị theo mặt hàng, chỉ xét mặt hàng có chứng từ đầu tiên là nhập (đã thấy từ đầu lịch sử)
   const INV = c => `(${c} LIKE '15%' AND substr(${c},1,3) BETWEEN '151' AND '158' AND ${c} NOT LIKE '154%')`;
   let cur = null, bal = 0, valid = false;
-  for (const r of db.prepare(`SELECT ${SELR}, e.product, e.account_date d, ${INV('e.acc_debit')} isIn, ${INV('e.acc_credit')} isOut FROM entries e
-      WHERE e.product IS NOT NULL AND (${INV('e.acc_debit')} OR ${INV('e.acc_credit')}) ORDER BY e.product, e.account_date, ${INV('e.acc_debit')} DESC, e.id`).all()) {
+  for (const r of db.prepare(`SELECT ${SELR}, e.ym, e.product, e.account_date d, ${INV('e.acc_debit')} isIn, ${INV('e.acc_credit')} isOut FROM entries e
+      WHERE e.product IS NOT NULL AND (${INV('e.acc_debit')} OR ${INV('e.acc_credit')})${scope.from || scope.to ? ` AND e.product IN (SELECT x.product FROM entries x WHERE x.product IS NOT NULL${S('x.')})` : ''} ORDER BY e.product, e.account_date, ${INV('e.acc_debit')} DESC, e.id`).all()) {
     if (r.product !== cur) { cur = r.product; bal = 0; valid = !!r.isIn && !r.isOut && r.qty > 0; } // chứng từ đầu tiên phải là phiếu nhập thật (từ ngoài kho, có số lượng)
     if (r.isIn && !r.isOut) bal += r.amt; else if (r.isOut && !r.isIn) bal -= r.amt;
-    if (valid && r.isOut && !r.isIn && bal < -0.01) insErr.run(r.id, 'INV_NEGATIVE', 'H', `Tồn luỹ kế ${fmt2(bal)} sau khi xuất ngày ${r.d.split('-').reverse().join('/')}`, keyOf('INV_NEGATIVE', r));
+    if (valid && r.isOut && !r.isIn && bal < -0.01 && inYm(r.ym)) insErr.run(r.id, 'INV_NEGATIVE', 'H', `Tồn luỹ kế ${fmt2(bal)} sau khi xuất ngày ${r.d.split('-').reverse().join('/')}`, keyOf('INV_NEGATIVE', r));
   }
   // Cặp tài khoản đối ứng hiếm
   if (db.prepare('SELECT count(*) n FROM entries').get().n >= 1000)
     for (const r of db.prepare(`SELECT ${SELR}, g.n FROM entries e JOIN (SELECT substr(acc_debit,1,3) a, substr(acc_credit,1,3) b, count(*) n FROM entries
-        GROUP BY 1,2 HAVING count(*)<=2) g ON g.a=substr(e.acc_debit,1,3) AND g.b=substr(e.acc_credit,1,3)`).all())
+        GROUP BY 1,2 HAVING count(*)<=2) g ON g.a=substr(e.acc_debit,1,3) AND g.b=substr(e.acc_credit,1,3) WHERE 1${S('e.')}`).all())
       insErr.run(r.id, 'RARE_PAIR', 'L', `Nợ ${r.dr.slice(0, 3)} / Có ${r.cr.slice(0, 3)} chỉ có ${r.n} lần`, keyOf('RARE_PAIR', r));
   db.exec('COMMIT');
 }
 
-/* ---------- Kiểm tra lại toàn bộ (khi nâng cấp / thay đổi quy tắc) ---------- */
-function recheck() {
-  const total = db.prepare('SELECT count(*) n FROM entries').get().n;
-  db.exec(`DELETE FROM errors`);
-  const page = db.prepare(`SELECT ${SEL_ENTRY} FROM entries e WHERE e.id>? ORDER BY e.id LIMIT ${BATCH}`);
-  let last = 0, done = 0;
+/* ---------- Phân tích dữ liệu theo kỳ (chạy toàn bộ quy tắc) ---------- */
+function analyze({ from = '', to = '' } = {}) {
+  const sc = (from ? ` AND e.ym>='${from}'` : '') + (to ? ` AND e.ym<='${to}'` : '');
+  const total = db.prepare(`SELECT count(*) n FROM entries e WHERE 1${sc}`).get().n;
+  post({ type: 'progress', label: 'Đang xoá kết quả phân tích cũ của kỳ', pct: 0 });
+  db.exec('BEGIN');
+  if (sc) db.exec(`DELETE FROM errors WHERE entry_id IN (SELECT e.id FROM entries e WHERE 1${sc})`); else db.exec('DELETE FROM errors');
+  db.exec('COMMIT');
+  const page = db.prepare(`SELECT ${SEL_ENTRY} FROM entries e WHERE e.id>?${sc} ORDER BY e.id LIMIT ${BATCH}`);
+  let last = 0, done = 0, t0 = Date.now();
   for (;;) {
     const rows = page.all(last);
     if (!rows.length) break;
     db.exec('BEGIN');
-    for (const raw of rows) {
-      const r = rowFromDb(raw);
-      for (const e of checkRow(r)) insErr.run(raw.id, e.k, e.s, e.msg, errKey(e.k, r));
-    }
+    for (const raw of rows) { const r = rowFromDb(raw); for (const e of checkRow(r)) insErrRaw.run(raw.id, e.k, e.s, e.msg, errKey(e.k, r)); }
     db.exec('COMMIT');
     last = rows.at(-1).id; done += rows.length;
-    post({ type: 'progress', label: 'Đang kiểm tra lại dữ liệu', rows: done, pct: done / total * 100 });
+    post({ type: 'progress', label: 'Đang phân tích từng bút toán', rows: done, pct: done / total * 90, secs: (Date.now() - t0) / 1000 });
   }
-  setRules();
+  setRules({ from, to });
+  const ms = db.prepare(`UPDATE months SET analyzed_ver=? WHERE 1${sc.replace(/e\.ym/g, 'ym')} RETURNING ym`).all(RULES_VERSION).map(r => r.ym);
+  return { rows: total, months: ms.length, secs: (Date.now() - t0) / 1000 };
+}
+
+/* ---------- Bổ sung mã hàng / ĐVT / kho cho dữ liệu đã nạp (không thay dữ liệu) ---------- */
+async function enrichFile({ file, name }) {
+  const size = fs.statSync(file).size;
+  let read = 0, n = 0, matched = 0, updated = 0, notFound = 0, ambiguous = 0, skipped = 0, map = null, t0 = Date.now(), lastPost = 0;
+  const rows = /\.csv$|\.txt$/i.test(name) ? csvRows(file, b => read += b) : xlsxRows(file, b => read += b);
+  // Khớp theo số chứng từ + line + TK Nợ + TK Có + số tiền
+  const find = db.prepare(`SELECT id, product, uom, locator, locator_credit FROM entries WHERE document_no IS ? AND line_no IS ? AND acc_debit=? AND acc_credit=? AND abs(amount-?)<0.005`);
+  const upd = db.prepare(`UPDATE entries SET product=coalesce(?,product), uom=coalesce(?,uom), locator=coalesce(?,locator), locator_credit=coalesce(?,locator_credit), enriched=1 WHERE id=?`);
+  const samples = [];
+  db.exec('BEGIN');
+  try {
+    for await (const vals of rows) {
+      if (!map) { map = headerMap(vals); continue; }
+      if (vals.every(v => v == null || v === '')) continue;
+      const r = normalize(vals, map); n++;
+      const hit = find.all(r.doc ?? null, r.line ?? null, r.dr, r.cr, r.amt);
+      if (!hit.length) { notFound++; if (samples.length < 20) samples.push(`${r.doc} line ${r.line} · ${r.dr}/${r.cr} · ${r.amt}`); continue; }
+      if (hit.length > 1) ambiguous++;
+      matched++;
+      if (!r.product && !r.loc && !r.locCr && !r.uom) skipped++; // file gốc cũng không có mã hàng/kho: chỉ đánh dấu đã đối chiếu
+      for (const h of hit) { upd.run(r.product, r.uom, r.loc, r.locCr, h.id); if (h.product !== r.product || h.uom !== r.uom || h.locator !== r.loc || h.locator_credit !== r.locCr) updated++; }
+      if (n % BATCH === 0) {
+        db.exec('COMMIT'); db.exec('BEGIN');
+        if (Date.now() - lastPost > 400) { lastPost = Date.now(); post({ type: 'progress', rows: n, pct: Math.min(99, read / size * 100), secs: (Date.now() - t0) / 1000 }); }
+      }
+    }
+    db.exec('COMMIT');
+  } catch (e) { try { db.exec('ROLLBACK'); } catch (_) {} throw e; }
+  if (!map) throw new Error('Không đúng định dạng file hạch toán (thiếu cột Account / Accounted Amount).');
+  // Thông tin hàng tồn kho thay đổi → các tháng liên quan cần phân tích lại
+  db.exec(`UPDATE months SET analyzed_ver=NULL WHERE ym IN (SELECT DISTINCT ym FROM entries WHERE enriched=1)`);
+  return { rows: n, matched, updated, notFound, ambiguous, skipped, samples, secs: (Date.now() - t0) / 1000 };
 }
 
 /* ---------- Điều phối ---------- */
 const TASKS = {
   import: importFile,
+  enrich: enrichFile,
   finalize({ importId, replace }) {
     const months = db.prepare('SELECT DISTINCT ym FROM entries WHERE import_id=? AND ym IS NOT NULL').all(importId).map(r => r.ym);
     if (replace) deleteMonths(months, importId);
     db.prepare(`UPDATE imports SET status='ok' WHERE id=?`).run(importId);
-    refreshImports(); setRules();
+    refreshImports();
+    const mark = db.prepare('UPDATE months SET analyzed_ver=NULL WHERE ym=?'); for (const m of months) mark.run(m); // tháng mới nạp: chưa phân tích
     db.exec('PRAGMA optimize');
     return { months };
   },
   cancel({ importId }) { post({ type: 'progress', label: 'Đang huỷ lần nạp…' }); db.prepare('DELETE FROM imports WHERE id=?').run(importId); refreshImports(); return {}; },
-  deleteMonth({ ym }) { deleteMonths([ym]); refreshImports(); setRules(); return {}; },
-  deleteImport({ id }) { post({ type: 'progress', label: 'Đang xoá lần nạp…' }); db.prepare('DELETE FROM imports WHERE id=?').run(id); refreshImports(); setRules(); return {}; },
+  deleteMonth({ ym }) { deleteMonths([ym]); refreshImports(); return {}; },
+  deleteImport({ id }) { post({ type: 'progress', label: 'Đang xoá lần nạp…' }); db.prepare('DELETE FROM imports WHERE id=?').run(id); refreshImports(); return {}; },
   clear() { post({ type: 'progress', label: 'Đang xoá toàn bộ dữ liệu…' }); db.exec(`DELETE FROM errors; DELETE FROM entries; DELETE FROM imports; DELETE FROM months;`); db.exec('VACUUM'); return {}; },
-  recheck() { recheck(); return {}; },
+  recheck() { return analyze({}); },
+  analyze: args => analyze(args),
 };
 (async () => {
   try { post({ type: 'done', result: await TASKS[workerData.task](workerData.args || {}) }); }

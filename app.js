@@ -34,12 +34,68 @@ async function go(p){
   $('#pTitle').textContent=TITLES[p][0];$('#pSub').textContent=TITLES[p][1];$('#content').scrollTop=0;
   try{await VIEWS[p]()}catch(e){console.error(e);api.logError(`Mở trang ${p}: ${e.message}`,e.stack)}
 }
+$('#sideRv').onclick=()=>go('errors');
 $('#nav').onclick=e=>{const b=e.target.closest('[data-p]');if(b)go(b.dataset.p)};
 document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g)go(g.dataset.go);if(e.target.closest('[data-act=import]'))doImport()});
+/* ---------- Kỳ rà soát lỗi ---------- */
+const QN=m=>Math.floor((+m.slice(5)-1)/3)+1;
+const addM=(ym,n)=>{let y=+ym.slice(0,4),m=+ym.slice(5)-1+n;y+=Math.floor(m/12);m=((m%12)+12)%12;return `${y}-${String(m+1).padStart(2,'0')}`};
+function rvLabel(p){if(!p.from&&!p.to)return 'Toàn bộ dữ liệu';const f=p.from,t=p.to;
+  if(f&&f===t)return `Tháng ${f.slice(5)}/${f.slice(0,4)}`;
+  if(f&&t&&f.slice(0,4)===t.slice(0,4)&&f.endsWith('-01')&&t.endsWith('-12'))return `Năm ${f.slice(0,4)}`;
+  if(f&&t&&addM(f,2)===t&&(+f.slice(5)-1)%3===0)return `Quý ${QN(f)}/${f.slice(0,4)}`;
+  return `${f?vn(f+'-01').slice(3):'…'} → ${t?vn(t+'-01').slice(3):'…'}`}
+async function renderReviewBar(id){
+  const [p,ms]=await Promise.all([api.q('reviewPeriod'),api.q('months')]);const yms=ms.map(m=>m.ym).sort();
+  if(!yms.length){$(id).innerHTML='<span class="mut">Chưa có dữ liệu.</span>';return}
+  const f=p.from,t=p.to,years=[...new Set(yms.map(m=>m.slice(0,4)))].reverse(),quarters=[...new Set(yms.map(m=>`${m.slice(0,4)}-Q${QN(m)}`))].reverse();
+  let mode='all';if(f||t){if(f===t)mode='m';else if(f&&t&&f.slice(0,4)===t.slice(0,4)&&f.endsWith('-01')&&t.endsWith('-12'))mode='y';else if(f&&t&&addM(f,2)===t&&(+f.slice(5)-1)%3===0)mode='q';else mode='r'}
+  const opt=(v,l,sel)=>`<option value="${v}" ${sel?'selected':''}>${l}</option>`;
+  const mSel=(cls,cur)=>`<select class="input ${cls}">${[...yms].reverse().map(m=>opt(m,`${m.slice(5)}/${m.slice(0,4)}`,m===cur)).join('')}</select>`;
+  let val='';
+  if(mode==='m')val=mSel('rvM',f);
+  if(mode==='q')val=`<select class="input rvQ">${quarters.map(q=>opt(q,`Quý ${q.slice(6)}/${q.slice(0,4)}`,f&&q===`${f.slice(0,4)}-Q${QN(f)}`)).join('')}</select>`;
+  if(mode==='y')val=`<select class="input rvY">${years.map(y=>opt(y,'Năm '+y,f&&y===f.slice(0,4))).join('')}</select>`;
+  if(mode==='r')val=`Từ ${mSel('rvF',f||yms[0])} đến ${mSel('rvT',t||yms.at(-1))}`;
+  $(id).innerHTML=`<span class="lbl">${ic('alert')}Kỳ rà soát lỗi</span>
+    <select class="input rvMode">${opt('all','Toàn bộ dữ liệu',mode==='all')}${opt('m','Theo tháng',mode==='m')}${opt('q','Theo quý',mode==='q')}${opt('y','Theo năm',mode==='y')}${opt('r','Khoảng tháng',mode==='r')}</select>${val}
+    <span class="mut" style="font-size:13px">Chỉ lỗi trong kỳ này được hiển thị, báo cáo và gửi email. Dữ liệu ngoài kỳ vẫn dùng cho phân tích công nợ, tồn kho, doanh thu – chi phí.</span>`;
+  const el=$(id),g=c=>el.querySelector(c)?.value;
+  el.onchange=async e=>{let from='',to='';const mode=g('.rvMode');
+    if(e.target.classList.contains('rvMode')){const last=yms.at(-1);
+      if(mode==='m')from=to=last;else if(mode==='q'){const q0=addM(last,-((+last.slice(5)-1)%3));from=q0;to=addM(q0,2)}else if(mode==='y'){from=last.slice(0,4)+'-01';to=last.slice(0,4)+'-12'}else if(mode==='r'){from=yms[0];to=last}}
+    else if(mode==='m')from=to=g('.rvM');
+    else if(mode==='q'){const q=g('.rvQ'),y=q.slice(0,4),n=+q.slice(6);from=`${y}-${String(n*3-2).padStart(2,'0')}`;to=addM(from,2)}
+    else if(mode==='y'){const y=g('.rvY');from=y+'-01';to=y+'-12'}
+    else if(mode==='r'){from=g('.rvF');to=g('.rvT');if(from>to)[from,to]=[to,from]}
+    await api.q('setReviewPeriod',from,to);OFF=0;FIL={...FIL,month:''};await refreshSide();go(PAGE)};
+}
+
+/* ---------- Phân tích dữ liệu (tách khỏi bước nạp) ---------- */
+async function refreshPending(){
+  const st=await api.q('analysisStatus'),n=st.pending.length;
+  $('#anPending').textContent=n;$('#anPending').classList.toggle('hide',!n);
+  const old=st.pending.filter(x=>x.old).length,list=st.pending.slice(0,6).map(x=>x.ym.slice(5)+'/'+x.ym.slice(0,4)).join(', ')+(n>6?'…':'');
+  $$('.pendNote').forEach(el=>{el.classList.toggle('hide',!n);
+    el.innerHTML=n?`${ic('alert')}<span><b>${n} tháng trong kỳ rà soát chưa được phân tích${old?` (${old} tháng phân tích bằng bộ quy tắc cũ)`:''}</b>: ${list}. Kết quả lỗi đang hiển thị chưa đầy đủ.</span><button class="btn sm primary" data-act="analyze">Phân tích ngay</button>`:''});
+  return st;
+}
+async function runAnalyze(all=false){
+  const st=await api.q('analysisStatus');
+  const label=all?'TOÀN BỘ dữ liệu (mọi tháng)':`kỳ rà soát: ${rvLabel(st.review)} (${st.months} tháng)`;
+  if(!confirm(`Phân tích ${label}?\n\nKết quả lỗi cũ của các tháng này được tính lại; trạng thái và ghi chú xử lý vẫn được giữ.`))return;
+  try{const r=await api.task(all?'recheck':'analyze',all?{}:st.review);alert(`Đã phân tích ${num(r.rows)} dòng · ${r.months} tháng · ${Math.round(r.secs)} giây.`)}catch(e){alert(e.message)}
+  await refreshSide();go(PAGE);
+}
+$('#btnAnalyze').onclick=()=>runAnalyze(false);
+document.addEventListener('click',e=>{if(e.target.closest('[data-act=analyze]'))runAnalyze(false)});
+
 async function refreshSide(){
+  refreshPending();
   const s=await api.q('stats');
   $('#sideFoot').innerHTML=`<b>${num(s.entries)}</b> dòng · <b>${s.monthsOn}/${s.months}</b> tháng đang phân tích`;
-  const f=await api.q('errorFacets');const n=f.status.open+f.status.doing;
+  const [f,rp]=await Promise.all([api.q('errorFacets'),api.q('reviewPeriod')]);const n=f.status.open+f.status.doing;
+  $('#sideRv').innerHTML=`Kỳ rà soát lỗi<b>${rvLabel(rp)}</b>`;
   $('#navErr').textContent=n>999?(Math.round(n/100)/10).toLocaleString('vi')+'k':n;$('#navErr').classList.toggle('hide',!n);
 }
 
@@ -68,8 +124,8 @@ async function vOverview(){
   const o=await api.q('overview');const empty=!o.rows;
   $('#ovEmpty').classList.toggle('hide',!empty);$('#ovBody').classList.toggle('hide',empty);if(empty)return;
   $('#hYear').textContent=o.year||'';$('#hSub').textContent=`Kỳ dữ liệu ${vn(o.dmin)} → ${vn(o.dmax)}`;
-  $('#hRows').textContent=num(o.rows);$('#hDocs').textContent=num(o.docs);$('#hErr').textContent=num(o.errs);$('#hHigh').textContent=num(o.high);
-  $('#ovKpi').innerHTML=kpi('','file','Dòng có cảnh báo',num(o.errRows),pct(o.errRows/o.rows)+' tổng số dòng')+kpi('red','alert','Lỗi mức cao',num(o.high),'cần xử lý ưu tiên')
+  $('#hRows').textContent=num(o.rows);$('#hDocs').textContent=num(o.docs);$('#hErr').textContent=num(o.errs);$('#hErrL').textContent='cảnh báo · '+rvLabel(o.review).toLowerCase();$('#hHigh').textContent=num(o.high);
+  $('#ovKpi').innerHTML=kpi('','file','Dòng có cảnh báo',num(o.errRows),pct(o.errRows/o.rvRows)+' số dòng trong kỳ rà soát')+kpi('red','alert','Lỗi mức cao',num(o.high),'cần xử lý ưu tiên')
     +kpi('blue','coins',`Doanh thu thuần ${o.year||''}`,fmt(o.net),'theo dữ liệu đã nạp')+kpi(o.pat<0?'red':'green','trend',`Lợi nhuận sau thuế ${o.year||''}`,fmt(o.pat),o.pat<0?'lỗ':'lãi');
   const sevC={H:C.err,M:C.brand,L:C.navy};
   chart('chRule',{type:'bar',data:{labels:o.byRule.map(r=>RULE[r.k]?.n||r.k),datasets:[{data:o.byRule.map(r=>r.n),backgroundColor:o.byRule.map(r=>sevC[r.sev]),barThickness:16}]},
@@ -85,6 +141,7 @@ let FIL={},SORT={k:'sev',d:1},OFF=0,VIEW=[],CUR=-1,TOTAL=0;const LIM=200;
 function readFil(){const v=id=>$(id).value;return {status:FIL.status||'',sev:v('#fSev'),rule:v('#fRule'),user:v('#fUser'),month:v('#fMonth'),dept:v('#fDept'),acc:v('#fAcc').trim(),min:v('#fMin'),max:v('#fMax'),text:v('#fText').trim()}}
 function fillSel(id,items,label,cur){$(id).innerHTML=`<option value="">${label}</option>`+items.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join('');$(id).value=cur||''}
 async function vErrors(keep){
+  renderReviewBar('#rvErr');
   const f=await api.q('errorFacets');
   if(!keep){
     fillSel('#fRule',f.rules.map(r=>[r.k,`${RULE[r.k]?.n||r.k} (${num(r.n)})`]),'Tất cả loại lỗi',FIL.rule);
@@ -350,6 +407,7 @@ async function drill(x){
 let MAILTO=ls.get('mailto',{});
 const mailOpts=(test=false)=>({minSev:$('#rSev').value,deadline:$('#rDeadline').value,intro:$('#rIntro').value,sign:$('#rSign').value,mark:$('#rMark').checked,test});
 async function vReport(){
+  renderReviewBar('#rvRep');
   const [rep,todo,log]=await Promise.all([api.q('report'),api.q('todo',$('#rSev').value),api.q('mailLog')]);
   const sum=k=>rep.byRule.reduce((a,r)=>a+r[k],0),n=sum('n'),done=sum('fixed')+sum('ignore');
   $('#repPeriod').textContent=`Kỳ dữ liệu ${rep.months[0]||''} → ${rep.months.at(-1)||''} · Lập ngày ${new Date().toLocaleDateString('vi')}`;
@@ -399,15 +457,17 @@ $('#s_save').onclick=async()=>{const v=k=>$('#s_'+k).value.trim();
   $('#smtpMsg').textContent='Đang kiểm tra kết nối…';const r=await api.verifySmtp();$('#smtpMsg').innerHTML=r.ok?'<span class=pos>✓ Kết nối SMTP thành công</span>':'<span class=neg>✕ '+esc(r.error)+'</span>';$('#s_pass').value=''};
 
 /* ---------- Quản lý dữ liệu ---------- */
+let INFO_VER=null;
 async function vData(){
-  const [ms,imps,info,s]=await Promise.all([api.q('months'),api.q('imports'),api.info(),api.q('stats')]);
+  const [ms,imps,info,s,ast]=await Promise.all([api.q('months'),api.q('imports'),api.info(),api.q('stats'),api.q('analysisStatus')]);INFO_VER=ast.version;
   const years={};ms.forEach(m=>(years[m.ym.slice(0,4)]??=[]).push(m));
   $('#months').innerHTML=Object.entries(years).map(([y,arr])=>`<h4 style="margin:16px 0 10px">Năm ${y}</h4><div class="month-grid">`+
     arr.map(m=>`<div class="mcard ${m.included?'on':''}"><div class="x"><span class="m">Tháng ${m.ym.slice(5)}</span><input type="checkbox" data-m="${m.ym}" ${m.included?'checked':''} title="Đưa vào phân tích"></div>
-      <div class="mut" style="font-size:12px">${num(m.n)} dòng</div><div class="mut" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(m.files)}">${esc(m.files||'')}</div>
+      <div class="mut" style="font-size:12px">${num(m.n)} dòng</div><div>${m.analyzed_ver==null?'<span class="badge s-open">Chưa phân tích</span>':m.analyzed_ver===INFO_VER?'<span class="badge s-fixed">Đã phân tích</span>':'<span class="badge b-M">Cần phân tích lại</span>'}</div><div class="mut" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(m.files)}">${esc(m.files||'')}</div>
       <button class="btn sm danger" data-delm="${m.ym}">Xoá tháng</button></div>`).join('')+'</div>').join('')||'<div class="empty"><h2>Chưa có dữ liệu</h2><p>Bấm "Nạp dữ liệu" để bắt đầu.</p></div>';
   $('#tImports').innerHTML='<thead><tr><th>File</th><th class=n>Số dòng</th><th>Từ ngày</th><th>Đến ngày</th><th>Nạp lúc</th><th></th></tr></thead><tbody>'+
     imps.map(i=>`<tr><td>${esc(i.file)}</td><td class=n>${num(i.rows)}</td><td>${vn(i.from)}</td><td>${vn(i.to)}</td><td class=nw>${esc(i.at)}</td><td><button class="btn sm danger" data-deli="${i.id}">Xoá</button></td></tr>`).join('')+'</tbody>';
+  api.q('inventory',new Date().toISOString().slice(0,10),'product','l1').then(r=>{$('#enrichInfo').innerHTML=r.oldImportRows?`<span class=neg>${num(r.oldImportRows)} dòng hàng tồn kho chưa có mã hàng/kho (nạp bằng phiên bản cũ).</span>`:'<span class=pos>✓ Tất cả dòng hàng tồn kho đã có thông tin mã hàng/kho.</span>'});
   $('#dbInfo').innerHTML=`<div>File CSDL</div><div><code>${esc(info.dbFile)}</code>${info.fallback?'<div class="neg" style="font-size:12px">Không ghi được vào thư mục ứng dụng ('+esc(info.appDir)+') nên đang lưu ở thư mục người dùng. Hãy đặt AccSoft ở thư mục có quyền ghi (vd D:\\AccSoft).</div>':''}${info.migratedFrom?'<div class="pos" style="font-size:12px">Đã chuyển dữ liệu từ '+esc(info.migratedFrom)+'</div>':''}</div><div>Dòng hạch toán</div><div>${num(s.entries)}</div><div>Cảnh báo</div><div>${num(s.errors)}</div><div>Phiên bản</div><div>${esc(info.version)}</div>`;
 }
 const runT=async(t,a,msg)=>{try{await api.task(t,a);if(msg)alert(msg)}catch(e){alert(e.message)}await refreshSide();go(PAGE)};
@@ -415,8 +475,9 @@ $('#months').onchange=async e=>{const m=e.target.dataset.m;if(!m)return;await ap
 $('#months').onclick=e=>{const m=e.target.dataset.delm;if(m&&confirm(`Xoá hẳn toàn bộ dữ liệu tháng ${m}?`))runT('deleteMonth',{ym:m})};
 $('#tImports').onclick=e=>{const id=e.target.closest('[data-deli]')?.dataset.deli;if(id&&confirm('Xoá toàn bộ dữ liệu của lần nạp này?'))runT('deleteImport',{id:+id})};
 $('#mAll').onclick=async()=>{await api.q('setAllMonths',true);await refreshSide();vData()};$('#mNone').onclick=async()=>{await api.q('setAllMonths',false);await refreshSide();vData()};
+$('#btnEnrich').onclick=async()=>{try{const log=await api.pickAndEnrich();if(log){alert('Kết quả bổ sung thông tin hàng tồn kho:\n\n'+log.join('\n'));await refreshSide();go(PAGE)}}catch(e){alert(e.message)}};
 $('#openDb').onclick=()=>api.openDbFolder();$('#btnLogs').onclick=()=>api.openLogs();
-$('#btnRecheck').onclick=()=>runT('recheck',{},'Đã kiểm tra lại toàn bộ dữ liệu.');
+$('#btnRecheck').onclick=()=>runAnalyze(true);
 $('#btnClear').onclick=()=>{if(confirm('Xoá TOÀN BỘ dữ liệu hạch toán và cảnh báo? (giữ lại trạng thái/ghi chú và cấu hình mail)'))runT('clear',{})};
 
 const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),inv:()=>vInv(true),pl:vPL,cost:()=>vCost(true),report:vReport,data:vData};

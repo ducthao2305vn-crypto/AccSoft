@@ -13,7 +13,7 @@ const COLS = [
   ['contract', 'contract', 'TEXT'], ['user', 'created_by', 'TEXT'], ['updUser', 'updated_by', 'TEXT'], ['cf', 'cashflow', 'TEXT'], ['bts', 'bts_site', 'TEXT'],
   ['product', 'product', 'TEXT'], ['uom', 'uom', 'TEXT'], ['loc', 'locator', 'TEXT'], ['locCr', 'locator_credit', 'TEXT'],
 ];
-const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
+const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, e.enriched AS _enriched, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
 
 function open(file, { cleanup = false } = {}) {
   const db = new DatabaseSync(file);
@@ -43,11 +43,19 @@ function open(file, { cleanup = false } = {}) {
   // v2.4: thêm cột mặt hàng / ĐVT / kho; schema=2 đánh dấu lần nạp có các cột này
   const ecols = db.prepare('PRAGMA table_info(entries)').all().map(c => c.name);
   for (const [, col, type] of COLS) if (!ecols.includes(col)) db.exec(`ALTER TABLE entries ADD COLUMN ${col} ${type}`);
+  // v2.5: đánh dấu tháng đã phân tích theo phiên bản bộ quy tắc nào (NULL = chưa phân tích)
+  if (!db.prepare('PRAGMA table_info(months)').all().some(c => c.name === 'analyzed_ver')) {
+    db.exec(`ALTER TABLE months ADD COLUMN analyzed_ver INTEGER`);
+    const v = db.prepare(`SELECT v FROM settings WHERE k='rules_version'`).get()?.v;
+    if (v && !needRecheck) db.prepare('UPDATE months SET analyzed_ver=?').run(+v);
+  }
+  if (!db.prepare('PRAGMA table_info(entries)').all().some(c => c.name === 'enriched')) db.exec(`ALTER TABLE entries ADD COLUMN enriched INTEGER`);
   if (!db.prepare('PRAGMA table_info(imports)').all().some(c => c.name === 'schema')) db.exec(`ALTER TABLE imports ADD COLUMN schema INTEGER DEFAULT 1`);
   db.exec(`
     CREATE INDEX IF NOT EXISTS ix_e_import ON entries(import_id);
     CREATE INDEX IF NOT EXISTS ix_e_ym ON entries(ym);
     CREATE INDEX IF NOT EXISTS ix_e_doc ON entries(document_no);
+    CREATE INDEX IF NOT EXISTS ix_e_docline ON entries(document_no, line_no);
     CREATE INDEX IF NOT EXISTS ix_e_user ON entries(created_by);
     CREATE INDEX IF NOT EXISTS ix_err_entry ON errors(entry_id);
     CREATE INDEX IF NOT EXISTS ix_err_rule ON errors(rule);

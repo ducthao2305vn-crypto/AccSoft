@@ -1,5 +1,17 @@
 # Lịch sử phiên bản
 
+## v2.5.0 – 30/10/2026
+**Tách nạp dữ liệu và phân tích**
+- Nạp dữ liệu chỉ đọc và lưu, không chạy quy tắc → nhanh hơn (file 575 MB: 104 → 52 giây).
+- Nút **Phân tích dữ liệu** (thanh trên cùng) chạy toàn bộ quy tắc cho **kỳ rà soát** đang chọn; quy tắc so sánh (trùng lặp, bất thường, chia nhỏ khoản chi, tồn kho…) vẫn đối chiếu với toàn bộ dữ liệu đã nạp nhưng chỉ gắn lỗi trong kỳ. Phân tích 1 tháng trên kho 647.000 dòng: khoảng 7 giây.
+- Ứng dụng ghi nhận tháng nào đã phân tích theo bộ quy tắc nào; nhắc "chưa phân tích / cần phân tích lại" ở Tổng quan, Lỗi nhập liệu, Báo cáo và trên từng thẻ tháng. Không còn tự phân tích lại toàn bộ khi khởi động.
+
+**Kỳ rà soát lỗi** (tháng / quý / năm / khoảng tháng / toàn bộ)
+- Lỗi nhập liệu, số đếm trên menu, Báo cáo & Thông báo, email và số lỗi ở Tổng quan chỉ tính trong kỳ rà soát. Dữ liệu cũ vẫn dùng đầy đủ cho công nợ, tồn kho, doanh thu – chi phí, kết quả kinh doanh.
+
+**Bổ sung thông tin hàng tồn kho cho dữ liệu đã nạp** (tab Quản lý dữ liệu)
+- Xuất từ ERP chỉ các dòng TK 151–158; ứng dụng khớp theo số chứng từ + line + TK Nợ/Có + số tiền và điền thêm mã hàng, ĐVT, kho – không cần nạp lại toàn bộ. Báo cáo số dòng khớp / không tìm thấy, ghi nhật ký.
+
 ## v2.4.0 – 30/10/2026
 Tab mới **Tuổi hàng tồn kho** (TK 151, 152, 153, 155, 156, 157, 158 – trừ 154):
 - Tính tuổi theo mặt hàng (Product), mặt hàng × kho, kho hoặc đối tượng; theo TK tổng hợp hoặc chi tiết.

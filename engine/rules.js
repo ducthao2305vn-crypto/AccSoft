@@ -80,7 +80,7 @@ const RULES=[
  {k:'REV_NO_INVOICE',s:'L',n:'Doanh thu không gắn hoá đơn',d:'Ghi Có TK doanh thu nhưng không có số hoá đơn – kiểm tra đã xuất hoá đơn hay doanh thu ước tính.',
   f:r=>isRev(r.cr)&&r.amt>0&&!r.inv&&'Thiếu Invoice'},
  {k:'INV_NO_PRODUCT',s:'M',n:'Hàng tồn kho thiếu mã hàng',d:'Dòng ghi TK hàng tồn kho (151–158, trừ 154) nhưng không có mã hàng (Product) – không theo dõi được tồn kho và tuổi hàng theo mặt hàng.',
-  f:r=>r._schema>=2&&(isInv(r.dr)||isInv(r.cr))&&!r.product&&`TK ${isInv(r.dr)?r.dr:r.cr} không có Product`},
+  f:r=>(r._schema>=2||r._enriched)&&(isInv(r.dr)||isInv(r.cr))&&!r.product&&`TK ${isInv(r.dr)?r.dr:r.cr} không có Product`},
 ];
 const FIX={
  FUTURE_DATE:'Sửa ngày hạch toán theo ngày chứng từ; nếu nghiệp vụ chưa phát sinh thì huỷ bút toán.',
@@ -139,5 +139,5 @@ function checkRow(r){
 }
 const errKey=(k,r)=>[k,r.doc,r.line,r.dr,r.cr,r.amt].join('|');
 const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||''})),status:ST});
-const RULES_VERSION=8; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
+const RULES_VERSION=9; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
 module.exports={RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};

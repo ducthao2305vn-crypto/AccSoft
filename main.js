@@ -51,11 +51,30 @@ async function importFiles(files) {
         }
         await runTask('finalize', { importId: r.importId, replace }, 'Đang hoàn tất');
         const msg = `${r.rows.toLocaleString('vi')} dòng · ${r.months.join(', ')} · ${Math.round(r.secs)} giây`;
-        log.info(`Nạp ${name} (${mb} MB) thành công: ${msg}`, { file });
+        log.info(`Nạp ${name} (${mb} MB) thành công (chưa phân tích): ${msg}`, { file });
         out.push(`✓ ${name}: ${msg}`);
       } catch (e) { failed = true; log.error(`Nạp ${name} (${mb} MB) thất bại`, e, { file }); out.push(`✗ ${name}: LỖI – ${firstLine(e.message)}`); }
     }
+    if (out.some(x => x.startsWith('✓'))) out.push('', 'Dữ liệu đã nạp, CHƯA phân tích. Chọn kỳ rà soát rồi bấm "Phân tích dữ liệu" để rà soát lỗi.');
     if (failed) out.push('', 'Chi tiết lỗi đã ghi vào nhật ký: ' + log.file(), '(menu Tệp → Mở nhật ký lỗi)');
+    return out;
+  });
+}
+
+async function enrichFiles(files) {
+  return exclusive(async () => {
+    const out = []; let failed = false;
+    for (const file of files) {
+      const name = path.basename(file), mb = (fs.statSync(file).size / 1048576).toFixed(1);
+      try {
+        const r = await runTask('enrich', { file, name }, `Đang bổ sung thông tin hàng tồn kho từ ${name} (${mb} MB)`);
+        log.info(`Bổ sung từ ${name}: ${r.rows} dòng, khớp ${r.matched}, cập nhật ${r.updated}, không tìm thấy ${r.notFound}, trùng khoá ${r.ambiguous}, bỏ qua ${r.skipped}`, { file, samples: r.samples });
+        out.push(`✓ ${name}: ${r.rows.toLocaleString('vi')} dòng · khớp ${r.matched.toLocaleString('vi')} · cập nhật ${r.updated.toLocaleString('vi')} bút toán` +
+          (r.notFound ? ` · ${r.notFound.toLocaleString('vi')} dòng không tìm thấy (xem nhật ký)` : '') + (r.ambiguous ? ` · ${r.ambiguous} dòng trùng khoá` : '') + ` · ${Math.round(r.secs)} giây`);
+        if (r.notFound) failed = true;
+      } catch (e) { failed = true; log.error(`Bổ sung từ ${name} thất bại`, e, { file }); out.push(`✗ ${name}: LỖI – ${firstLine(e.message)}`); }
+    }
+    if (failed) out.push('', 'Chi tiết: ' + log.file());
     return out;
   });
 }
@@ -69,8 +88,8 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
-const WRITE = ['setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
+const READ = ['meta', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const WRITE = ['setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
 function appDir() {
@@ -115,7 +134,11 @@ async function init() {
     return canceled ? null : importFiles(filePaths);
   });
   handle('import:files', (_e, files) => importFiles(files));
-  handle('task', (_e, task, args) => exclusive(() => runTask(task, args, { deleteMonth: 'Đang xoá tháng', deleteImport: 'Đang xoá lần nạp', clear: 'Đang xoá dữ liệu', recheck: 'Đang kiểm tra lại dữ liệu' }[task])));
+  handle('enrich:pick', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file ERP chỉ gồm các dòng TK 151–158', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Dữ liệu hạch toán', extensions: ['xlsx', 'csv', 'txt'] }] });
+    return canceled ? null : enrichFiles(filePaths);
+  });
+  handle('task', (_e, task, args) => exclusive(() => runTask(task, args, { deleteMonth: 'Đang xoá tháng', deleteImport: 'Đang xoá lần nạp', clear: 'Đang xoá dữ liệu', recheck: 'Đang phân tích lại toàn bộ dữ liệu', analyze: 'Đang phân tích dữ liệu' }[task])).then(r => { if (task === 'analyze' || task === 'recheck') log.info(`Phân tích dữ liệu ${JSON.stringify(args)}: ${r.rows} dòng, ${r.months} tháng, ${Math.round(r.secs)} giây`); return r; }));
   // Xuất Excel
   handle('export:errors', (_e, f, sort) => {
     const rows = Q.errors(f, sort, 0, 2e6).rows;
@@ -153,10 +176,9 @@ async function init() {
   handle('log:renderer', (_e, msg, stack) => log.error('Lỗi giao diện: ' + msg, stack));
   handle('log:open', () => shell.openPath(log.dir()));
   handle('log:file', () => log.file());
-  // Bộ quy tắc thay đổi so với lần kiểm tra trước → kiểm tra lại toàn bộ dữ liệu một lần
-  const hasData = Q.stats().entries > 0;
-  if (!hasData) Q.setSetting('rules_version', String(RULES_VERSION));
-  return r.needRecheck || (hasData && Q.getSetting('rules_version') !== String(RULES_VERSION));
+  // Không tự phân tích khi khởi động: tháng nào chưa phân tích (hoặc phân tích bằng bộ quy tắc cũ) sẽ được nhắc trên giao diện
+  Q.setSetting('rules_version', String(RULES_VERSION));
+  return false;
 }
 
 function createWindow() {

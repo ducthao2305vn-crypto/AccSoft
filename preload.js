@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('api', {
   openLogs: () => ipcRenderer.invoke('log:open'),
   info: () => ipcRenderer.invoke('app:info'),
   pickAndImport: () => ipcRenderer.invoke('import:pick'),
+  pickAndEnrich: () => ipcRenderer.invoke('enrich:pick'),
   importFiles: files => ipcRenderer.invoke('import:files', files.map(f => webUtils.getPathForFile(f))),
   task: (name, args) => ipcRenderer.invoke('task', name, args),
   exportErrors: (f, sort) => ipcRenderer.invoke('export:errors', f, sort),

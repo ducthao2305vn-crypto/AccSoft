@@ -153,6 +153,13 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
 @keyframes ind{0%{margin-left:-35%}100%{margin-left:100%}}
 #dropmask{position:fixed;inset:0;background:rgba(250,71,0,.08);border:3px dashed var(--brand-500);z-index:50;display:grid;place-items:center;font-size:20px;font-weight:700;color:var(--brand-700);pointer-events:none}
 @media print{aside,.topbar,.noprint,#drawer,#toast{display:none!important}body{display:block;overflow:visible;background:#fff}.main,.content{height:auto;overflow:visible;padding:0}.tbl{max-height:none;overflow:visible}}
+.rvbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px;border-color:var(--brand-200);background:linear-gradient(90deg,var(--brand-25),#fff)}
+.rvbar .lbl{font-weight:700;color:var(--brand-700);display:flex;align-items:center;gap:8px}
+.rvbar select{width:auto}
+.side-rv{margin:8px 12px 0;padding:10px 12px;border-radius:10px;background:var(--brand-25);border:1px solid var(--brand-200);font-size:12px;color:var(--gray-600);cursor:pointer}
+.side-rv b{color:var(--brand-700);display:block;font-size:13px}
+.pendNote{border-color:var(--brand-300);background:var(--brand-50);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pendNote b{color:var(--brand-700)}
 </style>
 </head>
 <body>
@@ -170,10 +177,12 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
     <button data-p="report"><svg class="icon"><use href="#i-mail"/></svg>Báo cáo & Thông báo</button>
     <button data-p="data"><svg class="icon"><use href="#i-db"/></svg>Quản lý dữ liệu</button>
   </nav>
+  <div class="side-rv" id="sideRv" title="Đổi kỳ rà soát trong tab Lỗi nhập liệu"></div>
   <div class="side-foot" id="sideFoot"></div>
 </aside>
 <div class="main">
   <div class="topbar"><div><h1 id="pTitle">Tổng quan</h1><div class="sub" id="pSub"></div></div><div class="sp"></div>
+    <button class="btn light" id="btnAnalyze" title="Chạy các quy tắc rà soát cho kỳ rà soát đang chọn"><svg class="icon"><use href="#i-refresh"/></svg>Phân tích dữ liệu<span class="count hide" id="anPending" style="margin-left:4px"></span></button>
     <button class="btn primary" id="btnImport"><svg class="icon"><use href="#i-upload"/></svg>Nạp dữ liệu</button></div>
   <div class="content" id="content">
 
@@ -186,8 +195,9 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
       <p class="mut" style="margin-top:12px">hoặc kéo-thả file vào cửa sổ</p>
     </div>
     <div id="ovBody" class="hide" style="display:flex;flex-direction:column;gap:20px">
+      <div class="note hide pendNote"></div>
       <div class="hero"><h2>Sổ hạch toán <span id="hYear"></span></h2><p id="hSub"></p>
-        <div class="stats"><div><b id="hRows"></b>dòng hạch toán</div><div><b id="hDocs"></b>chứng từ</div><div><b id="hErr"></b>cảnh báo</div><div><b id="hHigh"></b>lỗi mức cao</div></div></div>
+        <div class="stats"><div><b id="hRows"></b>dòng hạch toán</div><div><b id="hDocs"></b>chứng từ</div><div><b id="hErr"></b><span id="hErrL">cảnh báo</span></div><div><b id="hHigh"></b>lỗi mức cao</div></div></div>
       <div class="kpis" id="ovKpi"></div>
       <div class="grid g2">
         <div class="card"><div class="card-h"><h3>Cảnh báo theo loại lỗi</h3><div class="sp"></div><button class="btn sm ghost" data-go="errors">Xem tất cả →</button></div><div class="cv" style="height:380px"><canvas id="chRule"></canvas></div></div>
@@ -198,6 +208,8 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
   </section>
 
   <section id="errors" class="hide">
+    <div class="card rvbar" id="rvErr"></div>
+    <div class="note hide pendNote"></div>
     <div class="card">
       <div class="card-h"><div class="tabs" id="stTabs"></div><div class="sp"></div>
         <select class="input" id="fGroup" style="width:auto"><option value="">Từng dòng lỗi</option><option value="doc">Gộp theo chứng từ</option></select></div>
@@ -299,6 +311,8 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
   </section>
 
   <section id="report" class="hide">
+    <div class="card rvbar noprint" id="rvRep"></div>
+    <div class="note hide pendNote noprint"></div>
     <div class="card">
       <div class="card-h"><div><h3>Báo cáo kết quả kiểm tra bút toán</h3><div class="hint" id="repPeriod"></div></div><div class="sp"></div>
         <div class="row noprint"><button class="btn" id="repPrint"><svg class="icon"><use href="#i-print"/></svg>In / Lưu PDF</button><button class="btn light" id="repXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button></div></div>
@@ -345,13 +359,18 @@ Bộ phận Kế toán – Kiểm soát nội bộ</textarea></label>
       <div id="months"></div>
     </div>
     <div class="card">
+      <div class="card-h"><div><h3>Bổ sung thông tin hàng tồn kho cho dữ liệu đã nạp</h3><div class="hint">Không cần nạp lại toàn bộ: xuất từ ERP <b>chỉ các dòng TK 151–158</b> (cùng định dạng file), ứng dụng khớp với bút toán đã có theo số chứng từ + line + TK Nợ/Có + số tiền và điền thêm mã hàng, ĐVT, kho. Không xoá hay thay dữ liệu.</div></div><div class="sp"></div>
+        <button class="btn light" id="btnEnrich"><svg class="icon"><use href="#i-box"/></svg>Chọn file bổ sung</button></div>
+      <div id="enrichInfo" class="mut" style="font-size:13px"></div>
+    </div>
+    <div class="card">
       <div class="card-h"><h3>Các lần nạp file</h3><div class="sp"></div><button class="btn sm ghost" id="openDb"><svg class="icon"><use href="#i-db"/></svg>Mở thư mục CSDL</button></div>
       <div class="tbl"><table id="tImports"></table></div>
     </div>
     <div class="card">
       <div class="card-h"><h3>Bảo trì</h3></div>
       <div class="kv" id="dbInfo"></div>
-      <div class="row" style="margin-top:16px"><button class="btn" id="btnRecheck"><svg class="icon"><use href="#i-refresh"/></svg>Kiểm tra lại toàn bộ dữ liệu</button>
+      <div class="row" style="margin-top:16px"><button class="btn" id="btnRecheck"><svg class="icon"><use href="#i-refresh"/></svg>Phân tích lại toàn bộ dữ liệu (mọi tháng)</button>
         <button class="btn danger" id="btnClear">Xoá toàn bộ dữ liệu</button><button class="btn ghost" id="btnLogs"><svg class="icon"><use href="#i-file"/></svg>Mở nhật ký lỗi</button></div>
     </div>
   </section>
