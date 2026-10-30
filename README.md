@@ -8,7 +8,7 @@ Trang **[Releases](https://github.com/ducthao2305vn-crypto/AccSoft/releases/late
 - Ứng dụng chưa ký số: nếu SmartScreen cảnh báo chọn *More info* → *Run anyway*.
 
 ## Dữ liệu lớn
-- Đọc file dạng luồng (xlsx, csv) trong tiến trình nền; dữ liệu lưu SQLite trên đĩa tại `%APPDATA%\AccSoft\accsoft.db`.
+- Đọc file dạng luồng (xlsx, csv) trong tiến trình nền; dữ liệu lưu SQLite tại `AccSoft_Data\accsoft.db` trong thư mục ứng dụng (cạnh file .exe bản Portable, hoặc thư mục cài đặt). Sao lưu = chép thư mục `AccSoft_Data` khi ứng dụng đã đóng.
 - Khuyến nghị: RAM ≥ 8 GB, ổ trống ≥ 3 lần dung lượng file nạp. CSV nạp nhanh hơn xlsx đáng kể – nên xuất CSV từ ERP với file rất lớn.
 - Dữ liệu quản lý theo tháng: bật/tắt tháng khỏi phân tích, xoá tháng, nạp lại tháng (hỏi thay thế).
 
