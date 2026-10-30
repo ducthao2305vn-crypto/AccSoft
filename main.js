@@ -66,12 +66,40 @@ async function saveXlsx(defName, wb) {
 const READ = ['meta', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
 const WRITE = ['setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
+// Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
+function appDir() {
+  if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
+  return app.isPackaged ? path.dirname(process.execPath) : __dirname;
+}
+function writable(dir) {
+  try { fs.mkdirSync(dir, { recursive: true }); const t = path.join(dir, '.write-test'); fs.writeFileSync(t, ''); fs.unlinkSync(t); return true; } catch (e) { return false; }
+}
+// CSDL nằm trong <thư mục ứng dụng>/AccSoft_Data; nếu không ghi được (vd cài vào Program Files) thì dùng thư mục người dùng
+function resolveDbFile() {
+  const dataDir = path.join(appDir(), 'AccSoft_Data');
+  const legacy = path.join(app.getPath('userData'), 'accsoft.db');
+  if (!writable(dataDir)) return { file: legacy, fallback: true };
+  const file = path.join(dataDir, 'accsoft.db');
+  // Chuyển CSDL cũ (ở %APPDATA%) sang thư mục ứng dụng ở lần chạy đầu – bản cũ được giữ nguyên làm dự phòng
+  if (!fs.existsSync(file) && fs.existsSync(legacy)) {
+    try {
+      const { DatabaseSync } = require('node:sqlite');
+      const old = new DatabaseSync(legacy); old.exec('PRAGMA wal_checkpoint(TRUNCATE)'); old.close();
+      fs.copyFileSync(legacy, file);
+      return { file, migratedFrom: legacy };
+    } catch (e) { try { fs.unlinkSync(file); } catch (_) {} return { file: legacy, fallback: true, error: String(e.message || e) }; }
+  }
+  return { file };
+}
+
+let dbInfo = {};
 async function init() {
-  dbFile = path.join(app.getPath('userData'), 'accsoft.db');
+  dbInfo = resolveDbFile();
+  dbFile = dbInfo.file;
   const r = open(dbFile, { cleanup: true });
   Q = make(r.db);
   ipcMain.handle('q', (_e, name, ...args) => { if (!READ.includes(name) && !WRITE.includes(name)) throw new Error('Không hỗ trợ: ' + name); return Q[name](...args); });
-  ipcMain.handle('app:info', () => ({ version: app.getVersion(), dbFile, needRecheck: r.needRecheck }));
+  ipcMain.handle('app:info', () => ({ version: app.getVersion(), dbFile, needRecheck: r.needRecheck, appDir: appDir(), ...dbInfo }));
   ipcMain.handle('db:openFolder', () => shell.showItemInFolder(dbFile));
   ipcMain.handle('import:pick', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Dữ liệu hạch toán', extensions: ['xlsx', 'csv', 'txt'] }] });

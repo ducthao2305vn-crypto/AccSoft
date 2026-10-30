@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v2.2.0 – 30/10/2026
+- Cơ sở dữ liệu lưu tại **thư mục ứng dụng**: `<thư mục chứa AccSoft>\AccSoft_Data\accsoft.db` (bản Portable: cạnh file .exe; bản cài: thư mục cài đặt).
+- Lần chạy đầu tự chuyển dữ liệu cũ từ `%APPDATA%\AccSoft` sang (bản cũ được giữ làm dự phòng).
+- Nếu thư mục ứng dụng không có quyền ghi (vd cài vào Program Files) thì tự dùng `%APPDATA%\AccSoft` và báo trong tab Quản lý dữ liệu.
+- Gỡ cài đặt / cập nhật phiên bản mới **không xoá** thư mục AccSoft_Data.
+
 ## v2.1.0 – 30/10/2026
 Phân tích **tuổi nợ phải thu – phải trả** làm lại:
 - Đối tượng công nợ lấy đúng theo phía hạch toán: TK ghi Nợ ↔ Đối tượng Nợ (Business Partner), TK ghi Có ↔ Đối tượng Có (Bpartner credit); không lấy thay đối tượng phía kia (thiếu thì ghi "không có đối tượng" và cảnh báo).

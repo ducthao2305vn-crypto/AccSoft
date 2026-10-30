@@ -1,7 +1,7 @@
 {
   "name": "accsoft",
   "productName": "AccSoft",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Phân tích sổ hạch toán ERP: lỗi nhập liệu, tuổi nợ, kết quả kinh doanh",
   "main": "main.js",
   "author": "AccSoft",
@@ -41,7 +41,8 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "shortcutName": "AccSoft",
-      "artifactName": "AccSoft-Setup-${version}.${ext}"
+      "artifactName": "AccSoft-Setup-${version}.${ext}",
+      "include": "build/installer.nsh"
     },
     "mac": {
       "target": [
