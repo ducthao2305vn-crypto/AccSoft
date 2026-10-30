@@ -13,9 +13,10 @@ Trang **[Releases](https://github.com/ducthao2305vn-crypto/AccSoft/releases/late
 - Dữ liệu quản lý theo tháng: bật/tắt tháng khỏi phân tích, xoá tháng, nạp lại tháng (hỏi thay thế).
 
 ## Chức năng
-- **Lỗi nhập liệu**: 20 quy tắc (sai chiều doanh thu/chi phí, thiếu khoản mục/đối tượng, diễn giải trống hoặc tính sai, SL×ĐG ≠ thành tiền, chi phí nhiều kỳ không qua 242, sai kỳ, nghi trùng, số tiền bất thường…); hướng dẫn "Cần chỉnh sửa"; xem toàn bộ chứng từ; trạng thái + ghi chú; lọc/sắp xếp; xuất Excel.
-- **Công nợ & tuổi nợ** 131, 1388, 141, 331, 3388 (FIFO), dư ngược chiều.
-- **Kết quả kinh doanh** theo năm/tháng, **cơ cấu chi phí**.
+- **Lỗi nhập liệu**: 34 quy tắc (sai chiều doanh thu/chi phí, thiếu khoản mục/đối tượng, diễn giải trống hoặc tính sai, SL×ĐG ≠ thành tiền, chi phí nhiều kỳ không qua 242, sai kỳ, nghi trùng, số tiền bất thường…); hướng dẫn "Cần chỉnh sửa"; xem toàn bộ chứng từ; trạng thái + ghi chú; lọc/sắp xếp; xuất Excel.
+- **Công nợ & tuổi nợ** phải thu 131, 136, 1388, 141 – phải trả 331, 336, 334, 3388 (FIFO, đối tượng theo phía Nợ/Có), dư ngược chiều.
+- **Kết quả kinh doanh** theo năm/tháng.
+- **Doanh thu & Chi phí** theo tài khoản, khoản mục, bộ phận × tháng/quý/năm, xem chi tiết bút toán.
 - **Báo cáo & Thông báo**: báo cáo kết quả kiểm tra (in/PDF/Excel), danh sách lỗi cần khắc phục theo nhân viên, gửi email qua SMTP kèm Excel.
 
 ## Phát triển

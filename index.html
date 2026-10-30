@@ -164,7 +164,7 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
     <button data-p="errors"><svg class="icon"><use href="#i-alert"/></svg>Lỗi nhập liệu<span class="count hide" id="navErr"></span></button>
     <button data-p="aging"><svg class="icon"><use href="#i-wallet"/></svg>Công nợ & tuổi nợ</button>
     <button data-p="pl"><svg class="icon"><use href="#i-chart"/></svg>Kết quả kinh doanh</button>
-    <button data-p="cost"><svg class="icon"><use href="#i-pie"/></svg>Cơ cấu chi phí</button>
+    <button data-p="cost"><svg class="icon"><use href="#i-pie"/></svg>Doanh thu & Chi phí</button>
     <div class="sec">Kiểm soát</div>
     <button data-p="report"><svg class="icon"><use href="#i-mail"/></svg>Báo cáo & Thông báo</button>
     <button data-p="data"><svg class="icon"><use href="#i-db"/></svg>Quản lý dữ liệu</button>
@@ -256,11 +256,22 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
   </section>
 
   <section id="cost" class="hide">
-    <div class="grid g2">
-      <div class="card"><div class="card-h"><h3>Top khoản mục chi phí</h3></div><div class="cv" style="height:420px"><canvas id="chCost"></canvas></div></div>
-      <div class="card"><div class="card-h"><h3>Chi phí theo bộ phận</h3></div><div class="cv" style="height:420px"><canvas id="chDept"></canvas></div></div>
+    <div class="card">
+      <div class="row" style="align-items:flex-end">
+        <div class="tabs" id="anKind"><button data-k="exp" class="on">Chi phí</button><button data-k="rev">Doanh thu</button></div>
+        <label class="field">Phân tích theo<select class="input" id="anBy"><option value="acc1">Tài khoản tổng hợp (cấp 3)</option><option value="acc">Tài khoản chi tiết</option><option value="item">Khoản mục (Type of cost / revenue)</option><option value="dept">Bộ phận</option></select></label>
+        <label class="field">Kỳ<select class="input" id="anPer"><option value="m">Tháng</option><option value="q">Quý</option><option value="y">Năm</option></select></label>
+        <label class="field" style="flex:1;min-width:200px">Tìm<input class="input" id="anFind" placeholder="Lọc theo tên tài khoản / khoản mục…"></label>
+        <button class="btn" id="anXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
+      </div>
+      <div class="note brand" style="margin-top:14px">Chi phí = phát sinh Nợ − Có TK loại 6, 8; doanh thu = phát sinh Có − Nợ TK 511, 512, 515, 711; loại trừ kết chuyển 911. Bấm một dòng để xem các bút toán chi tiết.</div>
     </div>
-    <div class="card"><div class="card-h"><h3>Biến động chi phí theo năm</h3></div><div class="tbl"><table id="tCost"></table></div></div>
+    <div class="kpis" id="anKpi"></div>
+    <div class="grid g3">
+      <div class="card"><div class="card-h"><h3 id="anChartT">Diễn biến theo kỳ</h3><span class="hint">8 nhóm lớn nhất</span></div><div class="cv" style="height:360px"><canvas id="chAn"></canvas></div></div>
+      <div class="card"><div class="card-h"><h3>Cơ cấu</h3></div><div class="cv" style="height:360px"><canvas id="chAnPie"></canvas></div></div>
+    </div>
+    <div class="card"><div class="card-h"><h3 id="anTblT">Bảng phân tích</h3><span class="hint" id="anHint"></span></div><div class="tbl" style="max-height:640px"><table id="tAn"></table></div></div>
   </section>
 
   <section id="report" class="hide">

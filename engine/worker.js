@@ -132,9 +132,9 @@ function deleteMonths(months, exceptImport = -1) {
 
 /* ---------- Quy tắc toàn cục (trùng lặp, bất thường) ---------- */
 function setRules() {
-  post({ type: 'progress', label: 'Đang tìm bút toán trùng lặp và số tiền bất thường…' });
+  post({ type: 'progress', label: 'Đang rà soát toàn bộ dữ liệu (trùng lặp, bất thường, chứng từ, chia nhỏ khoản chi)…' });
   db.exec('BEGIN');
-  db.exec(`DELETE FROM errors WHERE rule IN ('DUPLICATE','OUTLIER')`);
+  db.exec(`DELETE FROM errors WHERE rule IN ('DUPLICATE','OUTLIER','DOC_MULTI_MONTH','SPLIT_PAYMENT','RARE_PAIR')`);
   const keyOf = (k, r) => errKey(k, { doc: r.doc, line: r.line, dr: r.dr, cr: r.cr, amt: r.amt });
   const F = (t = '') => `${t}amount<>0 AND ifnull(${t}source_table,'') NOT LIKE '%Depreciation%' AND ifnull(${t}source_table,'') NOT LIKE '%Distribution%' AND ifnull(${t}source_table,'') NOT LIKE '%CIP%'`;
   db.exec(`DROP TABLE IF EXISTS temp.dg;
@@ -150,13 +150,29 @@ function setRules() {
     const docs = [...new Set(arr.map(x => x.doc))];
     for (const r of arr) insErr.run(r.id, 'DUPLICATE', 'H', `${docs.length} chứng từ: ${docs.slice(0, 4).join(', ')}`, keyOf('DUPLICATE', r));
   }
-  const EXP = `substr(acc_debit,1,1) IN ('6','8') AND acc_debit NOT LIKE '911%' AND type_of_cost IS NOT NULL AND amount>0`;
+  const EXP = `substr(acc_debit,1,1) IN ('6','8') AND acc_debit NOT LIKE '911%' AND type_of_cost IS NOT NULL AND amount>0
+    AND ifnull(source_table,'') NOT LIKE '%Depreciation%' AND ifnull(source_table,'') NOT LIKE '%Distribution%' AND ifnull(source_table,'') NOT LIKE '%CIP%'`;
   for (const { t } of db.prepare(`SELECT type_of_cost t FROM entries WHERE ${EXP} GROUP BY type_of_cost HAVING count(*)>=10`).all()) {
     const c = db.prepare(`SELECT count(*) n FROM entries WHERE ${EXP} AND type_of_cost=?`).get(t).n;
     const med = db.prepare(`SELECT amount FROM entries WHERE ${EXP} AND type_of_cost=? ORDER BY amount LIMIT 1 OFFSET ?`).get(t, c >> 1).amount;
     for (const r of db.prepare(`SELECT id, document_no doc, line_no line, acc_debit dr, acc_credit cr, amount amt FROM entries WHERE ${EXP} AND type_of_cost=? AND amount>? AND amount>100`).all(t, 10 * med))
       insErr.run(r.id, 'OUTLIER', 'M', `${fmt2(r.amt)} so với trung vị ${fmt2(med)}`, keyOf('OUTLIER', r));
   }
+  const SELR = `e.id, e.document_no doc, e.line_no line, e.acc_debit dr, e.acc_credit cr, e.amount amt`;
+  // Chứng từ có dòng thuộc nhiều tháng
+  for (const r of db.prepare(`SELECT ${SELR}, d.ms FROM entries e JOIN (SELECT document_no, group_concat(DISTINCT ym) ms FROM entries
+      WHERE document_no IS NOT NULL GROUP BY document_no HAVING count(DISTINCT ym)>1) d ON d.document_no=e.document_no`).all())
+    insErr.run(r.id, 'DOC_MULTI_MONTH', 'M', `Các tháng: ${r.ms}`, keyOf('DOC_MULTI_MONTH', r));
+  // Nhiều khoản chi tiền cho cùng đối tượng trong một ngày
+  for (const r of db.prepare(`SELECT ${SELR}, g.n, g.tot FROM entries e JOIN (SELECT partner_debit p, account_date d, count(DISTINCT document_no) n, sum(amount) tot FROM entries
+      WHERE (acc_credit LIKE '111%' OR acc_credit LIKE '112%') AND partner_debit IS NOT NULL AND amount>0 GROUP BY partner_debit, account_date HAVING count(DISTINCT document_no)>=3) g
+      ON g.p=e.partner_debit AND g.d=e.account_date WHERE (e.acc_credit LIKE '111%' OR e.acc_credit LIKE '112%') AND e.amount>0`).all())
+    insErr.run(r.id, 'SPLIT_PAYMENT', 'M', `${r.n} chứng từ chi trong ngày, tổng ${fmt2(r.tot)}`, keyOf('SPLIT_PAYMENT', r));
+  // Cặp tài khoản đối ứng hiếm
+  if (db.prepare('SELECT count(*) n FROM entries').get().n >= 1000)
+    for (const r of db.prepare(`SELECT ${SELR}, g.n FROM entries e JOIN (SELECT substr(acc_debit,1,3) a, substr(acc_credit,1,3) b, count(*) n FROM entries
+        GROUP BY 1,2 HAVING count(*)<=2) g ON g.a=substr(e.acc_debit,1,3) AND g.b=substr(e.acc_credit,1,3)`).all())
+      insErr.run(r.id, 'RARE_PAIR', 'L', `Nợ ${r.dr.slice(0, 3)} / Có ${r.cr.slice(0, 3)} chỉ có ${r.n} lần`, keyOf('RARE_PAIR', r));
   db.exec('COMMIT');
 }
 

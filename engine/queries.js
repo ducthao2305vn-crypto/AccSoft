@@ -140,6 +140,43 @@ function make(db) {
     };
   }
 
+  /* ---------- Phân tích doanh thu – chi phí theo tài khoản / khoản mục ---------- */
+  const ACC1 = { '511': 'Doanh thu bán hàng & CCDV', '512': 'Doanh thu nội bộ', '515': 'Doanh thu hoạt động tài chính', '711': 'Thu nhập khác',
+    '621': 'Chi phí NVL trực tiếp', '622': 'Chi phí nhân công trực tiếp', '623': 'Chi phí sử dụng máy', '627': 'Chi phí sản xuất chung', '632': 'Giá vốn hàng bán',
+    '635': 'Chi phí tài chính', '641': 'Chi phí bán hàng', '642': 'Chi phí quản lý doanh nghiệp', '811': 'Chi phí khác', '821': 'Chi phí thuế TNDN' };
+  const PERIOD = { m: 'e.ym', q: `substr(e.ym,1,4)||'-Q'||((cast(substr(e.ym,6,2) AS INTEGER)+2)/3)`, y: 'substr(e.ym,1,4)' };
+  function sides(kind) {
+    const exp = s => `(substr(e.acc_${s},1,1) IN ('6','8') AND e.acc_${s} NOT LIKE '911%')`;
+    const rev = s => `(e.acc_${s} LIKE '511%' OR e.acc_${s} LIKE '512%' OR e.acc_${s} LIKE '515%' OR e.acc_${s} LIKE '711%')`;
+    const no911 = `e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%'`;
+    // [phía TK, điều kiện, dấu]: chi phí = Nợ − Có; doanh thu = Có − Nợ
+    return kind === 'rev' ? [['credit', `${rev('credit')} AND ${no911}`, 1], ['debit', `${rev('debit')} AND ${no911}`, -1]]
+      : [['debit', `${exp('debit')} AND ${no911}`, 1], ['credit', `${exp('credit')} AND ${no911}`, -1]];
+  }
+  function groupExpr(kind, by, side) {
+    if (by === 'acc1') return `substr(e.acc_${side},1,3)`;
+    if (by === 'acc') return `coalesce(e.acc_${side}_name, e.acc_${side})`;
+    if (by === 'dept') return `coalesce(e.department,'(trống)')`;
+    return kind === 'rev' ? `coalesce(e.type_of_revenue,'(chưa phân loại)')` : `coalesce(e.type_of_cost,'(chưa phân loại)')`;
+  }
+  function analysis(kind = 'exp', by = 'acc1', period = 'm') {
+    const P = PERIOD[period] || PERIOD.m;
+    const parts = sides(kind).map(([side, cond, sign]) => `SELECT ${groupExpr(kind, by, side)} g, ${P} p, e.amount*${sign} v FROM entries e WHERE ${INC} AND ${cond}`);
+    const rows = all(`SELECT g, p, sum(v) v, count(*) n FROM (${parts.join(' UNION ALL ')}) GROUP BY g, p`);
+    return { rows: rows.map(r => ({ ...r, name: by === 'acc1' ? (ACC1[r.g] || '') : '' })), periods: [...new Set(rows.map(r => r.p))].sort() };
+  }
+  function analysisDrill(kind, by, g, period, p, limit = 500) {
+    const P = PERIOD[period] || PERIOD.m;
+    const parts = sides(kind).map(([side, cond, sign]) => `SELECT e.id rid, e.document_no doc, e.account_date date, e.acc_debit_name drName, e.acc_credit_name crName,
+        e.amount*${sign} amt, e.description "desc", e.created_by user, e.type_of_cost tcost, e.type_of_revenue trev, e.department dept, e.partner_debit bp, e.partner_credit bpCr,
+        (SELECT min(er.id) FROM errors er WHERE er.entry_id=e.id) eid
+      FROM entries e WHERE ${INC} AND ${cond} AND ${groupExpr(kind, by, side)}=?${p ? ` AND ${P}=?` : ''}`);
+    const args = p ? [g, p, g, p] : [g, g];
+    const sql = parts.join(' UNION ALL ');
+    const tot = get(`SELECT count(*) n, sum(amt) v FROM (${sql})`, ...args);
+    return { total: tot.n, sum: tot.v, rows: all(`SELECT * FROM (${sql}) ORDER BY abs(amt) DESC LIMIT ?`, ...args, limit) };
+  }
+
   /* ---------- Công nợ – tuổi nợ (FIFO) ---------- */
   // Tài khoản công nợ: [mã cấp 1, tên, nhóm, chiều số dư tự nhiên (1 = dư Nợ, -1 = dư Có)]
   const AG_ACC = [
@@ -214,7 +251,7 @@ function make(db) {
   const mailLog = () => all(`SELECT sent_at at, employee, to_addr "to", error_count count, status, CASE WHEN status='ok' THEN '' ELSE info END error FROM mail_log ORDER BY id DESC LIMIT 500`);
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };

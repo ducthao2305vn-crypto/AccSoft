@@ -18,7 +18,7 @@ const ls={get:(k,d)=>{try{const v=localStorage.getItem('accsoft.'+k);return v==n
 const SEVL={H:'Cao',M:'Trung bình',L:'Thấp'};
 let META={rules:[],status:{}},RULE={},PAGE='overview',charts={};
 const TITLES={overview:['Tổng quan','Bức tranh chung về dữ liệu hạch toán'],errors:['Lỗi nhập liệu','Phát hiện, theo dõi và xử lý bút toán sai'],aging:['Công nợ & tuổi nợ','Phải thu, phải trả, tạm ứng theo đối tượng'],
-  pl:['Kết quả kinh doanh','Doanh thu, chi phí, lợi nhuận theo năm và tháng'],cost:['Cơ cấu chi phí','Khoản mục và bộ phận phát sinh chi phí'],report:['Báo cáo & Thông báo','Báo cáo kiểm tra và gửi yêu cầu khắc phục'],data:['Quản lý dữ liệu','Tháng dữ liệu, lần nạp file và bảo trì CSDL']};
+  pl:['Kết quả kinh doanh','Doanh thu, chi phí, lợi nhuận theo năm và tháng'],cost:['Doanh thu & Chi phí','Phân tích theo tài khoản, khoản mục, bộ phận và kỳ'],report:['Báo cáo & Thông báo','Báo cáo kiểm tra và gửi yêu cầu khắc phục'],data:['Quản lý dữ liệu','Tháng dữ liệu, lần nạp file và bảo trì CSDL']};
 
 /* ---------- Biểu đồ: bảng màu TLM, cam chủ đạo ---------- */
 const C={brand:'#FA4700',brand3:'#FF9C6B',brand1:'#FFD4BD',navy:'#001A79',ok:'#17B26A',err:'#F04438',gray:'#D5D7DA',grid:'#F5F5F5',txt:'#535862'};
@@ -250,16 +250,59 @@ async function vPL(){
   $('#plNotes').innerHTML=notes.join('');
 }
 
-/* ---------- Chi phí ---------- */
-async function vCost(){
-  const c=await api.q('cost');const tc={},ty={};
-  for(const r of c.byType){tc[r.t]=(tc[r.t]||0)+r.v;(ty[r.t]??={})[r.y]=r.v}
-  const top=Object.entries(tc).sort((a,b)=>b[1]-a[1]),t1=top.slice(0,15);
-  chart('chCost',{type:'bar',data:{labels:t1.map(x=>x[0].slice(0,42)),datasets:[{data:t1.map(x=>x[1]),backgroundColor:t1.map((_,i)=>i<3?C.brand:C.brand3),barThickness:16}]},options:{indexAxis:'y',plugins:{legend:{display:false}}}});
-  chart('chDept',{type:'bar',data:{labels:c.byDept.map(x=>x.d.slice(0,32)),datasets:[{data:c.byDept.map(x=>x.v),backgroundColor:C.navy,barThickness:16}]},options:{indexAxis:'y',plugins:{legend:{display:false}}}});
-  const ys=[...new Set(c.byType.map(r=>r.y))].sort(),tot=top.reduce((a,b)=>a+b[1],0);
-  $('#tCost').innerHTML='<thead><tr><th>Khoản mục</th>'+ys.map(y=>`<th class=n>${y}</th>`).join('')+'<th class=n>Tỷ trọng</th>'+(ys.length>1?'<th class=n>Biến động năm cuối</th>':'')+'</tr></thead><tbody>'+
-   top.slice(0,80).map(([t,v])=>{const a=ty[t]||{},l=a[ys.at(-1)]||0,p=a[ys.at(-2)]||0;return `<tr><td>${esc(t)}</td>${ys.map(y=>`<td class=n>${fmt(a[y]||0)}</td>`).join('')}<td class=n><b>${pct(v/tot)}</b></td>`+(ys.length>1?`<td class=n>${p?pct((l-p)/Math.abs(p)):'mới'}</td>`:'')+'</tr>'}).join('')+'</tbody>';
+/* ---------- Doanh thu & chi phí theo tài khoản / khoản mục ---------- */
+const AN_BY={acc1:'Tài khoản',acc:'Tài khoản chi tiết',item:'Khoản mục',dept:'Bộ phận'};
+const PAL=['#FA4700','#001A79','#FF9C6B','#2970FF','#D63600','#875BF7','#17B26A','#EAAA08','#A4A7AE'];
+let AN={kind:'exp',data:null,view:[]};
+async function vCost(reload=true){
+  const by=$('#anBy').value,per=$('#anPer').value,find=$('#anFind').value.trim().toLowerCase();
+  if(reload||!AN.data)AN.data=await api.q('analysis',AN.kind,by,per);
+  const {rows,periods}=AN.data,G=new Map();
+  for(const r of rows){const g=G.get(r.g)||G.set(r.g,{g:r.g,name:r.name,tot:0,n:0,by:{}}).get(r.g);g.tot+=r.v;g.n+=r.n;g.by[r.p]=(g.by[r.p]||0)+r.v}
+  const all=[...G.values()].sort((a,b)=>b.tot-a.tot),total=all.reduce((s,x)=>s+x.tot,0);
+  const list=all.filter(x=>!find||(x.g+' '+x.name).toLowerCase().includes(find));AN.view=list;
+  const last=periods.at(-1),prev=periods.at(-2),sumP=p=>all.reduce((s,x)=>s+(x.by[p]||0),0),lv=sumP(last),pv=sumP(prev);
+  const label=AN.kind==='rev'?'doanh thu':'chi phí',lbl=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  // Biến động mạnh nhất kỳ cuối
+  const mv=prev?all.map(x=>({x,d:(x.by[last]||0)-(x.by[prev]||0)})).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d))[0]:null;
+  $('#anKpi').innerHTML=kpi(AN.kind==='rev'?'blue':'','coins',`Tổng ${label}`,fmt(total),`${periods.length} kỳ · ${num(all.length)} nhóm`)
+    +kpi('',AN.kind==='rev'?'trend':'pie',`${lbl(label)} kỳ ${last||''}`,fmt(lv),prev?`${lv>=pv?'▲':'▼'} ${pct(Math.abs((lv-pv)/pv))} so với ${prev}`:'')
+    +kpi('','chart',`Lớn nhất: ${esc(String(all[0]?.g||'').slice(0,28))}`,all[0]?pct(all[0].tot/total):'–',esc(all[0]?.name||'tỷ trọng trong tổng'))
+    +(mv?kpi(mv.d>0&&AN.kind==='exp'?'red':'green','alert','Biến động mạnh nhất kỳ cuối',(mv.d>0?'+':'')+fmt(mv.d),esc(String(mv.x.g).slice(0,40))):'');
+  $('#anChartT').textContent=`Diễn biến ${label} theo ${{m:'tháng',q:'quý',y:'năm'}[per]}`;
+  const top=all.slice(0,8),other=all.slice(8);
+  const ds=top.map((x,i)=>({label:String(x.g).slice(0,40),data:periods.map(p=>x.by[p]||0),backgroundColor:PAL[i],borderRadius:0,maxBarThickness:42}));
+  if(other.length)ds.push({label:'Khác',data:periods.map(p=>other.reduce((s,x)=>s+(x.by[p]||0),0)),backgroundColor:PAL[8],borderRadius:0,maxBarThickness:42});
+  chart('chAn',{type:'bar',data:{labels:periods,datasets:ds},options:{scales:{x:{stacked:true},y:{stacked:true}},plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
+  chart('chAnPie',{type:'doughnut',data:{labels:[...top.map(x=>String(x.g).slice(0,30)),...(other.length?['Khác']:[])],datasets:[{data:[...top.map(x=>Math.max(0,x.tot)),...(other.length?[other.reduce((s,x)=>s+Math.max(0,x.tot),0)]:[])],backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
+    options:{cutout:'62%',plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.raw)} (${pct(c.raw/total)})`}}}}});
+  // Bảng: nhóm × kỳ
+  const P=periods.length>36?periods.slice(-36):periods;
+  $('#anTblT').textContent=`${lbl(label)} theo ${AN_BY[by].toLowerCase()} × ${{m:'tháng',q:'quý',y:'năm'}[per]}`;
+  $('#anHint').textContent=(periods.length>P.length?`hiển thị ${P.length} kỳ gần nhất · `:'')+`${num(list.length)} nhóm`;
+  const head='<thead><tr><th style="position:sticky;left:0;z-index:2;background:var(--gray-50)">'+AN_BY[by]+'</th>'+(by==='acc1'?'<th>Tên</th>':'')+'<th class=n>Tổng</th><th class=n>Tỷ trọng</th>'+(prev?`<th class=n>± ${last} / ${prev}</th>`:'')+P.map(p=>`<th class=n>${p}</th>`).join('')+'<th class=n>Số dòng</th></tr></thead>';
+  const body=list.slice(0,1000).map((x,i)=>{const l=x.by[last]||0,p=x.by[prev]||0,ch=p?(l-p)/Math.abs(p):null;
+    const chc=ch==null?'':(AN.kind==='exp'?(ch>0.2?'neg':ch<-0.2?'pos':''):(ch<-0.2?'neg':ch>0.2?'pos':''));
+    return `<tr class="click" data-i="${i}"><td style="position:sticky;left:0;background:#fff;min-width:200px"><b>${esc(x.g)}</b></td>${by==='acc1'?`<td class=nw>${esc(x.name)}</td>`:''}
+      <td class=n><b>${fmt(x.tot)}</b></td><td class=n><div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><div style="width:50px;height:6px;border-radius:9px;background:var(--gray-200)"><div style="width:${Math.max(0,Math.min(100,x.tot/total*100))}%;height:100%;border-radius:9px;background:var(--brand-500)"></div></div>${pct(x.tot/total)}</div></td>
+      ${prev?`<td class="n ${chc}">${ch==null?(l?'mới':''):(ch>0?'▲ ':'▼ ')+pct(Math.abs(ch))}</td>`:''}${P.map(p=>`<td class=n>${x.by[p]?fmt(x.by[p]):''}</td>`).join('')}<td class="n mut">${num(x.n)}</td></tr>`}).join('');
+  const foot=`<tr style="background:var(--brand-25)"><td style="position:sticky;left:0;background:var(--brand-25)"><b>Tổng cộng</b></td>${by==='acc1'?'<td></td>':''}<td class=n><b>${fmt(total)}</b></td><td class=n>100%</td>${prev?`<td class=n>${pv?pct((lv-pv)/Math.abs(pv)):''}</td>`:''}${P.map(p=>`<td class=n><b>${fmt(sumP(p))}</b></td>`).join('')}<td></td></tr>`;
+  $('#tAn').innerHTML=head+'<tbody>'+body+foot+'</tbody>';
+}
+$('#anKind').onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;AN.kind=b.dataset.k;$$('#anKind button').forEach(x=>x.classList.toggle('on',x===b));vCost(true)};
+['#anBy','#anPer'].forEach(s=>$(s).onchange=()=>vCost(true));$('#anFind').oninput=()=>vCost(false);
+$('#tAn').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)drill(AN.view[+tr.dataset.i])};
+$('#anXls').onclick=()=>{const {periods}=AN.data,by=$('#anBy').value;
+  api.exportAnalysis((AN.kind==='rev'?'DoanhThu':'ChiPhi')+'_'+by,AN.view.map(x=>Object.assign({[AN_BY[by]]:x.g},by==='acc1'?{'Tên':x.name}:{},{'Tổng':x.tot},...periods.map(p=>({[p]:x.by[p]||0})),{'Số dòng':x.n})))};
+async function drill(x){
+  const d=await api.q('analysisDrill',AN.kind,$('#anBy').value,x.g,$('#anPer').value,null);CUR=-1;
+  $('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">${AN_BY[$('#anBy').value]}</div><h2 style="font-size:20px">${esc(x.g)} ${x.name?'<span class=mut style="font-weight:400">– '+esc(x.name)+'</span>':''}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div>
+   <div class="pb"><div class="kpis">${kpi('','coins','Tổng',fmt(d.sum),num(d.total)+' bút toán')}${kpi('','file','Đang hiển thị',num(d.rows.length),'bút toán có số tiền lớn nhất')}</div>
+   <div class="card"><div class="card-h"><h3>Bút toán chi tiết</h3><span class="hint">bấm dòng có biểu tượng cảnh báo để xem lỗi</span></div><div class="tbl"><table><thead><tr><th></th><th>Ngày</th><th>Chứng từ</th><th>TK Nợ</th><th>TK Có</th><th class=n>Số tiền</th><th>Diễn giải</th><th>Khoản mục</th><th>Bộ phận</th><th>Người nhập</th></tr></thead><tbody>
+   ${d.rows.map(r=>`<tr class="${r.eid?'click':''}" data-eid="${r.eid||''}"><td>${r.eid?'<span class="badge b-M">Có lỗi</span>':''}</td><td class=nw>${vn(r.date)}</td><td class=nw>${esc(r.doc)}</td><td>${esc(r.drName)}</td><td>${esc(r.crName)}</td><td class="n ${r.amt<0?'neg':''}">${fmt2(r.amt)}</td><td><div class=clamp title="${esc(r.desc)}">${esc(r.desc)}</div></td><td>${esc(AN.kind==='rev'?r.trev:r.tcost)}</td><td>${esc(r.dept)}</td><td class=nw>${esc(short(r.user))}</td></tr>`).join('')}
+   </tbody></table></div></div></div>`;
+  $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
+  $('#dPane').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr[data-eid]');if(tr&&tr.dataset.eid)showDetail(null,+tr.dataset.eid)};
 }
 
 /* ---------- Báo cáo & thông báo ---------- */
@@ -335,7 +378,7 @@ $('#openDb').onclick=()=>api.openDbFolder();$('#btnLogs').onclick=()=>api.openLo
 $('#btnRecheck').onclick=()=>runT('recheck',{},'Đã kiểm tra lại toàn bộ dữ liệu.');
 $('#btnClear').onclick=()=>{if(confirm('Xoá TOÀN BỘ dữ liệu hạch toán và cảnh báo? (giữ lại trạng thái/ghi chú và cấu hình mail)'))runT('clear',{})};
 
-const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),pl:vPL,cost:vCost,report:vReport,data:vData};
+const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),pl:vPL,cost:()=>vCost(true),report:vReport,data:vData};
 (async()=>{
   META=await api.q('meta');RULE=Object.fromEntries(META.rules.map(r=>[r.k,r]));
   const info=await api.info();$('#ver').textContent='v'+info.version;

@@ -1,5 +1,19 @@
 # Lịch sử phiên bản
 
+## v2.3.0 – 30/10/2026
+**Rà soát dữ liệu mở rộng: 34 quy tắc** (thêm 14):
+- Ngày hạch toán ở tương lai · Diễn giải chung chung · Bù trừ công nợ giữa hai đối tượng · Ghi giảm TSCĐ vào chi phí
+- Chi phí lớn thiếu hợp đồng/hoá đơn/đề nghị · Bút toán bị người khác sửa · Chi phí số tròn lớn · Bút toán lớn sát cuối tháng (cut-off)
+- Hạn thanh toán quá dài · Khấu hao sai khoản mục · Doanh thu không gắn hoá đơn
+- Toàn bộ dữ liệu: Chứng từ trải nhiều kỳ · Nghi chia nhỏ khoản chi (≥ 3 chứng từ chi cho một đối tượng trong ngày) · Cặp tài khoản đối ứng bất thường
+- Bút toán tự động (khấu hao, phân bổ, kết chuyển XDCB) không còn bị báo "số tiền bất thường".
+- Khi bộ quy tắc thay đổi, ứng dụng tự rà soát lại dữ liệu đã nạp (giữ trạng thái/ghi chú).
+
+**Tab mới "Doanh thu & Chi phí"** (thay "Cơ cấu chi phí"):
+- Phân tích chi phí hoặc doanh thu theo tài khoản tổng hợp, tài khoản chi tiết, khoản mục (Type of cost / revenue) hoặc bộ phận; theo tháng, quý, năm.
+- Bảng nhóm × kỳ có tổng, tỷ trọng, biến động kỳ cuối so với kỳ trước (tô màu tăng/giảm mạnh); biểu đồ diễn biến và cơ cấu.
+- Bấm một nhóm để xem các bút toán chi tiết (500 dòng lớn nhất), bút toán có lỗi mở thẳng sang màn hình xử lý lỗi; xuất Excel.
+
 ## v2.2.1 – 30/10/2026
 - **Sửa lỗi** nạp file Excel trên bản Windows: `Cannot find module 'call-bind-apply-helpers'` (bản đóng gói thiếu thư viện phụ của exceljs). Mã nguồn và thư viện giờ được gộp sẵn (esbuild), bản đóng gói không còn phụ thuộc node_modules.
 - **Nhật ký lỗi** tại `AccSoft_Data\logs\accsoft-YYYY-MM-DD.log` (giữ 60 ngày): ghi khởi động, từng lần nạp file (thành công/thất bại kèm stack đầy đủ), lỗi xử lý, lỗi giao diện.

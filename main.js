@@ -7,6 +7,7 @@ const { make } = require('./engine/queries');
 const R = require('./engine/reports');
 const mailer = require('./mailer');
 const log = require('./engine/log');
+const { RULES_VERSION } = require('./engine/rules');
 const firstLine = m => String(m || '').split('\n')[0];
 
 let win, Q, dbFile, busy = false;
@@ -68,7 +69,7 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const READ = ['meta', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
 const WRITE = ['setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
@@ -122,6 +123,7 @@ async function init() {
     const byUser = Object.entries(by).map(([k, n]) => { const [u, c] = k.split('|'); return { 'Người nhập': u, 'Mã lỗi': c, 'Số lượng': n }; });
     return saveXlsx('AccSoft_LoiNhapLieu.xlsx', R.errorsBook(rows, byUser));
   });
+  handle('export:analysis', (_e, title, rows) => saveXlsx(`AccSoft_${title}.xlsx`, R.book([[title.slice(0, 31), rows]])));
   handle('export:aging', (_e, asOf, term, level, grp, acc) => saveXlsx('AccSoft_TuoiNo.xlsx', R.agingBook(Q.aging(asOf, term, level).items.filter(o => (!grp || o.grp === grp) && (!acc || o.acc === acc)))));
   handle('export:report', (_e, minSev) => saveXlsx('AccSoft_BaoCaoKiemTra.xlsx',
     R.reportBook(Q.report(), Q.errors({ statusIn: ['fixed', 'ignore'] }, { k: 'user', d: 1 }, 0, 2e6).rows, Q.errors({ minSev, statusIn: ['open', 'doing'] }, { k: 'user', d: 1 }, 0, 2e6).rows)));
@@ -150,7 +152,10 @@ async function init() {
   handle('log:renderer', (_e, msg, stack) => log.error('Lỗi giao diện: ' + msg, stack));
   handle('log:open', () => shell.openPath(log.dir()));
   handle('log:file', () => log.file());
-  return r.needRecheck;
+  // Bộ quy tắc thay đổi so với lần kiểm tra trước → kiểm tra lại toàn bộ dữ liệu một lần
+  const hasData = Q.stats().entries > 0;
+  if (!hasData) Q.setSetting('rules_version', String(RULES_VERSION));
+  return r.needRecheck || (hasData && Q.getSetting('rules_version') !== String(RULES_VERSION));
 }
 
 function createWindow() {
@@ -174,7 +179,7 @@ process.on('unhandledRejection', e => log.error('Promise bị từ chối không
 app.whenReady().then(init).then(async needRecheck => {
   createWindow();
   // CSDL từ phiên bản cũ: tính lại bảng lỗi một lần
-  if (needRecheck) win.webContents.once('did-finish-load', () => exclusive(() => runTask('recheck', {}, 'Đang nâng cấp CSDL từ phiên bản cũ')).then(() => send('reload')).catch(e => { log.error('Nâng cấp CSDL thất bại', e); dialog.showErrorBox('AccSoft', firstLine(e.message) + '\n\nChi tiết: ' + log.file()); }));
+  if (needRecheck) win.webContents.once('did-finish-load', () => exclusive(() => runTask('recheck', {}, 'Đang rà soát lại dữ liệu theo bộ quy tắc mới')).then(() => { Q.setSetting('rules_version', String(RULES_VERSION)); log.info('Đã rà soát lại theo quy tắc phiên bản ' + RULES_VERSION); send('reload'); }).catch(e => { log.error('Nâng cấp CSDL thất bại', e); dialog.showErrorBox('AccSoft', firstLine(e.message) + '\n\nChi tiết: ' + log.file()); }));
 }).catch(err => {
   log.error('Không khởi động được ứng dụng', err);
   dialog.showErrorBox('AccSoft – lỗi mở cơ sở dữ liệu', String(err && err.stack || err));
