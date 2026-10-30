@@ -163,6 +163,7 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
     <button data-p="overview" class="on"><svg class="icon"><use href="#i-home"/></svg>Tổng quan</button>
     <button data-p="errors"><svg class="icon"><use href="#i-alert"/></svg>Lỗi nhập liệu<span class="count hide" id="navErr"></span></button>
     <button data-p="aging"><svg class="icon"><use href="#i-wallet"/></svg>Công nợ & tuổi nợ</button>
+    <button data-p="inv"><svg class="icon"><use href="#i-box"/></svg>Tuổi hàng tồn kho</button>
     <button data-p="pl"><svg class="icon"><use href="#i-chart"/></svg>Kết quả kinh doanh</button>
     <button data-p="cost"><svg class="icon"><use href="#i-pie"/></svg>Doanh thu & Chi phí</button>
     <div class="sec">Kiểm soát</div>
@@ -244,6 +245,29 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
       <div class="card"><div class="card-h"><h3>Dư ngược chiều</h3><span class="hint">phải thu dư Có / phải trả dư Nợ – cần đối chiếu</span></div><div class="tbl" style="max-height:360px"><table id="tAbn"></table></div></div>
     </div>
     <div class="card"><div class="card-h"><h3>Chi tiết theo đối tượng</h3><div class="sp"></div><input class="input" id="agFind" placeholder="Tìm đối tượng…" style="width:260px"></div><div class="tbl"><table id="tAging"></table></div></div>
+  </section>
+
+  <section id="inv" class="hide">
+    <div class="card">
+      <div class="row" style="align-items:flex-end">
+        <label class="field">Ngày báo cáo<input class="input" type="date" id="ivAsOf"></label>
+        <label class="field">Tính tuổi theo<select class="input" id="ivBy"><option value="product">Mặt hàng (Product)</option><option value="product_loc">Mặt hàng × Kho</option><option value="loc">Kho (Locator)</option><option value="bp">Đối tượng (Business Partner)</option></select></label>
+        <label class="field">Cấp tài khoản<select class="input" id="ivLevel"><option value="l1">Tài khoản tổng hợp</option><option value="detail">Tài khoản chi tiết</option></select></label>
+        <label class="field">Tài khoản<select class="input" id="ivAcc"></select></label>
+        <label class="field" style="flex:1;min-width:200px">Tìm<input class="input" id="ivFind" placeholder="Mã hàng, tên hàng, kho…"></label>
+        <button class="btn" id="ivXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
+      </div>
+      <div class="note brand" style="margin-top:14px"><b>Đối tượng theo phía hạch toán:</b> dòng ghi <b>Nợ</b> TK kho (nhập) lấy thông tin phía Nợ – kho <b>Locator</b>, đối tượng <b>Business Partner</b>; dòng ghi <b>Có</b> TK kho (xuất) lấy phía Có – kho <b>Locator Credit</b>, đối tượng <b>Bpartner credit</b>. Mặt hàng (Product) gắn với cả dòng.
+        Tuổi hàng tính FIFO từ ngày nhập: giá trị tồn được phân bổ cho các lần nhập gần nhất. TK 151–158, trừ 154.</div>
+      <div class="note hide" id="ivOld" style="margin-top:10px;border-color:var(--warn-500);background:var(--warn-50)"></div>
+    </div>
+    <div class="kpis" id="ivKpi"></div>
+    <div class="card"><div class="card-h"><h3>Tổng hợp tuổi hàng tồn theo tài khoản</h3><span class="hint">bấm một dòng để lọc chi tiết</span></div><div class="tbl"><table id="tIvSum"></table></div></div>
+    <div class="grid g2">
+      <div class="card"><div class="card-h"><h3>Cơ cấu tuổi hàng tồn</h3></div><div class="cv" style="height:340px"><canvas id="chIv"></canvas></div></div>
+      <div class="card"><div class="card-h"><h3>Tồn âm (xuất vượt nhập)</h3><span class="hint">thiếu phiếu nhập, xuất nhầm mã hàng/kho hoặc chưa có tồn đầu kỳ</span></div><div class="tbl" style="max-height:340px"><table id="tIvNeg"></table></div></div>
+    </div>
+    <div class="card"><div class="card-h"><h3>Chi tiết hàng tồn</h3><div class="sp"></div><div class="tabs" id="ivFlag"><button data-f="" class="on">Tất cả</button><button data-f="slow">Chậm luân chuyển</button><button data-f="old">Tồn &gt; 1 năm</button><button data-f="noprod">Thiếu mã hàng</button></div></div><div class="tbl"><table id="tIv"></table></div></div>
   </section>
 
   <section id="pl" class="hide">
@@ -339,6 +363,7 @@ Bộ phận Kế toán – Kiểm soát nội bộ</textarea></label>
 <div id="dropmask" class="hide">Thả file để nạp dữ liệu</div>
 
 <svg width="0" height="0" style="position:absolute">
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
   <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4m0 0h-4a2 2 0 0 0 0 4h4m0-4v4m0 0v4a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V5"/></symbol>

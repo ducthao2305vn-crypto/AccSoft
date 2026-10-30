@@ -15,6 +15,7 @@ Trang **[Releases](https://github.com/ducthao2305vn-crypto/AccSoft/releases/late
 ## Chức năng
 - **Lỗi nhập liệu**: 34 quy tắc (sai chiều doanh thu/chi phí, thiếu khoản mục/đối tượng, diễn giải trống hoặc tính sai, SL×ĐG ≠ thành tiền, chi phí nhiều kỳ không qua 242, sai kỳ, nghi trùng, số tiền bất thường…); hướng dẫn "Cần chỉnh sửa"; xem toàn bộ chứng từ; trạng thái + ghi chú; lọc/sắp xếp; xuất Excel.
 - **Công nợ & tuổi nợ** phải thu 131, 136, 1388, 141 – phải trả 331, 336, 334, 3388 (FIFO, đối tượng theo phía Nợ/Có), dư ngược chiều.
+- **Tuổi hàng tồn kho** 151–158 (trừ 154) theo mặt hàng / kho / đối tượng (phía Nợ ↔ đối tượng Nợ, phía Có ↔ đối tượng Có), FIFO theo ngày nhập, chậm luân chuyển, tồn âm.
 - **Kết quả kinh doanh** theo năm/tháng.
 - **Doanh thu & Chi phí** theo tài khoản, khoản mục, bộ phận × tháng/quý/năm, xem chi tiết bút toán.
 - **Báo cáo & Thông báo**: báo cáo kết quả kiểm tra (in/PDF/Excel), danh sách lỗi cần khắc phục theo nhân viên, gửi email qua SMTP kèm Excel.

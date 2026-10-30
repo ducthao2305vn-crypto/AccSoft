@@ -1,5 +1,14 @@
 # Lịch sử phiên bản
 
+## v2.4.0 – 30/10/2026
+Tab mới **Tuổi hàng tồn kho** (TK 151, 152, 153, 155, 156, 157, 158 – trừ 154):
+- Tính tuổi theo mặt hàng (Product), mặt hàng × kho, kho hoặc đối tượng; theo TK tổng hợp hoặc chi tiết.
+- Đối tượng theo phía hạch toán: dòng ghi Nợ TK kho lấy kho Locator / Business Partner, dòng ghi Có lấy Locator Credit / Bpartner credit.
+- FIFO theo ngày nhập: 0–30, 31–90, 91–180, 181–365 ngày, 1–2 năm, > 2 năm; số lượng nhập/xuất/tồn, ngày nhập và xuất gần nhất.
+- Cảnh báo: tồn trên 1 – 2 năm (xem xét dự phòng giảm giá), chậm luân chuyển (> 180 ngày không xuất), tồn âm, thiếu mã hàng; xuất Excel 3 sheet.
+- Quy tắc rà soát mới: **Hàng tồn kho thiếu mã hàng**, **Xuất kho vượt tồn** (chỉ xét mặt hàng có phiếu nhập đầu tiên trong dữ liệu, tránh báo nhầm hàng tồn trước kỳ).
+- CSDL lưu thêm mặt hàng, ĐVT, kho Nợ/Có. Dữ liệu nạp bằng bản cũ cần **nạp lại** để có thông tin này (ứng dụng nhắc trong tab).
+
 ## v2.3.0 – 30/10/2026
 **Rà soát dữ liệu mở rộng: 34 quy tắc** (thêm 14):
 - Ngày hạch toán ở tương lai · Diễn giải chung chung · Bù trừ công nợ giữa hai đối tượng · Ghi giảm TSCĐ vào chi phí

@@ -11,8 +11,9 @@ const COLS = [
   ['dept', 'department', 'TEXT'], ['deptSub', 'department_sub', 'TEXT'], ['table', 'source_table', 'TEXT'],
   ['tcost', 'type_of_cost', 'TEXT'], ['trev', 'type_of_revenue', 'TEXT'], ['inv', 'invoice', 'TEXT'], ['adv', 'advance_request', 'TEXT'],
   ['contract', 'contract', 'TEXT'], ['user', 'created_by', 'TEXT'], ['updUser', 'updated_by', 'TEXT'], ['cf', 'cashflow', 'TEXT'], ['bts', 'bts_site', 'TEXT'],
+  ['product', 'product', 'TEXT'], ['uom', 'uom', 'TEXT'], ['loc', 'locator', 'TEXT'], ['locCr', 'locator_credit', 'TEXT'],
 ];
-const SEL_ENTRY = 'e.id, e.ym, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
+const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
 
 function open(file, { cleanup = false } = {}) {
   const db = new DatabaseSync(file);
@@ -39,6 +40,10 @@ function open(file, { cleanup = false } = {}) {
     needRecheck = true;
   }
   if (!db.prepare('PRAGMA table_info(imports)').all().some(c => c.name === 'status')) db.exec(`ALTER TABLE imports ADD COLUMN status TEXT DEFAULT 'ok'`);
+  // v2.4: thêm cột mặt hàng / ĐVT / kho; schema=2 đánh dấu lần nạp có các cột này
+  const ecols = db.prepare('PRAGMA table_info(entries)').all().map(c => c.name);
+  for (const [, col, type] of COLS) if (!ecols.includes(col)) db.exec(`ALTER TABLE entries ADD COLUMN ${col} ${type}`);
+  if (!db.prepare('PRAGMA table_info(imports)').all().some(c => c.name === 'schema')) db.exec(`ALTER TABLE imports ADD COLUMN schema INTEGER DEFAULT 1`);
   db.exec(`
     CREATE INDEX IF NOT EXISTS ix_e_import ON entries(import_id);
     CREATE INDEX IF NOT EXISTS ix_e_ym ON entries(ym);

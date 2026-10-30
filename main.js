@@ -69,7 +69,7 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const READ = ['meta', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
 const WRITE = ['setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
@@ -124,6 +124,7 @@ async function init() {
     return saveXlsx('AccSoft_LoiNhapLieu.xlsx', R.errorsBook(rows, byUser));
   });
   handle('export:analysis', (_e, title, rows) => saveXlsx(`AccSoft_${title}.xlsx`, R.book([[title.slice(0, 31), rows]])));
+  handle('export:inventory', (_e, asOf, by, level, acc) => saveXlsx('AccSoft_TuoiHangTonKho.xlsx', R.inventoryBook(Q.inventory(asOf, by, level).items.filter(o => !acc || o.acc === acc))));
   handle('export:aging', (_e, asOf, term, level, grp, acc) => saveXlsx('AccSoft_TuoiNo.xlsx', R.agingBook(Q.aging(asOf, term, level).items.filter(o => (!grp || o.grp === grp) && (!acc || o.acc === acc)))));
   handle('export:report', (_e, minSev) => saveXlsx('AccSoft_BaoCaoKiemTra.xlsx',
     R.reportBook(Q.report(), Q.errors({ statusIn: ['fixed', 'ignore'] }, { k: 'user', d: 1 }, 0, 2e6).rows, Q.errors({ minSev, statusIn: ['open', 'doing'] }, { k: 'user', d: 1 }, 0, 2e6).rows)));

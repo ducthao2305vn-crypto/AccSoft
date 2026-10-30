@@ -7,6 +7,7 @@ const code=s=>String(s??'').split('_')[0].trim();
 const ym=d=>d?d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'):'';
 const isRev=a=>/^(511|512|515|711)/.test(a), isExp=a=>/^(6|8)/.test(a)&&!/^911/.test(a);
 const isAuto=r=>/Depreciation|Distribution|CIP/i.test(r.table||''); // bút toán hệ thống tự sinh
+const isInv=a=>/^15[1-8]/.test(a)&&!/^154/.test(a); // hàng tồn kho (trừ 154 SXKD dở dang)
 const isCash=a=>/^(111|112)/.test(a), isPartner=a=>/^(131|331|141|136|336)/.test(a);
 const MONTHS={jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,may:5,jun:6,june:6,jul:7,july:7,aug:8,august:8,sep:9,sept:9,september:9,oct:10,october:10,nov:11,november:11,dec:12,december:12};
 function periodsInText(t){ // trả về danh sách {y,m} được nhắc tới trong diễn giải
@@ -78,6 +79,8 @@ const RULES=[
    if(/^214/.test(r.cr)&&!dep)return `Có 214 nhưng khoản mục: ${String(r.tcost).slice(0,50)}`;if(dep&&!/^214/.test(r.cr)&&!/^242/.test(r.cr))return `Khoản mục khấu hao nhưng Có ${r.cr}`;return false}},
  {k:'REV_NO_INVOICE',s:'L',n:'Doanh thu không gắn hoá đơn',d:'Ghi Có TK doanh thu nhưng không có số hoá đơn – kiểm tra đã xuất hoá đơn hay doanh thu ước tính.',
   f:r=>isRev(r.cr)&&r.amt>0&&!r.inv&&'Thiếu Invoice'},
+ {k:'INV_NO_PRODUCT',s:'M',n:'Hàng tồn kho thiếu mã hàng',d:'Dòng ghi TK hàng tồn kho (151–158, trừ 154) nhưng không có mã hàng (Product) – không theo dõi được tồn kho và tuổi hàng theo mặt hàng.',
+  f:r=>r._schema>=2&&(isInv(r.dr)||isInv(r.cr))&&!r.product&&`TK ${isInv(r.dr)?r.dr:r.cr} không có Product`},
 ];
 const FIX={
  FUTURE_DATE:'Sửa ngày hạch toán theo ngày chứng từ; nếu nghiệp vụ chưa phát sinh thì huỷ bút toán.',
@@ -91,6 +94,8 @@ const FIX={
  DUE_LONG:'Kiểm tra lại hạn thanh toán trên hợp đồng; nợ trên 12 tháng cần phân loại dài hạn khi lập báo cáo.',
  DEP_MISMATCH:'Chọn lại khoản mục chi phí khấu hao đúng nhóm tài sản (Dep.…) hoặc sửa TK đối ứng 214.',
  REV_NO_INVOICE:'Bổ sung số hoá đơn; nếu là doanh thu ước tính (accrual) thì ghi rõ trong diễn giải và đảo khi có hoá đơn.',
+ INV_NO_PRODUCT:'Bổ sung mã hàng (Product) cho dòng nhập/xuất kho; chi phí mua hàng (thuế, vận chuyển) cần phân bổ vào đúng mã hàng.',
+ INV_NEGATIVE:'Kiểm tra thứ tự nhập – xuất: xuất trước khi nhập, xuất nhầm mã hàng/kho, hoặc thiếu phiếu nhập. Điều chỉnh để tồn kho không âm.',
  DOC_MULTI_MONTH:'Một chứng từ chỉ nên thuộc một kỳ; tách chứng từ hoặc sửa ngày hạch toán các dòng cho thống nhất.',
  SPLIT_PAYMENT:'Kiểm tra có chia nhỏ khoản chi để né hạn mức phê duyệt không; gộp hồ sơ và xin phê duyệt đúng cấp.',
  RARE_PAIR:'Cặp tài khoản đối ứng hiếm gặp – kiểm tra bản chất nghiệp vụ, có thể chọn nhầm tài khoản.',
@@ -117,6 +122,7 @@ const FIX={
 };
 // Quy tắc cần nhìn toàn bộ dữ liệu – được tính bằng SQL trong engine/setrules.js
 const SET_RULES=[
+ {k:'INV_NEGATIVE',s:'H',n:'Xuất kho vượt tồn (âm kho)',d:'Giá trị luỹ kế theo mặt hàng bị âm tại thời điểm xuất – xuất quá số đã nhập. Chỉ xét mặt hàng có chứng từ đầu tiên trong dữ liệu là phiếu nhập từ ngoài kho có số lượng (tránh báo nhầm hàng tồn từ trước kỳ).'},
  {k:'DOC_MULTI_MONTH',s:'M',n:'Chứng từ trải nhiều kỳ',d:'Các dòng của cùng một số chứng từ có ngày hạch toán thuộc các tháng khác nhau.'},
  {k:'SPLIT_PAYMENT',s:'M',n:'Nghi chia nhỏ khoản chi',d:'Cùng đối tượng nhận tiền có từ 3 chứng từ chi tiền mặt/ngân hàng khác nhau trở lên trong cùng một ngày.'},
  {k:'RARE_PAIR',s:'L',n:'Cặp tài khoản đối ứng bất thường',d:'Cặp TK Nợ – Có (cấp 3) chỉ xuất hiện 1–2 lần trong toàn bộ dữ liệu (≥ 1.000 dòng).'},
@@ -133,5 +139,5 @@ function checkRow(r){
 }
 const errKey=(k,r)=>[k,r.doc,r.line,r.dr,r.cr,r.amt].join('|');
 const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||''})),status:ST});
-const RULES_VERSION=5; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
+const RULES_VERSION=8; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
 module.exports={RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};

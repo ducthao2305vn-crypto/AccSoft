@@ -222,6 +222,60 @@ function make(db) {
     return { accounts: AG_ACC.map(a => ({ k: a[0], n: a[1], grp: a[2] })), items: out };
   }
 
+  /* ---------- Tuổi hàng tồn kho (FIFO theo ngày nhập) ---------- */
+  const INV_ACC = [['151', 'Hàng mua đang đi đường'], ['152', 'Nguyên liệu, vật liệu'], ['153', 'Công cụ, dụng cụ'], ['155', 'Thành phẩm'],
+    ['156', 'Hàng hoá'], ['157', 'Hàng gửi đi bán'], ['158', 'Hàng hoá kho bảo thuế']];
+  // Đối tượng theo phía hạch toán: dòng ghi Nợ TK kho lấy thông tin phía Nợ, dòng ghi Có lấy thông tin phía Có
+  const INV_OBJ = {
+    product: () => '',
+    loc: side => side === 'dr' ? 'loc' : 'locCr',
+    bp: side => side === 'dr' ? 'bp' : 'bpCr',
+    product_loc: side => side === 'dr' ? 'loc' : 'locCr',
+  };
+  function inventory(asOf, by = 'product', level = 'l1') {
+    const asD = new Date(asOf), map = new Map(), pres = INV_ACC.map(a => a[0]);
+    const rows = all(`SELECT e.account_date date, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount amt, e.quantity qty,
+        e.product, e.uom, e.locator loc, e.locator_credit locCr, e.partner_debit bp, e.partner_credit bpCr
+      FROM entries e WHERE ${INC} AND e.account_date<=? AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)}) ORDER BY e.account_date`, asOf);
+    const NONE = { product: '(không có mã hàng)', loc: '(không có kho)', bp: '(không có đối tượng)' };
+    for (const r of rows) {
+      for (const side of ['dr', 'cr']) {
+        const code = String(r[side] || ''), def = INV_ACC.find(a => code.startsWith(a[0]));
+        if (!def) continue;
+        // Bút toán chuyển nội bộ cùng TK kho (Nợ 152 / Có 152) vẫn tính hai phía: tăng ở đối tượng Nợ, giảm ở đối tượng Có
+        const acc = level === 'detail' ? code : def[0];
+        const accName = level === 'detail' ? (String(side === 'dr' ? r.drName : r.crName).split('_').slice(1).join('_') || def[1]) : def[1];
+        let obj;
+        if (by === 'product') obj = r.product || NONE.product;
+        else if (by === 'product_loc') obj = (r.product || NONE.product) + ' @ ' + (r[INV_OBJ.loc(side)] || NONE.loc);
+        else obj = r[INV_OBJ[by](side)] || NONE[by];
+        const key = acc + '|' + obj; let o = map.get(key);
+        if (!o) map.set(key, o = { acc, accName, obj, uom: r.uom || '', valIn: 0, valOut: 0, qtyIn: 0, qtyOut: 0, lastIn: null, lastOut: null, inc: [] });
+        const q = Math.abs(r.qty || 0);
+        if (side === 'dr') { o.valIn += r.amt; o.qtyIn += q; o.lastIn = r.date; if (r.amt > 0) o.inc.push({ d: new Date(r.date), v: r.amt }); }
+        else { o.valOut += r.amt; o.qtyOut += q; o.lastOut = r.date; }
+      }
+    }
+    // 0–30 · 31–90 · 91–180 · 181–365 · 1–2 năm · > 2 năm
+    const bucket = d => d <= 30 ? 0 : d <= 90 ? 1 : d <= 180 ? 2 : d <= 365 ? 3 : d <= 730 ? 4 : 5;
+    const out = [];
+    for (const o of map.values()) {
+      const bal = o.valIn - o.valOut;
+      if (Math.abs(bal) <= 0.005 && Math.abs(o.qtyIn - o.qtyOut) < 1e-9) continue;
+      const b = Array(6).fill(0); let rem = bal, maxAge = 0;
+      if (rem > 0) {
+        o.inc.sort((x, y) => y.d - x.d);
+        for (const it of o.inc) { if (rem <= 0) break; const take = Math.min(rem, it.v); rem -= take; const age = Math.max(0, Math.floor((asD - it.d) / 864e5)); b[bucket(age)] += take; maxAge = Math.max(maxAge, age); }
+        if (rem > 0) b[5] += rem;
+      }
+      const sinceOut = o.lastOut ? Math.floor((asD - new Date(o.lastOut)) / 864e5) : null, sinceIn = o.lastIn ? Math.floor((asD - new Date(o.lastIn)) / 864e5) : null;
+      const { inc, ...rest } = o; void inc;
+      out.push({ ...rest, bal, qtyBal: o.qtyIn - o.qtyOut, b, maxAge, sinceOut, sinceIn });
+    }
+    const missing = get(`SELECT count(*) n FROM entries e JOIN imports i ON i.id=e.import_id WHERE ${INC} AND i.schema<2 AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)})`).n;
+    return { accounts: INV_ACC.map(a => ({ k: a[0], n: a[1] })), items: out, oldImportRows: missing };
+  }
+
   /* ---------- Báo cáo & thông báo ---------- */
   function report() {
     const cross = col => all(`SELECT ${col} k, count(*) n, sum(er.sev='H') high, sum(${STATUS}='open') open, sum(${STATUS}='doing') doing,
@@ -251,7 +305,7 @@ function make(db) {
   const mailLog = () => all(`SELECT sent_at at, employee, to_addr "to", error_count count, status, CASE WHEN status='ok' THEN '' ELSE info END error FROM mail_log ORDER BY id DESC LIMIT 500`);
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };

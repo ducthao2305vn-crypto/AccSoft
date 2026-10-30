@@ -38,6 +38,18 @@ function agingBook(items) {
   const abn = items.filter(o => o.bal < 0).map(o => ({ 'Nhóm': GRP[o.grp], 'TK': o.acc, 'Tên TK': o.accName, 'Đối tượng': o.bp, 'PS Nợ': o.dr, 'PS Có': o.cr, 'Số dư ngược chiều': o.bal }));
   return book([['Tong hop theo TK', [...sum.values()]], ['Chi tiet doi tuong', detail], ['Du nguoc chieu', abn]]);
 }
+const IBUCKETS = ['0–30 ngày', '31–90', '91–180', '181–365', '1–2 năm', '> 2 năm'];
+function inventoryBook(items) {
+  const sum = new Map();
+  for (const o of items) {
+    const s = sum.get(o.acc) || sum.set(o.acc, { 'TK': o.acc, 'Tên TK': o.accName, 'Số mặt hàng/đối tượng': 0, 'Giá trị tồn': 0, ...Object.fromEntries(IBUCKETS.map(b => [b, 0])), 'Tồn âm': 0 }).get(o.acc);
+    if (o.bal > 0) { s['Số mặt hàng/đối tượng']++; s['Giá trị tồn'] += o.bal; IBUCKETS.forEach((b, i) => { s[b] += o.b[i]; }); } else s['Tồn âm'] += o.bal;
+  }
+  const row = o => Object.assign({ 'TK': o.acc, 'Tên TK': o.accName, 'Mặt hàng / Đối tượng': o.obj, 'ĐVT': o.uom, 'SL nhập': o.qtyIn, 'SL xuất': o.qtyOut, 'SL tồn': o.qtyBal,
+    'Giá trị nhập': o.valIn, 'Giá trị xuất': o.valOut, 'Giá trị tồn': o.bal }, ...IBUCKETS.map((b, i) => ({ [b]: o.b[i] })),
+    { 'Nhập gần nhất': o.lastIn || '', 'Xuất gần nhất': o.lastOut || '', 'Số ngày không xuất': o.sinceOut ?? '', 'Tuổi tối đa (ngày)': o.maxAge });
+  return book([['Tong hop theo TK', [...sum.values()]], ['Chi tiet ton kho', items.filter(o => o.bal > 0).sort((a, c) => c.bal - a.bal).map(row)], ['Ton am', items.filter(o => o.bal < 0).map(row)]]);
+}
 function reportBook(rep, checked, todo) {
   const cross = (rows, label, name) => rows.map(r => ({ [label]: name(r.k), 'Tổng': r.n, 'Mức cao': r.high, 'Chưa xử lý': r.open, 'Đang xử lý': r.doing,
     'Đã khắc phục': r.fixed, 'Không phải lỗi': r.ignore, '% hoàn thành': r.n ? (r.fixed + r.ignore) / r.n : 0 }));
@@ -70,4 +82,4 @@ function mailHtml(user, rows, o) {
 }
 const mailSubject = u => `[AccSoft] Danh sách bút toán cần khắc phục – ${shortName(u)}`;
 
-module.exports = { XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };
+module.exports = { inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };
