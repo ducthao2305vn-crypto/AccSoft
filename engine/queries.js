@@ -129,15 +129,23 @@ function make(db) {
   /* ---------- Kết quả kinh doanh ---------- */
   const PLG = [['rev', ['511', '512'], -1], ['ded', ['521'], 1], ['cogs', ['621', '622', '623', '627', '632'], 1], ['finInc', ['515'], -1], ['finExp', ['635'], 1],
     ['sell', ['641'], 1], ['admin', ['642'], 1], ['othInc', ['711'], -1], ['othExp', ['811'], 1], ['tax', ['821'], 1]];
-  function plBy(keyExpr) {
+  // Khoảng tháng [from, to] (YYYY-MM); trống = không giới hạn
+  const RNG = (from, to) => (okYm(from) ? ` AND e.ym>='${okYm(from)}'` : '') + (okYm(to) ? ` AND e.ym<='${okYm(to)}'` : '');
+  function plBy(keyExpr, from, to) {
     const cols = PLG.map(([k, pres, sign]) =>
       `${sign} * (sum(CASE WHEN ${like('e.acc_debit', pres)} THEN e.amount ELSE 0 END) - sum(CASE WHEN ${like('e.acc_credit', pres)} THEN e.amount ELSE 0 END)) AS ${k}`).join(',');
-    return all(`SELECT ${keyExpr} k, ${cols} FROM entries e WHERE ${INC} AND e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%' GROUP BY k ORDER BY k`).map(r => {
+    return all(`SELECT ${keyExpr} k, ${cols} FROM entries e WHERE ${INC}${RNG(from, to)} AND e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%' GROUP BY k ORDER BY k`).map(r => {
       const net = r.rev - r.ded, gp = net - r.cogs, op = gp + r.finInc - r.finExp - r.sell - r.admin, other = r.othInc - r.othExp, pbt = op + other;
       return { ...r, net, gp, op, other, pbt, pat: pbt - r.tax };
     });
   }
   function pl() { return { years: plBy('substr(e.ym,1,4)'), months: plBy('e.ym') }; }
+  // Kết quả kinh doanh của một khoảng tháng (một con số cho mỗi chỉ tiêu)
+  function plRange(from, to) {
+    const r = plBy(`'x'`, from, to)[0];
+    return r || { rev: 0, ded: 0, cogs: 0, finInc: 0, finExp: 0, sell: 0, admin: 0, othInc: 0, othExp: 0, tax: 0, net: 0, gp: 0, op: 0, other: 0, pbt: 0, pat: 0 };
+  }
+  const plTrend = (from, to, gran = 'm') => plBy(PERIOD[gran] || PERIOD.m, from, to);
 
   /* ---------- Chi phí ---------- */
   function cost() {
@@ -169,19 +177,23 @@ function make(db) {
     if (by === 'dept') return `coalesce(e.department,'(trống)')`;
     return kind === 'rev' ? `coalesce(e.type_of_revenue,'(chưa phân loại)')` : `coalesce(e.type_of_cost,'(chưa phân loại)')`;
   }
-  function analysis(kind = 'exp', by = 'acc1', period = 'm') {
+  function analysis(kind = 'exp', by = 'acc1', period = 'm', from = '', to = '') {
     const P = PERIOD[period] || PERIOD.m;
-    const parts = sides(kind).map(([side, cond, sign]) => `SELECT ${groupExpr(kind, by, side)} g, ${P} p, e.amount*${sign} v FROM entries e WHERE ${INC} AND ${cond}`);
+    const parts = sides(kind).map(([side, cond, sign]) => `SELECT ${groupExpr(kind, by, side)} g, ${P} p, e.amount*${sign} v FROM entries e WHERE ${INC}${RNG(from, to)} AND ${cond}`);
     const rows = all(`SELECT g, p, sum(v) v, count(*) n FROM (${parts.join(' UNION ALL ')}) GROUP BY g, p`);
     return { rows: rows.map(r => ({ ...r, name: by === 'acc1' ? (ACC1[r.g] || '') : '' })), periods: [...new Set(rows.map(r => r.p))].sort() };
   }
-  function analysisDrill(kind, by, g, period, p, limit = 500) {
-    const P = PERIOD[period] || PERIOD.m;
+  // Tổng theo nhóm trong một khoảng tháng
+  function analysisRange(kind = 'exp', by = 'acc1', from = '', to = '') {
+    const parts = sides(kind).map(([side, cond, sign]) => `SELECT ${groupExpr(kind, by, side)} g, e.amount*${sign} v FROM entries e WHERE ${INC}${RNG(from, to)} AND ${cond}`);
+    return all(`SELECT g, sum(v) v, count(*) n FROM (${parts.join(' UNION ALL ')}) GROUP BY g`).map(r => ({ ...r, name: by === 'acc1' ? (ACC1[r.g] || '') : '' }));
+  }
+  function analysisDrill(kind, by, g, from = '', to = '', limit = 500) {
     const parts = sides(kind).map(([side, cond, sign]) => `SELECT e.id rid, e.document_no doc, e.account_date date, e.acc_debit_name drName, e.acc_credit_name crName,
         e.amount*${sign} amt, e.description "desc", e.created_by user, e.type_of_cost tcost, e.type_of_revenue trev, e.department dept, e.partner_debit bp, e.partner_credit bpCr,
         (SELECT min(er.id) FROM errors er WHERE er.entry_id=e.id) eid
-      FROM entries e WHERE ${INC} AND ${cond} AND ${groupExpr(kind, by, side)}=?${p ? ` AND ${P}=?` : ''}`);
-    const args = p ? [g, p, g, p] : [g, g];
+      FROM entries e WHERE ${INC}${RNG(from, to)} AND ${cond} AND ${groupExpr(kind, by, side)}=?`);
+    const args = [g, g];
     const sql = parts.join(' UNION ALL ');
     const tot = get(`SELECT count(*) n, sum(amt) v FROM (${sql})`, ...args);
     return { total: tot.n, sum: tot.v, rows: all(`SELECT * FROM (${sql}) ORDER BY abs(amt) DESC LIMIT ?`, ...args, limit) };
@@ -322,7 +334,7 @@ function make(db) {
   }
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };

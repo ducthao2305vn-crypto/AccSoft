@@ -330,82 +330,147 @@ $('#ivFlag').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;IV.fl
 $('#tIvSum').onclick=e=>{const tr=e.target.closest('[data-acc]');if(tr){$('#ivAcc').value=tr.dataset.acc;vInv(false);$('#tIv').scrollIntoView({behavior:'smooth'})}};
 $('#ivXls').onclick=()=>api.exportInventory($('#ivAsOf').value,$('#ivBy').value,$('#ivLevel').value,$('#ivAcc').value);
 
+/* ---------- Bộ chọn kỳ phân tích & so sánh (dùng chung) ---------- */
+const MODES={y:'Năm',q:'Quý',m:'Tháng',ytd:'Lũy kế từ đầu năm',r:'Khoảng tháng'};
+const CMPS={both:'Kỳ trước & cùng kỳ năm trước',prev:'Kỳ liền trước',ly:'Cùng kỳ năm trước',none:'Không so sánh'};
+const SPANS={'12m':'12 tháng','24m':'24 tháng','3y':'3 năm','5y':'5 năm',all:'Toàn bộ'};
+const ymLbl=ym=>`${ym.slice(5)}/${ym.slice(0,4)}`;
+const mdiff=(a,b)=>(+b.slice(0,4)-+a.slice(0,4))*12+(+b.slice(5)-+a.slice(5));
+function perRange(st,lastYm){ // → {cur,cmp[],trend}; kỳ chưa đủ dữ liệu được cắt đến tháng cuối có dữ liệu và so sánh tương đương
+  let f,t,l;
+  if(st.mode==='y'){f=st.y+'-01';t=st.y+'-12';l='Năm '+st.y}
+  else if(st.mode==='q'){f=`${st.y}-${String(st.q*3-2).padStart(2,'0')}`;t=addM(f,2);l=`Quý ${st.q}/${st.y}`}
+  else if(st.mode==='m'){f=t=st.m;l='Tháng '+ymLbl(st.m)}
+  else if(st.mode==='ytd'){f=st.m.slice(0,4)+'-01';t=st.m;l=`Lũy kế 01–${st.m.slice(5)}/${st.m.slice(0,4)}`}
+  else{f=st.from<=st.to?st.from:st.to;t=st.from<=st.to?st.to:st.from;l=`${ymLbl(f)} → ${ymLbl(t)}`}
+  const fullLen=mdiff(f,t)+1;let partial=false;
+  if(lastYm&&t>lastYm&&f<=lastYm){t=lastYm;partial=true;l+=` (dữ liệu đến ${ymLbl(lastYm)})`}
+  const len=mdiff(f,t)+1,lab=(a,b)=>a===b?'Tháng '+ymLbl(a):`${ymLbl(a)} → ${ymLbl(b)}`;
+  const prev=st.mode==='ytd'?null:{from:addM(f,-fullLen),to:addM(t,-fullLen)};
+  if(prev)prev.label=partial?lab(prev.from,prev.to):st.mode==='y'?'Năm '+prev.from.slice(0,4):st.mode==='q'?`Quý ${QN(prev.from)}/${prev.from.slice(0,4)}`:lab(prev.from,prev.to);
+  const ly={from:addM(f,-12),to:addM(t,-12)};
+  ly.label=partial&&st.mode!=='ytd'?lab(ly.from,ly.to):st.mode==='y'?'Năm '+ly.from.slice(0,4):st.mode==='q'?`Quý ${QN(ly.from)}/${ly.from.slice(0,4)}`:st.mode==='ytd'?`Lũy kế 01–${ly.to.slice(5)}/${ly.to.slice(0,4)}`:lab(ly.from,ly.to);
+  const cmp=[];if(prev&&(st.cmp==='both'||st.cmp==='prev'))cmp.push({k:'prev',...prev});if((st.cmp==='both'||st.cmp==='ly')&&!(prev&&st.cmp==='both'&&prev.from===ly.from&&prev.to===ly.to))cmp.push({k:'ly',...ly}); // năm: kỳ trước = cùng kỳ năm trước → không lặp cột
+  const sp={'12m':11,'24m':23,'3y':35,'5y':59}[st.span],gran=st.span==='12m'||st.span==='24m'?'m':st.span==='3y'?'q':'y';
+  return {cur:{from:f,to:t,label:l},cmp,trend:{from:sp==null?'':addM(t,-sp),to:t,gran}};
+}
+function initPick(st,yms){
+  const last=yms.at(-1);if(!last)return;
+  st.y??=last.slice(0,4);st.q??=QN(last);st.m??=last;st.from??=addM(last,-11)<yms[0]?yms[0]:addM(last,-11);st.to??=last;st.mode??='y';st.cmp??='both';st.span??='5y';
+}
+function renderPick(el,st,yms,onChange){
+  initPick(st,yms);const years=[...new Set(yms.map(m=>m.slice(0,4)))].reverse(),R=perRange(st,yms.at(-1));
+  const o=(v,l,c)=>`<option value="${v}" ${String(c)===String(v)?'selected':''}>${l}</option>`,F=(l,h)=>`<label class="field">${l}${h}</label>`;
+  const mSel=(k,cur)=>`<select class="input" data-k="${k}">${[...yms].reverse().map(m=>o(m,ymLbl(m),cur)).join('')}</select>`;
+  let v='';
+  if(st.mode==='y')v=F('Năm',`<select class="input" data-k="y">${years.map(y=>o(y,y,st.y)).join('')}</select>`);
+  if(st.mode==='q')v=F('Năm',`<select class="input" data-k="y">${years.map(y=>o(y,y,st.y)).join('')}</select>`)+F('Quý',`<select class="input" data-k="q">${[1,2,3,4].map(q=>o(q,'Quý '+q,st.q)).join('')}</select>`);
+  if(st.mode==='m')v=F('Tháng',mSel('m',st.m));
+  if(st.mode==='ytd')v=F('Đến hết tháng',mSel('m',st.m));
+  if(st.mode==='r')v=F('Từ tháng',mSel('from',st.from))+F('Đến tháng',mSel('to',st.to));
+  el.innerHTML=F('Kỳ phân tích',`<select class="input" data-k="mode">${Object.entries(MODES).map(([k,l])=>o(k,l,st.mode)).join('')}</select>`)+v+'<span class="sep"></span>'
+    +F('So sánh với',`<select class="input" data-k="cmp">${Object.entries(CMPS).filter(([k])=>st.mode!=='ytd'||k==='ly'||k==='none').map(([k,l])=>o(k,l,st.cmp)).join('')}</select>`)
+    +F('Biểu đồ xu hướng',`<select class="input" data-k="span">${Object.entries(SPANS).map(([k,l])=>o(k,l,st.span)).join('')}</select>`)
+    +`<div class="cur">Đang xem<b>${R.cur.label}</b>${R.cmp.map(c=>'so với '+c.label).join(' · ')}</div>`;
+  el.onchange=e=>{const k=e.target.dataset.k;if(!k)return;st[k]=k==='q'?+e.target.value:e.target.value;if(k==='mode'&&st.mode==='ytd'&&(st.cmp==='both'||st.cmp==='prev'))st.cmp='ly';onChange()};
+}
+const chg=(a,b)=>b?(a-b)/Math.abs(b):null;
+const chgTd=(a,b,good=1)=>{const c=chg(a,b);if(c==null)return '<td class="n mut">–</td>';const cls=Math.abs(c)<0.005?'':(c*good>0?'up':'down');return `<td class="n ${cls}">${c>0?'▲':'▼'} ${pct(Math.abs(c))}</td>`};
+
 /* ---------- Kết quả kinh doanh ---------- */
+const PLST=ls.get('plPick',{});
 async function vPL(){
-  const {years:ys,months:ms}=await api.q('pl');
-  const L=[['Doanh thu bán hàng & CCDV','rev'],['Giảm trừ doanh thu','ded'],['Doanh thu thuần','net',1],['Giá vốn / chi phí SX','cogs'],['Lợi nhuận gộp','gp',1],['Doanh thu tài chính','finInc'],['Chi phí tài chính','finExp'],
-    ['Chi phí bán hàng','sell'],['Chi phí quản lý DN','admin'],['Lợi nhuận thuần từ HĐKD','op',1],['Lợi nhuận khác','other'],['Lợi nhuận trước thuế','pbt',1],['Chi phí thuế TNDN','tax'],['Lợi nhuận sau thuế','pat',1],
-    ['Biên lợi nhuận gộp',y=>y.gp/y.net,2],['Biên LN thuần HĐKD',y=>y.op/y.net,2],['CP bán hàng + QLDN / DT',y=>(y.sell+y.admin)/y.net,2]];
+  const yms=(await api.q('months')).filter(m=>m.included).map(m=>m.ym).sort();
+  if(!yms.length){$('#plPick').innerHTML='<span class=mut>Chưa có dữ liệu.</span>';return}
+  renderPick($('#plPick'),PLST,yms,()=>{ls.set('plPick',PLST);vPL()});
+  const R=perRange(PLST,yms.at(-1));
+  const [cur,...cmps]=await Promise.all([api.q('plRange',R.cur.from,R.cur.to),...R.cmp.map(c=>api.q('plRange',c.from,c.to))]);
+  const L=[['Doanh thu bán hàng & CCDV','rev',0,1],['Giảm trừ doanh thu','ded',0,-1],['Doanh thu thuần','net',1,1],['Giá vốn / chi phí SX','cogs',0,-1],['Lợi nhuận gộp','gp',1,1],['Doanh thu tài chính','finInc',0,1],['Chi phí tài chính','finExp',0,-1],
+    ['Chi phí bán hàng','sell',0,-1],['Chi phí quản lý DN','admin',0,-1],['Lợi nhuận thuần từ HĐKD','op',1,1],['Lợi nhuận khác','other',0,1],['Lợi nhuận trước thuế','pbt',1,1],['Chi phí thuế TNDN','tax',0,-1],['Lợi nhuận sau thuế','pat',1,1],
+    ['Biên lợi nhuận gộp',y=>y.gp/y.net,2,1],['Biên LN thuần HĐKD',y=>y.op/y.net,2,1],['CP bán hàng + QLDN / DT',y=>(y.sell+y.admin)/y.net,2,-1]];
   const val=(y,f)=>typeof f==='function'?f(y):y[f];
-  $('#tPL').innerHTML='<thead><tr><th>Chỉ tiêu</th>'+ys.map((y,i)=>`<th class=n>${y.k}</th>`+(i?`<th class=n>± ${ys[i-1].k}</th>`:'')).join('')+'</tr></thead><tbody>'+
-   L.map(([n,f,t])=>`<tr style="${t===1?'background:var(--brand-25)':''}"><td>${t===1?'<b>'+n+'</b>':n}</td>${ys.map((y,i)=>{const v=val(y,f),p=i?val(ys[i-1],f):null;
-     const cell=t===2?pct(v):fmt(v),ch=i?(t===2?((v-p)*100).toFixed(1)+' đ%':pct((v-p)/Math.abs(p))):'';
-     return `<td class="n ${v<0?'neg':''}">${t===1?'<b>'+cell+'</b>':cell}</td>`+(i?`<td class="n mut">${ch}</td>`:'')}).join('')}</tr>`).join('')+'</tbody>';
-  chart('chMonth',{data:{labels:ms.map(m=>m.k),datasets:[{type:'bar',label:'Doanh thu thuần',data:ms.map(m=>m.net),backgroundColor:C.brand,maxBarThickness:32},
-    {type:'bar',label:'Tổng chi phí',data:ms.map(m=>m.net-m.pbt),backgroundColor:C.gray,maxBarThickness:32},{type:'line',label:'LN trước thuế',data:ms.map(m=>m.pbt),borderColor:C.navy,backgroundColor:C.navy,tension:.3}]}});
-  const notes=[],last=ys.at(-1),prev=ys.at(-2),N=(cls,t)=>notes.push(`<div class="note ${cls}">${t}</div>`);
-  if(!last)N('','Chưa có dữ liệu.');
-  else{
-    if(ys.length===1)N('brand',`Dữ liệu chỉ có năm <b>${last.k}</b> (${ms.length} tháng). Nạp thêm các năm khác để so sánh xu hướng.`);
-    if(last.net<=0&&last.cogs>0)N('','⚠ Có chi phí nhưng doanh thu ghi nhận rất ít – kiểm tra doanh thu hạch toán ở phân hệ khác (BCCS) hoặc chưa kết chuyển.');
-    if(last.gp<0)N('','⚠ Lợi nhuận gộp âm: chi phí sản xuất vượt doanh thu.');
-    if(prev){const g=(last.net-prev.net)/Math.abs(prev.net),c=(last.cogs-prev.cogs)/Math.abs(prev.cogs);
-      N('brand',`Doanh thu thuần ${last.k} <b>${g>=0?'tăng':'giảm'} ${pct(Math.abs(g))}</b> so với ${prev.k}; giá vốn ${c>=0?'tăng':'giảm'} ${pct(Math.abs(c))}.`);
-      if(c>g+0.05)N('','⚠ Chi phí tăng nhanh hơn doanh thu → biên lợi nhuận bị thu hẹp.');
-      if(ms.length/ys.length<12)N('','Các năm có số tháng dữ liệu khác nhau – nên so sánh lũy kế cùng kỳ.')}
-  }
+  // KPI
+  const K=(cls,icon,lb,f)=>{const v=cur[f];return kpi(cls,icon,lb,fmt(v),cmps.map((c,i)=>{const x=chg(v,c[f]);return x==null?'':`${x>=0?'▲':'▼'} ${pct(Math.abs(x))} vs ${R.cmp[i].k==='ly'?'cùng kỳ':'kỳ trước'}`}).filter(Boolean).join(' · ')||R.cur.label)};
+  $('#plKpi').innerHTML=K('blue','coins','Doanh thu thuần','net')+K('','trend','Lợi nhuận gộp','gp')+K('','chart','LN thuần từ HĐKD','op')+K(cur.pat<0?'red':'green','check','Lợi nhuận sau thuế','pat');
+  $('#plHint').textContent=R.cur.label;
+  $('#tPL').innerHTML='<thead><tr><th>Chỉ tiêu</th><th class=n>'+R.cur.label+'</th>'+R.cmp.map(c=>`<th class=n>${c.label}</th><th class=n>±</th><th class=n>%</th>`).join('')+'</tr></thead><tbody>'+
+    L.map(([n,f,t,good])=>{const v=val(cur,f);return `<tr style="${t===1?'background:var(--brand-25)':''}"><td class=nw style="min-width:220px">${t===1?'<b>'+n+'</b>':n}</td><td class="n ${v<0?'neg':''}">${t===2?pct(v):(t===1?'<b>'+fmt(v)+'</b>':fmt(v))}</td>`+
+      cmps.map(c=>{const p=val(c,f);return t===2?`<td class=n>${pct(p)}</td><td class=n>${isFinite(v-p)?((v-p)*100).toFixed(1)+' đ%':''}</td><td></td>`:`<td class="n mut">${fmt(p)}</td><td class=n>${fmt(v-p)}</td>${chgTd(v,p,good)}`}).join('')+'</tr>'}).join('')+'</tbody>';
+  // Xu hướng
+  const tr=await api.q('plTrend',R.trend.from,R.trend.to,R.trend.gran);
+  $('#plTrendT').textContent=`Xu hướng theo ${{m:'tháng',q:'quý',y:'năm'}[R.trend.gran]} – ${SPANS[PLST.span].toLowerCase()} đến ${ymLbl(R.trend.to)}`;
+  const inCur=k=>{const s=R.cur.from,e=R.cur.to;if(R.trend.gran==='m')return k>=s&&k<=e;if(R.trend.gran==='y')return k>=s.slice(0,4)&&k<=e.slice(0,4);const qs=`${s.slice(0,4)}-Q${QN(s)}`,qe=`${e.slice(0,4)}-Q${QN(e)}`;return k>=qs&&k<=qe};
+  chart('chMonth',{data:{labels:tr.map(m=>m.k),datasets:[{type:'bar',label:'Doanh thu thuần',data:tr.map(m=>m.net),backgroundColor:tr.map(m=>inCur(m.k)?C.brand:C.brand1),maxBarThickness:36},
+    {type:'bar',label:'Tổng chi phí',data:tr.map(m=>m.net-m.pbt),backgroundColor:tr.map(m=>inCur(m.k)?'#A4A7AE':C.gray),maxBarThickness:36},{type:'line',label:'LN trước thuế',data:tr.map(m=>m.pbt),borderColor:C.navy,backgroundColor:C.navy,tension:.3}]}});
+  // So sánh nhiều năm: cùng khoảng tháng trong từng năm có dữ liệu
+  const years=[...new Set(yms.map(m=>m.slice(0,4)))],off=+R.cur.to.slice(0,4)-+R.cur.from.slice(0,4)===0;
+  const ranges=off?years.map(y=>({y,from:y+R.cur.from.slice(4),to:y+R.cur.to.slice(4)})):years.map(y=>({y,from:y+'-01',to:y+'-12'}));
+  const multi=(await Promise.all(ranges.map(r=>api.q('plRange',r.from,r.to)))).map((v,i)=>({...v,y:ranges[i].y})).filter(v=>v.net||v.cogs||v.pbt);
+  const mlab=off?(R.cur.from===R.cur.to?'tháng '+R.cur.from.slice(5):`tháng ${R.cur.from.slice(5)}–${R.cur.to.slice(5)}`):'cả năm';
+  $('#tPLY').innerHTML=`<thead><tr><th>Chỉ tiêu (${mlab})</th>`+multi.map((y,i)=>`<th class=n>${y.y}</th>`+(i?'<th class=n>±%</th>':'')).join('')+'</tr></thead><tbody>'+
+    L.filter(x=>x[2]!==2).map(([n,f,t,good])=>`<tr style="${t===1?'background:var(--brand-25)':''}"><td class=nw style="min-width:220px">${t===1?'<b>'+n+'</b>':n}</td>`+multi.map((y,i)=>`<td class="n ${y[f]<0?'neg':''}">${fmt(y[f])}</td>`+(i?chgTd(y[f],multi[i-1][f],good):'')).join('')+'</tr>').join('')+'</tbody>';
+  // Nhận xét
+  const notes=[],N=(cls,t)=>notes.push(`<div class="note ${cls}">${t}</div>`);
+  N('brand',`Kỳ phân tích <b>${R.cur.label}</b>: doanh thu thuần <b>${fmt(cur.net)}</b>, lợi nhuận trước thuế <b>${fmt(cur.pbt)}</b>.`);
+  cmps.forEach((c,i)=>{const g=chg(cur.net,c.net),k=chg(cur.cogs+cur.sell+cur.admin,c.cogs+c.sell+c.admin);
+    if(g!=null)N('',`So với <b>${R.cmp[i].label}</b>: doanh thu ${g>=0?'tăng':'giảm'} <b>${pct(Math.abs(g))}</b>; chi phí hoạt động ${k>=0?'tăng':'giảm'} ${pct(Math.abs(k||0))}.`+(k!=null&&k>g+0.05?' ⚠ Chi phí tăng nhanh hơn doanh thu.':''))});
+  if(cur.net<=0&&cur.cogs>0)N('','⚠ Có chi phí nhưng doanh thu ghi nhận rất ít – kiểm tra doanh thu hạch toán ở phân hệ khác (BCCS) hoặc chưa kết chuyển.');
+  if(cur.gp<0)N('','⚠ Lợi nhuận gộp âm: chi phí sản xuất vượt doanh thu.');
+  if(!cmps.some(c=>c.net||c.cogs))R.cmp.length&&N('','Kỳ so sánh chưa có dữ liệu.');
   $('#plNotes').innerHTML=notes.join('');
 }
 
 /* ---------- Doanh thu & chi phí theo tài khoản / khoản mục ---------- */
 const AN_BY={acc1:'Tài khoản',acc:'Tài khoản chi tiết',item:'Khoản mục',dept:'Bộ phận'};
 const PAL=['#FA4700','#001A79','#FF9C6B','#2970FF','#D63600','#875BF7','#17B26A','#EAAA08','#A4A7AE'];
-let AN={kind:'exp',data:null,view:[]};
-async function vCost(reload=true){
-  const by=$('#anBy').value,per=$('#anPer').value,find=$('#anFind').value.trim().toLowerCase();
-  if(reload||!AN.data)AN.data=await api.q('analysis',AN.kind,by,per);
-  const {rows,periods}=AN.data,G=new Map();
-  for(const r of rows){const g=G.get(r.g)||G.set(r.g,{g:r.g,name:r.name,tot:0,n:0,by:{}}).get(r.g);g.tot+=r.v;g.n+=r.n;g.by[r.p]=(g.by[r.p]||0)+r.v}
-  const all=[...G.values()].sort((a,b)=>b.tot-a.tot),total=all.reduce((s,x)=>s+x.tot,0);
+const ANST=ls.get('anPick',{});
+let AN={kind:'exp',view:[],R:null};
+async function vCost(){
+  const yms=(await api.q('months')).filter(m=>m.included).map(m=>m.ym).sort();
+  if(!yms.length){$('#anPick').innerHTML='<span class=mut>Chưa có dữ liệu.</span>';return}
+  renderPick($('#anPick'),ANST,yms,()=>{ls.set('anPick',ANST);vCost()});
+  const R=perRange(ANST,yms.at(-1));AN.R=R;const by=$('#anBy').value,find=$('#anFind').value.trim().toLowerCase();
+  const [cur,...cmps]=await Promise.all([api.q('analysisRange',AN.kind,by,R.cur.from,R.cur.to),...R.cmp.map(c=>api.q('analysisRange',AN.kind,by,c.from,c.to))]);
+  const G=new Map();
+  cur.forEach(r=>G.set(r.g,{g:r.g,name:r.name,v:r.v,n:r.n,c:R.cmp.map(()=>0)}));
+  cmps.forEach((rows,i)=>rows.forEach(r=>{const x=G.get(r.g)||G.set(r.g,{g:r.g,name:r.name,v:0,n:0,c:R.cmp.map(()=>0)}).get(r.g);x.c[i]=r.v}));
+  const all=[...G.values()].sort((a,b)=>b.v-a.v),total=all.reduce((s,x)=>s+x.v,0),ctot=R.cmp.map((_,i)=>all.reduce((s,x)=>s+x.c[i],0));
   const list=all.filter(x=>!find||(x.g+' '+x.name).toLowerCase().includes(find));AN.view=list;
-  const last=periods.at(-1),prev=periods.at(-2),sumP=p=>all.reduce((s,x)=>s+(x.by[p]||0),0),lv=sumP(last),pv=sumP(prev);
-  const label=AN.kind==='rev'?'doanh thu':'chi phí',lbl=s=>s.charAt(0).toUpperCase()+s.slice(1);
-  // Biến động mạnh nhất kỳ cuối
-  const mv=prev?all.map(x=>({x,d:(x.by[last]||0)-(x.by[prev]||0)})).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d))[0]:null;
-  $('#anKpi').innerHTML=kpi(AN.kind==='rev'?'blue':'','coins',`Tổng ${label}`,fmt(total),`${periods.length} kỳ · ${num(all.length)} nhóm`)
-    +kpi('',AN.kind==='rev'?'trend':'pie',`${lbl(label)} kỳ ${last||''}`,fmt(lv),prev?`${lv>=pv?'▲':'▼'} ${pct(Math.abs((lv-pv)/pv))} so với ${prev}`:'')
-    +kpi('','chart',`Lớn nhất: ${esc(String(all[0]?.g||'').slice(0,28))}`,all[0]?pct(all[0].tot/total):'–',esc(all[0]?.name||'tỷ trọng trong tổng'))
-    +(mv?kpi(mv.d>0&&AN.kind==='exp'?'red':'green','alert','Biến động mạnh nhất kỳ cuối',(mv.d>0?'+':'')+fmt(mv.d),esc(String(mv.x.g).slice(0,40))):'');
-  $('#anChartT').textContent=`Diễn biến ${label} theo ${{m:'tháng',q:'quý',y:'năm'}[per]}`;
-  const top=all.slice(0,8),other=all.slice(8);
-  const ds=top.map((x,i)=>({label:String(x.g).slice(0,40),data:periods.map(p=>x.by[p]||0),backgroundColor:PAL[i],borderRadius:0,maxBarThickness:42}));
-  if(other.length)ds.push({label:'Khác',data:periods.map(p=>other.reduce((s,x)=>s+(x.by[p]||0),0)),backgroundColor:PAL[8],borderRadius:0,maxBarThickness:42});
+  const label=AN.kind==='rev'?'doanh thu':'chi phí',good=AN.kind==='rev'?1:-1;
+  const mv=R.cmp.length?all.map(x=>({x,d:x.v-x.c[0]})).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d))[0]:null;
+  $('#anKpi').innerHTML=kpi(AN.kind==='rev'?'blue':'','coins',`Tổng ${label} – ${R.cur.label}`,fmt(total),R.cmp.map((c,i)=>{const x=chg(total,ctot[i]);return x==null?'':`${x>=0?'▲':'▼'} ${pct(Math.abs(x))} vs ${c.label}`}).filter(Boolean).join(' · ')||`${num(all.length)} nhóm`)
+    +kpi('','chart',`Lớn nhất: ${esc(String(all[0]?.g||'').slice(0,28))}`,all[0]?pct(all[0].v/total):'–',esc(all[0]?.name||'tỷ trọng trong tổng'))
+    +(mv?kpi(mv.d*good<0?'red':'green','alert',`Biến động mạnh nhất vs ${R.cmp[0].label}`,(mv.d>0?'+':'')+fmt(mv.d),esc(String(mv.x.g).slice(0,40))):'');
+  // Xu hướng: top 8 nhóm của kỳ hiện tại
+  const tr=await api.q('analysis',AN.kind,by,R.trend.gran,R.trend.from,R.trend.to),periods=[...new Set(tr.rows.map(r=>r.p))].sort();
+  const top=all.slice(0,8).map(x=>x.g),idx=new Map(tr.rows.map(r=>[r.g+'|'+r.p,r.v]));
+  const ds=top.map((g,i)=>({label:String(g).slice(0,40),data:periods.map(p=>idx.get(g+'|'+p)||0),backgroundColor:PAL[i],borderRadius:0,maxBarThickness:42}));
+  ds.push({label:'Khác',data:periods.map(p=>tr.rows.filter(r=>r.p===p&&!top.includes(r.g)).reduce((s,r)=>s+r.v,0)),backgroundColor:PAL[8],borderRadius:0,maxBarThickness:42});
+  $('#anChartT').textContent=`Diễn biến ${label} theo ${{m:'tháng',q:'quý',y:'năm'}[R.trend.gran]} – ${SPANS[ANST.span].toLowerCase()} đến ${ymLbl(R.trend.to)}`;
   chart('chAn',{type:'bar',data:{labels:periods,datasets:ds},options:{scales:{x:{stacked:true},y:{stacked:true}},plugins:{legend:{position:'bottom',labels:{font:{size:11}}}}}});
-  chart('chAnPie',{type:'doughnut',data:{labels:[...top.map(x=>String(x.g).slice(0,30)),...(other.length?['Khác']:[])],datasets:[{data:[...top.map(x=>Math.max(0,x.tot)),...(other.length?[other.reduce((s,x)=>s+Math.max(0,x.tot),0)]:[])],backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
+  const t8=all.slice(0,8),oth=all.slice(8).reduce((s,x)=>s+Math.max(0,x.v),0);
+  chart('chAnPie',{type:'doughnut',data:{labels:[...t8.map(x=>String(x.g).slice(0,30)),...(oth?['Khác']:[])],datasets:[{data:[...t8.map(x=>Math.max(0,x.v)),...(oth?[oth]:[])],backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
     options:{cutout:'62%',plugins:{legend:{position:'bottom',labels:{font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.raw)} (${pct(c.raw/total)})`}}}}});
-  // Bảng: nhóm × kỳ
-  const P=periods.length>36?periods.slice(-36):periods;
-  $('#anTblT').textContent=`${lbl(label)} theo ${AN_BY[by].toLowerCase()} × ${{m:'tháng',q:'quý',y:'năm'}[per]}`;
-  $('#anHint').textContent=(periods.length>P.length?`hiển thị ${P.length} kỳ gần nhất · `:'')+`${num(list.length)} nhóm`;
-  const head='<thead><tr><th style="position:sticky;left:0;z-index:2;background:var(--gray-50)">'+AN_BY[by]+'</th>'+(by==='acc1'?'<th>Tên</th>':'')+'<th class=n>Tổng</th><th class=n>Tỷ trọng</th>'+(prev?`<th class=n>± ${last} / ${prev}</th>`:'')+P.map(p=>`<th class=n>${p}</th>`).join('')+'<th class=n>Số dòng</th></tr></thead>';
-  const body=list.slice(0,1000).map((x,i)=>{const l=x.by[last]||0,p=x.by[prev]||0,ch=p?(l-p)/Math.abs(p):null;
-    const chc=ch==null?'':(AN.kind==='exp'?(ch>0.2?'neg':ch<-0.2?'pos':''):(ch<-0.2?'neg':ch>0.2?'pos':''));
-    return `<tr class="click" data-i="${i}"><td style="position:sticky;left:0;background:#fff;min-width:200px"><b>${esc(x.g)}</b></td>${by==='acc1'?`<td class=nw>${esc(x.name)}</td>`:''}
-      <td class=n><b>${fmt(x.tot)}</b></td><td class=n><div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><div style="width:50px;height:6px;border-radius:9px;background:var(--gray-200)"><div style="width:${Math.max(0,Math.min(100,x.tot/total*100))}%;height:100%;border-radius:9px;background:var(--brand-500)"></div></div>${pct(x.tot/total)}</div></td>
-      ${prev?`<td class="n ${chc}">${ch==null?(l?'mới':''):(ch>0?'▲ ':'▼ ')+pct(Math.abs(ch))}</td>`:''}${P.map(p=>`<td class=n>${x.by[p]?fmt(x.by[p]):''}</td>`).join('')}<td class="n mut">${num(x.n)}</td></tr>`}).join('');
-  const foot=`<tr style="background:var(--brand-25)"><td style="position:sticky;left:0;background:var(--brand-25)"><b>Tổng cộng</b></td>${by==='acc1'?'<td></td>':''}<td class=n><b>${fmt(total)}</b></td><td class=n>100%</td>${prev?`<td class=n>${pv?pct((lv-pv)/Math.abs(pv)):''}</td>`:''}${P.map(p=>`<td class=n><b>${fmt(sumP(p))}</b></td>`).join('')}<td></td></tr>`;
+  // Bảng so sánh
+  $('#anTblT').textContent=`${label.charAt(0).toUpperCase()+label.slice(1)} theo ${AN_BY[by].toLowerCase()} – ${R.cur.label}`;
+  $('#anHint').textContent=`${num(list.length)} nhóm`;
+  const head='<thead><tr><th>'+AN_BY[by]+'</th>'+(by==='acc1'?'<th>Tên</th>':'')+`<th class=n>${R.cur.label}</th><th class=n>Tỷ trọng</th>`+R.cmp.map(c=>`<th class=n>${c.label}</th><th class=n>±</th><th class=n>%</th>`).join('')+'<th class=n>Số dòng</th></tr></thead>';
+  const body=list.slice(0,1500).map((x,i)=>`<tr class="click" data-i="${i}"><td style="min-width:200px"><b>${esc(x.g)}</b></td>${by==='acc1'?`<td class=nw>${esc(x.name)}</td>`:''}<td class=n><b>${fmt(x.v)}</b></td>
+      <td class=n><div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><div style="width:50px;height:6px;border-radius:9px;background:var(--gray-200)"><div style="width:${Math.max(0,Math.min(100,x.v/total*100))}%;height:100%;border-radius:9px;background:var(--brand-500)"></div></div>${pct(x.v/total)}</div></td>
+      ${x.c.map(c=>`<td class="n mut">${fmt(c)}</td><td class=n>${fmt(x.v-c)}</td>${c?chgTd(x.v,c,good):`<td class="n mut">${x.v?'mới':''}</td>`}`).join('')}<td class="n mut">${num(x.n)}</td></tr>`).join('');
+  const foot=`<tr style="background:var(--brand-25)"><td><b>Tổng cộng</b></td>${by==='acc1'?'<td></td>':''}<td class=n><b>${fmt(total)}</b></td><td class=n>100%</td>${ctot.map(c=>`<td class=n><b>${fmt(c)}</b></td><td class=n><b>${fmt(total-c)}</b></td>${chgTd(total,c,good)}`).join('')}<td></td></tr>`;
   $('#tAn').innerHTML=head+'<tbody>'+body+foot+'</tbody>';
 }
-$('#anKind').onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;AN.kind=b.dataset.k;$$('#anKind button').forEach(x=>x.classList.toggle('on',x===b));vCost(true)};
-['#anBy','#anPer'].forEach(s=>$(s).onchange=()=>vCost(true));$('#anFind').oninput=()=>vCost(false);
+$('#anKind').onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;AN.kind=b.dataset.k;$$('#anKind button').forEach(x=>x.classList.toggle('on',x===b));vCost()};
+$('#anBy').onchange=()=>vCost();$('#anFind').oninput=()=>{clearTimeout(tmr);tmr=setTimeout(vCost,250)};
 $('#tAn').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)drill(AN.view[+tr.dataset.i])};
-$('#anXls').onclick=()=>{const {periods}=AN.data,by=$('#anBy').value;
-  api.exportAnalysis((AN.kind==='rev'?'DoanhThu':'ChiPhi')+'_'+by,AN.view.map(x=>Object.assign({[AN_BY[by]]:x.g},by==='acc1'?{'Tên':x.name}:{},{'Tổng':x.tot},...periods.map(p=>({[p]:x.by[p]||0})),{'Số dòng':x.n})))};
+$('#anXls').onclick=()=>{const by=$('#anBy').value,R=AN.R;
+  api.exportAnalysis((AN.kind==='rev'?'DoanhThu':'ChiPhi')+'_'+by,AN.view.map(x=>Object.assign({[AN_BY[by]]:x.g},by==='acc1'?{'Tên':x.name}:{},{[R.cur.label]:x.v},...R.cmp.map((c,i)=>({[c.label]:x.c[i],[`± ${c.label}`]:x.v-x.c[i]})),{'Số dòng':x.n})))};
 async function drill(x){
-  const d=await api.q('analysisDrill',AN.kind,$('#anBy').value,x.g,$('#anPer').value,null);CUR=-1;
-  $('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">${AN_BY[$('#anBy').value]}</div><h2 style="font-size:20px">${esc(x.g)} ${x.name?'<span class=mut style="font-weight:400">– '+esc(x.name)+'</span>':''}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div>
+  const R=AN.R,d=await api.q('analysisDrill',AN.kind,$('#anBy').value,x.g,R.cur.from,R.cur.to);CUR=-1;
+  $('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">${AN_BY[$('#anBy').value]} · ${R.cur.label}</div><h2 style="font-size:20px">${esc(x.g)} ${x.name?'<span class=mut style="font-weight:400">– '+esc(x.name)+'</span>':''}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div>
    <div class="pb"><div class="kpis">${kpi('','coins','Tổng',fmt(d.sum),num(d.total)+' bút toán')}${kpi('','file','Đang hiển thị',num(d.rows.length),'bút toán có số tiền lớn nhất')}</div>
-   <div class="card"><div class="card-h"><h3>Bút toán chi tiết</h3><span class="hint">bấm dòng có biểu tượng cảnh báo để xem lỗi</span></div><div class="tbl"><table><thead><tr><th></th><th>Ngày</th><th>Chứng từ</th><th>TK Nợ</th><th>TK Có</th><th class=n>Số tiền</th><th>Diễn giải</th><th>Khoản mục</th><th>Bộ phận</th><th>Người nhập</th></tr></thead><tbody>
+   <div class="card"><div class="card-h"><h3>Bút toán chi tiết</h3><span class="hint">bấm dòng có nhãn lỗi để xem lỗi</span></div><div class="tbl"><table><thead><tr><th></th><th>Ngày</th><th>Chứng từ</th><th>TK Nợ</th><th>TK Có</th><th class=n>Số tiền</th><th>Diễn giải</th><th>Khoản mục</th><th>Bộ phận</th><th>Người nhập</th></tr></thead><tbody>
    ${d.rows.map(r=>`<tr class="${r.eid?'click':''}" data-eid="${r.eid||''}"><td>${r.eid?'<span class="badge b-M">Có lỗi</span>':''}</td><td class=nw>${vn(r.date)}</td><td class=nw>${esc(r.doc)}</td><td>${esc(r.drName)}</td><td>${esc(r.crName)}</td><td class="n ${r.amt<0?'neg':''}">${fmt2(r.amt)}</td><td><div class=clamp title="${esc(r.desc)}">${esc(r.desc)}</div></td><td>${esc(AN.kind==='rev'?r.trev:r.tcost)}</td><td>${esc(r.dept)}</td><td class=nw>${esc(short(r.user))}</td></tr>`).join('')}
    </tbody></table></div></div></div>`;
   $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;

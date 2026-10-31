@@ -171,6 +171,10 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
 .why{margin-top:8px;border-left:3px solid #875BF7;background:#F5F3FF;border-radius:6px;padding:8px 10px;font-size:13px;color:#491C96}
 tr.grow td{background:var(--gray-50)!important;font-weight:700;color:var(--gray-800)}
 @media(max-width:1100px){.grptabs{grid-template-columns:1fr}}
+.pick{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;padding:16px 20px}
+.pick .field{min-width:0}.pick select{width:auto}.pick .sep{width:1px;align-self:stretch;background:var(--gray-200);margin:0 4px}
+.pick .cur{margin-left:auto;text-align:right;font-size:13px;color:var(--gray-600)}.pick .cur b{display:block;color:var(--brand-700);font-size:16px}
+td.up{color:var(--ok-700)}td.down{color:var(--err-700)}
 </style>
 </head>
 <body>
@@ -295,12 +299,15 @@ tr.grow td{background:var(--gray-50)!important;font-weight:700;color:var(--gray-
   </section>
 
   <section id="pl" class="hide">
+    <div class="card pick" id="plPick"></div>
+    <div class="kpis" id="plKpi"></div>
     <div class="grid g3">
-      <div class="card"><div class="card-h"><h3>Báo cáo kết quả kinh doanh theo năm</h3></div><div class="tbl"><table id="tPL"></table></div>
+      <div class="card"><div class="card-h"><h3>Báo cáo kết quả kinh doanh so sánh</h3><span class="hint" id="plHint"></span></div><div class="tbl"><table id="tPL"></table></div>
         <p class="mut" style="font-size:12px;margin:10px 0 0">Phát sinh thuần (Nợ − Có) TK loại 5–8, loại trừ kết chuyển 911. 621/622/623/627 tính vào giá vốn.</p></div>
       <div class="card"><div class="card-h"><h3>Nhận xét</h3></div><div id="plNotes" style="display:flex;flex-direction:column;gap:10px"></div></div>
     </div>
-    <div class="card"><div class="card-h"><h3>Theo tháng</h3></div><div class="cv" style="height:360px"><canvas id="chMonth"></canvas></div></div>
+    <div class="card"><div class="card-h"><h3 id="plTrendT">Xu hướng</h3></div><div class="cv" style="height:360px"><canvas id="chMonth"></canvas></div></div>
+    <div class="card"><div class="card-h"><h3>So sánh nhiều năm</h3><span class="hint">cùng khoảng tháng của kỳ phân tích trong từng năm</span></div><div class="tbl"><table id="tPLY"></table></div></div>
   </section>
 
   <section id="cost" class="hide">
@@ -308,12 +315,12 @@ tr.grow td{background:var(--gray-50)!important;font-weight:700;color:var(--gray-
       <div class="row" style="align-items:flex-end">
         <div class="tabs" id="anKind"><button data-k="exp" class="on">Chi phí</button><button data-k="rev">Doanh thu</button></div>
         <label class="field">Phân tích theo<select class="input" id="anBy"><option value="acc1">Tài khoản tổng hợp (cấp 3)</option><option value="acc">Tài khoản chi tiết</option><option value="item">Khoản mục (Type of cost / revenue)</option><option value="dept">Bộ phận</option></select></label>
-        <label class="field">Kỳ<select class="input" id="anPer"><option value="m">Tháng</option><option value="q">Quý</option><option value="y">Năm</option></select></label>
         <label class="field" style="flex:1;min-width:200px">Tìm<input class="input" id="anFind" placeholder="Lọc theo tên tài khoản / khoản mục…"></label>
         <button class="btn" id="anXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
       </div>
       <div class="note brand" style="margin-top:14px">Chi phí = phát sinh Nợ − Có TK loại 6, 8; doanh thu = phát sinh Có − Nợ TK 511, 512, 515, 711; loại trừ kết chuyển 911. Bấm một dòng để xem các bút toán chi tiết.</div>
     </div>
+    <div class="card pick" id="anPick"></div>
     <div class="kpis" id="anKpi"></div>
     <div class="grid g3">
       <div class="card"><div class="card-h"><h3 id="anChartT">Diễn biến theo kỳ</h3><span class="hint">8 nhóm lớn nhất</span></div><div class="cv" style="height:360px"><canvas id="chAn"></canvas></div></div>

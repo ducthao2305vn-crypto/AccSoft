@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v2.7.0 – 31/10/2026
+**Chọn kỳ và so sánh** cho Kết quả kinh doanh và Doanh thu & Chi phí:
+- Kỳ phân tích: năm, quý, tháng, lũy kế từ đầu năm, khoảng tháng tuỳ chọn.
+- So sánh với: kỳ liền trước, cùng kỳ năm trước, hoặc cả hai – chênh lệch tuyệt đối và % (tô màu tốt/xấu theo bản chất chỉ tiêu).
+- Kỳ chưa đủ dữ liệu (vd quý/năm hiện tại) tự cắt đến tháng cuối có dữ liệu và so sánh tương đương (cùng số tháng).
+- Biểu đồ xu hướng theo khoảng nhìn 12 tháng / 24 tháng / 3 năm / 5 năm / toàn bộ – tự chọn độ chi tiết tháng/quý/năm, cột của kỳ đang xem được tô đậm.
+- Kết quả kinh doanh: thẻ KPI có % so sánh, bảng so sánh, **so sánh nhiều năm cùng khoảng tháng**, nhận xét tự động.
+- Doanh thu & Chi phí: bảng nhóm (TK / TK chi tiết / khoản mục / bộ phận) theo kỳ đang xem với các cột so sánh; xem chi tiết bút toán của đúng kỳ; Excel kèm cột so sánh.
+- Lựa chọn kỳ được ghi nhớ cho lần mở sau.
+
 ## v2.6.0 – 31/10/2026
 Phân tách kết quả rà soát thành **2 nhóm**:
 - **Sai sót nhân viên** (16 quy tắc): lỗi thao tác nhập liệu – thiếu khoản mục/đối tượng/mã hàng, chọn sai TK, diễn giải trống/chung chung, SL×ĐG lệch, hạn thanh toán sai, khấu hao sai khoản mục… → dùng để nhắc nhở, đào tạo.

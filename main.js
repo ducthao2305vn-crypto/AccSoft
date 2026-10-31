@@ -88,7 +88,7 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const READ = ['meta', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
 const WRITE = ['setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn

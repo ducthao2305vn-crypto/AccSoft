@@ -1,7 +1,7 @@
 {
   "name": "accsoft",
   "productName": "AccSoft",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "Phân tích sổ hạch toán ERP: lỗi nhập liệu, tuổi nợ, kết quả kinh doanh",
   "main": "main.js",
   "author": "AccSoft",
