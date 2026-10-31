@@ -365,7 +365,7 @@ const TASKS = {
   deleteMonth({ ym }) { deleteMonths([ym]); refreshImports(); rebuildAgg(db, [ym]); return {}; },
   buildAgg() { post({ type: 'progress', label: 'Đang tổng hợp sổ số dư theo tháng và bảng báo cáo…' }); rebuildAgg(db); return {}; },
   deleteImport({ id }) { post({ type: 'progress', label: 'Đang xoá lần nạp…' }); db.prepare('DELETE FROM imports WHERE id=?').run(id); refreshImports(); rebuildAgg(db); return {}; },
-  clear() { post({ type: 'progress', label: 'Đang xoá toàn bộ dữ liệu…' }); db.exec(`DELETE FROM errors; DELETE FROM entries; DELETE FROM imports; DELETE FROM months; DELETE FROM agg; DELETE FROM fin_mv; DELETE FROM fin_pmv; DELETE FROM fin_close; DELETE FROM err_sum; DELETE FROM err_ent; DELETE FROM settings WHERE k='err_sum_n';`); db.exec('VACUUM'); return {}; },
+  clear() { post({ type: 'progress', label: 'Đang xoá toàn bộ dữ liệu…' }); db.exec(`DELETE FROM errors; DELETE FROM entries; DELETE FROM imports; DELETE FROM months; DELETE FROM agg; DELETE FROM fin_mv; DELETE FROM fin_pmv; DELETE FROM fin_close; DELETE FROM err_sum; DELETE FROM err_ent; DELETE FROM err_doc; DELETE FROM settings WHERE k='err_sum_n';`); db.exec('VACUUM'); return {}; },
   recheck() { return analyze({}); },
   analyze: args => analyze(args),
   scan: args => scanRange(args),

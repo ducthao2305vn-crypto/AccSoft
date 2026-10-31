@@ -91,6 +91,25 @@ function make(db) {
     return { total, rows };
   }
   function errorGroups(f = {}, offset = 0, limit = 200) {
+    // Bộ lọc theo người nhập / tháng / bộ phận / trạng thái / nhóm lỗi → đọc bảng gom sẵn err_doc (nhanh); lọc khác → gom trực tiếp
+    const DOCF = ['user', 'month', 'dept', 'status', 'statusIn', 'group'];
+    if (!Object.keys(f).some(k => f[k] != null && f[k] !== '' && !DOCF.includes(k))) {
+      const w = [`d.ym IN (SELECT ym FROM months WHERE included=1)${RV('d')}`], a = [];
+      if (f.user) { w.push('d.u=?'); a.push(f.user); }
+      if (f.month) { w.push('d.ym=?'); a.push(f.month); }
+      if (f.dept) { w.push('d.dept=?'); a.push(f.dept); }
+      if (f.status) { w.push('d.st=?'); a.push(f.status); }
+      if (f.statusIn) { w.push(`d.st IN (${f.statusIn.map(() => '?').join(',')})`); a.push(...f.statusIn); }
+      if (f.group === 'staff' || f.group === 'audit') { w.push('d.g=?'); a.push(f.group); }
+      const W = 'WHERE ' + w.join(' AND ');
+      const total = get(`SELECT count(DISTINCT d.doc) n FROM err_doc d ${W}`, ...a).n;
+      const rows = all(`SELECT nullif(d.doc,'') doc, sum(d.n) n, sum(d.high) high, sum(CASE WHEN d.st IN ('open','doing') THEN d.n ELSE 0 END) open,
+          group_concat(d.rules) rules, min(nullif(d.u,'')) user, min(d.eid) eid FROM err_doc d ${W} GROUP BY d.doc ORDER BY high DESC, n DESC LIMIT ? OFFSET ?`, ...a, limit, offset);
+      for (const r of rows) r.rules = [...new Set(String(r.rules || '').split(','))].join(',');
+      if (rows.length) { const ph = rows.map(() => '?').join(','), d = new Map(all(`SELECT document_no k, min(account_date) d FROM entries WHERE document_no IN (${ph}) GROUP BY 1`, ...rows.map(r => r.doc)).map(r => [r.k, r.d]));
+        for (const r of rows) r.date = d.get(r.doc) || null; }
+      return { total, rows };
+    }
     const { sql, args, from } = where(f);
     const total = get(`SELECT count(DISTINCT er.doc) n ${from} ${sql}`, ...args).n;
     const rows = all(`SELECT er.doc doc, count(*) n, sum(er.sev='H') high,
@@ -137,11 +156,13 @@ function make(db) {
     const grp = db.prepare(`SELECT ifnull(ym,'') ym, rule, sev, coalesce(st,'open') st, ifnull(u,'') u, ifnull(dept,'') dept, count(*) n FROM errors WHERE err_key=? GROUP BY 1,2,3,4,5,6`);
     const dec = db.prepare('UPDATE err_sum SET n=n-? WHERE ym=? AND rule=? AND sev=? AND st=? AND u=? AND dept=?');
     const inc = db.prepare('INSERT INTO err_sum VALUES(?,?,?,?,?,?,?) ON CONFLICT DO UPDATE SET n=n+excluded.n');
+    const docs = new Set(), docOf = db.prepare('SELECT DISTINCT doc FROM errors WHERE err_key=?');
     const move = (key, to) => { for (const g of grp.all(key)) if (g.st !== to) { dec.run(g.n, g.ym, g.rule, g.sev, g.st, g.u, g.dept); inc.run(g.ym, g.rule, g.sev, to, g.u, g.dept, g.n); } };
     const up = db.prepare(`INSERT INTO reviews(err_key,rule,document_no,status,note,snapshot,updated_at) VALUES(?,?,?,?,?,?,datetime('now','localtime'))
       ON CONFLICT(err_key) DO UPDATE SET status=excluded.status,note=excluded.note,snapshot=excluded.snapshot,updated_at=excluded.updated_at`);
     db.exec('BEGIN');
-    for (const r of list) { if (!r.status && !r.note) del.run(r.key); else up.run(r.key, r.rule, r.doc, r.status || '', r.note || '', r.snapshot || ''); move(r.key, r.status || 'open'); st.run(r.status || 'open', r.key); }
+    for (const r of list) { if (!r.status && !r.note) del.run(r.key); else up.run(r.key, r.rule, r.doc, r.status || '', r.note || '', r.snapshot || ''); move(r.key, r.status || 'open'); st.run(r.status || 'open', r.key); for (const d of docOf.all(r.key)) docs.add(d.doc); }
+    require('./db').refreshErrDoc(db, docs);
     db.exec('DELETE FROM err_sum WHERE n<=0');
     db.exec('COMMIT');
     return list.length;
@@ -426,7 +447,7 @@ function make(db) {
     return { review: P, version: V, months: ms.length, pending: ms.filter(m => m.v !== V).map(m => ({ ym: m.ym, old: m.v != null })) };
   }
   const aggEmpty = () => !!get('SELECT 1 x FROM entries LIMIT 1') && (!get('SELECT 1 x FROM agg LIMIT 1') || !get('SELECT 1 x FROM ent_sum LIMIT 1')
-    || String(getSetting('err_sum_n')) !== String(get('SELECT count(*) n FROM errors').n));
+    || String(getSetting('err_sum_n')) !== String(get('SELECT count(*) n FROM errors').n) || (!get('SELECT 1 x FROM err_doc LIMIT 1') && !!get('SELECT 1 x FROM errors LIMIT 1')));
   // Ngưỡng cảnh báo
   try { setConfig(JSON.parse(getSetting('thresholds') || '{}')); } catch (e) { /* mặc định */ }
   const getThresholds = () => ({ cfg: { ...CFG }, def: { ...CFG_DEFAULT } });

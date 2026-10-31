@@ -20,17 +20,26 @@ const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import
 // Điền các cột phi chuẩn hoá cho dòng lỗi mới (sau mỗi lần phân tích) – chỉ đụng các dòng còn trống
 // Bảng đếm lỗi tổng hợp: tháng × quy tắc × mức × trạng thái × người nhập × bộ phận → Tổng quan, bộ lọc, Báo cáo, Chấm điểm nhân viên
 // đọc vài nghìn dòng thay vì hàng triệu cảnh báo. Dựng lại sau phân tích / xoá dữ liệu; đổi trạng thái thì cộng trừ tại chỗ.
+// Gom lỗi theo chứng từ (trang Lỗi → "Theo chứng từ"): chứng từ × tháng × người nhập × bộ phận × trạng thái × nhóm lỗi
+const ERR_DOC_SEL = (() => { const { GROUP } = require('./rules'); const audit = Object.keys(GROUP).filter(k => GROUP[k] === 'audit').map(k => `'${k}'`).join(',') || "''";
+  return `SELECT ifnull(doc,''), ifnull(ym,''), ifnull(u,''), ifnull(dept,''), coalesce(st,'open'), CASE WHEN rule IN (${audit}) THEN 'audit' ELSE 'staff' END,
+    count(*), sum(sev='H'), group_concat(DISTINCT rule), min(id) FROM errors`; })();
+function refreshErrDoc(db, docs) { // sau khi đổi trạng thái: tính lại các chứng từ liên quan
+  const del = db.prepare('DELETE FROM err_doc WHERE doc=?'), ins = db.prepare(`INSERT INTO err_doc ${ERR_DOC_SEL} WHERE doc=? GROUP BY 1,2,3,4,5,6`);
+  for (const d of docs) { del.run(d ?? ''); ins.run(d); }
+}
 function rebuildErrSum(db, from = '', to = '') { // from/to: chỉ dựng lại các tháng trong kỳ vừa phân tích
   const ok = v => /^\d{4}-\d{2}$/.test(v || '') ? v : '', f = ok(from), t = ok(to);
   const W = (f ? ` AND ym>='${f}'` : '') + (t ? ` AND ym<='${t}'` : '');
   db.exec(`BEGIN; DELETE FROM err_sum WHERE 1${W}; DELETE FROM err_ent WHERE 1${W};
     INSERT INTO err_sum SELECT ifnull(ym,''), rule, sev, coalesce(st,'open'), ifnull(u,''), ifnull(dept,''), count(*) FROM errors WHERE 1${W} GROUP BY 1,2,3,4,5,6;
     INSERT INTO err_ent SELECT ym, u, count(*), sum(hm) FROM (SELECT ifnull(ym,'') ym, ifnull(u,'') u, entry_id, max(sev IN ('H','M')) hm FROM errors WHERE 1${W} GROUP BY entry_id) GROUP BY 1,2;
+    DELETE FROM err_doc WHERE 1${W}; INSERT INTO err_doc ${ERR_DOC_SEL} WHERE 1${W} GROUP BY 1,2,3,4,5,6;
     INSERT INTO settings(k,v) VALUES('err_sum_n',(SELECT count(*) FROM errors)) ON CONFLICT(k) DO UPDATE SET v=excluded.v; COMMIT;`);
 }
 function syncErrSum(db) {
   const es = db.prepare(`SELECT (SELECT v FROM settings WHERE k='err_sum_n') v, (SELECT count(*) FROM errors) n`).get();
-  if (String(es.v) !== String(es.n)) rebuildErrSum(db);
+  if (String(es.v) !== String(es.n) || (es.n > 0 && !db.prepare('SELECT 1 FROM err_doc LIMIT 1').get())) rebuildErrSum(db);
 }
 function fillErrCols(db) {
   if (!db.prepare('SELECT 1 FROM errors WHERE ym IS NULL OR st IS NULL LIMIT 1').get()) return 0;
@@ -91,6 +100,8 @@ function open(file, { cleanup = false, light = false } = {}) {
     CREATE INDEX IF NOT EXISTS ix_err_entry ON errors(entry_id);
     CREATE TABLE IF NOT EXISTS ent_sum(ym TEXT, u TEXT, n INTEGER, nx INTEGER, docs INTEGER, dmin TEXT, dmax TEXT, PRIMARY KEY(ym, u)) WITHOUT ROWID;
     CREATE TABLE IF NOT EXISTS err_sum(ym TEXT, rule TEXT, sev TEXT, st TEXT, u TEXT, dept TEXT, n INTEGER, PRIMARY KEY(ym, rule, sev, st, u, dept)) WITHOUT ROWID;
+    CREATE TABLE IF NOT EXISTS err_doc(doc TEXT, ym TEXT, u TEXT, dept TEXT, st TEXT, g TEXT, n INTEGER, high INTEGER, rules TEXT, eid INTEGER, PRIMARY KEY(doc, ym, u, dept, st, g)) WITHOUT ROWID;
+    CREATE INDEX IF NOT EXISTS ix_errdoc_ym ON err_doc(ym);
     CREATE TABLE IF NOT EXISTS err_ent(ym TEXT, u TEXT, n INTEGER, nhm INTEGER, PRIMARY KEY(ym, u)) WITHOUT ROWID;
     CREATE TABLE IF NOT EXISTS fin_mv(ym TEXT, acc TEXT, name TEXT, dr REAL, cr REAL);
     CREATE INDEX IF NOT EXISTS ix_finmv ON fin_mv(ym, acc);
@@ -172,4 +183,4 @@ function rebuildFin(db, months = null) {
   db.prepare(`INSERT INTO settings(k,v) VALUES('fin_built', datetime('now','localtime')) ON CONFLICT(k) DO UPDATE SET v=excluded.v`).run();
   db.exec('COMMIT');
 }
-module.exports = { syncErrSum, rebuildErrSum, rebuildFin, FIN_PS, fillErrCols, dropErrIndexes, createErrIndexes, rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };
+module.exports = { refreshErrDoc, syncErrSum, rebuildErrSum, rebuildFin, FIN_PS, fillErrCols, dropErrIndexes, createErrIndexes, rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };

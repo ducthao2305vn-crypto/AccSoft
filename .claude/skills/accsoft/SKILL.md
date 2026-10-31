@@ -51,6 +51,7 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
    | `ent_sum` | Bút toán theo tháng × người nhập: n, nx (không tính số dư đầu kỳ), docs, dmin/dmax | `rebuildAgg` |
    | `err_sum` | Cảnh báo theo tháng × quy tắc × mức × trạng thái × người nhập × bộ phận | `rebuildErrSum(db, from, to)` sau phân tích (chỉ các tháng trong kỳ); `setReviews` cộng trừ tại chỗ |
    | `err_ent` | Số dòng có lỗi / có lỗi mức H–M theo tháng × người nhập | cùng `rebuildErrSum` |
+   | `err_doc` | Lỗi theo chứng từ × tháng × người nhập × bộ phận × trạng thái × nhóm (n, high, rules, eid) | `rebuildErrSum`; `setReviews` gọi `refreshErrDoc(docs)` |
 
    - `syncErrSum` tự dựng lại khi `settings.err_sum_n` khác `count(errors)`.
    - Khi khởi động, `aggEmpty()` kiểm tra thiếu hoặc lệch → chạy task nền `buildAgg`, không khoá cửa sổ.
@@ -62,6 +63,7 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
    - Lọc lỗi bằng `EINC + RV('er')`; chỉ nối `entries` khi lọc theo TK, số tiền hoặc chữ (`where().from`).
    - Trang danh sách: lấy id theo trang trước (sắp xếp theo sev/rule/user/st/doc) rồi mới nối dữ liệu chi tiết.
    - Tổng số dòng lấy từ `err_sum` qua `sumWhere(f)`, trả null nếu bộ lọc cần dữ liệu chi tiết.
+   - `errorGroups` dùng `err_doc` khi bộ lọc chỉ gồm user/month/dept/status/statusIn/group; lọc khác thì gom trực tiếp. Kiểm tra: so `{...}` với `{..., minSev:'L'}` (ép đi nhánh cũ), kết quả phải khớp từng dòng.
 3. **Chỉ mục:**
    - Chỉ mục lỗi khai báo trong `ERR_IDX`. Phân tích kỳ trên 200k dòng thì `dropErrIndexes` trước, `createErrIndexes` sau; kỳ nhỏ giữ nguyên.
    - Chỉ mục `entries` cần có: `ix_e_ym`, `ix_e_ym_imp` (để `months()` đếm theo chỉ mục), `ix_e_dup(acc_debit, acc_credit, amount)` (quy tắc trùng), `ix_e_accd`, `ix_e_accc`, `ix_e_doc`.
@@ -73,6 +75,7 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 5. **Nhóm worker truy vấn (`main.js`):**
    - `qPool` gồm 2–3 `qworker`. Hàng đợi `qQueue`. Bộ nhớ đệm `qCache` chỉ cho tên trong `READ`; xoá khi có truy vấn ghi hoặc task ghi xong (`invalidateQueries`). `qInflight` gộp các truy vấn trùng đang chạy.
    - `warmJob()` chỉ chạy khi còn ít nhất 2 luồng rảnh. `WARM` gồm overview, errorFacets, report, pl…, cộng thêm aging/inventory/todo theo tham số mặc định của giao diện. Nếu đổi mặc định ô chọn trên giao diện thì sửa `WARM` theo.
+   - Khoá cache `qKey()` bỏ các ô lọc trống, nên `{group:''}` dùng chung kết quả với `{}`.
    - Truy vấn đọc mới **phải** thêm vào `READ`; nếu không, nó bị coi là truy vấn ghi và xoá cache.
    - Debug: `ACCSOFT_QDEBUG=/tmp/q.log` ghi thời gian từng truy vấn, số việc trong hàng đợi, số luồng bận.
 6. **Giao diện:**

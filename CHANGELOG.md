@@ -1,5 +1,16 @@
 # Lịch sử phiên bản
 
+## v4.2.0 – 31/10/2026
+**Gom lỗi theo chứng từ nhanh hơn**
+- **Bảng gom sẵn:** lỗi theo chứng từ × tháng × người nhập × bộ phận × trạng thái × nhóm lỗi.
+  - Dùng cho chế độ "Theo chứng từ" trên trang Lỗi nhập liệu khi lọc theo người nhập, tháng, bộ phận, trạng thái, nhóm lỗi (hoặc không lọc).
+  - Lọc theo loại lỗi hoặc mức độ vẫn gom trực tiếp, đã có chỉ mục.
+  - Dựng lại sau mỗi lần phân tích (chỉ các tháng trong kỳ).
+  - Khi đổi trạng thái lỗi, các chứng từ liên quan được tính lại ngay.
+- **Tốc độ** đo trên 1,3 triệu dòng / 3 triệu cảnh báo: từ 4,2–5,2 giây xuống 0,2–2,1 giây. Chế độ mặc định được tính sẵn, mở ra 0,24 giây.
+- **Bộ nhớ đệm:** bỏ qua các ô lọc đang để trống khi so khớp, nên dùng lại được kết quả tính sẵn.
+- **Kiểm tra:** kết quả khớp từng dòng với cách gom cũ, kể cả sau khi đổi trạng thái.
+
 ## v4.1.0 – 31/10/2026
 **Sửa lỗi "Đang tải dữ liệu…" rất lâu với dữ liệu trên 1 triệu dòng, thêm thanh tiến độ**
 

@@ -18,8 +18,10 @@ let dbHandle = null, win, Q, dbFile, busy = false, qSeq = 0;
 const qPool = [], qQueue = [], qCache = new Map(), qInflight = new Map();
 let qEpoch = 0;
 const WARM = [['overview', []], ['errorFacets', []], ['analysisStatus', []], ['months', []], ['stats', []], ['reviewPeriod', []], ['report', []], ['pl', []]];
+// Khoá bộ nhớ đệm: bỏ các ô lọc trống ('' / null) để { group: '', rule: '' } trùng với {} (dùng chung kết quả tính sẵn)
+const qKey = (name, args) => name + '\u0000' + JSON.stringify(args, (k, v) => (k && (v === '' || v == null) ? undefined : v));
 function qa(name, ...args) {
-  const cacheable = READ.includes(name), key = cacheable ? name + '\u0000' + JSON.stringify(args) : null;
+  const cacheable = READ.includes(name), key = cacheable ? qKey(name, args) : null;
   if (key && qCache.has(key)) return Promise.resolve(qCache.get(key));
   if (key && qInflight.has(key)) return qInflight.get(key);
   if (!cacheable) { qCache.clear(); qEpoch++; if (process.env.ACCSOFT_QDEBUG) fs.appendFileSync(process.env.ACCSOFT_QDEBUG, `${new Date().toISOString().slice(11, 23)} CLEAR by ${name}\n`); } // truy vấn ghi → kết quả cũ không còn đúng
@@ -37,8 +39,8 @@ function pump() {
 function warmJob() {
   if (qPool.filter(w => !w.job).length < 2 && qPool.length > 1) return null; // luôn chừa ít nhất một luồng rảnh cho người dùng
   // sau khi có Tổng quan: làm nóng thêm tuổi nợ, tồn kho, danh sách cần khắc phục với tham số mặc định của giao diện
-  const ov = qCache.get('overview\u0000[]'), extra = ov && ov.dmax ? [['aging', [ov.dmax, 30, 'l1', 'bp']], ['inventory', [ov.dmax, 'product', 'l1']], ['todo', ['L', '']]] : [];
-  for (const [name, args] of [...WARM, ...extra]) { const key = name + '\u0000' + JSON.stringify(args);
+  const ov = qCache.get(qKey('overview', [])), extra = ov && ov.dmax ? [['aging', [ov.dmax, 30, 'l1', 'bp']], ['inventory', [ov.dmax, 'product', 'l1']], ['todo', ['L', '']], ['errorGroups', [{}, 0, 200]], ['errors', [{}, { k: 'sev', d: 1 }, 0, 200]]] : [];
+  for (const [name, args] of [...WARM, ...extra]) { const key = qKey(name, args);
     if (!qCache.has(key) && !qInflight.has(key)) { let ok; const p = new Promise(r => { ok = r; }); qInflight.set(key, p); p.finally(() => qInflight.delete(key));
       return { id: ++qSeq, name, args, key, epoch: qEpoch, resolve: ok, reject: ok, t: Date.now(), warm: true }; } }
   return null;
