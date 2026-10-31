@@ -160,6 +160,17 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
 .side-rv b{color:var(--brand-700);display:block;font-size:13px}
 .pendNote{border-color:var(--brand-300);background:var(--brand-50);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .pendNote b{color:var(--brand-700)}
+.grptabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.grptabs button{text-align:left;border:1px solid var(--gray-200);background:#fff;border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;gap:12px;align-items:flex-start}
+.grptabs button .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--gray-100);color:var(--gray-600)}
+.grptabs button b{display:block;font-size:15px;color:var(--gray-900)}.grptabs button small{color:var(--gray-500);font-size:12px;line-height:1.35;display:block;margin-top:2px}
+.grptabs button .n{margin-left:auto;font-size:22px;font-weight:700;color:var(--gray-700)}
+.grptabs button.on{border-color:var(--brand-500);box-shadow:inset 0 0 0 1px var(--brand-500);background:var(--brand-25)}
+.grptabs button.on .ic{background:var(--brand-500);color:#fff}.grptabs button.on .n{color:var(--brand-600)}
+.badge.g-staff{color:#004EEB;background:#EFF4FF;border-color:#D1E0FF}.badge.g-audit{color:#6927DA;background:#F5F3FF;border-color:#DDD6FE}
+.why{margin-top:8px;border-left:3px solid #875BF7;background:#F5F3FF;border-radius:6px;padding:8px 10px;font-size:13px;color:#491C96}
+tr.grow td{background:var(--gray-50)!important;font-weight:700;color:var(--gray-800)}
+@media(max-width:1100px){.grptabs{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -211,6 +222,7 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
     <div class="card rvbar" id="rvErr"></div>
     <div class="note hide pendNote"></div>
     <div class="card">
+      <div class="grptabs" id="grpTabs"></div>
       <div class="card-h"><div class="tabs" id="stTabs"></div><div class="sp"></div>
         <select class="input" id="fGroup" style="width:auto"><option value="">Từng dòng lỗi</option><option value="doc">Gộp theo chứng từ</option></select></div>
       <div class="filters">
@@ -325,6 +337,7 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
     <div class="card noprint">
       <div class="card-h"><div><h3>Lỗi cần khắc phục & gửi thông báo</h3><div class="hint">Mỗi nhân viên nhận một email liệt kê lỗi, hướng dẫn chỉnh sửa và file Excel đính kèm.</div></div></div>
       <div class="filters" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+        <label class="field">Nhóm lỗi<select class="input" id="rGroup"><option value="">Tất cả các nhóm</option><option value="staff">Sai sót nhân viên</option><option value="audit">Sai sót dễ bị kiểm toán</option></select></label>
         <label class="field">Mức độ<select class="input" id="rSev"><option value="L">Tất cả mức</option><option value="M">Trung bình trở lên</option><option value="H">Chỉ mức cao</option></select></label>
         <label class="field">Hạn khắc phục<input class="input" type="date" id="rDeadline"></label>
         <label class="check" style="align-self:end;padding-bottom:10px"><input type="checkbox" id="rMark" checked>Sau khi gửi, chuyển "Chưa xử lý" → "Đang xử lý"</label>

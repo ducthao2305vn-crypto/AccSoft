@@ -1,7 +1,7 @@
 'use strict';
 // Xuất Excel và soạn nội dung email – chạy ở tiến trình chính, dữ liệu lấy thẳng từ SQLite
 const XLSX = require('../vendor/xlsx.full.min.js');
-const { FIX, ST, ALL_RULES, fmt2 } = require('./rules');
+const { FIX, ST, ALL_RULES, fmt2, GROUP, GROUPS } = require('./rules');
 
 const RULE = Object.fromEntries(ALL_RULES.map(r => [r.k, r]));
 const SEV = { H: 'Cao', M: 'Trung bình', L: 'Thấp' };
@@ -12,7 +12,7 @@ const shortName = u => String(u || '').split('_')[0];
 const emailOf = u => String(u || '').split(/[_\s]/).find(x => /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(x)) || '';
 
 const errRow = e => ({
-  'Mức': SEV[e.sev], 'Trạng thái': ST[e.status], 'Loại lỗi': RULE[e.k]?.n, 'Chi tiết': e.msg, 'Cần chỉnh sửa': FIX[e.k] || '',
+  'Nhóm': GROUPS[GROUP[e.k]], 'Mức': SEV[e.sev], 'Trạng thái': ST[e.status], 'Loại lỗi': RULE[e.k]?.n, 'Chi tiết': e.msg, 'Cần chỉnh sửa': FIX[e.k] || '',
   'Ngày HT': vnDate(e.date), 'Chứng từ': e.doc, 'Line': e.line, 'TK Nợ': e.drName, 'TK Có': e.crName, 'Số tiền': e.amt,
   'Diễn giải': e.desc, 'Bộ phận': e.dept, 'Người nhập': e.user, 'Ghi chú kiểm soát': e.note || '', 'Cập nhật': e.at || '',
 });
@@ -51,7 +51,7 @@ function inventoryBook(items) {
   return book([['Tong hop theo TK', [...sum.values()]], ['Chi tiet ton kho', items.filter(o => o.bal > 0).sort((a, c) => c.bal - a.bal).map(row)], ['Ton am', items.filter(o => o.bal < 0).map(row)]]);
 }
 function reportBook(rep, checked, todo) {
-  const cross = (rows, label, name) => rows.map(r => ({ [label]: name(r.k), 'Tổng': r.n, 'Mức cao': r.high, 'Chưa xử lý': r.open, 'Đang xử lý': r.doing,
+  const cross = (rows, label, name) => rows.map(r => ({ ...(label === 'Loại lỗi' ? { 'Nhóm': GROUPS[GROUP[r.k]] } : {}), [label]: name(r.k), 'Tổng': r.n, 'Mức cao': r.high, 'Chưa xử lý': r.open, 'Đang xử lý': r.doing,
     'Đã khắc phục': r.fixed, 'Không phải lỗi': r.ignore, '% hoàn thành': r.n ? (r.fixed + r.ignore) / r.n : 0 }));
   return book([['Theo loai loi', cross(rep.byRule, 'Loại lỗi', k => RULE[k]?.n || k)], ['Theo nguoi nhap', cross(rep.byUser, 'Người nhập', k => k)],
     ['Da kiem tra', checked.map(errRow)], ['Can khac phuc', todo.map(errRow)]]);

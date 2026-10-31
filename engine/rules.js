@@ -79,6 +79,8 @@ const RULES=[
    if(/^214/.test(r.cr)&&!dep)return `Có 214 nhưng khoản mục: ${String(r.tcost).slice(0,50)}`;if(dep&&!/^214/.test(r.cr)&&!/^242/.test(r.cr))return `Khoản mục khấu hao nhưng Có ${r.cr}`;return false}},
  {k:'REV_NO_INVOICE',s:'L',n:'Doanh thu không gắn hoá đơn',d:'Ghi Có TK doanh thu nhưng không có số hoá đơn – kiểm tra đã xuất hoá đơn hay doanh thu ước tính.',
   f:r=>isRev(r.cr)&&r.amt>0&&!r.inv&&'Thiếu Invoice'},
+ {k:'MANUAL_JE_LARGE',s:'M',n:'Bút toán thủ công giá trị lớn',d:'Bút toán ghi sổ thủ công (GL Journal) ≥ 10.000 vào doanh thu, chi phí hoặc tiền – đối tượng kiểm toán viên chọn mẫu khi kiểm tra bút toán (journal entry testing).',
+  f:r=>/GL_Journal|Journal/i.test(r.table||'')&&Math.abs(r.amt)>=10000&&(isRev(r.dr)||isRev(r.cr)||isExp(r.dr)||isExp(r.cr)||isCash(r.dr)||isCash(r.cr))&&`${fmt2(r.amt)} · Nợ ${r.dr} / Có ${r.cr}`},
  {k:'INV_NO_PRODUCT',s:'M',n:'Hàng tồn kho thiếu mã hàng',d:'Dòng ghi TK hàng tồn kho (151–158, trừ 154) nhưng không có mã hàng (Product) – không theo dõi được tồn kho và tuổi hàng theo mặt hàng.',
   f:r=>(r._schema>=2||r._enriched)&&(isInv(r.dr)||isInv(r.cr))&&!r.product&&`TK ${isInv(r.dr)?r.dr:r.cr} không có Product`},
 ];
@@ -96,6 +98,7 @@ const FIX={
  REV_NO_INVOICE:'Bổ sung số hoá đơn; nếu là doanh thu ước tính (accrual) thì ghi rõ trong diễn giải và đảo khi có hoá đơn.',
  INV_NO_PRODUCT:'Bổ sung mã hàng (Product) cho dòng nhập/xuất kho; chi phí mua hàng (thuế, vận chuyển) cần phân bổ vào đúng mã hàng.',
  INV_NEGATIVE:'Kiểm tra thứ tự nhập – xuất: xuất trước khi nhập, xuất nhầm mã hàng/kho, hoặc thiếu phiếu nhập. Điều chỉnh để tồn kho không âm.',
+ MANUAL_JE_LARGE:'Lưu hồ sơ đầy đủ: lý do điều chỉnh, chứng từ gốc, người lập và người phê duyệt; bút toán thủ công lớn nên có phê duyệt của kế toán trưởng.',
  DOC_MULTI_MONTH:'Một chứng từ chỉ nên thuộc một kỳ; tách chứng từ hoặc sửa ngày hạch toán các dòng cho thống nhất.',
  SPLIT_PAYMENT:'Kiểm tra có chia nhỏ khoản chi để né hạn mức phê duyệt không; gộp hồ sơ và xin phê duyệt đúng cấp.',
  RARE_PAIR:'Cặp tài khoản đối ứng hiếm gặp – kiểm tra bản chất nghiệp vụ, có thể chọn nhầm tài khoản.',
@@ -138,6 +141,32 @@ function checkRow(r){
   return out;
 }
 const errKey=(k,r)=>[k,r.doc,r.line,r.dr,r.cr,r.amt].join('|');
-const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||''})),status:ST});
-const RULES_VERSION=9; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
-module.exports={RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};
+// Phân nhóm: 'staff' = sai sót thao tác của nhân viên nhập liệu; 'audit' = dấu hiệu kiểm toán viên thường chọn mẫu / nêu trong thư quản lý
+const AUDIT_WHY={
+ REV_REVERSED:'Ghi nhận doanh thu là rủi ro gian lận được giả định theo VSA 240 – giảm doanh thu bất thường luôn bị kiểm tra.',
+ EXP_REVERSED:'Giảm chi phí không chứng từ làm tăng lợi nhuận – kiểm tra tính hiện hữu và đầy đủ của chi phí.',
+ AMT_NEG:'Bút toán âm/điều chỉnh là đối tượng của thủ tục kiểm tra bút toán ghi sổ (VSA 240) – cần lý do và phê duyệt.',
+ PREPAID_EXPENSED:'Vi phạm nguyên tắc phù hợp (VAS 01) – chi phí ghi nhận sai kỳ, kiểm toán thường đề nghị điều chỉnh qua 242.',
+ CUTOFF:'Kiểm tra tính đúng kỳ (cut-off) là thủ tục bắt buộc với doanh thu và chi phí cuối kỳ.',
+ MONTH_END_LARGE:'Bút toán lớn sát kỳ khoá sổ là tiêu chí chọn mẫu kinh điển khi kiểm tra bút toán ghi sổ.',
+ DUPLICATE:'Thanh toán/ghi nhận trùng là sai sót trọng yếu dễ phát hiện bằng phân tích dữ liệu – kiểm toán luôn chạy kiểm tra này.',
+ OUTLIER:'Giao dịch bất thường so với tổng thể được chọn để kiểm tra chi tiết (VSA 520 – thủ tục phân tích).',
+ SPLIT_PAYMENT:'Chia nhỏ khoản chi để né hạn mức phê duyệt là dấu hiệu gian lận/kiểm soát nội bộ yếu.',
+ CASH_ROUND:'Chi tiền số tròn lớn là dấu hiệu rủi ro (tạm ứng, chi không chứng từ) – thường được chọn mẫu.',
+ ROUND_EXPENSE:'Số tròn gợi ý ước tính/khoán – kiểm toán yêu cầu chứng từ chi tiết.',
+ BIG_NO_REF:'Thiếu bằng chứng kiểm toán thích hợp (VSA 500) – chi phí lớn không hợp đồng/hoá đơn có thể bị loại.',
+ ASSET_TO_EXPENSE:'Ghi giảm TSCĐ cần hồ sơ thanh lý; sai sót ảnh hưởng cả bảng cân đối và kết quả kinh doanh.',
+ PARTNER_NETTING:'Bù trừ công nợ cần biên bản ba bên – kiểm toán đối chiếu khi gửi thư xác nhận công nợ.',
+ REV_NO_INVOICE:'Doanh thu không có hoá đơn cần giải trình (ước tính, chưa xuất hoá đơn) – rủi ro ghi nhận doanh thu.',
+ RARE_PAIR:'Bút toán với cặp tài khoản bất thường là tiêu chí chọn mẫu khi kiểm tra bút toán ghi sổ (VSA 240).',
+ INV_NEGATIVE:'Tồn kho âm cho thấy sai sót ghi nhận nhập – xuất, ảnh hưởng giá vốn và giá trị hàng tồn kho.',
+ WEEKEND:'Bút toán ghi vào ngày nghỉ là tiêu chí chọn mẫu khi kiểm tra bút toán ghi sổ.',
+ EDITED_BY_OTHER:'Sửa bút toán bởi người khác người lập – kiểm tra kiểm soát phân quyền và phê duyệt.',
+ MANUAL_JE_LARGE:'VSA 240 yêu cầu kiểm toán viên kiểm tra bút toán ghi sổ thủ công, đặc biệt giá trị lớn vào doanh thu/chi phí/tiền.',
+ DESC_MATH:'Diễn giải tính sai cho thấy số tiền có thể sai so với hợp đồng – sai sót dễ bị phát hiện khi đối chiếu hồ sơ.',
+};
+const GROUP=Object.fromEntries(ALL_RULES.map(r=>[r.k,AUDIT_WHY[r.k]?'audit':'staff']));
+const GROUPS={staff:'Sai sót nhân viên',audit:'Sai sót dễ bị kiểm toán'};
+const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||'',g:GROUP[k],why:AUDIT_WHY[k]||''})),status:ST,groups:GROUPS});
+const RULES_VERSION=10; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
+module.exports={GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};

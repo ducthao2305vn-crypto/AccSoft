@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v2.6.0 – 31/10/2026
+Phân tách kết quả rà soát thành **2 nhóm**:
+- **Sai sót nhân viên** (16 quy tắc): lỗi thao tác nhập liệu – thiếu khoản mục/đối tượng/mã hàng, chọn sai TK, diễn giải trống/chung chung, SL×ĐG lệch, hạn thanh toán sai, khấu hao sai khoản mục… → dùng để nhắc nhở, đào tạo.
+- **Sai sót dễ bị kiểm toán** (21 quy tắc): dấu hiệu kiểm toán viên thường chọn mẫu / nêu trong thư quản lý – doanh thu/chi phí ghi sai chiều, sai kỳ (cut-off), chi phí nhiều kỳ không qua 242, trùng lặp, bất thường, chia nhỏ khoản chi, chi số tròn, thiếu chứng từ, bút toán ngày nghỉ/cuối tháng/cặp TK hiếm, tồn kho âm… Mỗi quy tắc có giải thích **"Vì sao kiểm toán quan tâm"** (VSA 240, 500, 520, VAS 01).
+- Quy tắc mới: **Bút toán thủ công giá trị lớn** (GL Journal ≥ 10.000 vào doanh thu/chi phí/tiền) – kiểm tra bút toán ghi sổ theo VSA 240.
+- Tab Lỗi nhập liệu: 3 thẻ chọn nhóm có số đếm; bảng quy tắc chia theo nhóm. Tổng quan: thẻ số lỗi từng nhóm (bấm để xem). Báo cáo & email: lọc theo nhóm; Excel thêm cột Nhóm.
+
 ## v2.5.0 – 30/10/2026
 **Tách nạp dữ liệu và phân tích**
 - Nạp dữ liệu chỉ đọc và lưu, không chạy quy tắc → nhanh hơn (file 575 MB: 104 → 52 giây).

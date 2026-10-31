@@ -1,7 +1,8 @@
 'use strict';
 // Truy vấn đọc cho giao diện – mọi phép tổng hợp chạy bằng SQL, giao diện chỉ nhận kết quả đã gọn
 const { COLS, rowFromDb } = require('./db');
-const { meta, ST, RULES_VERSION } = require('./rules');
+const { meta, ST, RULES_VERSION, GROUP } = require('./rules');
+const RULES_OF = g => Object.keys(GROUP).filter(k => GROUP[k] === g).map(k => `'${k}'`).join(',');
 
 const INC = `e.ym IN (SELECT ym FROM months WHERE included=1)`;
 const STATUS = `coalesce(nullif(rv.status,''),'open')`;
@@ -22,6 +23,7 @@ function make(db) {
   function where(f = {}) {
     const w = [INC + RV()], a = [];
     if (f.rule) { w.push('er.rule=?'); a.push(f.rule); }
+    if (f.group === 'staff' || f.group === 'audit') w.push(`er.rule IN (${RULES_OF(f.group)})`);
     if (f.sev) { w.push('er.sev=?'); a.push(f.sev); }
     if (f.minSev) w.push({ H: `er.sev='H'`, M: `er.sev IN ('H','M')`, L: '1' }[f.minSev] || '1');
     if (f.user) { w.push('e.created_by=?'); a.push(f.user); }
@@ -292,12 +294,12 @@ function make(db) {
     const months = all(`SELECT ym FROM months WHERE included=1 ORDER BY ym`).map(r => r.ym).filter(m => (!P.from || m >= P.from) && (!P.to || m <= P.to));
     return { review: P, byRule: cross('er.rule'), byUser: cross('e.created_by'), months };
   }
-  function todo(minSev) {
-    const { sql, args } = where({ minSev, statusIn: ['open', 'doing'] });
+  function todo(minSev, group) {
+    const { sql, args } = where({ minSev, group, statusIn: ['open', 'doing'] });
     return all(`SELECT e.created_by u, count(*) n, sum(er.sev='H') high, count(DISTINCT e.document_no) docs ${FROM} ${sql} GROUP BY u ORDER BY n DESC`, ...args);
   }
-  function employeeErrors(user, minSev, limit = 100000) {
-    const { sql, args } = where({ minSev, user, statusIn: ['open', 'doing'] });
+  function employeeErrors(user, minSev, limit = 100000, group = '') {
+    const { sql, args } = where({ minSev, user, group, statusIn: ['open', 'doing'] });
     return all(`SELECT ${ERR_COLS} ${FROM} ${sql} ORDER BY ${SEVN}, e.account_date LIMIT ?`, ...args, limit);
   }
 

@@ -149,17 +149,17 @@ async function init() {
   handle('export:analysis', (_e, title, rows) => saveXlsx(`AccSoft_${title}.xlsx`, R.book([[title.slice(0, 31), rows]])));
   handle('export:inventory', (_e, asOf, by, level, acc) => saveXlsx('AccSoft_TuoiHangTonKho.xlsx', R.inventoryBook(Q.inventory(asOf, by, level).items.filter(o => !acc || o.acc === acc))));
   handle('export:aging', (_e, asOf, term, level, grp, acc) => saveXlsx('AccSoft_TuoiNo.xlsx', R.agingBook(Q.aging(asOf, term, level).items.filter(o => (!grp || o.grp === grp) && (!acc || o.acc === acc)))));
-  handle('export:report', (_e, minSev) => saveXlsx('AccSoft_BaoCaoKiemTra.xlsx',
-    R.reportBook(Q.report(), Q.errors({ statusIn: ['fixed', 'ignore'] }, { k: 'user', d: 1 }, 0, 2e6).rows, Q.errors({ minSev, statusIn: ['open', 'doing'] }, { k: 'user', d: 1 }, 0, 2e6).rows)));
-  handle('export:employee', (_e, user, minSev) => saveXlsx(`AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, R.book([['Can khac phuc', Q.employeeErrors(user, minSev).map(R.errRow)]])));
+  handle('export:report', (_e, minSev, group) => saveXlsx('AccSoft_BaoCaoKiemTra.xlsx',
+    R.reportBook(Q.report(), Q.errors({ statusIn: ['fixed', 'ignore'] }, { k: 'user', d: 1 }, 0, 2e6).rows, Q.errors({ minSev, group, statusIn: ['open', 'doing'] }, { k: 'user', d: 1 }, 0, 2e6).rows)));
+  handle('export:employee', (_e, user, minSev, group) => saveXlsx(`AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, R.book([['Can khac phuc', Q.employeeErrors(user, minSev, 100000, group).map(R.errRow)]])));
   // Email
-  handle('mail:preview', (_e, user, o) => ({ subject: R.mailSubject(user), html: R.mailHtml(user, Q.employeeErrors(user, o.minSev), o), count: Q.employeeErrors(user, o.minSev).length }));
+  handle('mail:preview', (_e, user, o) => ({ subject: R.mailSubject(user), html: R.mailHtml(user, Q.employeeErrors(user, o.minSev, 100000, o.group), o), count: Q.employeeErrors(user, o.minSev, 100000, o.group).length }));
   handle('smtp:get', () => mailer.getConfig(Q));
   handle('smtp:set', (_e, cfg) => mailer.setConfig(Q, cfg));
   handle('smtp:verify', () => mailer.verify(Q).then(() => ({ ok: true }), e => ({ ok: false, error: String(e.message || e) })));
   handle('mail:send', async (_e, list, o) => {
     const msgs = list.map(({ user, to }) => {
-      const rows = Q.employeeErrors(user, o.minSev);
+      const rows = Q.employeeErrors(user, o.minSev, 100000, o.group);
       return { user, rows, to, subject: R.mailSubject(user) + (o.test ? ' (THỬ)' : ''), html: R.mailHtml(user, rows, o),
         attachment: { name: `AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, base64: R.toBuffer(R.book([['Can khac phuc', rows.map(R.errRow)]])).toString('base64') },
         employee: user, count: rows.length };
