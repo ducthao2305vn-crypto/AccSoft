@@ -73,6 +73,11 @@ function open(file, { cleanup = false, light = false } = {}) {
     CREATE INDEX IF NOT EXISTS ix_e_docline ON entries(document_no, line_no);
     CREATE INDEX IF NOT EXISTS ix_e_user ON entries(created_by);
     CREATE INDEX IF NOT EXISTS ix_err_entry ON errors(entry_id);
+    CREATE TABLE IF NOT EXISTS fin_mv(ym TEXT, acc TEXT, name TEXT, dr REAL, cr REAL);
+    CREATE INDEX IF NOT EXISTS ix_finmv ON fin_mv(ym, acc);
+    CREATE TABLE IF NOT EXISTS fin_pmv(ym TEXT, a3 TEXT, p TEXT, v REAL);
+    CREATE INDEX IF NOT EXISTS ix_finpmv ON fin_pmv(ym, a3);
+    CREATE TABLE IF NOT EXISTS fin_close(ym TEXT, acc TEXT, ob REAL, dr REAL, cr REAL, cb REAL, PRIMARY KEY(ym, acc)) WITHOUT ROWID;
     CREATE TABLE IF NOT EXISTS agg(ym TEXT, side TEXT, acc TEXT, acc_name TEXT, dept TEXT, tcost TEXT, trev TEXT, amount REAL, n INTEGER);
     CREATE INDEX IF NOT EXISTS ix_agg_ym ON agg(ym);
     CREATE INDEX IF NOT EXISTS ix_e_accd ON entries(acc_debit);
@@ -103,5 +108,43 @@ function rebuildAgg(db, months = null) {
       WHERE substr(acc_${col},1,1) IN ('5','6','7','8') AND ifnull(source_table,'')<>'OPENING_BALANCE' AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%' AND ym IS NOT NULL${IN}
       GROUP BY ym, acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue`);
   db.exec('COMMIT');
+  rebuildFin(db, months);
 }
-module.exports = { fillErrCols, dropErrIndexes, createErrIndexes, rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };
+
+/* Sổ số dư tổng hợp cho báo cáo tài chính (khoá sổ theo tháng):
+   fin_mv   – phát sinh Nợ/Có theo tháng × TK chi tiết (vài nghìn dòng thay cho hàng triệu bút toán)
+   fin_pmv  – phát sinh ròng theo tháng × TK công nợ (3 số) × đối tượng (tách dư Nợ/Có trên B01, top đối tượng trên B09)
+   fin_close – số dư đầu kỳ / phát sinh / cuối kỳ từng tháng (luỹ kế từ tháng đầu tiên) → số dư đầu kỳ của bất kỳ tháng nào đọc thẳng, không cộng lại lịch sử.
+   Cập nhật cùng bảng agg mỗi khi nạp / xoá dữ liệu: chỉ tính lại phát sinh của các tháng thay đổi, rồi cộng dồn lại số dư (rất nhanh). */
+const FIN_PS = ['131', '331', '138', '338', '141', '136', '336'];
+function rebuildFin(db, months = null) {
+  const IN = months ? ` AND ym IN (${months.map(m => `'${String(m).replace(/'/g, '')}'`).join(',')})` : '';
+  db.exec('BEGIN');
+  db.exec(`DELETE FROM fin_mv WHERE 1${IN}; DELETE FROM fin_pmv WHERE 1${IN};`);
+  db.exec(`INSERT INTO fin_mv SELECT ym, acc_debit, max(acc_debit_name), sum(amount), 0 FROM entries WHERE ym IS NOT NULL AND ifnull(acc_debit,'')<>''${IN} GROUP BY ym, acc_debit;
+    INSERT INTO fin_mv SELECT ym, acc_credit, max(acc_credit_name), 0, sum(amount) FROM entries WHERE ym IS NOT NULL AND ifnull(acc_credit,'')<>''${IN} GROUP BY ym, acc_credit;`);
+  const ps = FIN_PS.map(a => `'${a}'`).join(',');
+  db.exec(`INSERT INTO fin_pmv SELECT ym, substr(acc_debit,1,3), coalesce(partner_debit,'(không đối tượng)'), sum(amount) FROM entries WHERE substr(acc_debit,1,3) IN (${ps}) AND ym IS NOT NULL${IN} GROUP BY 1,2,3;
+    INSERT INTO fin_pmv SELECT ym, substr(acc_credit,1,3), coalesce(partner_credit,'(không đối tượng)'), -sum(amount) FROM entries WHERE substr(acc_credit,1,3) IN (${ps}) AND ym IS NOT NULL${IN} GROUP BY 1,2,3;`);
+  // Cộng dồn số dư theo tháng (cả tháng không phát sinh vẫn có dòng số dư để đọc đầu kỳ trực tiếp)
+  const mv = db.prepare(`SELECT ym, acc, sum(dr) dr, sum(cr) cr FROM fin_mv GROUP BY ym, acc ORDER BY ym`).all();
+  const yms = [...new Set(mv.map(r => r.ym))].sort();
+  db.exec('DELETE FROM fin_close');
+  if (yms.length) {
+    const all = []; let [y, m] = yms[0].split('-').map(Number); const last = yms.at(-1);
+    for (;;) { const k = `${y}-${String(m).padStart(2, '0')}`; all.push(k); if (k >= last) break; m++; if (m > 12) { m = 1; y++; } }
+    const by = new Map(); for (const r of mv) (by.get(r.ym) || by.set(r.ym, []).get(r.ym)).push(r);
+    const bal = new Map(), ins = db.prepare('INSERT INTO fin_close VALUES(?,?,?,?,?,?)');
+    for (const ym of all) {
+      const cur = new Map(); for (const r of by.get(ym) || []) cur.set(r.acc, r);
+      for (const acc of new Set([...bal.keys(), ...cur.keys()])) {
+        const ob = bal.get(acc) || 0, r = cur.get(acc), dr = r ? r.dr : 0, cr = r ? r.cr : 0, cb = ob + dr - cr;
+        if (Math.abs(ob) < 0.005 && !r) continue;
+        ins.run(ym, acc, ob, dr, cr, cb); bal.set(acc, cb);
+      }
+    }
+  }
+  db.prepare(`INSERT INTO settings(k,v) VALUES('fin_built', datetime('now','localtime')) ON CONFLICT(k) DO UPDATE SET v=excluded.v`).run();
+  db.exec('COMMIT');
+}
+module.exports = { rebuildFin, FIN_PS, fillErrCols, dropErrIndexes, createErrIndexes, rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };

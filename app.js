@@ -722,7 +722,10 @@ async function vFin(){
     ${partial?`<span class="badge b-M">Dữ liệu đến ${ymLbl(FP.to)}</span>`:''}
     ${FT==='tb'?`<label>Cấp TK <select data-fk="level"><option value="1" ${FP.level==='1'?'selected':''}>Cấp 1 (3 số)</option><option value="0" ${FP.level==='0'?'selected':''}>Chi tiết</option></select></label>`:''}
     ${FT==='pl'?`<label>So sánh <select data-fk="cmp"><option value="ly" ${FP.cmp==='ly'?'selected':''}>Cùng kỳ năm trước</option><option value="prev" ${FP.cmp==='prev'?'selected':''}>Kỳ liền trước (${FP.mode==='m'?'tháng trước':FP.mode==='q'?'quý trước':FP.mode==='y'?'năm trước':'cùng độ dài'})</option><option value="none" ${FP.cmp==='none'?'selected':''}>Không</option></select></label>`:''}
-    <span class="hint">Số đầu kỳ = luỹ kế các tháng đã nạp trước "Từ tháng"; không có dữ liệu trước đó thì bằng 0.</span></div>`;
+    <span class="hint">Số đầu kỳ = số dư cuối tháng trước kỳ trên sổ số dư tổng hợp; không có dữ liệu trước đó thì bằng 0.</span></div>
+    <div class="row" id="fnSt" style="margin-top:8px;font-size:12px"></div>`;
+  api.q('finStatus').then(s=>{const el=$('#fnSt');if(!el)return;el.innerHTML=`<span class="badge s-fixed">Sổ số dư tổng hợp</span><span class="mut">${s.months?`${num(s.months)} tháng (${ymLbl(s.from)} → ${ymLbl(s.to)}) · ${num(s.rows)} dòng phát sinh tổng hợp · cập nhật ${esc(s.built||'')}`:'chưa tổng hợp'} – tự cập nhật khi nạp/xoá dữ liệu, chỉ tính lại tháng thay đổi.</span><button class="btn sm ghost" id="fnRebuild">Tổng hợp lại toàn bộ</button>`;
+    $('#fnRebuild').onclick=async()=>{try{await api.task('buildAgg',{});vFin()}catch(e){alert(e.message)}}});
   const B=$('#fnBody');B.innerHTML='<div class="card"><span class="spin"></span> Đang lập báo cáo…</div>';
   const n={m:1,q:3,y:12,ytd:12}[FP.mode]||mdiff(FP.from,FP.to)+1,cmp=FP.cmp==='ly'?[addM(FP.from,-12),addM(FP.to,-12)]:FP.cmp==='prev'?[addM(FP.from,-n),addM(FP.to,-n)]:[null,null]; // so sánh tương đương: cùng số tháng
   const per=FP.mode==='m'?`Tháng ${ymLbl(FP.from)}`:FP.mode==='q'?`Quý ${FP.pq.slice(-1)}/${FP.pq.slice(0,4)}${partial?` (đến ${ymLbl(FP.to)})`:''}`:FP.mode==='y'?`Năm ${FP.py}${partial?` (đến ${ymLbl(FP.to)})`:''}`:FP.mode==='ytd'?`Luỹ kế ${ymLbl(FP.from)} – ${ymLbl(FP.to)}`:`${ymLbl(FP.from)} – ${ymLbl(FP.to)}`;

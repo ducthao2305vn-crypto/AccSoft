@@ -153,11 +153,11 @@ function make(db) {
     ['sell', ['641'], 1], ['admin', ['642'], 1], ['othInc', ['711'], -1], ['othExp', ['811'], 1], ['tax', ['821'], 1]];
   // Khoảng tháng [from, to] (YYYY-MM); trống = không giới hạn
   const RNG = (from, to) => (okYm(from) ? ` AND e.ym>='${okYm(from)}'` : '') + (okYm(to) ? ` AND e.ym<='${okYm(to)}'` : '');
-  function plBy(keyExpr, from, to) {
+  function plBy(keyExpr, from, to, allMonths = false) {
     // đọc từ bảng tổng hợp agg (nhanh hơn rất nhiều so với quét entries)
     const cols = PLG.map(([k, pres, sign]) =>
       `${sign} * (sum(CASE WHEN e.side='dr' AND ${like('e.acc', pres)} THEN e.amount ELSE 0 END) - sum(CASE WHEN e.side='cr' AND ${like('e.acc', pres)} THEN e.amount ELSE 0 END)) AS ${k}`).join(',');
-    return all(`SELECT ${keyExpr} k, ${cols} FROM agg e WHERE ${INC}${RNG(from, to)} GROUP BY k ORDER BY k`).map(r => {
+    return all(`SELECT ${keyExpr} k, ${cols} FROM agg e WHERE ${allMonths ? '1' : INC}${RNG(from, to)} GROUP BY k ORDER BY k`).map(r => {
       const net = r.rev - r.ded, gp = net - r.cogs, op = gp + r.finInc - r.finExp - r.sell - r.admin, other = r.othInc - r.othExp, pbt = op + other;
       return { ...r, net, gp, op, other, pbt, pat: pbt - r.tax };
     });
@@ -412,7 +412,8 @@ function make(db) {
   // Sao lưu nóng an toàn (VACUUM INTO tạo bản sao nhất quán khi đang dùng)
   function backup(file) { db.prepare('VACUUM INTO ?').run(file); return file; }
   const D = deep.make(db, { INC, all, get, okYm });
-  const FIN = require('./fin').make(all, okYm, INC, (f, t) => plRange(f, t));
+  // BCTC dùng toàn bộ dữ liệu (không lọc tháng "đưa vào phân tích") để số liệu liên tục với sổ số dư
+  const FIN = require('./fin').make(all, okYm, '1', (f, t) => plBy(`'x'`, f, t, true)[0] || plRange('9999-01', '9999-01'));
   // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
   // Dòng trích trước của một kỳ dịch vụ (làm mẫu lập trích kỳ mới) + đánh dấu khoản đã có trích ở kỳ đích
   function accrualSource(per, target) {
@@ -441,7 +442,7 @@ function make(db) {
   }
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, finTrial: FIN.trial, finBalance: FIN.balanceSheet, finIncome: FIN.income, finCash: FIN.cashFlow, finNotes: FIN.notes, getB09Info: () => JSON.parse(getSetting('b09Info') || 'null'), setB09Info: o => { setSetting('b09Info', JSON.stringify(o || {})); return o; }, deepReversal: D.reversal, reversalLines, accrualSource, accrualLinesByIds, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, finTrial: FIN.trial, finBalance: FIN.balanceSheet, finIncome: FIN.income, finCash: FIN.cashFlow, finNotes: FIN.notes, finStatus: FIN.status, finEmpty: () => !get('SELECT 1 x FROM fin_close LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1'), getB09Info: () => JSON.parse(getSetting('b09Info') || 'null'), setB09Info: o => { setSetting('b09Info', JSON.stringify(o || {})); return o; }, deepReversal: D.reversal, reversalLines, accrualSource, accrualLinesByIds, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };

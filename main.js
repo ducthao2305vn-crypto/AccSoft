@@ -198,7 +198,7 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'finNotes', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'finNotes', 'finStatus', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
 const WRITE = ['setB09Info', 'setThresholds', 'setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
@@ -290,7 +290,7 @@ async function init() {
     const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file ERP chỉ gồm các dòng TK 151–158', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Dữ liệu hạch toán', extensions: ['xlsx', 'csv', 'txt'] }] });
     return canceled ? null : enrichFiles(filePaths);
   });
-  const TASK_LABEL = { deleteMonth: 'Đang xoá tháng', deleteImport: 'Đang xoá lần nạp', clear: 'Đang xoá dữ liệu', recheck: 'Đang phân tích lại toàn bộ dữ liệu', analyze: 'Đang phân tích dữ liệu' };
+  const TASK_LABEL = { buildAgg: 'Đang tổng hợp sổ số dư theo tháng', deleteMonth: 'Đang xoá tháng', deleteImport: 'Đang xoá lần nạp', clear: 'Đang xoá dữ liệu', recheck: 'Đang phân tích lại toàn bộ dữ liệu', analyze: 'Đang phân tích dữ liệu' };
   handle('task', (_e, task, args) => exclusive(async () => {
     if (['deleteMonth', 'deleteImport', 'clear'].includes(task)) await backupNow('truoc-' + task); // tự sao lưu trước thao tác xoá
     const r = await runTask(task, args, TASK_LABEL[task]);
@@ -338,7 +338,7 @@ async function init() {
   handle('log:file', () => log.file());
   // Không tự phân tích khi khởi động: tháng nào chưa phân tích (hoặc phân tích bằng bộ quy tắc cũ) sẽ được nhắc trên giao diện
   Q.setSetting('rules_version', String(RULES_VERSION));
-  return Q.aggEmpty() ? 'agg' : false;
+  return Q.aggEmpty() || Q.finEmpty() ? 'agg' : false;
 }
 
 function createWindow() {
@@ -362,7 +362,7 @@ process.on('unhandledRejection', e => log.error('Promise bị từ chối không
 app.whenReady().then(init).then(async needRecheck => {
   createWindow();
   // CSDL từ phiên bản cũ: tính lại bảng lỗi một lần
-  if (needRecheck === 'agg') win.webContents.once('did-finish-load', () => exclusive(() => runTask('buildAgg', {}, 'Đang tạo bảng tổng hợp để báo cáo nhanh hơn (chỉ lần đầu)')).then(() => { log.info('Đã tạo bảng tổng hợp agg'); send('reload'); }).catch(e => log.error('Tạo bảng tổng hợp thất bại', e)));
+  if (needRecheck === 'agg') win.webContents.once('did-finish-load', () => exclusive(() => runTask('buildAgg', {}, 'Đang tổng hợp sổ số dư theo tháng để lập báo cáo nhanh (chỉ lần đầu)')).then(() => { log.info('Đã tạo bảng tổng hợp agg'); send('reload'); }).catch(e => log.error('Tạo bảng tổng hợp thất bại', e)));
   else if (needRecheck) win.webContents.once('did-finish-load', () => exclusive(() => runTask('recheck', {}, 'Đang rà soát lại dữ liệu theo bộ quy tắc mới')).then(() => { Q.setSetting('rules_version', String(RULES_VERSION)); log.info('Đã rà soát lại theo quy tắc phiên bản ' + RULES_VERSION); send('reload'); }).catch(e => { log.error('Nâng cấp CSDL thất bại', e); dialog.showErrorBox('AccSoft', firstLine(e.message) + '\n\nChi tiết: ' + log.file()); }));
 }).catch(err => {
   log.error('Không khởi động được ứng dụng', err);

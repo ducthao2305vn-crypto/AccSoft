@@ -59,9 +59,14 @@ DB: `<thư mục app>/AccSoft_Data/accsoft.db` (portable: `PORTABLE_EXECUTABLE_D
   - Tên mẫu: B01-DN "Báo cáo tình hình tài chính", B02-DN "Kết quả hoạt động kinh doanh", B03-DN "Lưu chuyển tiền tệ".
   - Mã số B03 theo cấu trúc chuẩn: 01–07, 20, 21–27, 30, 31–36, 40, 50, 60, 61, 70.
   - Chưa đối chiếu được với nguyên văn Thông tư 99 (mạng chặn). Nếu người dùng gửi mẫu chuẩn thì chỉnh lại theo mẫu đó.
+- **Sổ số dư tổng hợp (v4.0, `db.rebuildFin`)**:
+  - Bảng `fin_mv(ym, acc, name, dr, cr)`, `fin_pmv(ym, a3, p, v)` và `fin_close(ym, acc, ob, dr, cr, cb)` (luỹ kế mọi tháng liên tục).
+  - Được dựng lại trong `rebuildAgg`, tức sau mỗi lần nạp/xoá dữ liệu: chỉ tính lại phát sinh các tháng thay đổi, rồi cộng dồn lại toàn bộ `fin_close` trong JS.
+  - BCTC đọc số đầu kỳ bằng `closeAt(prevYm(from))` và phát sinh từ `fin_mv`; **không quét bảng entries**, trừ B03 (dòng tiền theo TK đối ứng, có chỉ mục).
+  - BCTC dùng **mọi tháng** (INC = '1', plBy với allMonths = true).
+  - Khi CSDL chưa có sổ, lúc khởi động tự chạy `buildAgg`. `finStatus` trả trạng thái sổ.
 - **Hàm dữ liệu:**
   - `make(all, okYm, INC, plRange)` tạo các hàm báo cáo; queries xuất ra `finTrial`, `finBalance`, `finIncome`, `finCash` (đã có trong mảng READ).
-  - `base()` gom **một lượt** `GROUP BY ym, acc_debit, acc_credit` (vài nghìn dòng), lọc tháng được chọn bằng `incl()` trong JS, mất khoảng 1 giây trên 650k dòng. **Không** dùng điều kiện `INC` trên toàn bảng: chậm khoảng 10 giây.
 - **`trial(from,to,level)` – bảng cân đối số phát sinh:**
   - Số đầu kỳ = luỹ kế mọi bút toán có `ym < from` (gồm cả số dư đầu kỳ nhập từ file mẫu với TK giả `OB`). Không có dữ liệu trước kỳ thì bằng 0 và `hasOpening=false`.
   - `level` 1 là TK cấp 1 (3 số), 0 là TK chi tiết. Tên TK lấy từ bảng `L1`.

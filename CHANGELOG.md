@@ -1,5 +1,25 @@
 # Lịch sử phiên bản
 
+## v4.0.0 – 31/10/2026
+**Sổ số dư tổng hợp theo tháng: lập báo cáo tài chính tức thì cho dữ liệu nhiều năm**
+- **Sổ số dư tổng hợp (khoá sổ theo tháng)** được lưu sẵn trong CSDL:
+  - Phát sinh Nợ/Có theo tháng × tài khoản chi tiết.
+  - Phát sinh công nợ theo tháng × đối tượng (131, 331, 138, 338, 141, 136, 336).
+  - Số dư đầu kỳ, phát sinh, cuối kỳ của **mọi tháng**, cộng dồn từ tháng đầu tiên. Tháng không phát sinh vẫn có số dư.
+- **Báo cáo đọc số dư đầu kỳ trực tiếp** từ sổ, không cộng lại hàng triệu bút toán từ năm 2015. Đo trên 647.000 dòng:
+
+| Báo cáo | Trước | Sau |
+|---|---|---|
+| Bảng cân đối số phát sinh | 1,0 s | 0,02 s |
+| B01 | 1,9 s | 0,06 s |
+| B09 | 1,9 s | 0,3 s |
+| Đổi kỳ báo cáo (năm/quý/tháng) | 1–4 s | 0,1–0,3 s |
+
+- **Tự cập nhật khi nạp/xoá dữ liệu:** chỉ tính lại phát sinh của tháng thay đổi (0,05 s mỗi tháng), rồi cộng dồn lại số dư.
+- Nút "Tổng hợp lại toàn bộ" và dòng trạng thái của sổ trên trang Báo cáo tài chính.
+- Lần đầu mở bản mới, ứng dụng tự tổng hợp sổ một lần (khoảng 2 giây trên 650.000 dòng).
+- Báo cáo tài chính luôn dùng **toàn bộ dữ liệu đã nạp**, không phụ thuộc lựa chọn tháng "đưa vào phân tích", để số dư liên tục qua các năm.
+
 ## v3.9.0 – 31/10/2026
 **Tối ưu cho dữ liệu 1–2 triệu dòng và hàng triệu cảnh báo**
 

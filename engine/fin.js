@@ -17,34 +17,39 @@ const L1 = { '111': 'Tiền mặt', '112': 'Tiền gửi ngân hàng', '113': 'T
 function make(all, okYm, INC, plRange) {
   const nameOf = (a, n) => { const k = a.slice(0, 3); return a.length <= 3 || a === 'OB' ? (L1[a] || n || a) : (n ? String(n).replace(/^[^_]*_/, '') : L1[k] || a); };
 
-  // Một lượt gom theo tháng × TK Nợ × TK Có (vài nghìn dòng) rồi tính trong JS – nhanh hơn nhiều so với quét có điều kiện tháng được chọn
-  const incl = () => new Set(all(`SELECT ym FROM months WHERE included=1`).map(r => r.ym));
-  const base = () => { const inc = incl(); return all(`SELECT ym, acc_debit d, acc_credit c, max(acc_debit_name) dn, max(acc_credit_name) cn, sum(amount) v FROM entries GROUP BY 1,2,3`).filter(r => inc.has(r.ym)); };
+  // Đọc từ sổ số dư tổng hợp (fin_close / fin_mv / fin_pmv – xem db.rebuildFin): số đầu kỳ của mọi tháng có sẵn, không cộng lại lịch sử.
+  // Báo cáo tài chính luôn dùng toàn bộ dữ liệu đã nạp (không phụ thuộc lựa chọn tháng "đưa vào phân tích") để số dư liên tục.
+  const prevYm = m => { const y = +m.slice(0, 4), mo = +m.slice(5) - 1; return mo ? `${y}-${String(mo).padStart(2, '0')}` : `${y - 1}-12`; };
+  const names = () => new Map(all(`SELECT acc, max(name) n FROM fin_mv GROUP BY acc`).map(r => [r.acc, r.n]));
+  // Số dư cuối tháng `at` theo TK chi tiết (tháng không phát sinh: lấy tháng gần nhất trước đó)
+  const closeAt = at => new Map(all(`SELECT c.acc, c.cb FROM fin_close c JOIN (SELECT acc, max(ym) ym FROM fin_close WHERE ym<=? GROUP BY acc) l ON l.acc=c.acc AND l.ym=c.ym`, at).map(r => [r.acc, r.cb]));
+  function status() {
+    const r = get1(`SELECT min(ym) a, max(ym) b, count(DISTINCT ym) n, (SELECT count(*) FROM fin_mv) mv FROM fin_close`);
+    return { from: r.a, to: r.b, months: r.n, rows: r.mv, built: (get1(`SELECT v FROM settings WHERE k='fin_built'`) || {}).v || null };
+  }
+  const get1 = (q, ...a) => all(q, ...a)[0] || {};
 
   /* Bảng cân đối số phát sinh. level: 1 = TK cấp 1 (3 số), 0 = chi tiết */
-  function trial(from, to, level = 1, rowsIn) {
-    const f = okYm(from) || '0000-00', t = okYm(to) || '9999-12', K = a => !level || a === 'OB' ? a : a.slice(0, 3);
-    const m = new Map(), get = (a, n) => m.get(a) || m.set(a, { a, n: nameOf(a, n), ob: 0, dr: 0, cr: 0 }).get(a);
-    let hasOpening = false;
-    for (const r of rowsIn || base()) {
-      if (r.ym > t) continue; const before = r.ym < f; if (before) hasOpening = true;
-      if (r.d) { const o = get(K(r.d), r.dn); before ? o.ob += r.v : o.dr += r.v; }
-      if (r.c) { const o = get(K(r.c), r.cn); before ? o.ob -= r.v : o.cr += r.v; }
-    }
+  function trial(from, to, level = 1) {
+    const f = okYm(from) || '0000-00', t = okYm(to) || '9999-12', K = a => !level || a === 'OB' ? a : a.slice(0, 3), N = names();
+    const m = new Map(), get = a => m.get(K(a)) || m.set(K(a), { a: K(a), n: nameOf(K(a), N.get(a)), ob: 0, dr: 0, cr: 0 }).get(K(a));
+    const open = f === '0000-00' ? new Map() : closeAt(prevYm(f));
+    for (const [a, v] of open) get(a).ob += v;
+    for (const r of all(`SELECT acc, sum(dr) dr, sum(cr) cr FROM fin_mv WHERE ym>=? AND ym<=? GROUP BY acc`, f, t)) { const o = get(r.acc); o.dr += r.dr; o.cr += r.cr; }
     const rows = [...m.values()].map(o => { const cb = o.ob + o.dr - o.cr; return { a: o.a, n: o.n, obDr: o.ob > 0 ? o.ob : 0, obCr: o.ob < 0 ? -o.ob : 0, dr: o.dr, cr: o.cr, cbDr: cb > 0 ? cb : 0, cbCr: cb < 0 ? -cb : 0, bal: cb }; })
       .filter(r => Math.abs(r.obDr) + Math.abs(r.obCr) + Math.abs(r.dr) + Math.abs(r.cr) > 0.004).sort((a, b) => a.a.localeCompare(b.a));
     const tot = rows.reduce((s, r) => { for (const k of ['obDr', 'obCr', 'dr', 'cr', 'cbDr', 'cbCr']) s[k] += r[k]; return s; }, { obDr: 0, obCr: 0, dr: 0, cr: 0, cbDr: 0, cbCr: 0 });
+    const hasOpening = f !== '0000-00' && !!all(`SELECT 1 FROM fin_mv WHERE ym<? LIMIT 1`, f).length;
     return { from: f === '0000-00' ? null : f, to: t === '9999-12' ? null : t, level, rows, tot, hasOpening };
   }
 
   /* Số dư TK công nợ theo từng đối tượng tại cuối các tháng cần (để tách dư Nợ / dư Có lên B01) */
   const PS = ['131', '331', '138', '338', '141', '136', '336'];
+  const pBal = (at, pres = PS) => all(`SELECT a3 a, p, sum(v) v FROM fin_pmv WHERE ym<=? AND a3 IN (${pres.map(() => '?').join(',')}) GROUP BY 1,2`, at, ...pres);
   function partnerSplits(ats) {
-    const inc = incl(), q = side => all(`SELECT ym, substr(acc_${side},1,3) a, coalesce(partner_${side},'') p, sum(amount) v FROM entries WHERE substr(acc_${side},1,3) IN (${PS.map(() => '?').join(',')}) GROUP BY 1,2,3`, ...PS);
-    const rows = [...q('debit').map(r => ({ ...r, s: 1 })), ...q('credit').map(r => ({ ...r, s: -1 }))].filter(r => inc.has(r.ym));
     const out = {};
-    for (const at of ats) { const m = new Map(); for (const r of rows) if (at && r.ym <= at) { const k = r.a + '|' + r.p; m.set(k, (m.get(k) || 0) + r.s * r.v); }
-      const o = {}; for (const a of PS) o[a] = { dr: 0, cr: 0 }; for (const [k, v] of m) { const a = k.slice(0, 3); v > 0 ? o[a].dr += v : o[a].cr -= v; } out[at] = o; }
+    for (const at of ats) { if (!at) continue; const o = {}; for (const a of PS) o[a] = { dr: 0, cr: 0 };
+      for (const r of pBal(at)) r.v > 0 ? o[r.a].dr += r.v : o[r.a].cr -= r.v; out[at] = o; }
     return out;
   }
 
@@ -123,9 +128,9 @@ function make(all, okYm, INC, plRange) {
     ['02', /^331|^15[1-8]|^611|^62[1-7]|^632|^64[12]|^133|^242|^335/], ['61', /^413/], ['07', /./]];
   const cls = (a, T) => T.find(([, rx]) => rx.test(a))[0];
   function cashFlows(from, to) {
-    const f = okYm(from) || '0000-00', t = okYm(to) || '9999-12', inc = incl();
+    const f = okYm(from) || '0000-00', t = okYm(to) || '9999-12';
     const q = (cashSide, other) => all(`SELECT ym, acc_${other} a, max(acc_${other}_name) n, sum(amount) v FROM entries WHERE ym>=? AND ym<=? AND acc_${cashSide}>='111' AND acc_${cashSide}<'114' GROUP BY 1,2`, f, t)
-      .filter(r => inc.has(r.ym) && !CASH(r.a));
+      .filter(r => !CASH(r.a));
     const by = {}, det = [];
     for (const r of q('debit', 'credit')) { const c = cls(r.a, IN); by[c] = (by[c] || 0) + r.v; det.push({ code: c, dir: 'Thu', a: r.a, n: r.n, v: r.v }); }
     for (const r of q('credit', 'debit')) { const c = cls(r.a, OUT); by[c] = (by[c] || 0) - r.v; det.push({ code: c, dir: 'Chi', a: r.a, n: r.n, v: -r.v }); }
@@ -180,9 +185,8 @@ function make(all, okYm, INC, plRange) {
     return { rows: top.map(x => ({ p: x.p, v: x.v })), other: tot - top.reduce((s, x) => s + x.v, 0), total: tot, count: list.length };
   }
   function notes(from, to) {
-    const tb = trial(from, to, 0), t = tb.to || '9999-12', f = tb.from, inc = incl();
-    const raw = ['debit', 'credit'].flatMap(side => all(`SELECT ym, substr(acc_${side},1,3) a, coalesce(partner_${side},'(không đối tượng)') p, sum(amount) v FROM entries WHERE substr(acc_${side},1,3) IN ('131','331') AND ym<=? GROUP BY 1,2,3`, t)
-      .filter(r => inc.has(r.ym)).map(r => ({ ...r, s: side === 'debit' ? 1 : -1 })));
+    const tb = trial(from, to, 0), t = tb.to || '9999-12', f = tb.from;
+    const raw = all(`SELECT ym, a3 a, p, v, 1 s FROM fin_pmv WHERE a3 IN ('131','331') AND ym<=?`, t);
     const PT = (pres, at, credit) => partnerTop(pres, at, 10, credit, raw);
     const prev = f ? (m => { const y = +m.slice(0, 4), mo = +m.slice(5) - 1; return mo ? `${y}-${String(mo).padStart(2, '0')}` : `${y - 1}-12`; })(f) : null;
     // Bảng biến động theo TK chi tiết: nat = 1 (dư Nợ: tăng = PS Nợ), −1 (dư Có: tăng = PS Có)
@@ -220,6 +224,6 @@ function make(all, okYm, INC, plRange) {
         N('VI.8', 'Chi phí thuế thu nhập doanh nghiệp hiện hành', { type: 'kv', rows: [['Lợi nhuận kế toán trước thuế', pl.pbt], ['Chi phí thuế TNDN (821)', pl.tax], ['Lợi nhuận sau thuế', pl.pat]] }),
       ] };
   }
-  return { trial, balanceSheet, income, cashFlow, notes };
+  return { trial, balanceSheet, income, cashFlow, notes, status };
 }
 module.exports = { make, L1 };
