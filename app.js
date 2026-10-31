@@ -32,7 +32,9 @@ async function go(p){
   PAGE=p;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   $$('.content>section').forEach(s=>s.classList.toggle('hide',s.id!==p));
   $('#pTitle').textContent=TITLES[p][0];$('#pSub').textContent=TITLES[p][1];$('#content').scrollTop=0;
+  const sec=$('#'+p);sec.classList.add('loading');const t=setTimeout(()=>$('#pageLoad').classList.remove('hide'),300);
   try{await VIEWS[p]()}catch(e){console.error(e);api.logError(`Mở trang ${p}: ${e.message}`,e.stack)}
+  finally{clearTimeout(t);sec.classList.remove('loading');$('#pageLoad').classList.add('hide')}
 }
 $('#sideRv').onclick=()=>go('errors');
 document.addEventListener('click',e=>{const k=e.target.closest('[data-gg]');if(k){FIL={group:k.dataset.gg};OFF=0;go('errors')}});
@@ -249,7 +251,7 @@ const refShort=v=>{const p=String(v??'').split('_'),h=p.length/2;return p.length
 const BUCKETS=['Chưa đến hạn','1–30','31–60','61–90','91–180','181–365','> 365'];
 const BCOL=[C.ok,'#FFD4BD','#FF9C6B','#FF6929','#FA4700','#D63600','#8A2200'];
 const GRPN={thu:'Phải thu',tra:'Phải trả'};
-let AGDATA=null;
+let AGDATA=null,AGV={det:[],abn:[]};
 async function vAging(reload=true){
   if(!$('#asOf').value){const s=await api.q('overview');if(s.dmax)$('#asOf').value=s.dmax}if(!$('#asOf').value)return;
   if(reload||!AGDATA)AGDATA=await api.q('aging',$('#asOf').value,+$('#term').value||0,$('#agLevel').value,$('#agDim').value);
@@ -271,24 +273,25 @@ async function vAging(reload=true){
   const SL=[...S.values()].sort((a,b)=>a.grp.localeCompare(b.grp)*-1||a.acc.localeCompare(b.acc));
   const sub=g=>{const L=SL.filter(x=>x.grp===g);if(!L.length)return '';const b=Array(7).fill(0);L.forEach(x=>x.b.forEach((v,i)=>b[i]+=v));const t=b.reduce((p,q)=>p+q,0),ab=L.reduce((p,x)=>p+x.abn,0);
     return `<tr style="background:var(--brand-25)"><td colspan=2><b>Cộng ${GRPN[g].toLowerCase()}</b></td><td class=n><b>${num(L.reduce((p,x)=>p+x.n,0))}</b></td><td class=n><b>${fmt2(t)}</b></td>${b.map(v=>`<td class=n><b>${Math.abs(v)>=0.005?fmt2(v):''}</b></td>`).join('')}<td class=n><b>${pct((t-b[0])/t)}</b></td><td class="n neg">${ab?fmt2(ab):''}</td></tr>`};
-  const row=x=>{const t=x.bal;return `<tr class="click" data-acc="${esc(x.acc)}"><td class=nw><b>${esc(x.acc)}</b></td><td style="min-width:240px">${esc(x.name)}</td><td class=n>${num(x.n)}</td><td class=n><b>${fmt2(t)}</b></td>${x.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${pct((t-x.b[0])/t)}</td><td class="n neg">${Math.abs(x.abn)>=0.005?fmt2(x.abn):''}</td></tr>`};
+  const row=x=>{const t=x.bal;return `<tr class="click dbl" title="Bấm: lọc chi tiết · Nhấn đúp: xem bút toán" data-acc="${esc(x.acc)}"><td class=nw><b>${esc(x.acc)}</b></td><td style="min-width:240px">${esc(x.name)}</td><td class=n>${num(x.n)}</td><td class=n><b>${fmt2(t)}</b></td>${x.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${pct((t-x.b[0])/t)}</td><td class="n neg">${Math.abs(x.abn)>=0.005?fmt2(x.abn):''}</td></tr>`};
   $('#tAgSum').innerHTML='<thead><tr><th>TK</th><th>Tên tài khoản</th><th class=n>Đối tượng</th><th class=n>Số dư</th>'+BUCKETS.map(b=>`<th class=n>${b}</th>`).join('')+'<th class=n>% quá hạn</th><th class=n>Dư ngược chiều</th></tr></thead><tbody>'+
     ['thu','tra'].map(g=>SL.filter(x=>x.grp===g).map(row).join('')+sub(g)).join('')+'</tbody>';
   chart('chAging',{type:'bar',data:{labels:SL.map(x=>x.acc),datasets:BUCKETS.map((b,i)=>({label:b,data:SL.map(x=>x.b[i]),backgroundColor:BCOL[i],borderRadius:0,maxBarThickness:48}))},
     options:{scales:{x:{stacked:true},y:{stacked:true}},plugins:{tooltip:{callbacks:{title:i=>{const x=SL[i[0].dataIndex];return x.acc+' – '+x.name}}}}}});
-  const REFH0={contract:'Hợp đồng',adv:'Đề nghị TU'}[$('#agDim').value];
+  const REFH0={contract:'Hợp đồng',adv:'Đề nghị TU',tcost:'Khoản mục'}[$('#agDim').value];AGV.abn=abn;
   $('#tAbn').innerHTML='<thead><tr><th>TK</th><th>Đối tượng</th>'+(REFH0?`<th>${REFH0}</th>`:'')+'<th class=n>PS Nợ</th><th class=n>PS Có</th><th class=n>Dư ngược</th></tr></thead><tbody>'+
-    abn.sort((a,b)=>a.bal-b.bal).map(o=>`<tr><td title="${esc(o.accName)}">${esc(o.acc)}</td><td>${esc(o.bp)}</td>${REFH0?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class="n neg">${fmt2(o.bal)}</td></tr>`).join('')+'</tbody>';
-  const dim=$('#agDim').value,REFH={contract:'Hợp đồng',adv:'Đề nghị tạm ứng'}[dim],refCell=o=>REFH?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:'';
+    abn.sort((a,b)=>a.bal-b.bal).map((o,i)=>`<tr class=dbl data-agn="${i}"><td title="${esc(o.accName)}">${esc(o.acc)}</td><td>${esc(o.bp)}</td>${REFH0?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class="n neg">${fmt2(o.bal)}</td></tr>`).join('')+'</tbody>';
+  const dim=$('#agDim').value,REFH={contract:'Hợp đồng',adv:'Đề nghị tạm ứng',tcost:'Khoản mục chi phí'}[dim],refCell=o=>REFH?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:'';
   const det=pos.filter(o=>!find||(o.bp+' '+(o.ref||'')).toLowerCase().includes(find)).sort((a,b)=>b.bal-a.bal);
+  AGV.det=det;
   $('#tAging').innerHTML='<thead><tr><th>Nhóm</th><th>TK</th><th>Đối tượng</th>'+(REFH?`<th>${REFH}</th><th>Phát sinh đầu</th>`:'')+'<th class=n>PS Nợ</th><th class=n>PS Có</th><th class=n>Số dư</th>'+BUCKETS.map(b=>`<th class=n>${b}</th>`).join('')+'<th class=n>Tuổi tối đa</th><th>Đánh giá</th></tr></thead><tbody>'+
-   det.slice(0,3000).map(o=>{const o90=o.b[4]+o.b[5]+o.b[6];
-    const risk=o.bp.startsWith('(không')?'<span class="badge b-H">Thiếu đối tượng</span>':REFH&&String(o.ref).startsWith('(không')?`<span class="badge b-M">Thiếu ${REFH.toLowerCase()}</span>`:dim==='adv'&&o.maxAge>30?`<span class="badge b-H">Tạm ứng quá ${o.maxAge} ngày chưa quyết toán</span>`:o.b[6]>0?`<span class="badge b-H">${o.grp==='thu'?'Xem xét dự phòng':'Quá hạn > 1 năm'}</span>`:o90>0?`<span class="badge b-M">${o.grp==='thu'?'Đôn đốc thu':'Ưu tiên thanh toán'}</span>`:'';
-    return `<tr><td><span class="badge ${o.grp==='thu'?'b-L':'s-doing'}">${GRPN[o.grp]}</span></td><td class=nw title="${esc(o.accName)}">${esc(o.acc)}</td><td>${esc(o.bp)}</td>${refCell(o)}${REFH?`<td class=nw>${vn(o.first)}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class=n><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${o.maxAge}</td><td>${risk}</td></tr>`}).join('')+'</tbody>';
+   det.slice(0,3000).map((o,i)=>{const o90=o.b[4]+o.b[5]+o.b[6];
+    const risk=o.bp.startsWith('(không')?'<span class="badge b-H">Thiếu đối tượng</span>':REFH&&String(o.ref).startsWith('(không')?`<span class="badge b-M">Thiếu ${REFH.toLowerCase()}</span>`:dim==='adv'&&o.maxAge>30?`<span class="badge b-H">Tạm ứng quá ${o.maxAge} ngày chưa quyết toán</span>`:o.acc.startsWith('335')&&o.maxAge>90?`<span class="badge b-H">Trích trước ${o.maxAge} ngày chưa quyết toán/hoàn nhập</span>`:o.b[6]>0?`<span class="badge b-H">${o.grp==='thu'?'Xem xét dự phòng':'Quá hạn > 1 năm'}</span>`:o90>0?`<span class="badge b-M">${o.grp==='thu'?'Đôn đốc thu':'Ưu tiên thanh toán'}</span>`:'';
+    return `<tr class=dbl data-ag="${i}"><td><span class="badge ${o.grp==='thu'?'b-L':'s-doing'}">${GRPN[o.grp]}</span></td><td class=nw title="${esc(o.accName)}">${esc(o.acc)}</td><td>${esc(o.bp)}</td>${refCell(o)}${REFH?`<td class=nw>${vn(o.first)}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class=n><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${o.maxAge}</td><td>${risk}</td></tr>`}).join('')+'</tbody>';
 }
 ['#asOf','#term','#agLevel','#agDim'].forEach(s=>$(s).onchange=()=>{if(s==='#agLevel')$('#agAcc').value='';vAging(true)});
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-preset]');if(!b)return;
-  const P={'331c':{grp:'tra',level:'l1',dim:'contract',acc:'331'},'1411a':{grp:'thu',level:'detail',dim:'adv',acc:'1411'},all:{grp:'',level:'l1',dim:'bp',acc:''}}[b.dataset.preset];
+  const P={'331c':{grp:'tra',level:'l1',dim:'contract',acc:'331'},'335t':{grp:'tra',level:'l1',dim:'tcost',acc:'335'},'1411a':{grp:'thu',level:'detail',dim:'adv',acc:'1411'},all:{grp:'',level:'l1',dim:'bp',acc:''}}[b.dataset.preset];
   $('#agGrp').value=P.grp;$('#agLevel').value=P.level;$('#agDim').value=P.dim;$('#agAcc').value='';await vAging(true);
   if(P.acc){const opt=[...$('#agAcc').options].find(o=>o.value===P.acc||o.value.startsWith(P.acc));if(opt){$('#agAcc').value=opt.value;vAging(false)}}});
 ['#agGrp','#agAcc'].forEach(s=>$(s).onchange=()=>vAging(false));
@@ -299,7 +302,7 @@ $('#expAg').onclick=()=>api.exportAging($('#asOf').value,+$('#term').value||0,$(
 /* ---------- Tuổi hàng tồn kho ---------- */
 const IBUCKETS=['0–30 ngày','31–90','91–180','181–365','1–2 năm','> 2 năm'];
 const IBCOL=[C.ok,'#FFD4BD','#FF9C6B','#FA4700','#D63600','#8A2200'];
-let IV={data:null,flag:''};
+let IV={data:null,flag:''},IVV={det:[],neg:[]};
 async function vInv(reload=true){
   if(!$('#ivAsOf').value){const s=await api.q('overview');if(s.dmax)$('#ivAsOf').value=s.dmax}if(!$('#ivAsOf').value)return;
   if(reload||!IV.data)IV.data=await api.q('inventory',$('#ivAsOf').value,$('#ivBy').value,$('#ivLevel').value);
@@ -318,17 +321,19 @@ async function vInv(reload=true){
   for(const o of sel){const x=S.get(o.acc)||S.set(o.acc,{acc:o.acc,name:o.accName,n:0,bal:0,b:Array(6).fill(0),neg:0}).get(o.acc);if(o.bal>0.005){x.n++;x.bal+=o.bal;o.b.forEach((v,i)=>x.b[i]+=v)}else if(o.bal<-0.005)x.neg+=o.bal}
   const SL=[...S.values()].sort((a,b)=>a.acc.localeCompare(b.acc)),c=v=>Math.abs(v)>=0.005?fmt2(v):'';
   $('#tIvSum').innerHTML='<thead><tr><th>TK</th><th>Tên tài khoản</th><th class=n>Mặt hàng</th><th class=n>Giá trị tồn</th>'+IBUCKETS.map(x=>`<th class=n>${x}</th>`).join('')+'<th class=n>% > 180 ngày</th><th class=n>Tồn âm</th></tr></thead><tbody>'+
-    SL.map(x=>`<tr class="click" data-acc="${esc(x.acc)}"><td class=nw><b>${esc(x.acc)}</b></td><td style="min-width:220px">${esc(x.name)}</td><td class=n>${num(x.n)}</td><td class=n><b>${fmt2(x.bal)}</b></td>${x.b.map(v=>`<td class=n>${c(v)}</td>`).join('')}<td class=n>${pct((x.b[3]+x.b[4]+x.b[5])/x.bal)}</td><td class="n neg">${c(x.neg)}</td></tr>`).join('')+
+    SL.map(x=>`<tr class="click dbl" data-acc="${esc(x.acc)}"><td class=nw><b>${esc(x.acc)}</b></td><td style="min-width:220px">${esc(x.name)}</td><td class=n>${num(x.n)}</td><td class=n><b>${fmt2(x.bal)}</b></td>${x.b.map(v=>`<td class=n>${c(v)}</td>`).join('')}<td class=n>${pct((x.b[3]+x.b[4]+x.b[5])/x.bal)}</td><td class="n neg">${c(x.neg)}</td></tr>`).join('')+
     `<tr style="background:var(--brand-25)"><td colspan=2><b>Tổng cộng</b></td><td class=n><b>${num(pos.length)}</b></td><td class=n><b>${fmt2(tot)}</b></td>${b.map(v=>`<td class=n><b>${c(v)}</b></td>`).join('')}<td class=n><b>${pct(o180/tot)}</b></td><td class="n neg">${c(neg.reduce((s,o)=>s+o.bal,0))}</td></tr></tbody>`;
   chart('chIv',{type:'bar',data:{labels:IBUCKETS,datasets:[{data:b,backgroundColor:IBCOL,barThickness:40}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>`${fmt(x.raw)} (${pct(x.raw/tot)})`}}}}});
   const objH={product:'Mặt hàng',product_loc:'Mặt hàng @ Kho',loc:'Kho',bp:'Đối tượng'}[$('#ivBy').value];
   $('#tIvNeg').innerHTML=`<thead><tr><th>TK</th><th>${objH}</th><th class=n>SL tồn</th><th class=n>Giá trị tồn</th><th>Xuất gần nhất</th></tr></thead><tbody>`+
-    neg.sort((a,b)=>a.bal-b.bal).map(o=>`<tr><td>${esc(o.acc)}</td><td><div class=clamp title="${esc(o.obj)}">${esc(o.obj)}</div></td><td class="n neg">${fmt2(o.qtyBal)} ${esc(o.uom)}</td><td class="n neg">${fmt2(o.bal)}</td><td class=nw>${vn(o.lastOut)}</td></tr>`).join('')+'</tbody>';
+    neg.sort((a,b)=>a.bal-b.bal).map((o,i)=>`<tr class=dbl data-ivn="${i}"><td>${esc(o.acc)}</td><td><div class=clamp title="${esc(o.obj)}">${esc(o.obj)}</div></td><td class="n neg">${fmt2(o.qtyBal)} ${esc(o.uom)}</td><td class="n neg">${fmt2(o.bal)}</td><td class=nw>${vn(o.lastOut)}</td></tr>`).join('')+'</tbody>';
   const f={slow,old,noprod}[IV.flag]||(()=>true);
+  IVV.neg=neg;
   const det=pos.filter(f).filter(o=>!find||o.obj.toLowerCase().includes(find)).sort((a,b)=>b.bal-a.bal);
+  IVV.det=det;
   $('#tIv').innerHTML=`<thead><tr><th>TK</th><th>${objH}</th><th>ĐVT</th><th class=n>SL nhập</th><th class=n>SL xuất</th><th class=n>SL tồn</th><th class=n>Giá trị tồn</th>`+IBUCKETS.map(x=>`<th class=n>${x}</th>`).join('')+'<th>Nhập gần nhất</th><th>Xuất gần nhất</th><th>Đánh giá</th></tr></thead><tbody>'+
-    det.slice(0,3000).map(o=>{const tags=[];if(noprod(o))tags.push('<span class="badge b-H">Thiếu mã hàng</span>');if(o.b[5]>0.005)tags.push('<span class="badge b-H">Tồn > 2 năm</span>');else if(old(o))tags.push('<span class="badge b-M">Tồn > 1 năm</span>');if(slow(o))tags.push(`<span class="badge b-M">${o.sinceOut==null?'Chưa xuất':o.sinceOut+' ngày không xuất'}</span>`);
-      return `<tr><td class=nw title="${esc(o.accName)}">${esc(o.acc)}</td><td><div class=clamp title="${esc(o.obj)}">${esc(o.obj)}</div></td><td>${esc(o.uom)}</td><td class=n>${o.qtyIn?fmt2(o.qtyIn):''}</td><td class=n>${o.qtyOut?fmt2(o.qtyOut):''}</td><td class=n>${o.qtyIn||o.qtyOut?fmt2(o.qtyBal):''}</td>
+    det.slice(0,3000).map((o,i)=>{const tags=[];if(noprod(o))tags.push('<span class="badge b-H">Thiếu mã hàng</span>');if(o.b[5]>0.005)tags.push('<span class="badge b-H">Tồn > 2 năm</span>');else if(old(o))tags.push('<span class="badge b-M">Tồn > 1 năm</span>');if(slow(o))tags.push(`<span class="badge b-M">${o.sinceOut==null?'Chưa xuất':o.sinceOut+' ngày không xuất'}</span>`);
+      return `<tr class=dbl data-iv="${i}"><td class=nw title="${esc(o.accName)}">${esc(o.acc)}</td><td><div class=clamp title="${esc(o.obj)}">${esc(o.obj)}</div></td><td>${esc(o.uom)}</td><td class=n>${o.qtyIn?fmt2(o.qtyIn):''}</td><td class=n>${o.qtyOut?fmt2(o.qtyOut):''}</td><td class=n>${o.qtyIn||o.qtyOut?fmt2(o.qtyBal):''}</td>
       <td class=n><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${c(v)}</td>`).join('')}<td class=nw>${vn(o.lastIn)}</td><td class=nw>${vn(o.lastOut)}</td><td>${tags.join(' ')}</td></tr>`}).join('')+'</tbody>';
 }
 ['#ivAsOf','#ivBy','#ivLevel'].forEach(s=>$(s).onchange=()=>{if(s!=='#ivAsOf')$('#ivAcc').value='';vInv(true)});
@@ -385,7 +390,7 @@ const chg=(a,b)=>b?(a-b)/Math.abs(b):null;
 const chgTd=(a,b,good=1)=>{const c=chg(a,b);if(c==null)return '<td class="n mut">–</td>';const cls=Math.abs(c)<0.005?'':(c*good>0?'up':'down');return `<td class="n ${cls}">${c>0?'▲':'▼'} ${pct(Math.abs(c))}</td>`};
 
 /* ---------- Kết quả kinh doanh ---------- */
-const PLST=ls.get('plPick',{});
+const PLST=ls.get('plPick',{});let PLV={};
 async function vPL(){
   const yms=(await api.q('months')).filter(m=>m.included).map(m=>m.ym).sort();
   if(!yms.length){$('#plPick').innerHTML='<span class=mut>Chưa có dữ liệu.</span>';return}
@@ -401,8 +406,8 @@ async function vPL(){
   $('#plKpi').innerHTML=K('blue','coins','Doanh thu thuần','net')+K('','trend','Lợi nhuận gộp','gp')+K('','chart','LN thuần từ HĐKD','op')+K(cur.pat<0?'red':'green','check','Lợi nhuận sau thuế','pat');
   $('#plHint').textContent=R.cur.label;
   $('#tPL').innerHTML='<thead><tr><th>Chỉ tiêu</th><th class=n>'+R.cur.label+'</th>'+R.cmp.map(c=>`<th class=n>${c.label}</th><th class=n>±</th><th class=n>%</th>`).join('')+'</tr></thead><tbody>'+
-    L.map(([n,f,t,good])=>{const v=val(cur,f);return `<tr style="${t===1?'background:var(--brand-25)':''}"><td class=nw style="min-width:220px">${t===1?'<b>'+n+'</b>':n}</td><td class="n ${v<0?'neg':''}">${t===2?pct(v):(t===1?'<b>'+fmt(v)+'</b>':fmt(v))}</td>`+
-      cmps.map(c=>{const p=val(c,f);return t===2?`<td class=n>${pct(p)}</td><td class=n>${isFinite(v-p)?((v-p)*100).toFixed(1)+' đ%':''}</td><td></td>`:`<td class="n mut">${fmt(p)}</td><td class=n>${fmt(v-p)}</td>${chgTd(v,p,good)}`}).join('')+'</tr>'}).join('')+'</tbody>';
+    L.map(([n,f,t,good])=>{const v=val(cur,f);return `<tr data-key="${typeof f==='string'?f:''}" data-n="${esc(n)}" style="${t===1?'background:var(--brand-25)':''}"><td class=nw style="min-width:220px">${t===1?'<b>'+n+'</b>':n}</td><td data-c="-1" class="n ${t!==2?'dbl':''} ${v<0?'neg':''}">${t===2?pct(v):(t===1?'<b>'+fmt(v)+'</b>':fmt(v))}</td>`+
+      cmps.map((c,ci)=>{const p=val(c,f);return t===2?`<td class=n>${pct(p)}</td><td class=n>${isFinite(v-p)?((v-p)*100).toFixed(1)+' đ%':''}</td><td></td>`:`<td data-c="${ci}" class="n mut dbl">${fmt(p)}</td><td class=n>${fmt(v-p)}</td>${chgTd(v,p,good)}`}).join('')+'</tr>'}).join('')+'</tbody>';
   // Xu hướng
   const tr=await api.q('plTrend',R.trend.from,R.trend.to,R.trend.gran);
   $('#plTrendT').textContent=`Xu hướng theo ${{m:'tháng',q:'quý',y:'năm'}[R.trend.gran]} – ${SPANS[PLST.span].toLowerCase()} đến ${ymLbl(R.trend.to)}`;
@@ -412,10 +417,10 @@ async function vPL(){
   // So sánh nhiều năm: cùng khoảng tháng trong từng năm có dữ liệu
   const years=[...new Set(yms.map(m=>m.slice(0,4)))],off=+R.cur.to.slice(0,4)-+R.cur.from.slice(0,4)===0;
   const ranges=off?years.map(y=>({y,from:y+R.cur.from.slice(4),to:y+R.cur.to.slice(4)})):years.map(y=>({y,from:y+'-01',to:y+'-12'}));
-  const multi=(await Promise.all(ranges.map(r=>api.q('plRange',r.from,r.to)))).map((v,i)=>({...v,y:ranges[i].y})).filter(v=>v.net||v.cogs||v.pbt);
+  PLV.R=R;PLV.ranges=ranges;const multi=(await Promise.all(ranges.map(r=>api.q('plRange',r.from,r.to)))).map((v,i)=>({...v,y:ranges[i].y})).filter(v=>v.net||v.cogs||v.pbt);PLV.multi=multi;
   const mlab=off?(R.cur.from===R.cur.to?'tháng '+R.cur.from.slice(5):`tháng ${R.cur.from.slice(5)}–${R.cur.to.slice(5)}`):'cả năm';
   $('#tPLY').innerHTML=`<thead><tr><th>Chỉ tiêu (${mlab})</th>`+multi.map((y,i)=>`<th class=n>${y.y}</th>`+(i?'<th class=n>±%</th>':'')).join('')+'</tr></thead><tbody>'+
-    L.filter(x=>x[2]!==2).map(([n,f,t,good])=>`<tr style="${t===1?'background:var(--brand-25)':''}"><td class=nw style="min-width:220px">${t===1?'<b>'+n+'</b>':n}</td>`+multi.map((y,i)=>`<td class="n ${y[f]<0?'neg':''}">${fmt(y[f])}</td>`+(i?chgTd(y[f],multi[i-1][f],good):'')).join('')+'</tr>').join('')+'</tbody>';
+    L.filter(x=>x[2]!==2).map(([n,f,t,good])=>`<tr data-key="${f}" data-n="${esc(n)}" style="${t===1?'background:var(--brand-25)':''}"><td class=nw style="min-width:220px">${t===1?'<b>'+n+'</b>':n}</td>`+multi.map((y,i)=>`<td data-y="${i}" class="n dbl ${y[f]<0?'neg':''}">${fmt(y[f])}</td>`+(i?chgTd(y[f],multi[i-1][f],good):'')).join('')+'</tr>').join('')+'</tbody>';
   // Nhận xét
   const notes=[],N=(cls,t)=>notes.push(`<div class="note ${cls}">${t}</div>`);
   N('brand',`Kỳ phân tích <b>${R.cur.label}</b>: doanh thu thuần <b>${fmt(cur.net)}</b>, lợi nhuận trước thuế <b>${fmt(cur.pbt)}</b>.`);
@@ -462,7 +467,7 @@ async function vCost(){
   $('#anTblT').textContent=`${label.charAt(0).toUpperCase()+label.slice(1)} theo ${AN_BY[by].toLowerCase()} – ${R.cur.label}`;
   $('#anHint').textContent=`${num(list.length)} nhóm`;
   const head='<thead><tr><th>'+AN_BY[by]+'</th>'+(by==='acc1'?'<th>Tên</th>':'')+`<th class=n>${R.cur.label}</th><th class=n>Tỷ trọng</th>`+R.cmp.map(c=>`<th class=n>${c.label}</th><th class=n>±</th><th class=n>%</th>`).join('')+'<th class=n>Số dòng</th></tr></thead>';
-  const body=list.slice(0,1500).map((x,i)=>`<tr class="click" data-i="${i}"><td style="min-width:200px"><b>${esc(x.g)}</b></td>${by==='acc1'?`<td class=nw>${esc(x.name)}</td>`:''}<td class=n><b>${fmt(x.v)}</b></td>
+  const body=list.slice(0,1500).map((x,i)=>`<tr class="click dbl" data-i="${i}"><td style="min-width:200px"><b>${esc(x.g)}</b></td>${by==='acc1'?`<td class=nw>${esc(x.name)}</td>`:''}<td class=n><b>${fmt(x.v)}</b></td>
       <td class=n><div style="display:flex;align-items:center;gap:6px;justify-content:flex-end"><div style="width:50px;height:6px;border-radius:9px;background:var(--gray-200)"><div style="width:${Math.max(0,Math.min(100,x.v/total*100))}%;height:100%;border-radius:9px;background:var(--brand-500)"></div></div>${pct(x.v/total)}</div></td>
       ${x.c.map(c=>`<td class="n mut">${fmt(c)}</td><td class=n>${fmt(x.v-c)}</td>${c?chgTd(x.v,c,good):`<td class="n mut">${x.v?'mới':''}</td>`}`).join('')}<td class="n mut">${num(x.n)}</td></tr>`).join('');
   const foot=`<tr style="background:var(--brand-25)"><td><b>Tổng cộng</b></td>${by==='acc1'?'<td></td>':''}<td class=n><b>${fmt(total)}</b></td><td class=n>100%</td>${ctot.map(c=>`<td class=n><b>${fmt(c)}</b></td><td class=n><b>${fmt(total-c)}</b></td>${chgTd(total,c,good)}`).join('')}<td></td></tr>`;
@@ -470,7 +475,7 @@ async function vCost(){
 }
 $('#anKind').onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;AN.kind=b.dataset.k;$$('#anKind button').forEach(x=>x.classList.toggle('on',x===b));vCost()};
 $('#anBy').onchange=()=>vCost();$('#anFind').oninput=()=>{clearTimeout(tmr);tmr=setTimeout(vCost,250)};
-$('#tAn').onclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)drill(AN.view[+tr.dataset.i])};
+$('#tAn').ondblclick=e=>{const tr=e.target.closest('tr[data-i]');if(tr)drill(AN.view[+tr.dataset.i])};
 $('#anXls').onclick=()=>{const by=$('#anBy').value,R=AN.R;
   api.exportAnalysis((AN.kind==='rev'?'DoanhThu':'ChiPhi')+'_'+by,AN.view.map(x=>Object.assign({[AN_BY[by]]:x.g},by==='acc1'?{'Tên':x.name}:{},{[R.cur.label]:x.v},...R.cmp.map((c,i)=>({[c.label]:x.c[i],[`± ${c.label}`]:x.v-x.c[i]})),{'Số dòng':x.n})))};
 async function drill(x){
@@ -483,6 +488,43 @@ async function drill(x){
   $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
   $('#dPane').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr[data-eid]');if(tr&&tr.dataset.eid)showDetail(null,+tr.dataset.eid)};
 }
+
+/* ---------- Chi tiết bút toán khi nhấn đúp ---------- */
+// nat: 1 = số dư tự nhiên bên Nợ (phải thu, tồn kho, chi phí); -1 = bên Có (phải trả, doanh thu)
+async function openLedger(title,sub,spec,nat=1){
+  CUR=-1;$('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">${esc(sub)}</div><h2 style="font-size:20px">${esc(title)}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div><div class="pb"><div class="row"><span class="spin"></span> Đang tải bút toán…</div></div>`;
+  $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
+  const d=await api.q('ledger',spec);let run=d.before*nat;
+  const bal=(d.debit-d.credit)*nat,rows=d.rows.map(r=>{run+=(r.debit-r.credit)*nat;return {...r,run}});
+  const REF=spec.dim==='contract'?['contract','Hợp đồng']:spec.dim==='adv'?['adv','Đề nghị TU']:spec.dim==='tcost'||spec.kind==='pl'?['tcost','Khoản mục']:spec.kind==='inv'?['product','Mặt hàng']:null;
+  $('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">${esc(sub)}</div><h2 style="font-size:20px">${esc(title)}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div>
+   <div class="pb"><div class="kpis">${kpi('','file','Số bút toán',num(d.total),d.truncated?`hiển thị ${num(d.rows.length)} dòng gần nhất`:'')}${kpi('blue','coins','Phát sinh Nợ',fmt2(d.debit))}${kpi('','coins','Phát sinh Có',fmt2(d.credit))}${kpi(bal<0?'red':'green','wallet','Số dư / Lũy kế',fmt2(bal),nat>0?'dư Nợ (+)':'dư Có (+)')}</div>
+   <div class="card"><div class="card-h"><h3>Bút toán chi tiết</h3><span class="hint">nhấn đúp dòng có nhãn lỗi để mở phần xử lý lỗi</span></div><div class="tbl" style="max-height:calc(100vh - 330px)"><table><thead><tr><th></th><th>Ngày</th><th>Chứng từ</th><th>TK Nợ</th><th>TK Có</th><th>Đối tượng</th>${REF?`<th>${REF[1]}</th>`:''}<th class=n>PS Nợ</th><th class=n>PS Có</th><th class=n>Lũy kế</th><th>Diễn giải</th><th>Người nhập</th></tr></thead><tbody>
+   ${rows.map(r=>`<tr class="${r.eid?'dbl':''}" data-eid="${r.eid||''}"><td>${r.eid?'<span class="badge b-M">Có lỗi</span>':''}</td><td class=nw>${vn(r.date)}</td><td class=nw>${esc(r.doc)}</td><td>${esc(r.drName)}</td><td>${esc(r.crName)}</td>
+     <td><div class="clamp s" title="${esc(r.side==='dr'?r.bp:r.bpCr)}">${esc(r.side==='dr'?r.bp:r.bpCr)}</div></td>${REF?`<td><div class="clamp s" title="${esc(r[REF[0]])}">${esc(refShort(r[REF[0]]))}</div></td>`:''}
+     <td class=n>${r.debit?fmt2(r.debit):''}</td><td class=n>${r.credit?fmt2(r.credit):''}</td><td class="n ${r.run<0?'neg':''}"><b>${fmt2(r.run)}</b></td><td><div class=clamp title="${esc(r.desc)}">${esc(r.desc)}</div></td><td class=nw>${esc(short(r.user))}</td></tr>`).join('')}
+   </tbody></table></div></div></div>`;
+  $('#dClose').onclick=closeDetail;
+  $('#dPane').querySelector('tbody').ondblclick=e=>{const tr=e.target.closest('tr[data-eid]');if(tr&&tr.dataset.eid)showDetail(null,+tr.dataset.eid)};
+}
+const AGNAT=acc=>/^(331|335|336|334|3388)/.test(acc)?-1:1;
+$('#tAging').ondblclick=e=>{const tr=e.target.closest('tr[data-ag]');if(!tr)return;const o=AGV.det[+tr.dataset.ag],dim=$('#agDim').value;
+  openLedger(o.bp+(o.ref?' · '+refShort(o.ref):''),`TK ${o.acc} – ${o.accName} · đến ${vn($('#asOf').value)}`,{kind:'ag',acc:o.acc,bp:o.bp,dim,ref:o.ref,asOf:$('#asOf').value},AGNAT(o.acc))};
+$('#tAbn').ondblclick=e=>{const tr=e.target.closest('tr[data-agn]');if(!tr)return;const o=AGV.abn[+tr.dataset.agn],dim=$('#agDim').value;
+  openLedger(o.bp+(o.ref?' · '+refShort(o.ref):''),`Dư ngược chiều · TK ${o.acc}`,{kind:'ag',acc:o.acc,bp:o.bp,dim,ref:o.ref,asOf:$('#asOf').value},AGNAT(o.acc))};
+$('#tAgSum').ondblclick=e=>{const tr=e.target.closest('tr[data-acc]');if(!tr)return;const a=tr.dataset.acc;
+  openLedger('Tài khoản '+a,`Tất cả đối tượng · đến ${vn($('#asOf').value)}`,{kind:'ag',acc:a,asOf:$('#asOf').value},AGNAT(a))};
+$('#tIv').ondblclick=e=>{const tr=e.target.closest('tr[data-iv]');if(!tr)return;const o=IVV.det[+tr.dataset.iv];
+  openLedger(o.obj,`TK ${o.acc} – ${o.accName} · đến ${vn($('#ivAsOf').value)}`,{kind:'inv',acc:o.acc,by:$('#ivBy').value,obj:o.obj,asOf:$('#ivAsOf').value},1)};
+$('#tIvNeg').ondblclick=e=>{const tr=e.target.closest('tr[data-ivn]');if(!tr)return;const o=IVV.neg[+tr.dataset.ivn];
+  openLedger(o.obj,`Tồn âm · TK ${o.acc}`,{kind:'inv',acc:o.acc,by:$('#ivBy').value,obj:o.obj,asOf:$('#ivAsOf').value},1)};
+$('#tIvSum').ondblclick=e=>{const tr=e.target.closest('tr[data-acc]');if(!tr)return;
+  openLedger('Tài khoản '+tr.dataset.acc,`Tất cả mặt hàng · đến ${vn($('#ivAsOf').value)}`,{kind:'inv',acc:tr.dataset.acc,asOf:$('#ivAsOf').value},1)};
+const PLNAT=k=>['rev','finInc','othInc','net','gp','op','other','pbt','pat'].includes(k)?-1:1;
+$('#tPL').ondblclick=e=>{const td=e.target.closest('td[data-c]'),tr=e.target.closest('tr[data-key]');if(!td||!tr||!tr.dataset.key)return;const c=+td.dataset.c,R=PLV.R||perRange(PLST),p=c<0?R.cur:R.cmp[c];
+  openLedger(tr.dataset.n,p.label,{kind:'pl',key:tr.dataset.key,from:p.from,to:p.to},PLNAT(tr.dataset.key))};
+$('#tPLY').ondblclick=e=>{const td=e.target.closest('td[data-y]'),tr=e.target.closest('tr[data-key]');if(!td||!tr)return;const y=PLV.multi[+td.dataset.y],r=PLV.ranges.find(x=>x.y===y.y);
+  openLedger(tr.dataset.n,`Năm ${y.y} (${r.from.slice(5)}–${r.to.slice(5)})`,{kind:'pl',key:tr.dataset.key,from:r.from,to:r.to},PLNAT(tr.dataset.key))};
 
 /* ---------- Báo cáo & thông báo ---------- */
 let MAILTO=ls.get('mailto',{});

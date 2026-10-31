@@ -27,7 +27,7 @@ function errorsBook(rows, byUser) {
   return book([['Loi nhap lieu', rows.map(errRow)], ['Theo nguoi nhap', byUser]]);
 }
 function agingBook(items, dim = 'bp') {
-  const REF = { contract: 'Hợp đồng', adv: 'Đề nghị tạm ứng' }[dim];
+  const REF = { contract: 'Hợp đồng', adv: 'Đề nghị tạm ứng', tcost: 'Khoản mục chi phí' }[dim];
   const GRP = { thu: 'Phải thu', tra: 'Phải trả' };
   const sum = new Map();
   for (const o of items) {

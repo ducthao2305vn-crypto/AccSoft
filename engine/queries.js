@@ -132,9 +132,10 @@ function make(db) {
   // Khoảng tháng [from, to] (YYYY-MM); trống = không giới hạn
   const RNG = (from, to) => (okYm(from) ? ` AND e.ym>='${okYm(from)}'` : '') + (okYm(to) ? ` AND e.ym<='${okYm(to)}'` : '');
   function plBy(keyExpr, from, to) {
+    // đọc từ bảng tổng hợp agg (nhanh hơn rất nhiều so với quét entries)
     const cols = PLG.map(([k, pres, sign]) =>
-      `${sign} * (sum(CASE WHEN ${like('e.acc_debit', pres)} THEN e.amount ELSE 0 END) - sum(CASE WHEN ${like('e.acc_credit', pres)} THEN e.amount ELSE 0 END)) AS ${k}`).join(',');
-    return all(`SELECT ${keyExpr} k, ${cols} FROM entries e WHERE ${INC}${RNG(from, to)} AND e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%' GROUP BY k ORDER BY k`).map(r => {
+      `${sign} * (sum(CASE WHEN e.side='dr' AND ${like('e.acc', pres)} THEN e.amount ELSE 0 END) - sum(CASE WHEN e.side='cr' AND ${like('e.acc', pres)} THEN e.amount ELSE 0 END)) AS ${k}`).join(',');
+    return all(`SELECT ${keyExpr} k, ${cols} FROM agg e WHERE ${INC}${RNG(from, to)} GROUP BY k ORDER BY k`).map(r => {
       const net = r.rev - r.ded, gp = net - r.cogs, op = gp + r.finInc - r.finExp - r.sell - r.admin, other = r.othInc - r.othExp, pbt = op + other;
       return { ...r, net, gp, op, other, pbt, pat: pbt - r.tax };
     });
@@ -177,16 +178,19 @@ function make(db) {
     if (by === 'dept') return `coalesce(e.department,'(trống)')`;
     return kind === 'rev' ? `coalesce(e.type_of_revenue,'(chưa phân loại)')` : `coalesce(e.type_of_cost,'(chưa phân loại)')`;
   }
+  // Điều kiện & nhóm trên bảng tổng hợp agg
+  const AGK = kind => kind === 'rev' ? `(e.acc LIKE '511%' OR e.acc LIKE '512%' OR e.acc LIKE '515%' OR e.acc LIKE '711%')` : `substr(e.acc,1,1) IN ('6','8')`;
+  const AGS = kind => kind === 'rev' ? `CASE e.side WHEN 'cr' THEN 1 ELSE -1 END` : `CASE e.side WHEN 'dr' THEN 1 ELSE -1 END`;
+  const AGG = (kind, by) => by === 'acc1' ? 'substr(e.acc,1,3)' : by === 'acc' ? 'coalesce(e.acc_name, e.acc)' : by === 'dept' ? `coalesce(e.dept,'(trống)')`
+    : kind === 'rev' ? `coalesce(e.trev,'(chưa phân loại)')` : `coalesce(e.tcost,'(chưa phân loại)')`;
   function analysis(kind = 'exp', by = 'acc1', period = 'm', from = '', to = '') {
     const P = PERIOD[period] || PERIOD.m;
-    const parts = sides(kind).map(([side, cond, sign]) => `SELECT ${groupExpr(kind, by, side)} g, ${P} p, e.amount*${sign} v FROM entries e WHERE ${INC}${RNG(from, to)} AND ${cond}`);
-    const rows = all(`SELECT g, p, sum(v) v, count(*) n FROM (${parts.join(' UNION ALL ')}) GROUP BY g, p`);
+    const rows = all(`SELECT ${AGG(kind, by)} g, ${P} p, sum(e.amount*${AGS(kind)}) v, sum(e.n) n FROM agg e WHERE ${INC}${RNG(from, to)} AND ${AGK(kind)} GROUP BY g, p`);
     return { rows: rows.map(r => ({ ...r, name: by === 'acc1' ? (ACC1[r.g] || '') : '' })), periods: [...new Set(rows.map(r => r.p))].sort() };
   }
   // Tổng theo nhóm trong một khoảng tháng
   function analysisRange(kind = 'exp', by = 'acc1', from = '', to = '') {
-    const parts = sides(kind).map(([side, cond, sign]) => `SELECT ${groupExpr(kind, by, side)} g, e.amount*${sign} v FROM entries e WHERE ${INC}${RNG(from, to)} AND ${cond}`);
-    return all(`SELECT g, sum(v) v, count(*) n FROM (${parts.join(' UNION ALL ')}) GROUP BY g`).map(r => ({ ...r, name: by === 'acc1' ? (ACC1[r.g] || '') : '' }));
+    return all(`SELECT ${AGG(kind, by)} g, sum(e.amount*${AGS(kind)}) v, sum(e.n) n FROM agg e WHERE ${INC}${RNG(from, to)} AND ${AGK(kind)} GROUP BY g`).map(r => ({ ...r, name: by === 'acc1' ? (ACC1[r.g] || '') : '' }));
   }
   function analysisDrill(kind, by, g, from = '', to = '', limit = 500) {
     const parts = sides(kind).map(([side, cond, sign]) => `SELECT e.id rid, e.document_no doc, e.account_date date, e.acc_debit_name drName, e.acc_credit_name crName,
@@ -203,15 +207,16 @@ function make(db) {
   // Tài khoản công nợ: [mã cấp 1, tên, nhóm, chiều số dư tự nhiên (1 = dư Nợ, -1 = dư Có)]
   const AG_ACC = [
     ['131', 'Phải thu khách hàng', 'thu', 1], ['136', 'Phải thu nội bộ', 'thu', 1], ['1388', 'Phải thu khác', 'thu', 1], ['141', 'Tạm ứng', 'thu', 1],
-    ['331', 'Phải trả người bán', 'tra', -1], ['336', 'Phải trả nội bộ', 'tra', -1], ['334', 'Phải trả người lao động', 'tra', -1], ['3388', 'Phải trả, phải nộp khác', 'tra', -1]];
+    ['331', 'Phải trả người bán', 'tra', -1], ['335', 'Chi phí phải trả (trích trước)', 'tra', -1], ['336', 'Phải trả nội bộ', 'tra', -1], ['334', 'Phải trả người lao động', 'tra', -1], ['3388', 'Phải trả, phải nộp khác', 'tra', -1]];
   const NO_BP = '(không có đối tượng)';
   // Đối tượng gắn theo phía hạch toán: TK bên Nợ ↔ Đối tượng Nợ (Business Partner), TK bên Có ↔ Đối tượng Có (Bpartner credit)
+  const refOf = (dim, r) => dim === 'contract' ? (r.contract || '(không có hợp đồng)') : dim === 'adv' ? (r.adv || '(không có đề nghị tạm ứng)') : dim === 'tcost' ? (r.tcost || '(không có khoản mục)') : '';
   // dim: 'bp' = theo đối tượng; 'contract' = đối tượng × hợp đồng; 'adv' = đối tượng × đề nghị tạm ứng (Advance Request)
   function aging(asOf, term = 30, level = 'l1', dim = 'bp') {
     const asD = new Date(asOf), map = new Map();
     const pres = AG_ACC.map(a => a[0]);
     const rows = all(`SELECT e.account_date date, e.due_date due, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName,
-        e.amount amt, e.partner_debit bp, e.partner_credit bpCr, e.contract, e.advance_request adv FROM entries e
+        e.amount amt, e.partner_debit bp, e.partner_credit bpCr, e.contract, e.advance_request adv, e.type_of_cost tcost FROM entries e
       WHERE ${INC} AND e.account_date<=? AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)})`, asOf);
     for (const r of rows) {
       for (const side of ['dr', 'cr']) {
@@ -222,7 +227,7 @@ function make(db) {
         const bp = (side === 'dr' ? r.bp : r.bpCr) || NO_BP;
         const acc = level === 'detail' ? accCode : pre;
         const accName = level === 'detail' ? (String(side === 'dr' ? r.drName : r.crName).split('_').slice(1).join('_') || name) : name;
-        const ref = dim === 'contract' ? (r.contract || '(không có hợp đồng)') : dim === 'adv' ? (r.adv || '(không có đề nghị tạm ứng)') : '';
+        const ref = refOf(dim, r);
         const key = acc + '|' + bp + '|' + ref; let o = map.get(key);
         if (!o) map.set(key, o = { acc, accName, parent: pre, grp, bp, ref, bal: 0, dr: 0, cr: 0, inc: [], first: r.date, last: r.date });
         if (r.date < o.first) o.first = r.date; if (r.date > o.last) o.last = r.date;
@@ -301,6 +306,41 @@ function make(db) {
     return { accounts: INV_ACC.map(a => ({ k: a[0], n: a[1] })), items: out, oldImportRows: missing };
   }
 
+  /* ---------- Chi tiết bút toán (nhấn đúp vào số liệu) ---------- */
+  // spec.kind: 'ag' công nợ, 'inv' tồn kho, 'pl' chỉ tiêu KQKD. Trả về các dòng kèm phát sinh Nợ/Có của chính tài khoản đang xem.
+  function ledger(spec = {}) {
+    const LIM = 3000, out = [];
+    const SEL = `e.id rid, e.account_date date, e.document_no doc, e.line_no line, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName,
+      e.amount amt, e.partner_debit bp, e.partner_credit bpCr, e.contract, e.advance_request adv, e.type_of_cost tcost, e.product, e.locator loc, e.locator_credit locCr,
+      e.description "desc", e.created_by user, (SELECT min(er.id) FROM errors er WHERE er.entry_id=e.id) eid`;
+    if (spec.kind === 'ag' || spec.kind === 'inv') {
+      const acc = String(spec.acc || '');
+      const rows = all(`SELECT ${SEL} FROM entries e WHERE ${INC} AND (e.acc_debit LIKE ? OR e.acc_credit LIKE ?)${spec.asOf ? ' AND e.account_date<=?' : ''}${RNG(spec.from, spec.to)} ORDER BY e.account_date, e.id`,
+        acc + '%', acc + '%', ...(spec.asOf ? [spec.asOf] : []));
+      const NONE = { bp: '(không có đối tượng)', product: '(không có mã hàng)', loc: '(không có kho)' };
+      for (const r of rows) for (const side of ['dr', 'cr']) {
+        if (!String(r[side] || '').startsWith(acc)) continue;
+        if (spec.kind === 'ag') {
+          if (spec.bp != null && ((side === 'dr' ? r.bp : r.bpCr) || NONE.bp) !== spec.bp) continue;
+          if (spec.dim && spec.dim !== 'bp' && spec.ref != null && refOf(spec.dim, r) !== spec.ref) continue;
+        } else if (spec.obj != null) {
+          const loc = (side === 'dr' ? r.loc : r.locCr) || NONE.loc, bp = (side === 'dr' ? r.bp : r.bpCr) || NONE.bp, prod = r.product || NONE.product;
+          const obj = spec.by === 'loc' ? loc : spec.by === 'bp' ? bp : spec.by === 'product_loc' ? prod + ' @ ' + loc : prod;
+          if (obj !== spec.obj) continue;
+        }
+        out.push({ ...r, side, debit: side === 'dr' ? r.amt : 0, credit: side === 'cr' ? r.amt : 0 });
+      }
+    } else if (spec.kind === 'pl') {
+      const g = PLG.find(x => x[0] === spec.key), keys = { net: ['rev', 'ded'], gp: ['rev', 'ded', 'cogs'], op: ['rev', 'ded', 'cogs', 'finInc', 'finExp', 'sell', 'admin'], other: ['othInc', 'othExp'] }[spec.key];
+      const pres = g ? g[1] : PLG.filter(x => (keys || PLG.map(y => y[0])).includes(x[0])).flatMap(x => x[1]);
+      const rows = all(`SELECT ${SEL} FROM entries e WHERE ${INC}${RNG(spec.from, spec.to)} AND e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%'
+        AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)}) ORDER BY e.account_date, e.id`);
+      for (const r of rows) for (const side of ['dr', 'cr']) if (pres.some(p => String(r[side] || '').startsWith(p))) out.push({ ...r, side, debit: side === 'dr' ? r.amt : 0, credit: side === 'cr' ? r.amt : 0 });
+    }
+    const tot = out.reduce((a, r) => ({ debit: a.debit + r.debit, credit: a.credit + r.credit }), { debit: 0, credit: 0 });
+    return { total: out.length, ...tot, truncated: out.length > LIM, rows: out.length > LIM ? out.slice(-LIM) : out, before: out.length > LIM ? out.slice(0, -LIM).reduce((s, r) => s + r.debit - r.credit, 0) : 0 };
+  }
+
   /* ---------- Báo cáo & thông báo ---------- */
   function report() {
     const cross = col => all(`SELECT ${col} k, count(*) n, sum(er.sev='H') high, sum(${STATUS}='open') open, sum(${STATUS}='doing') doing,
@@ -335,9 +375,10 @@ function make(db) {
     const ms = all(`SELECT ym, analyzed_ver v FROM months WHERE 1${P.from ? ` AND ym>='${P.from}'` : ''}${P.to ? ` AND ym<='${P.to}'` : ''} ORDER BY ym`);
     return { review: P, version: V, months: ms.length, pending: ms.filter(m => m.v !== V).map(m => ({ ym: m.ym, old: m.v != null })) };
   }
+  const aggEmpty = () => !get('SELECT 1 x FROM agg LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1');
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };

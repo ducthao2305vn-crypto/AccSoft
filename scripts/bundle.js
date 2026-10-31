@@ -9,6 +9,7 @@ fs.rmSync(out, { recursive: true, force: true });
 const common = { bundle: true, platform: 'node', target: 'node22', format: 'cjs', external: ['electron'], logLevel: 'warning', legalComments: 'none' };
 esbuild.buildSync({ ...common, entryPoints: [path.join(root, 'main.js')], outfile: path.join(out, 'main.js') });
 esbuild.buildSync({ ...common, entryPoints: [path.join(root, 'engine', 'worker.js')], outfile: path.join(out, 'engine', 'worker.js') });
+esbuild.buildSync({ ...common, entryPoints: [path.join(root, 'engine', 'qworker.js')], outfile: path.join(out, 'engine', 'qworker.js') });
 for (const f of ['preload.js', 'index.html', 'app.js']) fs.copyFileSync(path.join(root, f), path.join(out, f));
 fs.cpSync(path.join(root, 'vendor'), path.join(out, 'vendor'), { recursive: true });
 fs.writeFileSync(path.join(out, 'package.json'), JSON.stringify({ name: pkg.name, productName: pkg.productName, version: pkg.version, description: pkg.description, author: pkg.author, main: 'main.js' }, null, 2));

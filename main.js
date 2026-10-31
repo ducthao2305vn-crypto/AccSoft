@@ -10,7 +10,19 @@ const log = require('./engine/log');
 const { RULES_VERSION } = require('./engine/rules');
 const firstLine = m => String(m || '').split('\n')[0];
 
-let win, Q, dbFile, busy = false;
+let win, Q, dbFile, busy = false, qw = null, qSeq = 0;
+const qPending = new Map();
+// Gửi truy vấn sang worker thường trực → tiến trình chính (cửa sổ) không bao giờ bị khoá
+function qa(name, ...args) {
+  return new Promise((resolve, reject) => { const id = ++qSeq; qPending.set(id, { resolve, reject, name, t: Date.now() }); qw.postMessage({ id, name, args }); });
+}
+function startQueryWorker() {
+  qw = new Worker(path.join(__dirname, 'engine', 'qworker.js'), { workerData: { dbPath: dbFile } });
+  qw.on('message', m => { const p = qPending.get(m.id); if (!p) return; qPending.delete(m.id);
+    const ms = Date.now() - p.t; if (ms > 3000) log.info(`Truy vấn chậm "${p.name}": ${ms} ms`);
+    if (m.ok) p.resolve(m.result); else p.reject(Object.assign(new Error(m.error), { stack: m.stack })); });
+  qw.on('error', e => { log.error('Worker truy vấn lỗi', e); for (const p of qPending.values()) p.reject(e); qPending.clear(); startQueryWorker(); });
+}
 const send = (ch, m) => win && !win.isDestroyed() && win.webContents.send(ch, m);
 
 // Chạy một tác vụ ghi nặng trong worker; tiến độ được đẩy lên giao diện
@@ -88,7 +100,7 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const READ = ['meta', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
 const WRITE = ['setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
@@ -126,7 +138,8 @@ async function init() {
   const handle = (ch, fn) => ipcMain.handle(ch, async (...a) => { try { return await fn(...a); } catch (e) { log.error(`Lỗi khi xử lý "${ch}"`, e); throw e; } });
   const r = open(dbFile, { cleanup: true });
   Q = make(r.db);
-  handle('q', (_e, name, ...args) => { if (!READ.includes(name) && !WRITE.includes(name)) throw new Error('Không hỗ trợ: ' + name); return Q[name](...args); });
+  startQueryWorker();
+  handle('q', (_e, name, ...args) => { if (!READ.includes(name) && !WRITE.includes(name)) throw new Error('Không hỗ trợ: ' + name); return qa(name, ...args); });
   handle('app:info', () => ({ version: app.getVersion(), dbFile, needRecheck: r.needRecheck, appDir: appDir(), ...dbInfo }));
   handle('db:openFolder', () => shell.showItemInFolder(dbFile));
   handle('import:pick', async () => {
@@ -139,35 +152,37 @@ async function init() {
     return canceled ? null : enrichFiles(filePaths);
   });
   handle('task', (_e, task, args) => exclusive(() => runTask(task, args, { deleteMonth: 'Đang xoá tháng', deleteImport: 'Đang xoá lần nạp', clear: 'Đang xoá dữ liệu', recheck: 'Đang phân tích lại toàn bộ dữ liệu', analyze: 'Đang phân tích dữ liệu' }[task])).then(r => { if (task === 'analyze' || task === 'recheck') log.info(`Phân tích dữ liệu ${JSON.stringify(args)}: ${r.rows} dòng, ${r.months} tháng, ${Math.round(r.secs)} giây`); return r; }));
-  // Xuất Excel
-  handle('export:errors', (_e, f, sort) => {
-    const rows = Q.errors(f, sort, 0, 2e6).rows;
+  // Xuất Excel (dữ liệu lấy qua worker truy vấn)
+  handle('export:errors', async (_e, f, sort) => {
+    const rows = (await qa('errors', f, sort, 0, 2e6)).rows;
     const by = {}; for (const e of rows) { const k = e.user + '|' + e.k; by[k] = (by[k] || 0) + 1; }
     const byUser = Object.entries(by).map(([k, n]) => { const [u, c] = k.split('|'); return { 'Người nhập': u, 'Mã lỗi': c, 'Số lượng': n }; });
     return saveXlsx('AccSoft_LoiNhapLieu.xlsx', R.errorsBook(rows, byUser));
   });
   handle('export:analysis', (_e, title, rows) => saveXlsx(`AccSoft_${title}.xlsx`, R.book([[title.slice(0, 31), rows]])));
-  handle('export:inventory', (_e, asOf, by, level, acc) => saveXlsx('AccSoft_TuoiHangTonKho.xlsx', R.inventoryBook(Q.inventory(asOf, by, level).items.filter(o => !acc || o.acc === acc))));
-  handle('export:aging', (_e, asOf, term, level, grp, acc, dim) => saveXlsx(`AccSoft_TuoiNo${dim === 'contract' ? '_HopDong' : dim === 'adv' ? '_TamUng' : ''}.xlsx`, R.agingBook(Q.aging(asOf, term, level, dim).items.filter(o => (!grp || o.grp === grp) && (!acc || o.acc === acc)), dim)));
-  handle('export:report', (_e, minSev, group) => saveXlsx('AccSoft_BaoCaoKiemTra.xlsx',
-    R.reportBook(Q.report(), Q.errors({ statusIn: ['fixed', 'ignore'] }, { k: 'user', d: 1 }, 0, 2e6).rows, Q.errors({ minSev, group, statusIn: ['open', 'doing'] }, { k: 'user', d: 1 }, 0, 2e6).rows)));
-  handle('export:employee', (_e, user, minSev, group) => saveXlsx(`AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, R.book([['Can khac phuc', Q.employeeErrors(user, minSev, 100000, group).map(R.errRow)]])));
+  handle('export:inventory', async (_e, asOf, by, level, acc) => saveXlsx('AccSoft_TuoiHangTonKho.xlsx', R.inventoryBook((await qa('inventory', asOf, by, level)).items.filter(o => !acc || o.acc === acc))));
+  handle('export:aging', async (_e, asOf, term, level, grp, acc, dim) => saveXlsx(`AccSoft_TuoiNo${dim === 'contract' ? '_HopDong' : dim === 'adv' ? '_TamUng' : dim === 'tcost' ? '_KhoanMuc' : ''}.xlsx`,
+    R.agingBook((await qa('aging', asOf, term, level, dim)).items.filter(o => (!grp || o.grp === grp) && (!acc || o.acc === acc)), dim)));
+  handle('export:report', async (_e, minSev, group) => saveXlsx('AccSoft_BaoCaoKiemTra.xlsx', R.reportBook(await qa('report'),
+    (await qa('errors', { statusIn: ['fixed', 'ignore'] }, { k: 'user', d: 1 }, 0, 2e6)).rows, (await qa('errors', { minSev, group, statusIn: ['open', 'doing'] }, { k: 'user', d: 1 }, 0, 2e6)).rows)));
+  handle('export:employee', async (_e, user, minSev, group) => saveXlsx(`AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, R.book([['Can khac phuc', (await qa('employeeErrors', user, minSev, 100000, group)).map(R.errRow)]])));
   // Email
-  handle('mail:preview', (_e, user, o) => ({ subject: R.mailSubject(user), html: R.mailHtml(user, Q.employeeErrors(user, o.minSev, 100000, o.group), o), count: Q.employeeErrors(user, o.minSev, 100000, o.group).length }));
+  handle('mail:preview', async (_e, user, o) => { const rows = await qa('employeeErrors', user, o.minSev, 100000, o.group); return { subject: R.mailSubject(user), html: R.mailHtml(user, rows, o), count: rows.length }; });
   handle('smtp:get', () => mailer.getConfig(Q));
   handle('smtp:set', (_e, cfg) => mailer.setConfig(Q, cfg));
   handle('smtp:verify', () => mailer.verify(Q).then(() => ({ ok: true }), e => ({ ok: false, error: String(e.message || e) })));
   handle('mail:send', async (_e, list, o) => {
-    const msgs = list.map(({ user, to }) => {
-      const rows = Q.employeeErrors(user, o.minSev, 100000, o.group);
+    const msgs = [];
+    for (const { user, to } of list) msgs.push(await (async () => {
+      const rows = await qa('employeeErrors', user, o.minSev, 100000, o.group);
       return { user, rows, to, subject: R.mailSubject(user) + (o.test ? ' (THỬ)' : ''), html: R.mailHtml(user, rows, o),
         attachment: { name: `AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, base64: R.toBuffer(R.book([['Can khac phuc', rows.map(R.errRow)]])).toString('base64') },
         employee: user, count: rows.length };
-    });
+    })());
     const res = await mailer.sendAll(Q, msgs);
     if (!o.test && o.mark) {
       const ok = new Set(res.filter(r => r.ok).map(r => r.to));
-      Q.setReviews(msgs.filter(m => ok.has(m.to)).flatMap(m => m.rows.filter(e => e.status === 'open')
+      await qa('setReviews', msgs.filter(m => ok.has(m.to)).flatMap(m => m.rows.filter(e => e.status === 'open')
         .map(e => ({ key: e.key, rule: e.k, doc: e.doc, status: 'doing', note: e.note || '', snapshot: JSON.stringify({ m: e.ym, amt: e.amt, desc: String(e.desc || '').slice(0, 200) }) }))));
     }
     return res;
@@ -178,7 +193,7 @@ async function init() {
   handle('log:file', () => log.file());
   // Không tự phân tích khi khởi động: tháng nào chưa phân tích (hoặc phân tích bằng bộ quy tắc cũ) sẽ được nhắc trên giao diện
   Q.setSetting('rules_version', String(RULES_VERSION));
-  return false;
+  return Q.aggEmpty() ? 'agg' : false;
 }
 
 function createWindow() {
@@ -202,7 +217,8 @@ process.on('unhandledRejection', e => log.error('Promise bị từ chối không
 app.whenReady().then(init).then(async needRecheck => {
   createWindow();
   // CSDL từ phiên bản cũ: tính lại bảng lỗi một lần
-  if (needRecheck) win.webContents.once('did-finish-load', () => exclusive(() => runTask('recheck', {}, 'Đang rà soát lại dữ liệu theo bộ quy tắc mới')).then(() => { Q.setSetting('rules_version', String(RULES_VERSION)); log.info('Đã rà soát lại theo quy tắc phiên bản ' + RULES_VERSION); send('reload'); }).catch(e => { log.error('Nâng cấp CSDL thất bại', e); dialog.showErrorBox('AccSoft', firstLine(e.message) + '\n\nChi tiết: ' + log.file()); }));
+  if (needRecheck === 'agg') win.webContents.once('did-finish-load', () => exclusive(() => runTask('buildAgg', {}, 'Đang tạo bảng tổng hợp để báo cáo nhanh hơn (chỉ lần đầu)')).then(() => { log.info('Đã tạo bảng tổng hợp agg'); send('reload'); }).catch(e => log.error('Tạo bảng tổng hợp thất bại', e)));
+  else if (needRecheck) win.webContents.once('did-finish-load', () => exclusive(() => runTask('recheck', {}, 'Đang rà soát lại dữ liệu theo bộ quy tắc mới')).then(() => { Q.setSetting('rules_version', String(RULES_VERSION)); log.info('Đã rà soát lại theo quy tắc phiên bản ' + RULES_VERSION); send('reload'); }).catch(e => { log.error('Nâng cấp CSDL thất bại', e); dialog.showErrorBox('AccSoft', firstLine(e.message) + '\n\nChi tiết: ' + log.file()); }));
 }).catch(err => {
   log.error('Không khởi động được ứng dụng', err);
   dialog.showErrorBox('AccSoft – lỗi mở cơ sở dữ liệu', String(err && err.stack || err));

@@ -58,6 +58,10 @@ function open(file, { cleanup = false } = {}) {
     CREATE INDEX IF NOT EXISTS ix_e_docline ON entries(document_no, line_no);
     CREATE INDEX IF NOT EXISTS ix_e_user ON entries(created_by);
     CREATE INDEX IF NOT EXISTS ix_err_entry ON errors(entry_id);
+    CREATE TABLE IF NOT EXISTS agg(ym TEXT, side TEXT, acc TEXT, acc_name TEXT, dept TEXT, tcost TEXT, trev TEXT, amount REAL, n INTEGER);
+    CREATE INDEX IF NOT EXISTS ix_agg_ym ON agg(ym);
+    CREATE INDEX IF NOT EXISTS ix_e_accd ON entries(acc_debit);
+    CREATE INDEX IF NOT EXISTS ix_e_accc ON entries(acc_credit);
     CREATE INDEX IF NOT EXISTS ix_err_rule ON errors(rule);
     CREATE INDEX IF NOT EXISTS ix_err_key ON errors(err_key);`);
   // Lần nạp bị gián đoạn (tắt máy giữa chừng) thì xoá – chỉ làm khi ứng dụng khởi động
@@ -69,4 +73,15 @@ function open(file, { cleanup = false } = {}) {
 const isoToDate = s => { if (!s) return null; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 function rowFromDb(r) { return { ...r, date: isoToDate(r.date), due: isoToDate(r.due) }; }
 
-module.exports = { open, COLS, SEL_ENTRY, rowFromDb, isoToDate };
+// Bảng tổng hợp sẵn cho báo cáo KQKD / doanh thu – chi phí: phát sinh TK loại 5–8 theo tháng × phía × TK × bộ phận × khoản mục (đã loại kết chuyển 911)
+function rebuildAgg(db, months = null) {
+  const IN = months ? ` AND ym IN (${months.map(m => `'${String(m).replace(/'/g, '')}'`).join(',')})` : '';
+  db.exec('BEGIN');
+  db.exec(`DELETE FROM agg WHERE 1${IN}`);
+  for (const [side, col] of [['dr', 'debit'], ['cr', 'credit']])
+    db.exec(`INSERT INTO agg SELECT ym, '${side}', acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue, sum(amount), count(*) FROM entries
+      WHERE substr(acc_${col},1,1) IN ('5','6','7','8') AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%' AND ym IS NOT NULL${IN}
+      GROUP BY ym, acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue`);
+  db.exec('COMMIT');
+}
+module.exports = { rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };

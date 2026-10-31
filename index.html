@@ -175,6 +175,11 @@ tr.grow td{background:var(--gray-50)!important;font-weight:700;color:var(--gray-
 .pick .field{min-width:0}.pick select{width:auto}.pick .sep{width:1px;align-self:stretch;background:var(--gray-200);margin:0 4px}
 .pick .cur{margin-left:auto;text-align:right;font-size:13px;color:var(--gray-600)}.pick .cur b{display:block;color:var(--brand-700);font-size:16px}
 td.up{color:var(--ok-700)}td.down{color:var(--err-700)}
+tr.dbl{cursor:zoom-in}tr.dbl:hover td{background:var(--brand-50)!important}td.dbl{cursor:zoom-in}td.dbl:hover{background:var(--brand-50)!important;outline:1px solid var(--brand-200)}
+.dblhint{font-size:12px;color:var(--gray-500);display:inline-flex;align-items:center;gap:4px}
+#pageLoad{position:fixed;top:84px;left:50%;transform:translateX(calc(-50% + 128px));z-index:35;background:#fff;border:1px solid var(--brand-200);box-shadow:var(--shadow-lg);border-radius:999px;padding:8px 16px;font-weight:600;color:var(--brand-700);display:flex;align-items:center;gap:10px}
+.spin{width:16px;height:16px;border:2px solid var(--brand-100);border-top-color:var(--brand-500);border-radius:50%;animation:sp .8s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+section.loading{opacity:.55;transition:opacity .2s;pointer-events:none}
 </style>
 </head>
 <body>
@@ -258,24 +263,24 @@ td.up{color:var(--ok-700)}td.down{color:var(--err-700)}
       <div class="row" style="align-items:flex-end">
         <label class="field">Ngày báo cáo<input class="input" type="date" id="asOf"></label>
         <label class="field">Nhóm<select class="input" id="agGrp"><option value="">Phải thu & phải trả</option><option value="thu">Phải thu</option><option value="tra">Phải trả</option></select></label>
-        <label class="field">Phân tích theo<select class="input" id="agDim"><option value="bp">Đối tượng</option><option value="contract">Đối tượng × Hợp đồng</option><option value="adv">Đối tượng × Đề nghị tạm ứng</option></select></label>
+        <label class="field">Phân tích theo<select class="input" id="agDim"><option value="bp">Đối tượng</option><option value="contract">Đối tượng × Hợp đồng</option><option value="adv">Đối tượng × Đề nghị tạm ứng</option><option value="tcost">Đối tượng × Khoản mục chi phí</option></select></label>
         <label class="field">Cấp tài khoản<select class="input" id="agLevel"><option value="l1">Tài khoản tổng hợp</option><option value="detail">Tài khoản chi tiết</option></select></label>
         <label class="field">Tài khoản<select class="input" id="agAcc"></select></label>
         <label class="field">Hạn mặc định (ngày)<input class="input" type="number" id="term" value="30" style="width:110px"></label>
         <div class="sp"></div><button class="btn" id="expAg"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
       </div>
       <div class="row" style="margin-top:12px"><span class="mut" style="font-size:13px">Xem nhanh:</span>
-        <button class="btn sm light" data-preset="331c">331 theo hợp đồng</button><button class="btn sm light" data-preset="1411a">1411 theo đề nghị tạm ứng</button><button class="btn sm ghost" data-preset="all">Tất cả công nợ theo đối tượng</button></div>
+        <button class="btn sm light" data-preset="331c">331 theo hợp đồng</button><button class="btn sm light" data-preset="1411a">1411 theo đề nghị tạm ứng</button><button class="btn sm light" data-preset="335t">335 theo đối tượng & khoản mục</button><button class="btn sm ghost" data-preset="all">Tất cả công nợ theo đối tượng</button></div>
       <div class="note brand" style="margin-top:14px"><b>Đối tượng công nợ theo phía hạch toán:</b> tài khoản ghi <b>Nợ</b> lấy <b>Đối tượng Nợ</b> (Business Partner), tài khoản ghi <b>Có</b> lấy <b>Đối tượng Có</b> (Bpartner credit) – không lấy thay đối tượng phía kia.
         Tuổi nợ theo FIFO: số dư phân bổ cho các phát sinh tăng gần nhất, tính từ Due Date (hoặc ngày hạch toán + hạn mặc định).</div>
     </div>
     <div class="kpis" id="agKpi"></div>
-    <div class="card"><div class="card-h"><h3>Tổng hợp tuổi nợ theo tài khoản</h3><span class="hint">bấm một dòng để lọc chi tiết theo tài khoản</span></div><div class="tbl"><table id="tAgSum"></table></div></div>
+    <div class="card"><div class="card-h"><h3>Tổng hợp tuổi nợ theo tài khoản</h3><span class="dblhint">🖱 nhấn đúp để xem bút toán chi tiết</span><span class="hint">bấm một dòng để lọc chi tiết theo tài khoản</span></div><div class="tbl"><table id="tAgSum"></table></div></div>
     <div class="grid g2">
       <div class="card"><div class="card-h"><h3>Cơ cấu tuổi nợ theo tài khoản</h3></div><div class="cv" style="height:360px"><canvas id="chAging"></canvas></div></div>
-      <div class="card"><div class="card-h"><h3>Dư ngược chiều</h3><span class="hint">phải thu dư Có / phải trả dư Nợ – cần đối chiếu</span></div><div class="tbl" style="max-height:360px"><table id="tAbn"></table></div></div>
+      <div class="card"><div class="card-h"><h3>Dư ngược chiều</h3><span class="hint">phải thu dư Có / phải trả dư Nợ – nhấn đúp để xem chi tiết</span></div><div class="tbl" style="max-height:360px"><table id="tAbn"></table></div></div>
     </div>
-    <div class="card"><div class="card-h"><h3>Chi tiết theo đối tượng</h3><div class="sp"></div><input class="input" id="agFind" placeholder="Tìm đối tượng…" style="width:260px"></div><div class="tbl"><table id="tAging"></table></div></div>
+    <div class="card"><div class="card-h"><h3>Chi tiết theo đối tượng</h3><span class="dblhint">🖱 nhấn đúp để xem bút toán chi tiết</span><div class="sp"></div><input class="input" id="agFind" placeholder="Tìm đối tượng…" style="width:260px"></div><div class="tbl"><table id="tAging"></table></div></div>
   </section>
 
   <section id="inv" class="hide">
@@ -293,24 +298,24 @@ td.up{color:var(--ok-700)}td.down{color:var(--err-700)}
       <div class="note hide" id="ivOld" style="margin-top:10px;border-color:var(--warn-500);background:var(--warn-50)"></div>
     </div>
     <div class="kpis" id="ivKpi"></div>
-    <div class="card"><div class="card-h"><h3>Tổng hợp tuổi hàng tồn theo tài khoản</h3><span class="hint">bấm một dòng để lọc chi tiết</span></div><div class="tbl"><table id="tIvSum"></table></div></div>
+    <div class="card"><div class="card-h"><h3>Tổng hợp tuổi hàng tồn theo tài khoản</h3><span class="dblhint">🖱 nhấn đúp để xem bút toán chi tiết</span><span class="hint">bấm một dòng để lọc chi tiết</span></div><div class="tbl"><table id="tIvSum"></table></div></div>
     <div class="grid g2">
       <div class="card"><div class="card-h"><h3>Cơ cấu tuổi hàng tồn</h3></div><div class="cv" style="height:340px"><canvas id="chIv"></canvas></div></div>
-      <div class="card"><div class="card-h"><h3>Tồn âm (xuất vượt nhập)</h3><span class="hint">thiếu phiếu nhập, xuất nhầm mã hàng/kho hoặc chưa có tồn đầu kỳ</span></div><div class="tbl" style="max-height:340px"><table id="tIvNeg"></table></div></div>
+      <div class="card"><div class="card-h"><h3>Tồn âm (xuất vượt nhập)</h3><span class="hint">nhấn đúp để xem chi tiết · thiếu phiếu nhập, xuất nhầm mã hàng/kho hoặc chưa có tồn đầu kỳ</span></div><div class="tbl" style="max-height:340px"><table id="tIvNeg"></table></div></div>
     </div>
-    <div class="card"><div class="card-h"><h3>Chi tiết hàng tồn</h3><div class="sp"></div><div class="tabs" id="ivFlag"><button data-f="" class="on">Tất cả</button><button data-f="slow">Chậm luân chuyển</button><button data-f="old">Tồn &gt; 1 năm</button><button data-f="noprod">Thiếu mã hàng</button></div></div><div class="tbl"><table id="tIv"></table></div></div>
+    <div class="card"><div class="card-h"><h3>Chi tiết hàng tồn</h3><span class="dblhint">🖱 nhấn đúp để xem bút toán chi tiết</span><div class="sp"></div><div class="tabs" id="ivFlag"><button data-f="" class="on">Tất cả</button><button data-f="slow">Chậm luân chuyển</button><button data-f="old">Tồn &gt; 1 năm</button><button data-f="noprod">Thiếu mã hàng</button></div></div><div class="tbl"><table id="tIv"></table></div></div>
   </section>
 
   <section id="pl" class="hide">
     <div class="card pick" id="plPick"></div>
     <div class="kpis" id="plKpi"></div>
     <div class="grid g3">
-      <div class="card"><div class="card-h"><h3>Báo cáo kết quả kinh doanh so sánh</h3><span class="hint" id="plHint"></span></div><div class="tbl"><table id="tPL"></table></div>
+      <div class="card"><div class="card-h"><h3>Báo cáo kết quả kinh doanh so sánh</h3><span class="dblhint">🖱 nhấn đúp để xem bút toán chi tiết</span><span class="hint" id="plHint"></span></div><div class="tbl"><table id="tPL"></table></div>
         <p class="mut" style="font-size:12px;margin:10px 0 0">Phát sinh thuần (Nợ − Có) TK loại 5–8, loại trừ kết chuyển 911. 621/622/623/627 tính vào giá vốn.</p></div>
       <div class="card"><div class="card-h"><h3>Nhận xét</h3></div><div id="plNotes" style="display:flex;flex-direction:column;gap:10px"></div></div>
     </div>
     <div class="card"><div class="card-h"><h3 id="plTrendT">Xu hướng</h3></div><div class="cv" style="height:360px"><canvas id="chMonth"></canvas></div></div>
-    <div class="card"><div class="card-h"><h3>So sánh nhiều năm</h3><span class="hint">cùng khoảng tháng của kỳ phân tích trong từng năm</span></div><div class="tbl"><table id="tPLY"></table></div></div>
+    <div class="card"><div class="card-h"><h3>So sánh nhiều năm</h3><span class="dblhint">🖱 nhấn đúp để xem bút toán chi tiết</span><span class="hint">cùng khoảng tháng của kỳ phân tích trong từng năm</span></div><div class="tbl"><table id="tPLY"></table></div></div>
   </section>
 
   <section id="cost" class="hide">
@@ -321,7 +326,7 @@ td.up{color:var(--ok-700)}td.down{color:var(--err-700)}
         <label class="field" style="flex:1;min-width:200px">Tìm<input class="input" id="anFind" placeholder="Lọc theo tên tài khoản / khoản mục…"></label>
         <button class="btn" id="anXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
       </div>
-      <div class="note brand" style="margin-top:14px">Chi phí = phát sinh Nợ − Có TK loại 6, 8; doanh thu = phát sinh Có − Nợ TK 511, 512, 515, 711; loại trừ kết chuyển 911. Bấm một dòng để xem các bút toán chi tiết.</div>
+      <div class="note brand" style="margin-top:14px">Chi phí = phát sinh Nợ − Có TK loại 6, 8; doanh thu = phát sinh Có − Nợ TK 511, 512, 515, 711; loại trừ kết chuyển 911. Nhấn đúp vào một dòng để xem các bút toán chi tiết.</div>
     </div>
     <div class="card pick" id="anPick"></div>
     <div class="kpis" id="anKpi"></div>
@@ -402,6 +407,7 @@ Bộ phận Kế toán – Kiểm soát nội bộ</textarea></label>
 
 <div id="drawer" class="hide"><div class="pane" id="dPane"></div></div>
 <div id="toast" class="hide"><div class="row"><b id="tLabel">Đang xử lý…</b><div class="sp"></div><span class="mut" id="tPct"></span></div><div class="mut" id="tSub" style="font-size:13px;margin-top:4px"></div><div class="bar" id="tBar"><i></i></div></div>
+<div id="pageLoad" class="hide"><span class="spin"></span>Đang tải dữ liệu…</div>
 <div id="dropmask" class="hide">Thả file để nạp dữ liệu</div>
 
 <svg width="0" height="0" style="position:absolute">

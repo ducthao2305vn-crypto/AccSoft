@@ -2,7 +2,7 @@
 // Tiến trình nền: mọi thao tác ghi nặng (nạp file, xoá tháng, tính lại lỗi) chạy ở đây để giao diện không bị treo
 const { parentPort, workerData } = require('worker_threads');
 const fs = require('fs');
-const { open, COLS, SEL_ENTRY, rowFromDb } = require('./db');
+const { open, COLS, SEL_ENTRY, rowFromDb, rebuildAgg } = require('./db');
 const { checkRow, errKey, code, fmt2, RULES_VERSION } = require('./rules');
 
 const { db } = open(workerData.dbPath);
@@ -262,14 +262,16 @@ const TASKS = {
     if (replace) deleteMonths(months, importId);
     db.prepare(`UPDATE imports SET status='ok' WHERE id=?`).run(importId);
     refreshImports();
+    post({ type: 'progress', label: 'Đang cập nhật bảng tổng hợp báo cáo…' }); rebuildAgg(db, months);
     const mark = db.prepare('UPDATE months SET analyzed_ver=NULL WHERE ym=?'); for (const m of months) mark.run(m); // tháng mới nạp: chưa phân tích
     db.exec('PRAGMA optimize');
     return { months };
   },
   cancel({ importId }) { post({ type: 'progress', label: 'Đang huỷ lần nạp…' }); db.prepare('DELETE FROM imports WHERE id=?').run(importId); refreshImports(); return {}; },
-  deleteMonth({ ym }) { deleteMonths([ym]); refreshImports(); return {}; },
-  deleteImport({ id }) { post({ type: 'progress', label: 'Đang xoá lần nạp…' }); db.prepare('DELETE FROM imports WHERE id=?').run(id); refreshImports(); return {}; },
-  clear() { post({ type: 'progress', label: 'Đang xoá toàn bộ dữ liệu…' }); db.exec(`DELETE FROM errors; DELETE FROM entries; DELETE FROM imports; DELETE FROM months;`); db.exec('VACUUM'); return {}; },
+  deleteMonth({ ym }) { deleteMonths([ym]); refreshImports(); rebuildAgg(db, [ym]); return {}; },
+  buildAgg() { post({ type: 'progress', label: 'Đang tạo bảng tổng hợp để báo cáo nhanh hơn (một lần)…' }); rebuildAgg(db); return {}; },
+  deleteImport({ id }) { post({ type: 'progress', label: 'Đang xoá lần nạp…' }); db.prepare('DELETE FROM imports WHERE id=?').run(id); refreshImports(); rebuildAgg(db); return {}; },
+  clear() { post({ type: 'progress', label: 'Đang xoá toàn bộ dữ liệu…' }); db.exec(`DELETE FROM errors; DELETE FROM entries; DELETE FROM imports; DELETE FROM months; DELETE FROM agg;`); db.exec('VACUUM'); return {}; },
   recheck() { return analyze({}); },
   analyze: args => analyze(args),
 };

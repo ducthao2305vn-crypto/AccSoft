@@ -1,5 +1,18 @@
 # Lịch sử phiên bản
 
+## v2.9.0 – 31/10/2026
+**Không còn treo máy khi dữ liệu lớn**
+- Mọi truy vấn báo cáo chạy trong worker thường trực – cửa sổ luôn phản hồi (độ trễ < 10 ms khi đang tải báo cáo trên 647.000 dòng); hiển thị "Đang tải dữ liệu…".
+- Bảng tổng hợp sẵn (tháng × TK × khoản mục × bộ phận, TK loại 5–8): Kết quả kinh doanh 5,7 → 0,4 giây; Doanh thu & Chi phí 2,3 → 0,4 giây. Tự cập nhật khi nạp/xoá dữ liệu; CSDL cũ được tạo bảng một lần khi mở.
+- Thêm chỉ mục tài khoản; ghi nhật ký các truy vấn chậm (> 3 giây).
+
+**Nhấn đúp để xem bút toán chi tiết**
+- Áp dụng cho: chi tiết & tổng hợp công nợ, dư ngược chiều, chi tiết & tổng hợp tồn kho, tồn âm, từng ô số liệu của Kết quả kinh doanh (kỳ hiện tại, kỳ so sánh, từng năm), bảng Doanh thu & Chi phí.
+- Màn hình chi tiết: phát sinh Nợ/Có của đúng tài khoản – đối tượng – hợp đồng/đề nghị/khoản mục, số dư lũy kế từng dòng; dòng có lỗi nhấn đúp để mở phần xử lý lỗi.
+
+**TK 335 – Chi phí phải trả (trích trước)**
+- Thêm vào phân tích công nợ (nhóm phải trả); lựa chọn mới "Đối tượng × Khoản mục chi phí"; nút xem nhanh "335 theo đối tượng & khoản mục"; cảnh báo trích trước quá 90 ngày chưa quyết toán/hoàn nhập.
+
 ## v2.8.0 – 31/10/2026
 Công nợ & tuổi nợ – **phân tích theo hợp đồng và đề nghị tạm ứng**:
 - Lựa chọn "Phân tích theo": Đối tượng · Đối tượng × Hợp đồng (cột Contract) · Đối tượng × Đề nghị tạm ứng (cột Advance Request). Đối tượng vẫn lấy theo phía hạch toán (Nợ ↔ Business Partner, Có ↔ Bpartner credit).
