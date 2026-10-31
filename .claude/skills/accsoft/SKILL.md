@@ -32,8 +32,37 @@ DB: `<thư mục app>/AccSoft_Data/accsoft.db` (portable: `PORTABLE_EXECUTABLE_D
 - Import **không** phân tích. Phân tích riêng bằng nút "Phân tích dữ liệu" theo kỳ rà soát (tháng/quý/năm). Trạng thái lưu ở `months.analyzed_ver`.
 - Dòng `source_table='OPENING_BALANCE'` (TK giả `OB`) không bao giờ là lỗi và không vào `agg`.
 - Trạng thái và ghi chú lỗi lưu ở `reviews` theo `err_key`, giữ qua các lần phân tích lại.
-- Huỷ trích 335 (`engine/accrual.js`): trích = Nợ 6xx/Có 335 dương; huỷ = Có 335 số âm hoặc Nợ 335; thực tế = Nợ 6xx/Có khác 335. Ghép đối tượng × khoản mục × kỳ dịch vụ (`period()` đọc diễn giải). Test: dựng bảng `entries` in-memory với các ca trích/huỷ/thực tế.
 - Dữ liệu thật: RateToVND = 0 nên kiểm tra tỷ giá báo "không có dữ liệu".
+
+## Trích trước – huỷ trích 335 (v3.1–3.4)
+Mẫu hạch toán trong ERP:
+| Nghiệp vụ | Bút toán | Diễn giải mẫu |
+|---|---|---|
+| Trích trước | Nợ 6xx / Có 335x, số **dương** | "Estimate … In April 2026" |
+| Huỷ trích | Nợ 6xx / Có 335x, số **ÂM** (hoặc Nợ 335 / Có 6xx) | cùng kỳ dịch vụ |
+| Chi phí thực tế | Nợ 6xx / Có 331, 111, 112… (có hoá đơn) | "Real … In April 2026" |
+| Quyết toán qua 335 (đúng) | Nợ 335 / Có 331 | |
+
+- **`engine/accrual.js`**
+  - `period(desc)` đọc kỳ dịch vụ trong diễn giải (tháng tiếng Anh + năm, "tháng m/yyyy", "mm/yyyy"; lấy kỳ cuối cùng xuất hiện).
+  - `match(all)` ghép theo khoá **đối tượng × khoản mục × kỳ dịch vụ**; diễn giải không có kỳ thì lấy tháng hạch toán, và chi phí thực tế ghép với khoản trích còn dư sớm nhất. Trả về `{groups, flagged}`.
+  - Mỗi group có: `accrued`, `released`, `remain`, `actual`, `paid`/`unpaid`/`lastPay`, `status`, `sev`, `accIds`, `accDocs`, `actDocs`, `invs`, `users`, `age`.
+  - Các tình trạng: Chưa huỷ trích (H khi khớp đúng kỳ, M khi kỳ suy ra), Huỷ trích vượt số đã trích, Chưa có chi phí thực tế, Đã huỷ trích, Đã huỷ / quyết toán, Huỷ trích của kỳ trước dữ liệu.
+  - Thanh toán: các khoản Nợ 331 của đối tượng trả dần cho hoá đơn Có 331 cũ nhất trước (FIFO). Dữ liệu thanh toán ERP không có số hoá đơn, nên số đã thanh toán của từng hoá đơn chỉ là ước tính.
+  - Truy vấn dùng điều kiện khoảng (`acc_credit>='335' AND <'336'`) để dùng được chỉ mục, chạy khoảng 0,5 giây trên 650k dòng; không đổi sang `LIKE`.
+  - `summarize()`, `STATUSES`, `AGE` dùng cho báo cáo.
+- **Quy tắc `ACCRUAL_NOT_REVERSED`** (SET_RULES, nhóm staff): sinh trong `setRules()` của `worker.js`, gắn lỗi vào bút toán **chi phí thực tế** để nó vào email nhắc nhân viên.
+- **`deep.reversal(from,to)`**: dữ liệu cho trang "Phân tích chuyên sâu → Trích – huỷ trích 335", gồm 7 chế độ (`RVM`): detail, per, p, t, u, age, make. Excel 6 sheet: `reports.accrualBook`.
+- **Xuất file import ERP** theo mẫu GL Journal 126 cột:
+  - Tiêu đề cột lấy từ `engine/gl_journal_headers.json` (lấy từ file mẫu `2026.08_HUY_IT_SLA_2026.xls`).
+  - Ghi bằng `reports.reversalErpBook(lines, o)`, xuất `.xls` dạng biff8. Thông tin chứng từ (cột 1–7) chỉ ở dòng đầu; dòng: 12 DueDate, 13 Description, 18/20 TK Nợ/Có, 19/21 số tiền, 22/23 đối tượng, 24 khoản mục, 25 Department Sub, 27 Group cost, 29 Services, 36 Location.
+  - Đổi `mã_tên` của dữ liệu xuất ERP sang `mã-tên` của file import: `vd()` thay `_` đầu tiên (TK, khoản mục, Group cost…); `bpVd()` tách mã đối tượng theo quy tắc, ví dụ `VTL_INTER_0002_TIMOR…` thành `VTL_INTER_0002-TIMOR…`.
+  - **Huỷ trích**: IPC `report:reversalErp(keys,o)`, dùng `queries.reversalLines`. Đảo dòng trích gốc với số âm bằng `remain`, phân bổ từ dòng trích mới nhất. Kèm file `_DoiChieu.xlsx` (`reversalCheckBook`).
+  - **Trích trước kỳ mới**: IPC `report:accrueErp(items,o)`, dùng `queries.accrualSource(per,target)` và `accrualLinesByIds`. Mỗi dòng truyền `out` (số dương) và `outDesc`; `swapPeriod()` trong `app.js` đổi tháng trong diễn giải. Khoản đã có trích ở kỳ đích được đánh `dup` và mặc định bỏ chọn. File đối chiếu: `accrueCheckBook`.
+  - Các cột Group cost, Services, Location, Project, Period có từ v3.3. Dữ liệu cũ bổ sung bằng tác vụ `enrich`.
+- **Test**:
+  - Dựng bảng `entries` in-memory với các ca trích / huỷ / thực tế / quyết toán qua 335, rồi gọi `match()`.
+  - Hoặc chèn dòng TEST vào bản sao DB, chạy Electron (mock `dialog.showSaveDialog`), so file xuất với mẫu: cùng 126 cột, cùng tên sheet. Sau đó khôi phục DB.
 
 ## Thêm / sửa quy tắc
 1. Quy tắc theo dòng: thêm `{k,s,n,d,fix,f:r=>…&&'thông báo'}` vào `RULES`, gán `GROUP[k]` (staff/audit), và `AUDIT_WHY[k]` nếu thuộc nhóm audit. Ngưỡng số đặt trong `CFG_DEFAULT`, sau đó thêm nhãn vào `THL` trong `app.js`.
