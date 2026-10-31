@@ -6,10 +6,7 @@ description: Phát triển, sửa lỗi, kiểm thử và phát hành AccSoft �
 # AccSoft – hướng dẫn làm việc
 
 Người dùng: chuyên gia tài chính/kiểm toán, giao tiếp tiếng Việt, ngắn gọn, chỉ thẳng nếu họ sai.
-Mục đích phần mềm: **quản trị rủi ro khi nhân viên hạch toán**. Từ v3.5 có thêm trang Báo cáo tài chính (`engine/fin.js`): bảng cân đối số phát sinh, B01-DN, B02-DN theo TT200 rút gọn.
-  - Số liệu được gom một lượt theo tháng × TK Nợ × TK Có rồi tính trong JS; không lọc tháng bằng điều kiện `INC` trên toàn bảng vì chậm (khoảng 10 giây).
-  - B03 (`cashFlow`): bảng `IN`/`OUT` phân loại theo TK đối ứng của TK tiền (111–113); bản gián tiếp dùng mã 07 làm số cân đối. Mẫu biểu theo Thông tư 99/2025/TT-BTC (thay TT200 từ năm 2026; người dùng có thể gọi nhầm là "Thông tư 49"). B02 dùng lại `plRange`.
-  - B01 tách dư Nợ/Có theo đối tượng bằng `partnerSplits`.
+Mục đích phần mềm: **quản trị rủi ro khi nhân viên hạch toán**, kèm bộ báo cáo tài chính lập tự động (mục "Báo cáo tài chính").
 
 ## Kiến trúc
 | File | Vai trò |
@@ -20,6 +17,8 @@ Mục đích phần mềm: **quản trị rủi ro khi nhân viên hạch toán*
 | `engine/db.js` | Lược đồ SQLite (`node:sqlite`, WAL). `COLS` = ánh xạ cột ERP → cột `entries`; cột thiếu tự `ALTER TABLE`. Bảng `agg` tổng hợp sẵn TK 5–8 (bỏ 911, bỏ OPENING_BALANCE). |
 | `engine/rules.js` | 37 quy tắc theo dòng (`RULES` {k,s:H/M/L,n,d,fix,f}) + `GROUP` staff/audit, `AUDIT_WHY`, ngưỡng `CFG`/`setConfig`, `RULES_VERSION`. |
 | `engine/queries.js` | Truy vấn báo cáo: overview, errors, aging (FIFO, gom SQL 2 phía), inventory, pl/plRange/plTrend (từ `agg`), cost, ledger (drill-down), thresholds, backup. |
+| `engine/fin.js` | Báo cáo tài chính: Bảng cân đối số phát sinh, B01, B02, B03 (Thông tư 99/2025). |
+| `engine/accrual.js` | Đối chiếu trích trước – huỷ trích 335. |
 | `engine/deep.js` | Phân tích chuyên sâu: recurring, variance, accruals (335), prepaid (242), benford, staff, vendors, fx. |
 | `engine/reports.js` | Xuất Excel, nội dung mail, `ruleInfo()`. |
 | `index.html` + `app.js` | Giao diện (TLM Design, cam #FA4700 chủ đạo, Chart.js). Mỗi trang là `<section id>` + hàm trong `VIEWS`. Nhấn đúp số liệu → `openLedger(title, sub, spec, nat)`. |
@@ -36,6 +35,38 @@ DB: `<thư mục app>/AccSoft_Data/accsoft.db` (portable: `PORTABLE_EXECUTABLE_D
 - Dòng `source_table='OPENING_BALANCE'` (TK giả `OB`) không bao giờ là lỗi và không vào `agg`.
 - Trạng thái và ghi chú lỗi lưu ở `reviews` theo `err_key`, giữ qua các lần phân tích lại.
 - Dữ liệu thật: RateToVND = 0 nên kiểm tra tỷ giá báo "không có dữ liệu".
+
+## Báo cáo tài chính (v3.5–3.7, `engine/fin.js`)
+- **Văn bản áp dụng:** Thông tư **99/2025/TT-BTC**, thay Thông tư 200 từ năm tài chính 2026. Người dùng có thể gọi nhầm là "Thông tư 49"; nếu vậy thì nói thẳng là nhầm.
+  - Tên mẫu: B01-DN "Báo cáo tình hình tài chính", B02-DN "Kết quả hoạt động kinh doanh", B03-DN "Lưu chuyển tiền tệ".
+  - Mã số B03 theo cấu trúc chuẩn: 01–07, 20, 21–27, 30, 31–36, 40, 50, 60, 61, 70.
+  - Chưa đối chiếu được với nguyên văn Thông tư 99 (mạng chặn). Nếu người dùng gửi mẫu chuẩn thì chỉnh lại theo mẫu đó.
+- **Hàm dữ liệu:**
+  - `make(all, okYm, INC, plRange)` tạo các hàm báo cáo; queries xuất ra `finTrial`, `finBalance`, `finIncome`, `finCash` (đã có trong mảng READ).
+  - `base()` gom **một lượt** `GROUP BY ym, acc_debit, acc_credit` (vài nghìn dòng), lọc tháng được chọn bằng `incl()` trong JS, mất khoảng 1 giây trên 650k dòng. **Không** dùng điều kiện `INC` trên toàn bảng: chậm khoảng 10 giây.
+- **`trial(from,to,level)` – bảng cân đối số phát sinh:**
+  - Số đầu kỳ = luỹ kế mọi bút toán có `ym < from` (gồm cả số dư đầu kỳ nhập từ file mẫu với TK giả `OB`). Không có dữ liệu trước kỳ thì bằng 0 và `hasOpening=false`.
+  - `level` 1 là TK cấp 1 (3 số), 0 là TK chi tiết. Tên TK lấy từ bảng `L1`.
+- **`balanceSheet` – B01:**
+  - Danh sách `L` gồm `[mã, tên, hàm(w), cấp, các mã con]`; `w` = 'cb' (cuối kỳ) hoặc 'ob' (đầu kỳ, tức cuối tháng trước `from`).
+  - Công nợ 131/331/138/338/141/136/336 tách dư Nợ / dư Có theo đối tượng bằng `partnerSplits`.
+  - Số dư còn lại của TK loại 5–9 đưa vào mã 421b. TK OB là dòng riêng.
+  - Trả về `diff` (phải bằng 0) và `unmapped` (TK chưa gán chỉ tiêu). Thêm TK mới thì thêm vào cả `L` và tập `used`.
+- **`income` – B02:** dùng lại `plRange` (bảng `agg`, không tính 911). Có kỳ so sánh `cmpFrom/cmpTo`.
+- **`cashFlow` – B03:**
+  - Tiền = TK 111–113. Mỗi khoản thu/chi tiền được phân loại theo TK đối ứng qua bảng `IN`/`OUT` (regex, quy tắc đầu tiên khớp được áp dụng); chuyển tiền giữa các TK tiền bị loại.
+  - Phương pháp gián tiếp: lợi nhuận trước thuế + khấu hao (biến động 214) + dự phòng − doanh thu tài chính + biến động vốn lưu động lấy từ bảng cân đối số phát sinh. **Mã 07 là số cân đối** để mã 20 bằng dòng tiền thực tế.
+  - Kiểm tra: `check` = 50 + 60 + 61 − tiền cuối kỳ phải bằng 0.
+- **Giao diện (`vFin` trong `app.js`):**
+  - Các tab tb/bs/pl/cf; B03 có nút chuyển trực tiếp/gián tiếp (`FP.cfm`).
+  - Kỳ báo cáo `FP.mode`: m (tháng), q (quý), y (năm), ytd (luỹ kế đầu năm), r (khoảng tháng); mode suy ra `from/to`. Kỳ chưa đủ tháng được cắt đến tháng cuối có dữ liệu (`partial`).
+  - So sánh B02: cùng kỳ năm trước = lùi 12 tháng; kỳ liền trước = lùi N tháng (m: 1, q: 3, y/ytd: 12), luôn cùng số tháng.
+  - Nhấn đúp chỉ tiêu B02 mở `openLedger` kind 'pl'.
+- **Excel:** IPC `report:fin` gọi `reports.finBook(tb, bs, pl, o, cf)`, tạo 7 sheet: CDSPS, B01-DN, B02-DN, B03 trực tiếp, B03 gián tiếp, B03 phân loại, Thông tin.
+- **Kiểm thử:**
+  - Gọi `require('./engine/queries')(db)` với DB chỉ đọc.
+  - Kiểm tra: tổng Nợ = tổng Có (đầu kỳ, phát sinh, cuối kỳ); B01 `diff` ≈ 0 và `diffOb` ≈ 0; B03 `check` ≈ 0; bản gián tiếp cộng ra đúng mã 20.
+- **Chưa có:** thuyết minh B09; tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Trích trước – huỷ trích 335 (v3.1–3.4)
 Mẫu hạch toán trong ERP:
