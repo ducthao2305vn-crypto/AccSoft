@@ -193,6 +193,7 @@ section.loading{opacity:.55;transition:opacity .2s;pointer-events:none}
     <button data-p="inv"><svg class="icon"><use href="#i-box"/></svg>Tuổi hàng tồn kho</button>
     <button data-p="pl"><svg class="icon"><use href="#i-chart"/></svg>Kết quả kinh doanh</button>
     <button data-p="cost"><svg class="icon"><use href="#i-pie"/></svg>Doanh thu & Chi phí</button>
+    <button data-p="deep"><svg class="icon"><use href="#i-trend"/></svg>Phân tích chuyên sâu</button>
     <div class="sec">Kiểm soát</div>
     <button data-p="report"><svg class="icon"><use href="#i-mail"/></svg>Báo cáo & Thông báo</button>
     <button data-p="data"><svg class="icon"><use href="#i-db"/></svg>Quản lý dữ liệu</button>
@@ -337,12 +338,20 @@ section.loading{opacity:.55;transition:opacity .2s;pointer-events:none}
     <div class="card"><div class="card-h"><h3 id="anTblT">Bảng phân tích</h3><span class="hint" id="anHint"></span></div><div class="tbl" style="max-height:640px"><table id="tAn"></table></div></div>
   </section>
 
+  <section id="deep" class="hide">
+    <div class="card" style="padding:12px 16px"><div class="tabs" id="dpTabs">
+      <button data-d="recurring" class="on">Chi phí định kỳ</button><button data-d="variance">Biến động bất thường</button><button data-d="accrual">Trích trước 335 & Phân bổ 242</button>
+      <button data-d="staff">Chấm điểm nhân viên</button><button data-d="benford">Benford & số tròn</button><button data-d="vendors">Nhà cung cấp</button><button data-d="fx">Tỷ giá</button></div></div>
+    <div class="card pick" id="dpCtl"></div>
+    <div id="dpBody" style="display:flex;flex-direction:column;gap:20px"></div>
+  </section>
+
   <section id="report" class="hide">
     <div class="card rvbar noprint" id="rvRep"></div>
     <div class="note hide pendNote noprint"></div>
     <div class="card">
       <div class="card-h"><div><h3>Báo cáo kết quả kiểm tra bút toán</h3><div class="hint" id="repPeriod"></div></div><div class="sp"></div>
-        <div class="row noprint"><button class="btn" id="repPrint"><svg class="icon"><use href="#i-print"/></svg>In / Lưu PDF</button><button class="btn light" id="repXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button></div></div>
+        <div class="row noprint"><button class="btn primary" id="repPdf"><svg class="icon"><use href="#i-file"/></svg>Báo cáo rủi ro (PDF)</button><button class="btn" id="repPrint"><svg class="icon"><use href="#i-print"/></svg>In / Lưu PDF</button><button class="btn light" id="repXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button></div></div>
       <div class="kpis" id="repKpi"></div>
       <div class="grid g2" style="margin-top:20px">
         <div><h4 style="margin-bottom:10px">Theo loại lỗi</h4><div class="tbl"><table id="tRepRule"></table></div></div>
@@ -395,6 +404,16 @@ Bộ phận Kế toán – Kiểm soát nội bộ</textarea></label>
       <div class="card-h"><h3>Các lần nạp file</h3><div class="sp"></div><button class="btn sm ghost" id="openDb"><svg class="icon"><use href="#i-db"/></svg>Mở thư mục CSDL</button></div>
       <div class="tbl"><table id="tImports"></table></div>
     </div>
+    <div class="grid g2">
+      <div class="card"><div class="card-h"><div><h3>Số dư đầu kỳ</h3><div class="hint">Để tuổi nợ, tồn kho, tạm ứng, 335/242 chính xác ngay từ tháng dữ liệu đầu tiên. Dùng file mẫu: TK + đối tượng (+ hợp đồng / đề nghị TU / khoản mục / mặt hàng) + Dư Nợ / Dư Có.</div></div></div>
+        <div class="row"><button class="btn" id="obTpl"><svg class="icon"><use href="#i-download"/></svg>Tải file mẫu</button><button class="btn light" id="obImp"><svg class="icon"><use href="#i-upload"/></svg>Nạp số dư đầu kỳ</button></div>
+        <p class="mut" style="font-size:12px">Số dư đầu kỳ hiện trong "Các lần nạp file" (tên bắt đầu "Số dư đầu kỳ:"), xoá được như file thường; không bị tính là lỗi nhân viên.</p></div>
+      <div class="card"><div class="card-h"><div><h3>Sao lưu & khôi phục</h3><div class="hint">Tự sao lưu trước mỗi lần xoá tháng / xoá lần nạp / xoá toàn bộ / nạp số dư đầu kỳ. Giữ 10 bản gần nhất trong AccSoft_Data\backups.</div></div></div>
+        <div class="row"><button class="btn light" id="bkNow"><svg class="icon"><use href="#i-db"/></svg>Sao lưu ngay</button><button class="btn" id="bkPick">Khôi phục từ file…</button></div>
+        <div class="tbl" style="max-height:220px;margin-top:10px"><table id="tBk"></table></div></div>
+    </div>
+    <div class="card"><div class="card-h"><div><h3>Cài đặt ngưỡng cảnh báo</h3><div class="hint">Theo quy chế công ty. Đổi ngưỡng quy tắc → các tháng cần "Phân tích dữ liệu" lại.</div></div><div class="sp"></div><button class="btn sm ghost" id="thReset">Về mặc định</button><button class="btn sm primary" id="thSave">Lưu cài đặt</button></div>
+      <div class="filters" id="thForm" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))"></div></div>
     <div class="card">
       <div class="card-h"><h3>Bảo trì</h3></div>
       <div class="kv" id="dbInfo"></div>

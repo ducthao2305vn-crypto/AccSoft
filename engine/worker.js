@@ -3,10 +3,11 @@
 const { parentPort, workerData } = require('worker_threads');
 const fs = require('fs');
 const { open, COLS, SEL_ENTRY, rowFromDb, rebuildAgg } = require('./db');
-const { checkRow, errKey, code, fmt2, RULES_VERSION } = require('./rules');
+const { checkRow, errKey, code, fmt2, RULES_VERSION, setConfig, CFG } = require('./rules');
 
 const { db } = open(workerData.dbPath);
 const post = m => parentPort.postMessage(m);
+try { setConfig(JSON.parse(db.prepare(`SELECT v FROM settings WHERE k='thresholds'`).get()?.v || '{}')); } catch (e) { /* dùng mặc định */ }
 const BATCH = 5000;
 
 /* ---------- Chuẩn hoá giá trị ô ---------- */
@@ -44,6 +45,7 @@ const SRC = {
   trev: ['Type of revenue ERP', str], trev2: ['Type of revenue BCCS', str], inv: ['Invoice', str], adv: ['Advance Request', str],
   contract: ['Contract', str], user: ['Created By', str], updUser: ['Updated By', str], cf: ['Cashflow activities', str], bts: ['BTS Site', str],
   product: ['Product', str], uom: ['UOM', str], loc: ['Locator', str], locCr: ['Locator Credit', str],
+  distFrom: ['Distribution From', isoDate], distTo: ['Distribution To', isoDate], currency: ['Currency', str], rate: ['Rate', num], rateVnd: ['RateToVND', num],
 };
 function headerMap(header) {
   const idx = {};
@@ -166,7 +168,7 @@ function setRules(scope = {}) {
   flush();
   for (const r of db.prepare(`SELECT id, document_no doc, line_no line, acc_debit dr, acc_credit cr, amount amt, type_of_cost t FROM entries WHERE ${EXP} AND amount>100${S('')}`).iterate()) {
     const m = med.get(r.t);
-    if (m != null && r.amt > 10 * m) insErr.run(r.id, 'OUTLIER', 'M', `${fmt2(r.amt)} so với trung vị ${fmt2(m)}`, keyOf('OUTLIER', r));
+    if (m != null && r.amt > CFG.outlierFactor * m) insErr.run(r.id, 'OUTLIER', 'M', `${fmt2(r.amt)} so với trung vị ${fmt2(m)}`, keyOf('OUTLIER', r));
   }
   const SELR = `e.id, e.document_no doc, e.line_no line, e.acc_debit dr, e.acc_credit cr, e.amount amt, e.quantity qty`;
   // Chứng từ có dòng thuộc nhiều tháng
@@ -215,6 +217,7 @@ function analyze({ from = '', to = '' } = {}) {
     post({ type: 'progress', label: 'Đang phân tích từng bút toán', rows: done, pct: done / total * 90, secs: (Date.now() - t0) / 1000 });
   }
   setRules({ from, to });
+  db.exec(`DELETE FROM errors WHERE entry_id IN (SELECT id FROM entries WHERE source_table='OPENING_BALANCE')`); // số dư đầu kỳ không phải bút toán của nhân viên
   const ms = db.prepare(`UPDATE months SET analyzed_ver=? WHERE 1${sc.replace(/e\.ym/g, 'ym')} RETURNING ym`).all(RULES_VERSION).map(r => r.ym);
   return { rows: total, months: ms.length, secs: (Date.now() - t0) / 1000 };
 }
@@ -226,7 +229,8 @@ async function enrichFile({ file, name }) {
   const rows = /\.csv$|\.txt$/i.test(name) ? csvRows(file, b => read += b) : xlsxRows(file, b => read += b);
   // Khớp theo số chứng từ + line + TK Nợ + TK Có + số tiền
   const find = db.prepare(`SELECT id, product, uom, locator, locator_credit FROM entries WHERE document_no IS ? AND line_no IS ? AND acc_debit=? AND acc_credit=? AND abs(amount-?)<0.005`);
-  const upd = db.prepare(`UPDATE entries SET product=coalesce(?,product), uom=coalesce(?,uom), locator=coalesce(?,locator), locator_credit=coalesce(?,locator_credit), enriched=1 WHERE id=?`);
+  const upd = db.prepare(`UPDATE entries SET product=coalesce(?,product), uom=coalesce(?,uom), locator=coalesce(?,locator), locator_credit=coalesce(?,locator_credit),
+    dist_from=coalesce(?,dist_from), dist_to=coalesce(?,dist_to), currency=coalesce(?,currency), rate=coalesce(?,rate), rate_vnd=coalesce(?,rate_vnd), enriched=1 WHERE id=?`);
   const samples = [];
   db.exec('BEGIN');
   try {
@@ -239,7 +243,7 @@ async function enrichFile({ file, name }) {
       if (hit.length > 1) ambiguous++;
       matched++;
       if (!r.product && !r.loc && !r.locCr && !r.uom) skipped++; // file gốc cũng không có mã hàng/kho: chỉ đánh dấu đã đối chiếu
-      for (const h of hit) { upd.run(r.product, r.uom, r.loc, r.locCr, h.id); if (h.product !== r.product || h.uom !== r.uom || h.locator !== r.loc || h.locator_credit !== r.locCr) updated++; }
+      for (const h of hit) { upd.run(r.product, r.uom, r.loc, r.locCr, r.distFrom, r.distTo, r.currency, r.rate, r.rateVnd, h.id); if (h.product !== r.product || h.uom !== r.uom || h.locator !== r.loc || h.locator_credit !== r.locCr) updated++; }
       if (n % BATCH === 0) {
         db.exec('COMMIT'); db.exec('BEGIN');
         if (Date.now() - lastPost > 400) { lastPost = Date.now(); post({ type: 'progress', rows: n, pct: Math.min(99, read / size * 100), secs: (Date.now() - t0) / 1000 }); }
@@ -253,19 +257,67 @@ async function enrichFile({ file, name }) {
   return { rows: n, matched, updated, notFound, ambiguous, skipped, samples, secs: (Date.now() - t0) / 1000 };
 }
 
+/* ---------- Số dư đầu kỳ (file mẫu) ---------- */
+// Mỗi dòng: TK + đối tượng (+ hợp đồng / đề nghị TU / khoản mục / mặt hàng) + Dư Nợ / Dư Có. Lưu như bút toán đối ứng với TK giả 'OB'.
+async function importOpening({ file, name }) {
+  const ExcelJS = require('exceljs');
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.readFile(file);
+  const ws = wb.worksheets[0]; if (!ws) throw new Error('File không có sheet dữ liệu.');
+  const head = ws.getRow(1).values.slice(1).map(h => String(cell(h) ?? '').trim().toLowerCase());
+  const col = (...names) => { const i = head.findIndex(h => names.some(n => h === n || h.startsWith(n))); return i < 0 ? null : i; };
+  const C = { acc: col('tài khoản', 'tk', 'account'), bp: col('đối tượng', 'business partner'), contract: col('hợp đồng', 'contract'), adv: col('đề nghị tạm ứng', 'advance'),
+    tcost: col('khoản mục', 'type of cost'), product: col('mặt hàng', 'product'), date: col('ngày số dư', 'ngày', 'date'), due: col('hạn thanh toán', 'due'),
+    dr: col('dư nợ', 'debit'), cr: col('dư có', 'credit'), qty: col('số lượng', 'quantity'), desc: col('diễn giải', 'description') };
+  if (C.acc == null || (C.dr == null && C.cr == null) || C.date == null) throw new Error('Thiếu cột bắt buộc: Tài khoản, Ngày số dư, Dư Nợ / Dư Có (dùng file mẫu).');
+  const { lastInsertRowid: importId } = db.prepare(`INSERT INTO imports(file_name,file_hash,status,schema) VALUES(?,?,'pending',2)`).run('Số dư đầu kỳ: ' + name, name);
+  let n = 0, skipped = 0;
+  db.exec('BEGIN');
+  try {
+    ws.eachRow((row, i) => {
+      if (i === 1) return;
+      const v = row.values.slice(1), g = k => C[k] == null ? null : cell(v[C[k]]);
+      const acc = String(g('acc') ?? '').trim().split(/[_\s]/)[0]; if (!acc) return;
+      if (/^v[íi] d[ụu]/i.test(String(g('desc') ?? '').trim())) { skipped++; return; } // dòng ví dụ của file mẫu
+      const date = isoDate(g('date')); if (!date) throw new Error(`Dòng ${i}: thiếu hoặc sai Ngày số dư.`);
+      const base = { line: i, doc: 'SO-DU-DAU-KY', date, due: isoDate(g('due')), amt: 0, qty: num(g('qty')), contract: str(g('contract')), adv: str(g('adv')), tcost: str(g('tcost')),
+        product: str(g('product')), desc: str(g('desc')) || 'Số dư đầu kỳ', table: 'OPENING_BALANCE', user: 'Số dư đầu kỳ', currency: 'USD' };
+      const dr = num(g('dr')) || 0, cr = num(g('cr')) || 0, bp = str(g('bp'));
+      if (dr) { writeRow(importId, { ...base, amt: dr, dr: acc, cr: 'OB', drName: acc, crName: 'OB_Số dư đầu kỳ', bp, bpCr: null }); n++; }
+      if (cr) { writeRow(importId, { ...base, amt: cr, dr: 'OB', cr: acc, drName: 'OB_Số dư đầu kỳ', crName: acc, bp: null, bpCr: bp }); n++; }
+    });
+    db.exec('COMMIT');
+  } catch (e) { try { db.exec('ROLLBACK'); } catch (_) {} db.prepare('DELETE FROM imports WHERE id=?').run(importId); throw e; }
+  db.prepare(`UPDATE imports SET status='ok' WHERE id=?`).run(importId);
+  refreshImports();
+  // tháng chỉ chứa số dư đầu kỳ: coi như đã phân tích
+  db.prepare(`UPDATE months SET analyzed_ver=? WHERE ym IN (SELECT DISTINCT ym FROM entries WHERE import_id=?) AND NOT EXISTS (SELECT 1 FROM entries x WHERE x.ym=months.ym AND ifnull(x.source_table,'')<>'OPENING_BALANCE')`).run(RULES_VERSION, importId);
+  return { rows: n, skipped };
+}
+
 /* ---------- Điều phối ---------- */
 const TASKS = {
   import: importFile,
   enrich: enrichFile,
-  finalize({ importId, replace }) {
+  opening: importOpening,
+  // mode: 'replace' = thay dữ liệu tháng trùng; 'merge' = giữ dữ liệu cũ, chỉ thêm bút toán chưa có; khác = tháng mới
+  finalize({ importId, replace, mode }) {
+    if (replace) mode = 'replace';
     const months = db.prepare('SELECT DISTINCT ym FROM entries WHERE import_id=? AND ym IS NOT NULL').all(importId).map(r => r.ym);
-    if (replace) deleteMonths(months, importId);
+    let merged = 0;
+    if (mode === 'replace') deleteMonths(months, importId);
+    if (mode === 'merge') {
+      post({ type: 'progress', label: 'Đang gộp – bỏ các bút toán đã có…' });
+      db.exec('BEGIN');
+      merged = db.prepare(`DELETE FROM entries WHERE import_id=? AND EXISTS (SELECT 1 FROM entries x WHERE x.import_id<>entries.import_id
+        AND x.document_no IS entries.document_no AND x.line_no IS entries.line_no AND x.acc_debit=entries.acc_debit AND x.acc_credit=entries.acc_credit AND abs(x.amount-entries.amount)<0.005)`).run(importId).changes;
+      db.exec('COMMIT');
+    }
     db.prepare(`UPDATE imports SET status='ok' WHERE id=?`).run(importId);
     refreshImports();
     post({ type: 'progress', label: 'Đang cập nhật bảng tổng hợp báo cáo…' }); rebuildAgg(db, months);
     const mark = db.prepare('UPDATE months SET analyzed_ver=NULL WHERE ym=?'); for (const m of months) mark.run(m); // tháng mới nạp: chưa phân tích
     db.exec('PRAGMA optimize');
-    return { months };
+    return { months, merged, kept: db.prepare('SELECT count(*) n FROM entries WHERE import_id=?').get(importId).n };
   },
   cancel({ importId }) { post({ type: 'progress', label: 'Đang huỷ lần nạp…' }); db.prepare('DELETE FROM imports WHERE id=?').run(importId); refreshImports(); return {}; },
   deleteMonth({ ym }) { deleteMonths([ym]); refreshImports(); rebuildAgg(db, [ym]); return {}; },

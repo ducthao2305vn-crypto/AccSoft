@@ -5,6 +5,12 @@ const fmt2=v=>(+v).toLocaleString('en-US',{maximumFractionDigits:2});
 const num=v=>{if(v==null||v==='')return null;const n=typeof v==='number'?v:parseFloat(String(v).replace(/,/g,''));return isNaN(n)?null:n};
 const code=s=>String(s??'').split('_')[0].trim();
 const ym=d=>d?d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'):'';
+// Ngưỡng cảnh báo – người dùng chỉnh trong Cài đặt (lưu trong bảng settings, khoá 'thresholds')
+const CFG_DEFAULT={dueBefore:30,cashRound:10000,bigExpense:10000,roundExpense:5000,monthEndLarge:50000,dueLong:365,manualJe:10000,outlierFactor:10,
+  advDays:30,accrualDays:90,variancePct:50,varianceMin:1000,recurringShare:75};
+const CFG={...CFG_DEFAULT};
+function setConfig(c){Object.assign(CFG,CFG_DEFAULT,c||{});for(const k in CFG)CFG[k]=+CFG[k]||CFG_DEFAULT[k];return CFG}
+const isOB=r=>r.table==='OPENING_BALANCE'; // dòng số dư đầu kỳ: không rà soát
 const isRev=a=>/^(511|512|515|711)/.test(a), isExp=a=>/^(6|8)/.test(a)&&!/^911/.test(a);
 const isAuto=r=>/Depreciation|Distribution|CIP/i.test(r.table||''); // bút toán hệ thống tự sinh
 const isInv=a=>/^15[1-8]/.test(a)&&!/^154/.test(a); // hàng tồn kho (trừ 154 SXKD dở dang)
@@ -50,11 +56,11 @@ const RULES=[
  {k:'PARTNER_MISSING',s:'H',n:'Công nợ thiếu đối tượng',d:'Dòng ghi TK công nợ (131/331/141/136/336) nhưng không có đối tượng tương ứng.',
   f:r=>(isPartner(r.dr)&&!r.bp)||(isPartner(r.cr)&&!(r.bpCr||r.bp))?'Thiếu Business Partner':false},
  {k:'DUE_BEFORE_DOC',s:'L',n:'Hạn thanh toán trước ngày hạch toán',d:'Due Date sớm hơn Account Date quá 30 ngày – hạch toán chậm hoặc nhập sai hạn.',
-  f:r=>r.due&&r.date&&(r.date-r.due)/864e5>30&&`Hạn ${r.due.toLocaleDateString('vi')} – HT ${r.date.toLocaleDateString('vi')}`},
+  f:r=>r.due&&r.date&&(r.date-r.due)/864e5>CFG.dueBefore&&`Hạn ${r.due.toLocaleDateString('vi')} – HT ${r.date.toLocaleDateString('vi')}`},
  {k:'WEEKEND',s:'L',n:'Hạch toán ngày nghỉ',d:'Ngày hạch toán là Chủ nhật (trừ cuối tháng).',
   f:r=>r.date&&r.date.getDay()===0&&new Date(r.date.getFullYear(),r.date.getMonth()+1,0).getDate()!==r.date.getDate()&&'Chủ nhật'},
  {k:'CASH_ROUND',s:'L',n:'Chi tiền mặt số tròn lớn',d:'Chi/thu tiền mặt-ngân hàng số tròn ≥ 10.000 – rủi ro tạm ứng/thanh toán không chứng từ.',
-  f:r=>(isCash(r.cr)||isCash(r.dr))&&Math.abs(r.amt)>=10000&&r.amt%1000===0&&`${fmt(r.amt)}`},
+  f:r=>(isCash(r.cr)||isCash(r.dr))&&Math.abs(r.amt)>=CFG.cashRound&&r.amt%1000===0&&`${fmt(r.amt)}`},
  // ---- Bổ sung v2.3: rà soát nâng cao ----
  {k:'FUTURE_DATE',s:'H',n:'Ngày hạch toán ở tương lai',d:'Ngày hạch toán sau ngày hiện tại – nhập sai năm/tháng hoặc ghi sổ trước khi nghiệp vụ phát sinh.',
   f:r=>r.date&&r.date-Date.now()>864e5&&`Ngày ${r.date.toLocaleDateString('vi')}`},
@@ -65,22 +71,22 @@ const RULES=[
  {k:'ASSET_TO_EXPENSE',s:'M',n:'Ghi giảm TSCĐ vào chi phí',d:'Nợ TK chi phí / Có TK nguyên giá TSCĐ (211, 213) – kiểm tra hồ sơ thanh lý, khấu hao hết, hoặc phân loại nhầm.',
   f:r=>isExp(r.dr)&&/^21[123]/.test(r.cr)&&!/^214/.test(r.cr)&&`Nợ ${r.dr} / Có ${r.crName}`},
  {k:'BIG_NO_REF',s:'M',n:'Chi phí lớn thiếu chứng từ tham chiếu',d:'Chi phí ≥ 10.000 không gắn hợp đồng, hoá đơn hay đề nghị tạm ứng/thanh toán.',
-  f:r=>isExp(r.dr)&&r.amt>=10000&&!r.contract&&!r.inv&&!r.adv&&!/^(214|242|241|154)/.test(r.cr)&&`${fmt2(r.amt)} không có hợp đồng/hoá đơn/đề nghị`},
+  f:r=>isExp(r.dr)&&r.amt>=CFG.bigExpense&&!r.contract&&!r.inv&&!r.adv&&!/^(214|242|241|154)/.test(r.cr)&&`${fmt2(r.amt)} không có hợp đồng/hoá đơn/đề nghị`},
  {k:'EDITED_BY_OTHER',s:'L',n:'Bút toán bị người khác sửa',d:'Người cập nhật khác người tạo – xác nhận việc sửa đã được phê duyệt.',
   f:r=>r.updUser&&r.user&&r.updUser!==r.user&&`Tạo: ${String(r.user).split('_')[0]} · Sửa: ${String(r.updUser).split('_')[0]}`},
  {k:'ROUND_EXPENSE',s:'L',n:'Chi phí số tròn lớn',d:'Chi phí ≥ 5.000 là số tròn nghìn – thường là ước tính/khoán, cần chứng từ chi tiết.',
-  f:r=>isExp(r.dr)&&!isAuto(r)&&r.amt>=5000&&r.amt%1000===0&&fmt2(r.amt)},
+  f:r=>isExp(r.dr)&&!isAuto(r)&&r.amt>=CFG.roundExpense&&r.amt%1000===0&&fmt2(r.amt)},
  {k:'MONTH_END_LARGE',s:'L',n:'Bút toán lớn sát cuối tháng',d:'Doanh thu/chi phí ≥ 50.000 ghi trong 2 ngày cuối tháng – rủi ro ghi nhận sai kỳ (cut-off).',
-  f:r=>{if(!r.date||isAuto(r)||!(isExp(r.dr)||isRev(r.cr))||Math.abs(r.amt)<50000)return false;const last=new Date(r.date.getFullYear(),r.date.getMonth()+1,0).getDate();return last-r.date.getDate()<2&&`${fmt2(r.amt)} ngày ${r.date.toLocaleDateString('vi')}`}},
+  f:r=>{if(!r.date||isAuto(r)||!(isExp(r.dr)||isRev(r.cr))||Math.abs(r.amt)<CFG.monthEndLarge)return false;const last=new Date(r.date.getFullYear(),r.date.getMonth()+1,0).getDate();return last-r.date.getDate()<2&&`${fmt2(r.amt)} ngày ${r.date.toLocaleDateString('vi')}`}},
  {k:'DUE_LONG',s:'L',n:'Hạn thanh toán quá dài',d:'Hạn thanh toán cách ngày hạch toán hơn 1 năm – kiểm tra nhập sai năm hoặc phân loại nợ dài hạn.',
-  f:r=>r.due&&r.date&&(r.due-r.date)/864e5>365&&`Hạn ${r.due.toLocaleDateString('vi')}`},
+  f:r=>r.due&&r.date&&(r.due-r.date)/864e5>CFG.dueLong&&`Hạn ${r.due.toLocaleDateString('vi')}`},
  {k:'DEP_MISMATCH',s:'M',n:'Khấu hao sai khoản mục',d:'Ghi Có 214 (hao mòn) nhưng khoản mục không phải khấu hao, hoặc khoản mục khấu hao nhưng không ghi Có 214.',
   f:r=>{if(!isExp(r.dr)||!r.tcost)return false;const dep=/dep\.|depreciation|kh[aấ]u hao|amorti/i.test(r.tcost);
    if(/^214/.test(r.cr)&&!dep)return `Có 214 nhưng khoản mục: ${String(r.tcost).slice(0,50)}`;if(dep&&!/^214/.test(r.cr)&&!/^242/.test(r.cr))return `Khoản mục khấu hao nhưng Có ${r.cr}`;return false}},
  {k:'REV_NO_INVOICE',s:'L',n:'Doanh thu không gắn hoá đơn',d:'Ghi Có TK doanh thu nhưng không có số hoá đơn – kiểm tra đã xuất hoá đơn hay doanh thu ước tính.',
   f:r=>isRev(r.cr)&&r.amt>0&&!r.inv&&'Thiếu Invoice'},
  {k:'MANUAL_JE_LARGE',s:'M',n:'Bút toán thủ công giá trị lớn',d:'Bút toán ghi sổ thủ công (GL Journal) ≥ 10.000 vào doanh thu, chi phí hoặc tiền – đối tượng kiểm toán viên chọn mẫu khi kiểm tra bút toán (journal entry testing).',
-  f:r=>/GL_Journal|Journal/i.test(r.table||'')&&Math.abs(r.amt)>=10000&&(isRev(r.dr)||isRev(r.cr)||isExp(r.dr)||isExp(r.cr)||isCash(r.dr)||isCash(r.cr))&&`${fmt2(r.amt)} · Nợ ${r.dr} / Có ${r.cr}`},
+  f:r=>/GL_Journal|Journal/i.test(r.table||'')&&Math.abs(r.amt)>=CFG.manualJe&&(isRev(r.dr)||isRev(r.cr)||isExp(r.dr)||isExp(r.cr)||isCash(r.dr)||isCash(r.cr))&&`${fmt2(r.amt)} · Nợ ${r.dr} / Có ${r.cr}`},
  {k:'INV_NO_PRODUCT',s:'M',n:'Hàng tồn kho thiếu mã hàng',d:'Dòng ghi TK hàng tồn kho (151–158, trừ 154) nhưng không có mã hàng (Product) – không theo dõi được tồn kho và tuổi hàng theo mặt hàng.',
   f:r=>(r._schema>=2||r._enriched)&&(isInv(r.dr)||isInv(r.cr))&&!r.product&&`TK ${isInv(r.dr)?r.dr:r.cr} không có Product`},
 ];
@@ -137,6 +143,7 @@ const ST={open:'Chưa xử lý',doing:'Đang xử lý',fixed:'Đã khắc phục
 // Áp dụng các quy tắc từng dòng; trả về [{k,s,msg}]
 function checkRow(r){
   const out=[];
+  if(isOB(r))return out;
   for(const ru of RULES){let m;try{m=ru.f(r)}catch(e){m=false}if(m)out.push({k:ru.k,s:ru.s,msg:String(m)})}
   return out;
 }
@@ -168,5 +175,5 @@ const AUDIT_WHY={
 const GROUP=Object.fromEntries(ALL_RULES.map(r=>[r.k,AUDIT_WHY[r.k]?'audit':'staff']));
 const GROUPS={staff:'Sai sót nhân viên',audit:'Sai sót dễ bị kiểm toán'};
 const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||'',g:GROUP[k],why:AUDIT_WHY[k]||''})),status:ST,groups:GROUPS});
-const RULES_VERSION=10; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
-module.exports={GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};
+const RULES_VERSION=11; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
+module.exports={CFG,CFG_DEFAULT,setConfig,GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};

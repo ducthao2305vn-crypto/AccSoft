@@ -83,4 +83,5 @@ function mailHtml(user, rows, o) {
 }
 const mailSubject = u => `[AccSoft] Danh sách bút toán cần khắc phục – ${shortName(u)}`;
 
-module.exports = { inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };
+const ruleInfo = () => ({ RULE_NAMES: Object.fromEntries(ALL_RULES.map(r => [r.k, r.n])), GROUPS, GROUP });
+module.exports = { ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };

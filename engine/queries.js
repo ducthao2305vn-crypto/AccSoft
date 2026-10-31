@@ -1,13 +1,23 @@
 'use strict';
 // Truy vấn đọc cho giao diện – mọi phép tổng hợp chạy bằng SQL, giao diện chỉ nhận kết quả đã gọn
 const { COLS, rowFromDb } = require('./db');
-const { meta, ST, RULES_VERSION, GROUP } = require('./rules');
+const { meta, ST, RULES_VERSION, GROUP, CFG, CFG_DEFAULT, setConfig } = require('./rules');
+const deep = require('./deep');
 const RULES_OF = g => Object.keys(GROUP).filter(k => GROUP[k] === g).map(k => `'${k}'`).join(',');
 
 const INC = `e.ym IN (SELECT ym FROM months WHERE included=1)`;
 const STATUS = `coalesce(nullif(rv.status,''),'open')`;
 const SEVN = `CASE er.sev WHEN 'H' THEN 0 WHEN 'M' THEN 1 ELSE 2 END`;
 const like = (col, pres) => '(' + pres.map(p => `${col} LIKE '${p}%'`).join(' OR ') + ')';
+// Dạng khoảng (dùng được chỉ mục): '131' → col >= '131' AND col < '132'
+const nextStr = p => p.slice(0, -1) + String.fromCharCode(p.charCodeAt(p.length - 1) + 1);
+// Lấy các dòng có TK thuộc danh sách ở phía Nợ hoặc phía Có: 2 truy vấn riêng, mỗi truy vấn dùng chỉ mục của cột mình → trả về [dòng, phía]
+function sidePairs(all, sel, pres, where, args) {
+  const a = all(`SELECT ${sel}, e.id _id FROM entries e WHERE ${where} AND ${rng('e.acc_debit', pres)}`, ...args).map(r => [r, 'dr']);
+  const b = all(`SELECT ${sel}, e.id _id FROM entries e WHERE ${where} AND ${rng('e.acc_credit', pres)}`, ...args).map(r => [r, 'cr']);
+  return a.concat(b).sort((x, y) => (x[0].date < y[0].date ? -1 : x[0].date > y[0].date ? 1 : x[0]._id - y[0]._id));
+}
+const rng = (col, pres) => '(' + pres.map(p => `(${col} >= '${p}' AND ${col} < '${nextStr(p)}')`).join(' OR ') + ')';
 
 function make(db) {
   const all = (sql, ...a) => db.prepare(sql).all(...a);
@@ -215,11 +225,15 @@ function make(db) {
   function aging(asOf, term = 30, level = 'l1', dim = 'bp') {
     const asD = new Date(asOf), map = new Map();
     const pres = AG_ACC.map(a => a[0]);
-    const rows = all(`SELECT e.account_date date, e.due_date due, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName,
-        e.amount amt, e.partner_debit bp, e.partner_credit bpCr, e.contract, e.advance_request adv, e.type_of_cost tcost FROM entries e
-      WHERE ${INC} AND e.account_date<=? AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)})`, asOf);
-    for (const r of rows) {
-      for (const side of ['dr', 'cr']) {
+    // Cộng gộp sẵn bằng SQL theo ngày × hạn × TK × đối tượng × mã tham chiếu (chỉ cột cần cho dim) → ít dòng hơn nhiều để tính FIFO
+    const refCol = { contract: 'e.contract', adv: 'e.advance_request', tcost: 'e.type_of_cost' }[dim];
+    const refAs = { contract: 'contract', adv: 'adv', tcost: 'tcost' }[dim];
+    const q = (col, partner, nameAs, accAs, bpAs) => all(`SELECT e.account_date date, e.due_date due, e.acc_${col} ${accAs}, e.acc_${col}_name ${nameAs}, e.${partner} ${bpAs}${refCol ? `, ${refCol} ${refAs}` : ''}, sum(e.amount) amt
+      FROM entries e WHERE ${INC} AND e.account_date<=? AND ${rng('e.acc_' + col, pres)} GROUP BY 1,2,3,4,5${refCol ? ',6' : ''}`, asOf);
+    const pairs = q('debit', 'partner_debit', 'drName', 'dr', 'bp').map(r => [r, 'dr']).concat(q('credit', 'partner_credit', 'crName', 'cr', 'bpCr').map(r => [r, 'cr']))
+      .sort((x, y) => (x[0].date < y[0].date ? -1 : x[0].date > y[0].date ? 1 : 0));
+    for (const [r, side] of pairs) {
+      {
         const accCode = String(r[side] || '');
         const def = AG_ACC.find(a => accCode.startsWith(a[0]));
         if (!def) continue;
@@ -264,12 +278,12 @@ function make(db) {
   };
   function inventory(asOf, by = 'product', level = 'l1') {
     const asD = new Date(asOf), map = new Map(), pres = INV_ACC.map(a => a[0]);
-    const rows = all(`SELECT e.account_date date, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount amt, e.quantity qty,
+    const pairs = sidePairs(all, `e.account_date date, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount amt, e.quantity qty,
         e.product, e.uom, e.locator loc, e.locator_credit locCr, e.partner_debit bp, e.partner_credit bpCr
-      FROM entries e WHERE ${INC} AND e.account_date<=? AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)}) ORDER BY e.account_date`, asOf);
+     `, pres, `${INC} AND e.account_date<=?`, [asOf]);
     const NONE = { product: '(không có mã hàng)', loc: '(không có kho)', bp: '(không có đối tượng)' };
-    for (const r of rows) {
-      for (const side of ['dr', 'cr']) {
+    for (const [r, side] of pairs) {
+      {
         const code = String(r[side] || ''), def = INV_ACC.find(a => code.startsWith(a[0]));
         if (!def) continue;
         // Bút toán chuyển nội bộ cùng TK kho (Nợ 152 / Có 152) vẫn tính hai phía: tăng ở đối tượng Nợ, giảm ở đối tượng Có
@@ -315,10 +329,9 @@ function make(db) {
       e.description "desc", e.created_by user, (SELECT min(er.id) FROM errors er WHERE er.entry_id=e.id) eid`;
     if (spec.kind === 'ag' || spec.kind === 'inv') {
       const acc = String(spec.acc || '');
-      const rows = all(`SELECT ${SEL} FROM entries e WHERE ${INC} AND (e.acc_debit LIKE ? OR e.acc_credit LIKE ?)${spec.asOf ? ' AND e.account_date<=?' : ''}${RNG(spec.from, spec.to)} ORDER BY e.account_date, e.id`,
-        acc + '%', acc + '%', ...(spec.asOf ? [spec.asOf] : []));
+      const pairs = sidePairs(all, SEL, [acc], `${INC}${spec.asOf ? ' AND e.account_date<=?' : ''}${RNG(spec.from, spec.to)}`, spec.asOf ? [spec.asOf] : []);
       const NONE = { bp: '(không có đối tượng)', product: '(không có mã hàng)', loc: '(không có kho)' };
-      for (const r of rows) for (const side of ['dr', 'cr']) {
+      for (const [r, side] of pairs) {
         if (!String(r[side] || '').startsWith(acc)) continue;
         if (spec.kind === 'ag') {
           if (spec.bp != null && ((side === 'dr' ? r.bp : r.bpCr) || NONE.bp) !== spec.bp) continue;
@@ -376,9 +389,20 @@ function make(db) {
     return { review: P, version: V, months: ms.length, pending: ms.filter(m => m.v !== V).map(m => ({ ym: m.ym, old: m.v != null })) };
   }
   const aggEmpty = () => !get('SELECT 1 x FROM agg LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1');
+  // Ngưỡng cảnh báo
+  try { setConfig(JSON.parse(getSetting('thresholds') || '{}')); } catch (e) { /* mặc định */ }
+  const getThresholds = () => ({ cfg: { ...CFG }, def: { ...CFG_DEFAULT } });
+  function setThresholds(c) {
+    setSetting('thresholds', JSON.stringify(c || {})); setConfig(c);
+    db.prepare('UPDATE months SET analyzed_ver=NULL').run(); // ngưỡng đổi → cần phân tích lại
+    return getThresholds();
+  }
+  // Sao lưu nóng an toàn (VACUUM INTO tạo bản sao nhất quán khi đang dùng)
+  function backup(file) { db.prepare('VACUUM INTO ?').run(file); return file; }
+  const D = deep.make(db, { INC, all, get, okYm });
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };

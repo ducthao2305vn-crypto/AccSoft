@@ -20,6 +20,16 @@ Trang **[Releases](https://github.com/ducthao2305vn-crypto/AccSoft/releases/late
 - **Doanh thu & Chi phí** theo tài khoản, khoản mục, bộ phận × tháng/quý/năm, xem chi tiết bút toán.
 - **Báo cáo & Thông báo**: báo cáo kết quả kiểm tra (in/PDF/Excel), danh sách lỗi cần khắc phục theo nhân viên, gửi email qua SMTP kèm Excel.
 
+## Phân tích chuyên sâu (v3)
+- Chi phí định kỳ: thiếu hoặc trùng tháng.
+- Biến động bất thường.
+- 335 / 242.
+- Chấm điểm nhân viên.
+- Benford.
+- Nhà cung cấp.
+- Tỷ giá. Cần cột RateToVND; dữ liệu hiện tại để 0 nên chưa kiểm tra được.
+- Số dư đầu kỳ, cài đặt ngưỡng và sao lưu/khôi phục nằm trong "Quản lý dữ liệu". Bản sao lưu ở `AccSoft_Data\backups`.
+
 ## Phát triển
 ```
 npm install

@@ -1,5 +1,24 @@
 # Lịch sử phiên bản
 
+## v3.0.0 – 31/10/2026
+**Phân tích chuyên sâu & vận hành an toàn**
+- Trang mới "Phân tích chuyên sâu":
+  - Chi phí định kỳ: tháng bị thiếu hoặc ghi trùng.
+  - Biến động bất thường so với trung bình 12 tháng, theo khoản mục, đối tượng, tài khoản và bộ phận.
+  - TK 335 trích trước (quá hạn, quyết toán vượt trích) và TK 242 phân bổ theo lịch.
+  - Chấm điểm nhân viên.
+  - Benford và tỷ lệ số tròn.
+  - Nhà cung cấp: tập trung, NCC mới, tên gần giống, trả trước khi có hoá đơn.
+  - Kiểm tra tỷ giá.
+- Số dư đầu kỳ: tải file mẫu và nạp số dư (công nợ, tạm ứng, tồn kho, 335). Số dư đầu kỳ không bị tính là lỗi.
+- Cài đặt ngưỡng cảnh báo theo quy chế công ty.
+- Nạp file trùng tháng có thêm lựa chọn "Gộp", chỉ thêm bút toán chưa có.
+- Sao lưu:
+  - Sao lưu ngay, khôi phục.
+  - Tự sao lưu trước khi xoá hoặc nạp số dư; giữ 10 bản.
+- Báo cáo tổng hợp rủi ro 1 trang dạng PDF.
+- Tuổi nợ nhanh hơn khoảng 3,5 lần.
+
 ## v2.9.0 – 31/10/2026
 **Không còn treo máy khi dữ liệu lớn**
 - Mọi truy vấn báo cáo chạy trong worker thường trực – cửa sổ luôn phản hồi (độ trễ < 10 ms khi đang tải báo cáo trên 647.000 dòng); hiển thị "Đang tải dữ liệu…".

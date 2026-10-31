@@ -12,6 +12,7 @@ const COLS = [
   ['tcost', 'type_of_cost', 'TEXT'], ['trev', 'type_of_revenue', 'TEXT'], ['inv', 'invoice', 'TEXT'], ['adv', 'advance_request', 'TEXT'],
   ['contract', 'contract', 'TEXT'], ['user', 'created_by', 'TEXT'], ['updUser', 'updated_by', 'TEXT'], ['cf', 'cashflow', 'TEXT'], ['bts', 'bts_site', 'TEXT'],
   ['product', 'product', 'TEXT'], ['uom', 'uom', 'TEXT'], ['loc', 'locator', 'TEXT'], ['locCr', 'locator_credit', 'TEXT'],
+  ['distFrom', 'dist_from', 'TEXT'], ['distTo', 'dist_to', 'TEXT'], ['currency', 'currency', 'TEXT'], ['rate', 'rate', 'REAL'], ['rateVnd', 'rate_vnd', 'REAL'],
 ];
 const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, e.enriched AS _enriched, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
 
@@ -80,7 +81,7 @@ function rebuildAgg(db, months = null) {
   db.exec(`DELETE FROM agg WHERE 1${IN}`);
   for (const [side, col] of [['dr', 'debit'], ['cr', 'credit']])
     db.exec(`INSERT INTO agg SELECT ym, '${side}', acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue, sum(amount), count(*) FROM entries
-      WHERE substr(acc_${col},1,1) IN ('5','6','7','8') AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%' AND ym IS NOT NULL${IN}
+      WHERE substr(acc_${col},1,1) IN ('5','6','7','8') AND ifnull(source_table,'')<>'OPENING_BALANCE' AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%' AND ym IS NOT NULL${IN}
       GROUP BY ym, acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue`);
   db.exec('COMMIT');
 }
