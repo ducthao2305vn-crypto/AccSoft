@@ -66,12 +66,13 @@ function make(db, { INC, all, get, okYm }) {
   }
 
   /* #3a TK 335: trích trước – quyết toán/hoàn nhập theo đối tượng × khoản mục */
-  function accruals(asOf) {
+  function accruals(asOf, acc = '') {
+    const a = /^335\d*$/.test(String(acc || '')) ? String(acc) : '335';
     const rows = all(`SELECT e.account_date d, e.ym, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.type_of_cost t
-      FROM entries e WHERE ${INC} AND e.account_date<=? AND (e.acc_debit LIKE '335%' OR e.acc_credit LIKE '335%')`, asOf);
+      FROM entries e WHERE ${INC} AND e.account_date<=? AND (e.acc_debit LIKE '${a}%' OR e.acc_credit LIKE '${a}%')`, asOf);
     const g = new Map(), asD = new Date(asOf);
     for (const r of rows) for (const side of ['dr', 'cr']) {
-      if (!String(r[side]).startsWith('335')) continue;
+      if (!String(r[side]).startsWith(a)) continue;
       const p = (side === 'dr' ? r.bp : r.bpCr) || '(không có đối tượng)', t = r.t || '(không có khoản mục)', k = p + '|' + t;
       const o = g.get(k) || g.set(k, { p, t, acc: 0, set: 0, accM: new Set(), setM: new Set(), lastAcc: null, lastSet: null, inc: [] }).get(k);
       if (side === 'cr') { o.acc += r.a; if (r.a > 0) { o.accM.add(r.ym); o.inc.push({ d: r.d, v: r.a }); } if (!o.lastAcc || r.d > o.lastAcc) o.lastAcc = r.d; }
@@ -200,8 +201,8 @@ function make(db, { INC, all, get, okYm }) {
 
   /* #13 Số liệu cho báo cáo tổng hợp rủi ro */
   /* Đã ghi chi phí thực tế nhưng chưa huỷ trích 335 */
-  function reversal(from, to) {
-    const r = require('./accrual').match(all), f = okYm(from), t = okYm(to);
+  function reversal(from, to, acc = '') {
+    const r = require('./accrual').match(all, { acc }), f = okYm(from), t = okYm(to);
     const groups = r.groups.filter(g => (!f || g.per >= f || (g.firstAct || '').slice(0, 7) >= f) && (!t || g.per <= t)).map(g => ({ ...g, name: nameOf(g.p) }));
     const byUser = new Map();
     for (const g of groups) if (g.status === 'Chưa huỷ trích') for (const u of g.users) { const o = byUser.get(u) || byUser.set(u, { u, n: 0, amt: 0, H: 0 }).get(u); o.n++; o.amt += Math.min(g.remain, g.actual); if (g.sev === 'H') o.H++; }

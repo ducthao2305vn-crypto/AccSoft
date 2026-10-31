@@ -1,5 +1,17 @@
 # Lịch sử phiên bản
 
+## v4.5.0 – 31/10/2026
+**Lọc theo tài khoản chi tiết 335**
+- Ô chọn "TK chi tiết" (Tất cả TK 335 / 3353 – Accrued vas, roaming… / 3358 – Other accrued expenses…), danh sách tự lấy theo dữ liệu. Có ở:
+  - "Trích – huỷ trích 335": đối chiếu chi tiết, theo kỳ, theo đối tượng, theo khoản mục, theo nhân viên, tuổi khoản treo, lập trích trước kỳ mới.
+  - "Trích trước 335 & Phân bổ 242".
+- Áp dụng cho:
+  - File huỷ trích và file trích trước để import ERP.
+  - Xuất Excel; tên file có số TK.
+  - Sổ chi tiết khi nhấn đúp.
+- Lựa chọn được nhớ cho lần mở sau.
+- **Sửa lỗi:** đổi bộ lọc khi đang ở chế độ "Lập trích trước kỳ mới" có thể báo lỗi giao diện.
+
 ## v4.4.0 – 31/10/2026
 **Lọc chi tiết từng đối tượng trong phân tích phải thu 138812**
 - Thanh lọc mới:

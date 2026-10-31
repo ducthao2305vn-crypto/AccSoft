@@ -31,7 +31,7 @@ contextBridge.exposeInMainWorld('api', {
   finXlsx: p => ipcRenderer.invoke('report:fin', p),
   accrueErp: (items, o) => ipcRenderer.invoke('report:accrueErp', items, o),
   reversalErp: (keys, o) => ipcRenderer.invoke('report:reversalErp', keys, o),
-  accrualXlsx: (f, t) => ipcRenderer.invoke('report:accrual', f, t),
+  accrualXlsx: (f, t, a) => ipcRenderer.invoke('report:accrual', f, t, a),
   openDbFolder: () => ipcRenderer.invoke('db:openFolder'),
   onProgress: fn => ipcRenderer.on('progress', (_e, m) => fn(m)),
   onReload: fn => ipcRenderer.on('reload', () => fn()),

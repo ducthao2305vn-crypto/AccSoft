@@ -181,6 +181,7 @@ Mẫu hạch toán trong ERP:
 
 - **`engine/accrual.js`**
   - `period(desc)` đọc kỳ dịch vụ trong diễn giải (tháng tiếng Anh + năm, "tháng m/yyyy", "mm/yyyy"; lấy kỳ cuối cùng xuất hiện).
+  - `match(all, {acc})`: `acc` là TK chi tiết 335 (vd '3353'); trống thì xét mọi TK 335. Hàm `accRange` đổi thành điều kiện khoảng. Truyền `acc` xuyên suốt: `deepReversal(from,to,acc)`, `deepAccruals(asOf,acc)`, `accrualSource(per,target,acc)`, `reversalLines(keys,acc)` (`o.acc335`), `report:accrual`. Danh sách TK lấy từ `acc335List` (đọc `fin_mv`); giao diện lưu ở `DPS.a335`.
   - `match(all)` ghép theo khoá **đối tượng × khoản mục × kỳ dịch vụ**; diễn giải không có kỳ thì lấy tháng hạch toán, và chi phí thực tế ghép với khoản trích còn dư sớm nhất. Trả về `{groups, flagged}`.
   - Mỗi group có: `accrued`, `released`, `remain`, `actual`, `paid`/`unpaid`/`lastPay`, `status`, `sev`, `accIds`, `accDocs`, `actDocs`, `invs`, `users`, `age`.
   - Các tình trạng: Chưa huỷ trích (H khi khớp đúng kỳ, M khi kỳ suy ra), Huỷ trích vượt số đã trích, Chưa có chi phí thực tế, Đã huỷ trích, Đã huỷ / quyết toán, Huỷ trích của kỳ trước dữ liệu.

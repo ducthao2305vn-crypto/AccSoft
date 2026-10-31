@@ -236,7 +236,7 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'recvAnalyze', 'recvDetail', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'finNotes', 'finStatus', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'acc335List', 'recvAnalyze', 'recvDetail', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'finNotes', 'finStatus', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
 const WRITE = ['setB09Info', 'setThresholds', 'setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
@@ -297,7 +297,7 @@ async function init() {
   });
   handle('report:pdf', () => riskPdf());
   handle('report:reversalErp', async (_e, keys, o) => {
-    const lines = await qa('reversalLines', keys);
+    const lines = await qa('reversalLines', keys, o.acc335 || '');
     if (!lines.length) throw new Error('Các khoản đã chọn không còn số trích treo để huỷ.');
     const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `${o.date.slice(0, 7).replace('-', '.')}_HUY_TRICH_AccSoft.xls`, filters: [{ name: 'Excel 97-2003', extensions: ['xls'] }] });
     if (canceled) return null;
@@ -324,7 +324,7 @@ async function init() {
     return saveXlsx(`AccSoft_BCTC_${(p.from || 'dau').replace('-', '')}-${(p.to || 'cuoi').replace('-', '')}.xlsx`, R.finBook(tb, bs, pl, p, cf, nt, txt || p.b09Def));
   });
   handle('report:recv', async (_e, acc, asOf, term) => saveXlsx(`AccSoft_PhaiThu_${acc}_${(asOf || '').replace(/-/g, '')}.xlsx`, R.recvBook(await qa('recvAnalyze', acc, asOf, term))));
-  handle('report:accrual', async (_e, from, to) => saveXlsx(`AccSoft_TrichTruoc_HuyTrich_${new Date().toISOString().slice(0, 10)}.xlsx`, R.accrualBook(await qa('deepReversal', from, to))));
+  handle('report:accrual', async (_e, from, to, acc) => saveXlsx(`AccSoft_TrichTruoc_HuyTrich_${acc || '335'}_${new Date().toISOString().slice(0, 10)}.xlsx`, R.accrualBook(await qa('deepReversal', from, to, acc || ''))));
   handle('enrich:pick', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file ERP chỉ gồm các dòng TK 151–158', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Dữ liệu hạch toán', extensions: ['xlsx', 'csv', 'txt'] }] });
     return canceled ? null : enrichFiles(filePaths);

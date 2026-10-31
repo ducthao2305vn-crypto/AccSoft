@@ -633,12 +633,15 @@ async function vDeep(){
   const opt=(v)=>yms.slice().reverse().map(m=>`<option value="${m}" ${m===v?'selected':''}>${ymLbl(m)}</option>`).join('');
   DPS.end??=last;DPS.from??=yms[Math.max(0,yms.length-12)]||'';DPS.by??='tcost';DPS.kind??='exp';DPS.asOf??=new Date().toISOString().slice(0,10);
   if(!yms.includes(DPS.end))DPS.end=last;if(!yms.includes(DPS.from))DPS.from=yms[Math.max(0,yms.length-12)]||'';
+  // TK chi tiết 335 (3351, 3353, 3358…): lọc phân tích trích trước – huỷ trích theo từng TK
+  const L335=DP==='reversal'||DP==='accrual'?await aq('acc335List'):[];if(DPS.a335&&!L335.some(x=>x.acc===DPS.a335))DPS.a335='';
+  const sel335=L335.length?`<label>TK chi tiết <select data-k="a335"><option value="">Tất cả TK 335</option>${L335.map(x=>`<option value="${esc(x.acc)}" ${DPS.a335===x.acc?'selected':''}>${esc(String(x.name||x.acc).replace('_',' – '))}</option>`).join('')}</select></label>`:'';
   const rangeCtl=`<label>Từ tháng <select data-k="from">${opt(DPS.from)}</select></label><label>Đến tháng <select data-k="end">${opt(DPS.end)}</select></label>`;
   const ctl={recurring:`<label>Đến tháng <select data-k="end">${opt(DPS.end)}</select></label><span class="hint">Xét 12 tháng; khoản mục × đối tượng phát sinh ≥ ${'ngưỡng'} số tháng được coi là định kỳ</span>`,
     variance:`<label>Tháng <select data-k="end">${opt(DPS.end)}</select></label><label>Loại <select data-k="kind"><option value="exp">Chi phí</option><option value="rev">Doanh thu</option></select></label><label>Theo <select data-k="by"><option value="tcost">Khoản mục</option><option value="tcost_bp">Khoản mục × đối tượng</option><option value="acc">Tài khoản</option><option value="dept">Bộ phận</option></select></label><span class="hint">So với trung bình 12 tháng trước</span>`,
     recv:`<label>Tài khoản <input data-k="racc" value="${esc(DPS.racc||'138812')}" style="width:100px"></label><label>Tại ngày <input type="date" data-k="asOf" value="${DPS.asOf}"></label><label>Hạn thanh toán (ngày) <input type="number" data-k="rterm" value="${DPS.rterm||30}" style="width:80px"></label><button class="btn sm" id="rcXls">${ic('download')}Xuất Excel</button>`,
-    reversal:rangeCtl+`<span class="hint">Kỳ dịch vụ / kỳ ghi chi phí thực tế</span>`,
-    accrual:`<label>Tại ngày <input type="date" data-k="asOf" value="${DPS.asOf}"></label>`,fx:rangeCtl,staff:rangeCtl,benford:rangeCtl,vendors:rangeCtl}[DP];
+    reversal:rangeCtl+sel335+`<span class="hint">Kỳ dịch vụ / kỳ ghi chi phí thực tế</span>`,
+    accrual:`<label>Tại ngày <input type="date" data-k="asOf" value="${DPS.asOf}"></label>`+sel335,fx:rangeCtl,staff:rangeCtl,benford:rangeCtl,vendors:rangeCtl}[DP];
   $('#dpCtl').innerHTML=`<div class="row">${ctl}</div>`;$$('#dpCtl select').forEach(x=>{if(DPS[x.dataset.k])x.value=DPS[x.dataset.k]});
   const B=$('#dpBody');B.innerHTML='<div class="card"><span class="spin"></span> Đang phân tích…</div>';
   B.onclick=null;B.ondblclick=null;B.onchange=null;B.oninput=null; // mỗi tab tự gắn sự kiện của mình
@@ -687,7 +690,7 @@ async function vDeep(){
     B.oninput=e=>{if(e.target.id==='rcQ'){clearTimeout(qT);qT=setTimeout(()=>{RCF.q=e.target.value;window.__rcFocus=1;reF()},600)}};
     B.ondblclick=e=>{const tr=e.target.closest('tr[data-rcp]');if(tr)recvDetail(tr.dataset.rcp)};
     $('#rcXls').onclick=async()=>{try{const f=await api.recvXlsx(DPS.racc||'138812',DPS.asOf,+(DPS.rterm||30));if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};}
-  if(DP==='reversal'){const r=await aq('deepReversal',DPS.from,DPS.end),G=r.groups,open=G.filter(g=>g.status==='Chưa huỷ trích');
+  if(DP==='reversal'){const r=await aq('deepReversal',DPS.from,DPS.end,DPS.a335||''),G=r.groups,open=G.filter(g=>g.status==='Chưa huỷ trích');
     const tot=k=>G.reduce((s,g)=>s+g[k],0),dbl=open.reduce((s,g)=>s+Math.min(g.remain,g.actual),0),cnt=s=>G.filter(g=>g.status===s).length;
     const ST=['Chưa huỷ trích','Huỷ trích vượt số đã trích','Chưa có chi phí thực tế','Đã huỷ trích','Đã huỷ / quyết toán','Huỷ trích của kỳ trước dữ liệu'],SC={'Chưa huỷ trích':'b-H','Huỷ trích vượt số đã trích':'b-M','Chưa có chi phí thực tế':'s-open','Đã huỷ trích':'s-fixed','Đã huỷ / quyết toán':'s-fixed','Huỷ trích của kỳ trước dữ liệu':''};
     const MODES={detail:'Đối chiếu chi tiết',per:'Theo kỳ dịch vụ',p:'Theo đối tượng',t:'Theo khoản mục',u:'Theo nhân viên',age:'Tuổi khoản trích còn treo',make:'Lập trích trước kỳ mới'};
@@ -721,20 +724,20 @@ async function vDeep(){
     selBar();
     B.onchange=e=>{const k=e.target.dataset.rvk;if(k!=null){e.target.checked?RVSEL.add(k):RVSEL.delete(k);selBar();return}
       if(e.target.id==='rvAll'){$$('[data-rvk]').forEach(x=>{x.checked=e.target.checked;e.target.checked?RVSEL.add(x.dataset.rvk):RVSEL.delete(x.dataset.rvk)});selBar()}};
-    $('#rvXls').onclick=async()=>{try{const f=await api.accrualXlsx(DPS.from,DPS.end);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
+    $('#rvXls').onclick=async()=>{try{const f=await api.accrualXlsx(DPS.from,DPS.end,DPS.a335||'');if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
     B.onclick=e=>{const sv=e.target.closest('[data-rvsel]');if(sv){if(sv.dataset.rvsel==='none')RVSEL.clear();else G.filter(g=>g.status==='Chưa huỷ trích').forEach(g=>RVSEL.add(g.key));vDeep();return}
       if(e.target.closest('#rvErp')){revForm();return}
       const m=e.target.closest('[data-rvm]');if(m){RVM=m.dataset.rvm;ls.set('rvMode',RVM);vDeep();return}const s=e.target.closest('[data-rvst]');if(s){RVST=s.dataset.rvst;vDeep();return}const u=e.target.closest('[data-rvu]');if(u){FIL={rule:'ACCRUAL_NOT_REVERSED',user:u.dataset.rvu};OFF=0;go('errors')}};
-    B.ondblclick=e=>{const tr=e.target.closest('[data-rvp]');if(tr)openLedger(tr.dataset.rvp||'(trống)','TK 335 · '+tr.dataset.rvt,{kind:'ag',acc:'335',bp:tr.dataset.rvp,dim:'tcost',ref:tr.dataset.rvt},-1)};}
+    B.ondblclick=e=>{const tr=e.target.closest('[data-rvp]');if(tr)openLedger(tr.dataset.rvp||'(trống)',`TK ${DPS.a335||'335'} · `+tr.dataset.rvt,{kind:'ag',acc:DPS.a335||'335',bp:tr.dataset.rvp,dim:'tcost',ref:tr.dataset.rvt},-1)};}
   if(DP==='variance'){const r=await aq('deepVariance',DPS.end,DPS.by,DPS.kind);
     B.innerHTML=r.note?card('Biến động bất thường',r.note,''):card(`Biến động bất thường tháng ${ymLbl(r.ym)}`,'Chênh lệch so với trung bình các tháng trước vượt ngưỡng % và giá trị tối thiểu (Cài đặt ngưỡng trong Quản lý dữ liệu).',
       tbl(['Nhóm','Loại','#Tháng này','#TB 12 tháng','#Chênh lệch','#%','Xu hướng'],r.items.map(x=>`<tr><td><div class="clamp" title="${esc(x.g)}">${esc(x.g)}</div></td><td><span class="badge ${x.diff>0?'b-H':'b-L'}">${x.type}</span></td><td class=n>${fmt(x.cur)}</td><td class=n>${fmt(x.avg)}</td><td class="n ${x.diff<0?'neg':''}"><b>${fmt(x.diff)}</b></td><td class=n>${x.pct==null?'mới':pct(x.pct)}</td><td>${spark(x.series)}</td></tr>`),'Không có biến động vượt ngưỡng'));}
-  if(DP==='accrual'){const [a,p]=await Promise.all([aq('deepAccruals',DPS.asOf),aq('deepPrepaid',DPS.asOf)]);
-    B.innerHTML=card('TK 335 – Trích trước theo đối tượng × khoản mục','Nhấn đúp dòng để xem bút toán. Cảnh báo: quá hạn quyết toán, quyết toán vượt trích, trích liên tục không quyết toán.',
+  if(DP==='accrual'){const [a,p]=await Promise.all([aq('deepAccruals',DPS.asOf,DPS.a335||''),aq('deepPrepaid',DPS.asOf)]);
+    B.innerHTML=card(`TK ${DPS.a335||'335'} – Trích trước theo đối tượng × khoản mục`,'Nhấn đúp dòng để xem bút toán. Cảnh báo: quá hạn quyết toán, quyết toán vượt trích, trích liên tục không quyết toán.',
       tbl(['Đối tượng','Khoản mục','#Đã trích','#Đã quyết toán','#Số dư','#Tuổi (ngày)','Trích gần nhất','QT gần nhất','Cảnh báo'],a.items.map(x=>`<tr class="dbl" data-acc335="${esc(x.p)}" data-t="${esc(x.t)}"><td><div class="clamp s" title="${esc(x.p)}">${esc(x.name||x.p)}</div></td><td>${esc(x.t)}</td><td class=n>${fmt(x.accrued)}</td><td class=n>${fmt(x.settled)}</td><td class="n ${x.bal<0?'neg':''}"><b>${fmt(x.bal)}</b></td><td class=n>${x.age||''}</td><td class=nw>${vn(x.lastAcc)}</td><td class=nw>${vn(x.lastSet)}</td><td>${flagB(x.flags)}</td></tr>`)))+
       card('TK 242 – Chi phí trả trước theo hợp đồng','So sánh số đã phân bổ với lịch phân bổ (Distribution From/To).',
       tbl(['Hợp đồng / nhóm','Khoản mục','#Trả trước','#Đã phân bổ','#Theo lịch','#Còn lại','Kỳ phân bổ','Cảnh báo'],p.items.map(x=>`<tr><td><div class="clamp s" title="${esc(x.k)}">${esc(refShort(x.k))}</div></td><td>${esc(x.t||'')}</td><td class=n>${fmt(x.pre)}</td><td class=n>${fmt(x.amo)}</td><td class=n>${x.expected==null?'':fmt(x.expected)}</td><td class="n ${x.bal<0?'neg':''}"><b>${fmt(x.bal)}</b></td><td class=nw>${x.f?vn(x.f)+' → '+vn(x.to):''}</td><td>${flagB(x.flags)}</td></tr>`)));
-    B.ondblclick=e=>{const tr=e.target.closest('[data-acc335]');if(tr)openLedger(tr.dataset.acc335,'TK 335 · '+tr.dataset.t,{kind:'ag',acc:'335',bp:tr.dataset.acc335,dim:'tcost',ref:tr.dataset.t,asOf:DPS.asOf},-1)};}
+    B.ondblclick=e=>{const tr=e.target.closest('[data-acc335]');if(tr)openLedger(tr.dataset.acc335,`TK ${DPS.a335||'335'} · `+tr.dataset.t,{kind:'ag',acc:DPS.a335||'335',bp:tr.dataset.acc335,dim:'tcost',ref:tr.dataset.t,asOf:DPS.asOf},-1)};}
   if(DP==='staff'){const r=await aq('deepStaff',DPS.from,DPS.end);
     B.innerHTML=card('Chấm điểm chất lượng hạch toán theo nhân viên','Điểm = 100 − (lỗi NV + 2×lỗi kiểm toán + 3×lỗi nghiêm trọng)/số dòng. Lỗi lặp = cùng quy tắc ≥ 3 tháng → cần đào tạo.',
       tbl(['Nhân viên','#Điểm','#Số dòng','#Lỗi','#Tỷ lệ %','#NV','#KT','#Cao','#Đã sửa','#Còn mở','Lỗi hay gặp','Lỗi lặp lại',`Tỷ lệ lỗi ${r.months.length} tháng`],r.items.map(x=>`<tr><td class=nw><b>${esc(short(x.u))}</b></td><td class=n><span class="badge ${x.score<70?'b-H':x.score<90?'b-M':'s-fixed'}">${x.score}</span></td><td class=n>${num(x.entries)}</td><td class=n>${num(x.errors)}</td><td class=n>${x.rate.toFixed(1)}</td><td class=n>${num(x.staff)}</td><td class=n>${num(x.audit)}</td><td class=n>${num(x.high)}</td><td class=n>${num(x.fixed)}</td><td class=n>${num(x.open)}</td>
@@ -863,14 +866,14 @@ function swapPeriod(s,from,to){const [fy,fm]=[+from.slice(0,4),+from.slice(5)],[
   return x}
 let MK=ls.get('mkPick',{});let MKROWS=[],MKLIM=300,MKQ='';
 async function mkView(){const box=$('#mkBox');if(!box)return;box.innerHTML='<div class="card"><span class="spin"></span> Đang tải các khoản trích…</div>';
-  let r=await aq('accrualSource',MK.src||'',MK.to||'');if(!MK.src||!r.pers.includes(MK.src)){MK.src=r.pers[0]||'';MK.to=MK.to&&MK.to>MK.src?MK.to:addM(MK.src||'2026-01',1);if(MK.src)r=await aq('accrualSource',MK.src,MK.to)}
+  let r=await aq('accrualSource',MK.src||'',MK.to||'',DPS.a335||'');if(!MK.src||!r.pers.includes(MK.src)){MK.src=r.pers[0]||'';MK.to=MK.to&&MK.to>MK.src?MK.to:addM(MK.src||'2026-01',1);if(MK.src)r=await aq('accrualSource',MK.src,MK.to,DPS.a335||'')}
   MKROWS=r.rows.map(x=>({...x,on:!x.dup,amt:x.a,desc:swapPeriod(x.ds,x.per,MK.to)}));
   const tot=()=>MKROWS.filter(x=>x.on).reduce((s,x)=>s+(+x.amt||0),0);
   box.innerHTML=`<div class="card"><div class="card-h"><div><h3>Lập trích trước kỳ mới từ khoản trích kỳ trước</h3><div class="hint">Chọn kỳ dịch vụ mẫu → các dòng trích (Nợ 6xx / Có 335) được sao chép sang kỳ mới: giữ TK, đối tượng, khoản mục, Group cost, Services, Location; diễn giải tự đổi tháng ("In ${MN[+MK.src.slice(5)-1]||''} ${MK.src.slice(0,4)}" → kỳ mới). Sửa số tiền theo ước tính, bỏ chọn dòng không trích, rồi xuất file .xls để import ERP.</div></div></div>
     <div class="row" style="flex-wrap:wrap;gap:12px"><label>Kỳ dịch vụ mẫu <select id="mkSrc">${r.pers.map(p=>`<option ${p===MK.src?'selected':''} value="${p}">${ymLbl(p)}</option>`).join('')}</select></label>
     <label>Kỳ trích mới <input type="month" id="mkTo" value="${MK.to}"></label><span class="mut" id="mkSum"></span><div style="flex:1"></div><button class="btn primary" id="mkGo">${ic('download')}Xuất file trích trước (import ERP)</button></div></div>
     <div class="card"><div class="row" style="margin-bottom:10px"><input id="mkQ" placeholder="Tìm đối tượng, khoản mục, diễn giải…" value="${esc(MKQ)}" style="flex:1;max-width:420px"><span class="mut" id="mkShown"></span></div><div id="mkTbl"></div></div>`;
-  const mkTable=()=>{const q=MKQ.toLowerCase(),idx=MKROWS.map((x,i)=>i).filter(i=>!q||[MKROWS[i].bpCr,MKROWS[i].bp,MKROWS[i].t,MKROWS[i].desc].some(v=>String(v||'').toLowerCase().includes(q))),show=idx.slice(0,MKLIM);
+  const mkTable=()=>{if(!$('#mkShown'))return;const q=MKQ.toLowerCase(),idx=MKROWS.map((x,i)=>i).filter(i=>!q||[MKROWS[i].bpCr,MKROWS[i].bp,MKROWS[i].t,MKROWS[i].desc].some(v=>String(v||'').toLowerCase().includes(q))),show=idx.slice(0,MKLIM);
     $('#mkShown').textContent=`Hiển thị ${num(show.length)} / ${num(idx.length)} dòng`+(idx.length<MKROWS.length?` (lọc từ ${num(MKROWS.length)})`:'');
     $('#mkTbl').innerHTML=tbl0(['<input type="checkbox" id="mkAll" title="Chọn / bỏ chọn các dòng đang lọc">','Đối tượng','Khoản mục','TK Nợ / Có','#Số kỳ mẫu','#Số trích kỳ mới','Diễn giải kỳ mới','Ghi chú'],show.map(i=>[MKROWS[i],i]).map(([x,i])=>`<tr class="${x.dup?'rM':''}"><td><input type="checkbox" data-mk="${i}" ${x.on?'checked':''}></td><td><div class="clamp s" title="${esc(x.bpCr)}">${esc(String(x.bpCr||x.bp||'').split('_').slice(2).join('_')||x.bpCr||x.bp||'')}</div></td><td><div class="clamp s" title="${esc(x.t)}">${esc(x.t)}</div></td><td class=nw>${esc(String(x.drName).split('_')[0])} / ${esc(String(x.crName).split('_')[0])}</td>
       <td class=n>${fmt2(x.a)}</td><td><input type="number" step="0.01" data-mka="${i}" value="${x.a}" style="width:110px;text-align:right"></td><td><input data-mkd="${i}" value="${esc(x.desc)}" style="width:100%;min-width:340px"></td><td>${x.dup?'<span class="badge b-M">Kỳ mới đã có trích – bỏ chọn để tránh trùng</span>':''}${!x.grpCost?'<span class="badge">Thiếu Group cost</span>':''}</td></tr>`),'Không có khoản trích ở kỳ này')+(idx.length>show.length?`<div style="text-align:center;margin-top:10px"><button class="btn sm" id="mkMore">Hiển thị thêm ${num(Math.min(300,idx.length-show.length))} dòng</button></div>`:'');
@@ -909,7 +912,7 @@ function revForm(){const sel=RVG.filter(g=>RVSEL.has(g.key));const last=sel.redu
      <div class="row"><div style="flex:1"></div><button class="btn primary" id="rvGo">${ic('download')}Xuất file .xls</button></div></div>
      <div class="card"><div class="card-h"><h3>Các khoản sẽ huỷ trích</h3></div>${tbl(['Đối tượng','Khoản mục','Kỳ DV','#Còn treo','CT trích'],sel.map(g=>`<tr><td>${esc(g.name||g.p)}</td><td>${esc(g.t)}</td><td>${ymLbl(g.per)}</td><td class=n>${fmt2(g.remain)}</td><td>${g.accDocs.map(esc).join(', ')}</td></tr>`))}</div></div>`;
   $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
-  $('#rvGo').onclick=async()=>{const o={date:$('#rvDate').value,due:$('#rvDue').value,dept:$('#rvDept').value.trim(),docType:$('#rvType').value.trim(),docNo:$('#rvNo').value.trim(),prefix:$('#rvPre').value,desc:$('#rvDesc').value.trim()};
+  $('#rvGo').onclick=async()=>{const o={acc335:DPS.a335||'',date:$('#rvDate').value,due:$('#rvDue').value,dept:$('#rvDept').value.trim(),docType:$('#rvType').value.trim(),docNo:$('#rvNo').value.trim(),prefix:$('#rvPre').value,desc:$('#rvDesc').value.trim()};
     if(!o.date)return alert('Chọn ngày hạch toán');ls.set('revErp',{dept:o.dept,docType:o.docType,prefix:o.prefix});
     try{const r=await api.reversalErp(sel.map(g=>g.key),o);if(r){alert(`Đã xuất ${num(r.lines)} dòng huỷ trích, tổng ${fmt2(-r.total)}:\n${r.file}\n\nFile kiểm tra: ${r.check}\n\nSau khi import và nạp lại dữ liệu, các khoản này sẽ chuyển sang "Đã huỷ trích".`);closeDetail()}}catch(e){alert(e.message)}};
 }
