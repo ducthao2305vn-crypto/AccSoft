@@ -621,7 +621,7 @@ $('#btnRecheck').onclick=()=>runAnalyze(true);
 $('#btnClear').onclick=()=>{if(confirm('Xoá TOÀN BỘ dữ liệu hạch toán và cảnh báo? (giữ lại trạng thái/ghi chú và cấu hình mail)'))runT('clear',{})};
 
 /* ---------- Phân tích chuyên sâu ---------- */
-let DP=ls.get('deepTab','reversal');let RCT='';const RCF=Object.assign({q:'',p:'',risk:'',flag:false,type:''},ls.get('rcFilter',{}));const RVSEL=new Set();let RVG=[];let RVST='Chưa huỷ trích',RVM=ls.get('rvMode','detail');const DPS=ls.get('deepPick',{});
+let DP=ls.get('deepTab','reversal');let RCT='';const RCF=Object.assign({q:'',p:'',risk:'',flag:false,type:'',bal:''},ls.get('rcFilter',{}));const RVSEL=new Set();let RVG=[];let RVST='Chưa huỷ trích',RVM=ls.get('rvMode','detail');const DPS=ls.get('deepPick',{});
 const flagB=f=>'<div style="display:flex;flex-direction:column;gap:3px;min-width:240px;white-space:normal">'+f.map(([s,t])=>`<span class="badge b-${s}">${esc(t)}</span>`).join('')+'</div>';
 const spark=a=>{const mx=Math.max(...a.map(Math.abs),1);return `<span style="display:inline-flex;gap:1px;align-items:flex-end;height:22px">${a.map((v,i)=>`<i style="width:4px;height:${Math.max(1,Math.abs(v)/mx*22)}px;background:${i===a.length-1?C.brand:v?C.brand3:C.gray}"></i>`).join('')}</span>`};
 const TBLMAX=1000; // bảng quá lớn làm trình duyệt dàn trang rất lâu → chỉ hiển thị 1.000 dòng đầu (xuất Excel để xem đủ)
@@ -656,15 +656,18 @@ async function vDeep(){
     if(RCF.p&&!r0.partners.some(o=>o.p===RCF.p))RCF.p='';
     const qq=RCF.q.trim().toLowerCase(),exact=RCF.p?r0.partners.find(o=>o.p===RCF.p):r0.partners.find(o=>o.p.toLowerCase()===qq||o.name.toLowerCase()===qq);
     const hasT=new Set(r0.flags.filter(f=>!RCF.type||f.type===RCF.type).map(f=>f.p));
-    const keep=o=>(!(qq||RCF.p)||(exact?o.p===exact.p:(o.p+' '+o.name).toLowerCase().includes(qq)))&&(!RCF.risk||o.risk===RCF.risk)&&(!RCF.flag||o.flagN>0)&&(!RCF.type||hasT.has(o.p));
-    const parts=r0.partners.filter(keep),pset=new Set(parts.map(o=>o.p)),flt=!!(qq||RCF.p||RCF.risk||RCF.flag||RCF.type);
+    // số dư tại ngày đang chọn: còn nợ (dư Nợ) / dư Có / có số dư / hết số dư
+    const BALF={debt:o=>o.bal>0.5,credit:o=>o.bal<-0.5,any:o=>Math.abs(o.bal)>0.5,zero:o=>Math.abs(o.bal)<=0.5},balOk=o=>!RCF.bal||BALF[RCF.bal](o);
+    const keep=o=>balOk(o)&&(!(qq||RCF.p)||(exact?o.p===exact.p:(o.p+' '+o.name).toLowerCase().includes(qq)))&&(!RCF.risk||o.risk===RCF.risk)&&(!RCF.flag||o.flagN>0)&&(!RCF.type||hasT.has(o.p));
+    const parts=r0.partners.filter(keep),pset=new Set(parts.map(o=>o.p)),flt=!!(qq||RCF.p||RCF.risk||RCF.flag||RCF.type||RCF.bal);
     const sm=k=>parts.reduce((t,o)=>t+o[k],0);
     const r={...r0,partners:parts,flags:r0.flags.filter(f=>pset.has(f.p)&&(!RCF.type||f.type===RCF.type)),
       summary:flt?{...r0.summary,partners:parts.length,rev:sm('rev'),paid:sm('paid'),adj:sm('adj'),bal:sm('bal'),overdue:sm('overdue'),od90:sm('od90'),b:r0.buckets.map((_,i)=>parts.reduce((t,o)=>t+o.b[i],0)),high:parts.filter(o=>o.risk==='H').length,nRev:sm('nRev'),nPay:sm('nPay')}:r0.summary},S=r.summary;
     const one=parts.length===1&&(qq||RCF.p)?parts[0]:null;
     const TYN={PAY_OTHER:'Tiền thu có thể của đối tượng khác',REV_OTHER:'Doanh thu / khoản nợ nghi sai đối tượng',REV_MISSING:'Thu tiền nhưng chưa có doanh thu',OVERPAID:'Thu vượt phải thu',REV_PERIOD:'Thu tiền kỳ chưa ghi doanh thu',REV_GAP:'Doanh thu định kỳ thiếu tháng',CREDIT_BAL:'Dư Có',GENERIC_PARTNER:'Thu tiền ghi vào đối tượng chung'};
     const filterBar=`<div class="card" style="padding:12px 16px"><div class="row" style="flex-wrap:wrap;gap:12px;align-items:center">
-      <label style="display:flex;gap:6px;align-items:center">Đối tượng <select id="rcSel" style="max-width:360px"><option value="">— Tất cả đối tượng (${num(r0.partners.length)}) —</option>${[...r0.partners].sort((a,b)=>a.name.localeCompare(b.name)).map(o=>`<option value="${esc(o.p)}" ${RCF.p===o.p?'selected':''}>${esc(o.name)}${o.risk==='H'?' ⚠':''}</option>`).join('')}</select></label>
+      <label style="display:flex;gap:6px;align-items:center">Đối tượng <select id="rcSel" style="max-width:360px"><option value="">— Tất cả đối tượng (${num(r0.partners.length)}) —</option>${[...r0.partners].filter(o=>balOk(o)||o.p===RCF.p).sort((a,b)=>a.name.localeCompare(b.name)).map(o=>`<option value="${esc(o.p)}" ${RCF.p===o.p?'selected':''}>${esc(o.name)} — ${o.bal>0.5?'còn nợ '+fmt2(o.bal):o.bal<-0.5?'dư Có '+fmt2(-o.bal):'hết số dư'}${o.risk==='H'?' ⚠':''}</option>`).join('')}</select></label>
+      <label>Số dư tại ${vn(r0.asOf)} <select id="rcBal"><option value="">Tất cả</option><option value="debt" ${RCF.bal==='debt'?'selected':''}>Còn nợ (dư Nợ) – ${num(r0.partners.filter(BALF.debt).length)}</option><option value="credit" ${RCF.bal==='credit'?'selected':''}>Dư Có – ${num(r0.partners.filter(BALF.credit).length)}</option><option value="any" ${RCF.bal==='any'?'selected':''}>Còn số dư (Nợ hoặc Có) – ${num(r0.partners.filter(BALF.any).length)}</option><option value="zero" ${RCF.bal==='zero'?'selected':''}>Hết số dư – ${num(r0.partners.filter(BALF.zero).length)}</option></select></label>
       <label style="display:flex;gap:6px;align-items:center">Tìm <input id="rcQ" value="${esc(RCF.q)}" placeholder="một phần tên / mã…" style="width:200px"></label>
       <label>Rủi ro <select id="rcRisk"><option value="">Tất cả</option><option value="H" ${RCF.risk==='H'?'selected':''}>Cao</option><option value="M" ${RCF.risk==='M'?'selected':''}>Trung bình</option><option value="L" ${RCF.risk==='L'?'selected':''}>Thấp</option></select></label>
       <label>Loại cảnh báo <select id="rcType"><option value="">Tất cả</option>${Object.entries(TYN).map(([k,v])=>`<option value="${k}" ${RCF.type===k?'selected':''}>${v}</option>`).join('')}</select></label>
@@ -685,9 +688,9 @@ async function vDeep(){
     setTimeout(()=>chart('cRcAge',{type:'bar',data:{labels:r.buckets,datasets:[{data:S.b,backgroundColor:[C.ok,'#FFD4BD','#FF9C6B','#FF6929','#FA4700','#D63600','#8A2200']}]},options:{plugins:{legend:{display:false}}}}));
     B.onclick=e=>{const t=e.target.closest('[data-rct]');if(t){RCT=t.dataset.rct;vDeep();return}const a=e.target.closest('a[data-rcp]');if(a){e.preventDefault();recvDetail(a.dataset.rcp);return}
       const fl=e.target.closest('a[data-rcf]');if(fl){e.preventDefault();RCF.p=fl.dataset.rcfp||'';RCF.q=RCF.p?'':fl.dataset.rcf;ls.set('rcFilter',RCF);vDeep();$('#content').scrollTop=0;return}
-      if(e.target.id==='rcClear'){Object.assign(RCF,{q:'',p:'',risk:'',flag:false,type:''});ls.set('rcFilter',RCF);vDeep()}};
+      if(e.target.id==='rcClear'){Object.assign(RCF,{q:'',p:'',risk:'',flag:false,type:'',bal:''});ls.set('rcFilter',RCF);vDeep()}};
     const reF=()=>{ls.set('rcFilter',RCF);vDeep()};let qT;
-    B.onchange=e=>{const id=e.target.id;if(id==='rcRisk'){RCF.risk=e.target.value;reF()}else if(id==='rcType'){RCF.type=e.target.value;reF()}else if(id==='rcFlag'){RCF.flag=e.target.checked;reF()}else if(id==='rcQ'&&e.target.value!==RCF.q){clearTimeout(qT);RCF.q=e.target.value;RCF.p='';reF()}else if(id==='rcSel'){RCF.p=e.target.value;RCF.q='';reF()}};
+    B.onchange=e=>{const id=e.target.id;if(id==='rcRisk'){RCF.risk=e.target.value;reF()}else if(id==='rcType'){RCF.type=e.target.value;reF()}else if(id==='rcFlag'){RCF.flag=e.target.checked;reF()}else if(id==='rcQ'&&e.target.value!==RCF.q){clearTimeout(qT);RCF.q=e.target.value;RCF.p='';reF()}else if(id==='rcSel'){RCF.p=e.target.value;RCF.q='';reF()}else if(id==='rcBal'){RCF.bal=e.target.value;reF()}};
     B.onfocusin=e=>{if(e.target.id==='rcQ')e.target.select()};
     B.oninput=e=>{if(e.target.id==='rcQ'){clearTimeout(qT);qT=setTimeout(()=>{RCF.q=e.target.value;RCF.p='';window.__rcFocus=1;reF()},600)}};
     B.ondblclick=e=>{const tr=e.target.closest('tr[data-rcp]');if(tr)recvDetail(tr.dataset.rcp)};

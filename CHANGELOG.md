@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v4.6.0 – 31/10/2026
+**Lọc theo số dư tại ngày đang chọn – phải thu 138812**
+- Ô chọn đối tượng hiện số dư tại "Tại ngày" ngay sau tên, ví dụ "ABC — còn nợ 2,200", "XYZ — dư Có 7,650", "… — hết số dư".
+- Thêm bộ lọc "Số dư tại dd/mm/yyyy", mỗi lựa chọn kèm số đối tượng:
+  - Còn nợ (dư Nợ).
+  - Dư Có.
+  - Còn số dư (Nợ hoặc Có).
+  - Hết số dư.
+- Khi lọc theo số dư, ô chọn đối tượng chỉ còn các đối tượng thoả điều kiện. Các ô tổng hợp, tuổi nợ, cảnh báo, bảng đối tượng tính lại theo bộ lọc.
+
 ## v4.5.1 – 31/10/2026
 **Sửa lỗi lọc đối tượng ở trang phải thu 138812**
 - **Lỗi:** chọn đối tượng A xong thì không chọn lại được đối tượng khác. Ô gõ có gợi ý của trình duyệt chỉ hiện các tên chứa chữ đang có trong ô, nên chỉ còn lại A.

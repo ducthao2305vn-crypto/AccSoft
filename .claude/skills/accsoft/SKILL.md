@@ -163,7 +163,7 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Mức rủi ro:** Cao nếu có cảnh báo H hoặc điểm ≥ 4 (H = 3, M = 1, quá hạn > 90 ngày = 2, tuổi > 365 ngày = 2, dư Có = 1).
 - **Giao diện:**
   - Tab `recv`: tab con của Phân tích chuyên sâu; `recvDetail(p)` mở bảng chi tiết bên phải. Phần HTML dùng chung `recvDetailHtml(d, inline)`.
-  - Bộ lọc `RCF` (p = mã đối tượng từ ô chọn `#rcSel`, q = chuỗi tìm). **Không** dùng `<datalist>` cho ô chọn đối tượng: trình duyệt chỉ gợi ý theo chữ đang có trong ô nên không đổi được đối tượng. Các trường còn lại: risk, type, flag lưu ở `ls 'rcFilter'`, lọc phía giao diện trên kết quả `recvAnalyze` (đã cache).
+  - Bộ lọc `RCF` (p = mã đối tượng từ ô chọn `#rcSel`, q = chuỗi tìm). **Không** dùng `<datalist>` cho ô chọn đối tượng: trình duyệt chỉ gợi ý theo chữ đang có trong ô nên không đổi được đối tượng. Các trường còn lại: risk, type, flag, bal (debt / credit / any / zero theo `o.bal` tại asOf, ngưỡng 0,5; ô chọn đối tượng hiện số dư và chỉ liệt kê đối tượng thoả `bal`) lưu ở `ls 'rcFilter'`, lọc phía giao diện trên kết quả `recvAnalyze` (đã cache).
   - Lọc còn đúng một đối tượng thì hiện chi tiết ngay trong trang. Gõ tìm: chờ 600 ms rồi vẽ lại; giữ con trỏ trong ô bằng cờ `window.__rcFocus`.
   - `#pageLoad` phải có `pointer-events:none`, nếu không sẽ che các tab.
   - Xuất Excel: IPC `report:recv` (`reports.recvBook`).
