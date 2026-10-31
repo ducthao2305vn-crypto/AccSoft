@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, shell, ipcMain, dialog } = require('electron');
 const path = require('path');
+const os = require('os');
 const fs = require('fs');
 const { Worker } = require('worker_threads');
 const { open } = require('./engine/db');
@@ -10,19 +11,54 @@ const log = require('./engine/log');
 const { RULES_VERSION } = require('./engine/rules');
 const firstLine = m => String(m || '').split('\n')[0];
 
-let dbHandle = null, win, Q, dbFile, busy = false, qw = null, qSeq = 0;
-const qPending = new Map();
-// Gửi truy vấn sang worker thường trực → tiến trình chính (cửa sổ) không bao giờ bị khoá
+let dbHandle = null, win, Q, dbFile, busy = false, qSeq = 0;
+// Nhóm worker truy vấn (2–3 luồng): trang đang mở không phải xếp hàng sau truy vấn nặng của trang khác.
+// Bộ nhớ đệm kết quả nằm ở đây (dùng chung cho mọi luồng), xoá khi dữ liệu thay đổi; truy vấn trùng đang chạy thì dùng chung kết quả.
+// Khi có luồng rảnh, tính sẵn các trang hay mở (WARM) – không bao giờ chiếm luồng khi người dùng đang chờ.
+const qPool = [], qQueue = [], qCache = new Map(), qInflight = new Map();
+let qEpoch = 0;
+const WARM = [['overview', []], ['errorFacets', []], ['analysisStatus', []], ['months', []], ['stats', []], ['reviewPeriod', []], ['report', []], ['pl', []]];
 function qa(name, ...args) {
-  return new Promise((resolve, reject) => { const id = ++qSeq; qPending.set(id, { resolve, reject, name, t: Date.now() }); qw.postMessage({ id, name, args }); });
+  const cacheable = READ.includes(name), key = cacheable ? name + '\u0000' + JSON.stringify(args) : null;
+  if (key && qCache.has(key)) return Promise.resolve(qCache.get(key));
+  if (key && qInflight.has(key)) return qInflight.get(key);
+  if (!cacheable) { qCache.clear(); qEpoch++; if (process.env.ACCSOFT_QDEBUG) fs.appendFileSync(process.env.ACCSOFT_QDEBUG, `${new Date().toISOString().slice(11, 23)} CLEAR by ${name}\n`); } // truy vấn ghi → kết quả cũ không còn đúng
+  const p = new Promise((resolve, reject) => { qQueue.push({ id: ++qSeq, name, args, key, epoch: qEpoch, resolve, reject, t: Date.now() }); pump(); });
+  if (key) { qInflight.set(key, p); p.finally(() => qInflight.delete(key)).catch(() => {}); }
+  return p;
+}
+function pump() {
+  for (const w of qPool) {
+    if (w.job) continue;
+    const job = qQueue.shift() || warmJob(); if (!job) return;
+    w.job = job; w.worker.postMessage({ id: job.id, name: job.name, args: job.args });
+  }
+}
+function warmJob() {
+  if (qPool.filter(w => !w.job).length < 2 && qPool.length > 1) return null; // luôn chừa ít nhất một luồng rảnh cho người dùng
+  // sau khi có Tổng quan: làm nóng thêm tuổi nợ, tồn kho, danh sách cần khắc phục với tham số mặc định của giao diện
+  const ov = qCache.get('overview\u0000[]'), extra = ov && ov.dmax ? [['aging', [ov.dmax, 30, 'l1', 'bp']], ['inventory', [ov.dmax, 'product', 'l1']], ['todo', ['L', '']]] : [];
+  for (const [name, args] of [...WARM, ...extra]) { const key = name + '\u0000' + JSON.stringify(args);
+    if (!qCache.has(key) && !qInflight.has(key)) { let ok; const p = new Promise(r => { ok = r; }); qInflight.set(key, p); p.finally(() => qInflight.delete(key));
+      return { id: ++qSeq, name, args, key, epoch: qEpoch, resolve: ok, reject: ok, t: Date.now(), warm: true }; } }
+  return null;
 }
 function startQueryWorker() {
-  qw = new Worker(path.join(__dirname, 'engine', 'qworker.js'), { workerData: { dbPath: dbFile, cache: READ } });
-  qw.on('message', m => { const p = qPending.get(m.id); if (!p) return; qPending.delete(m.id);
-    const ms = Date.now() - p.t; if (ms > 3000) log.info(`Truy vấn chậm "${p.name}": ${ms} ms`);
-    if (m.ok) p.resolve(m.result); else p.reject(Object.assign(new Error(m.error), { stack: m.stack })); });
-  qw.on('error', e => { log.error('Worker truy vấn lỗi', e); for (const p of qPending.values()) p.reject(e); qPending.clear(); startQueryWorker(); });
+  const n = Math.max(2, Math.min(3, os.cpus().length - 1));
+  for (let i = 0; i < n; i++) addQueryWorker();
 }
+function addQueryWorker() {
+  const w = { worker: new Worker(path.join(__dirname, 'engine', 'qworker.js'), { workerData: { dbPath: dbFile } }), job: null };
+  w.worker.on('message', m => { const job = w.job; w.job = null; if (job && job.id === m.id) {
+      const ms = Date.now() - job.t; if (ms > 3000 && !job.warm) log.info(`Truy vấn chậm "${job.name}": ${ms} ms`);
+      if (process.env.ACCSOFT_QDEBUG) fs.appendFileSync(process.env.ACCSOFT_QDEBUG, `${new Date().toISOString().slice(11, 23)} ${job.warm ? 'warm ' : ''}${job.name} ${ms}ms queue=${qQueue.length} busy=${qPool.filter(x => x.job).length}\n`);
+      if (m.ok) { if (job.key && job.epoch === qEpoch) { if (qCache.size > 400) qCache.delete(qCache.keys().next().value); qCache.set(job.key, m.result); } job.resolve(m.result); }
+      else job.warm ? job.resolve(null) : job.reject(Object.assign(new Error(m.error), { stack: m.stack })); }
+    pump(); });
+  w.worker.on('error', e => { log.error('Worker truy vấn lỗi', e); if (w.job) w.job.reject(e); qPool.splice(qPool.indexOf(w), 1); addQueryWorker(); pump(); });
+  qPool.push(w);
+}
+const invalidateQueries = () => { qCache.clear(); qEpoch++; setTimeout(pump, 300); };
 const send = (ch, m) => win && !win.isDestroyed() && win.webContents.send(ch, m);
 
 // Chạy một tác vụ ghi nặng trong worker; tiến độ được đẩy lên giao diện
@@ -30,7 +66,7 @@ function runTask(task, args, label) {
   return new Promise((resolve, reject) => {
     const w = new Worker(path.join(__dirname, 'engine', 'worker.js'), { workerData: { dbPath: dbFile, task, args } });
     w.on('message', m => {
-      if (m.type === 'done' || m.type === 'error') qw && qw.postMessage({ invalidate: true }); // dữ liệu đã đổi → bỏ bộ nhớ đệm truy vấn
+      if (m.type === 'done' || m.type === 'error') invalidateQueries(); // dữ liệu đã đổi → bỏ bộ nhớ đệm truy vấn
       if (m.type === 'progress') send('progress', { label, ...m });
       else if (m.type === 'done') resolve(m.result);
       else if (m.type === 'error') reject(Object.assign(new Error(m.error), { stack: m.stack || m.error }));
@@ -117,7 +153,7 @@ async function restoreBackup(file) {
   if (response !== 0) return false;
   await backupNow('truoc-khoi-phuc');
   log.info('Khôi phục từ ' + file);
-  try { await qw.terminate(); } catch (e) { /* bỏ qua */ }
+  for (const w of qPool) try { await w.worker.terminate(); } catch (e) { /* bỏ qua */ }
   try { Q && Q.close && Q.close(); } catch (e) { /* bỏ qua */ }
   try { dbHandle.close(); } catch (e) { /* bỏ qua */ }
   for (const ext of ['-wal', '-shm']) try { fs.unlinkSync(dbFile + ext); } catch (e) { /* không có */ }

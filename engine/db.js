@@ -18,6 +18,20 @@ const COLS = [
 const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, e.enriched AS _enriched, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
 
 // Điền các cột phi chuẩn hoá cho dòng lỗi mới (sau mỗi lần phân tích) – chỉ đụng các dòng còn trống
+// Bảng đếm lỗi tổng hợp: tháng × quy tắc × mức × trạng thái × người nhập × bộ phận → Tổng quan, bộ lọc, Báo cáo, Chấm điểm nhân viên
+// đọc vài nghìn dòng thay vì hàng triệu cảnh báo. Dựng lại sau phân tích / xoá dữ liệu; đổi trạng thái thì cộng trừ tại chỗ.
+function rebuildErrSum(db, from = '', to = '') { // from/to: chỉ dựng lại các tháng trong kỳ vừa phân tích
+  const ok = v => /^\d{4}-\d{2}$/.test(v || '') ? v : '', f = ok(from), t = ok(to);
+  const W = (f ? ` AND ym>='${f}'` : '') + (t ? ` AND ym<='${t}'` : '');
+  db.exec(`BEGIN; DELETE FROM err_sum WHERE 1${W}; DELETE FROM err_ent WHERE 1${W};
+    INSERT INTO err_sum SELECT ifnull(ym,''), rule, sev, coalesce(st,'open'), ifnull(u,''), ifnull(dept,''), count(*) FROM errors WHERE 1${W} GROUP BY 1,2,3,4,5,6;
+    INSERT INTO err_ent SELECT ym, u, count(*), sum(hm) FROM (SELECT ifnull(ym,'') ym, ifnull(u,'') u, entry_id, max(sev IN ('H','M')) hm FROM errors WHERE 1${W} GROUP BY entry_id) GROUP BY 1,2;
+    INSERT INTO settings(k,v) VALUES('err_sum_n',(SELECT count(*) FROM errors)) ON CONFLICT(k) DO UPDATE SET v=excluded.v; COMMIT;`);
+}
+function syncErrSum(db) {
+  const es = db.prepare(`SELECT (SELECT v FROM settings WHERE k='err_sum_n') v, (SELECT count(*) FROM errors) n`).get();
+  if (String(es.v) !== String(es.n)) rebuildErrSum(db);
+}
 function fillErrCols(db) {
   if (!db.prepare('SELECT 1 FROM errors WHERE ym IS NULL OR st IS NULL LIMIT 1').get()) return 0;
   db.exec(`UPDATE errors SET ym=e.ym, u=e.created_by, dept=e.department, doc=e.document_no FROM entries e WHERE e.id=errors.entry_id AND errors.ym IS NULL;
@@ -69,10 +83,15 @@ function open(file, { cleanup = false, light = false } = {}) {
   db.exec(`
     CREATE INDEX IF NOT EXISTS ix_e_import ON entries(import_id);
     CREATE INDEX IF NOT EXISTS ix_e_ym ON entries(ym);
+    CREATE INDEX IF NOT EXISTS ix_e_ym_imp ON entries(ym, import_id);
+    CREATE INDEX IF NOT EXISTS ix_e_dup ON entries(acc_debit, acc_credit, amount);
     CREATE INDEX IF NOT EXISTS ix_e_doc ON entries(document_no);
     CREATE INDEX IF NOT EXISTS ix_e_docline ON entries(document_no, line_no);
     CREATE INDEX IF NOT EXISTS ix_e_user ON entries(created_by);
     CREATE INDEX IF NOT EXISTS ix_err_entry ON errors(entry_id);
+    CREATE TABLE IF NOT EXISTS ent_sum(ym TEXT, u TEXT, n INTEGER, nx INTEGER, docs INTEGER, dmin TEXT, dmax TEXT, PRIMARY KEY(ym, u)) WITHOUT ROWID;
+    CREATE TABLE IF NOT EXISTS err_sum(ym TEXT, rule TEXT, sev TEXT, st TEXT, u TEXT, dept TEXT, n INTEGER, PRIMARY KEY(ym, rule, sev, st, u, dept)) WITHOUT ROWID;
+    CREATE TABLE IF NOT EXISTS err_ent(ym TEXT, u TEXT, n INTEGER, nhm INTEGER, PRIMARY KEY(ym, u)) WITHOUT ROWID;
     CREATE TABLE IF NOT EXISTS fin_mv(ym TEXT, acc TEXT, name TEXT, dr REAL, cr REAL);
     CREATE INDEX IF NOT EXISTS ix_finmv ON fin_mv(ym, acc);
     CREATE TABLE IF NOT EXISTS fin_pmv(ym TEXT, a3 TEXT, p TEXT, v REAL);
@@ -89,6 +108,7 @@ function open(file, { cleanup = false, light = false } = {}) {
   for (const c of ['ym', 'u', 'dept', 'doc', 'st']) if (!xcols.includes(c)) db.exec(`ALTER TABLE errors ADD COLUMN ${c} TEXT`);
   db.exec(`DROP INDEX IF EXISTS ix_err_ym;`);
   fillErrCols(db); createErrIndexes(db);
+  // bảng đếm lỗi / bút toán (err_sum, ent_sum) được dựng ở tác vụ nền buildAgg khi khởi động nếu còn thiếu – không khoá cửa sổ
   // Lần nạp bị gián đoạn (tắt máy giữa chừng) thì xoá – chỉ làm khi ứng dụng khởi động
   if (cleanup) db.exec(`DELETE FROM imports WHERE status='pending'`);
   return { db, needRecheck };
@@ -109,6 +129,11 @@ function rebuildAgg(db, months = null) {
       GROUP BY ym, acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue`);
   db.exec('COMMIT');
   rebuildFin(db, months);
+  // Đếm bút toán theo tháng × người nhập (Tổng quan, Chấm điểm nhân viên không phải đếm hàng triệu dòng)
+  db.exec(`BEGIN; DELETE FROM ent_sum WHERE 1${IN};
+    INSERT INTO ent_sum SELECT ym, ifnull(created_by,''), count(*), sum(ifnull(source_table,'')<>'OPENING_BALANCE'), count(DISTINCT document_no), min(account_date), max(account_date)
+      FROM entries WHERE ym IS NOT NULL${IN} GROUP BY 1,2; COMMIT;`);
+  syncErrSum(db);
 }
 
 /* Sổ số dư tổng hợp cho báo cáo tài chính (khoá sổ theo tháng):
@@ -147,4 +172,4 @@ function rebuildFin(db, months = null) {
   db.prepare(`INSERT INTO settings(k,v) VALUES('fin_built', datetime('now','localtime')) ON CONFLICT(k) DO UPDATE SET v=excluded.v`).run();
   db.exec('COMMIT');
 }
-module.exports = { rebuildFin, FIN_PS, fillErrCols, dropErrIndexes, createErrIndexes, rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };
+module.exports = { syncErrSum, rebuildErrSum, rebuildFin, FIN_PS, fillErrCols, dropErrIndexes, createErrIndexes, rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };

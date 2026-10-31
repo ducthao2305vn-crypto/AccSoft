@@ -38,9 +38,20 @@ DB: `<thư mục app>/AccSoft_Data/accsoft.db` (portable: `PORTABLE_EXECUTABLE_D
   - Phân tích kỳ lớn (trên 200k dòng) thì `dropErrIndexes` trước, `createErrIndexes` sau.
   - Thêm chỉ mục mới cho bảng lỗi thì thêm vào `ERR_IDX`.
 - **Phân tích song song:** `analyze()` (async) chia khoảng id cho K luồng phụ chạy task `scan`. Luồng phụ mở DB với `{ light: true }`, chỉ đọc, gửi `errs` về; luồng chính ghi kết quả.
-- **qworker có bộ nhớ đệm** cho các truy vấn trong mảng `READ` (main truyền vào qua `workerData.cache`):
-  - Xoá bộ nhớ đệm khi task ghi xong (`invalidate`) hoặc khi có truy vấn ghi.
-  - Khi rảnh, `WARM` tính sẵn overview, errorFacets, report… Truy vấn mới chỉ đọc thì thêm vào `READ` để được cache.
+- **Nhóm worker truy vấn (v4.1, `main.js`):**
+  - `qPool` gồm 2–3 `engine/qworker.js`; qworker mở DB `{light: true}` và chỉ thực thi truy vấn.
+  - Hàng đợi `qQueue`; bộ nhớ đệm `qCache` ở main, chỉ cho tên trong `READ`, xoá khi có truy vấn ghi hoặc task ghi xong (`invalidateQueries`); `qInflight` gộp các truy vấn trùng đang chạy.
+  - `warmJob()` chỉ chạy khi còn ít nhất 2 luồng rảnh. Danh sách `WARM` cộng thêm aging/inventory/todo theo tham số mặc định của giao diện. **Không** để việc tính sẵn chiếm luồng người dùng đang cần.
+  - Debug: đặt `ACCSOFT_QDEBUG=<file>` để ghi thời gian từng truy vấn.
+- **Bảng đếm:**
+  - `err_sum` (tháng × quy tắc × mức × trạng thái × người nhập × bộ phận) và `err_ent` (dòng có lỗi / lỗi mức H–M theo tháng × người nhập): `rebuildErrSum(db, from, to)` sau phân tích, `syncErrSum` khi số lượng lệch.
+  - `setReviews` cộng trừ tại chỗ.
+  - `ent_sum` (bút toán theo tháng × người nhập) dựng trong `rebuildAgg`.
+  - overview / errorFacets / report / deepStaff / tổng của `errors()` đọc từ các bảng này (`sumWhere`).
+- **Giao diện:**
+  - `aq()` thay cho `api.q()`: đếm số truy vấn để vẽ thanh tiến độ. **Không** khai báo lại `api` (trùng biến contextBridge làm hỏng toàn bộ app.js).
+  - `loadWith(key, sec, fn)` hiện thanh tiến độ (ước lượng theo `pageMs` lưu trong localStorage).
+  - Bảng lớn: `tbl()` giới hạn 1.000 dòng; bảng có ô nhập phải phân trang (xem `mkTable`). Không vẽ hàng nghìn ô nhập cùng lúc.
 - **Đo hiệu năng:**
   - Chạy `node /tmp/.../an.js` với `new Worker('engine/worker.js', {workerData:{task:'analyze'}})` và in mốc thời gian theo nhãn tiến độ.
   - Gọi `require('./engine/queries')(db)` rồi đo từng hàm.

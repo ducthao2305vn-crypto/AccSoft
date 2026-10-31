@@ -1,5 +1,35 @@
 # Lịch sử phiên bản
 
+## v4.1.0 – 31/10/2026
+**Sửa lỗi "Đang tải dữ liệu…" rất lâu với dữ liệu trên 1 triệu dòng, thêm thanh tiến độ**
+
+Nguyên nhân: ở v3.9–4.0 mọi truy vấn xếp hàng trong một luồng. Khi mở ứng dụng, luồng này bận tính sẵn trang Tổng quan, bộ lọc lỗi, Báo cáo (5–7 giây mỗi việc trên dữ liệu lớn), nên trang đang mở phải chờ.
+
+- **Nhiều luồng truy vấn:**
+  - 2–3 luồng chạy song song; trang đang mở không phải xếp hàng sau trang khác.
+  - Chỉ tính sẵn khi có luồng rảnh, luôn chừa một luồng cho người dùng.
+  - Bộ nhớ đệm dùng chung; truy vấn trùng đang chạy thì dùng chung kết quả.
+  - Tính sẵn thêm Công nợ, Tồn kho, danh sách cần khắc phục.
+- **Bảng đếm tổng hợp:**
+  - Lỗi: theo tháng × quy tắc × mức × trạng thái × người nhập × bộ phận.
+  - Bút toán: theo tháng × người nhập.
+  - Tổng quan, bộ lọc lỗi, Báo cáo, Chấm điểm nhân viên đọc vài nghìn dòng thay vì hàng triệu.
+  - Đổi trạng thái lỗi thì bảng được cộng trừ tại chỗ.
+- **Thanh tiến độ tải dữ liệu:** hiện phần trăm, số phần đã tải và thời gian còn lại ước tính (học theo thời gian các lần mở trước). Áp dụng cho chuyển trang và chuyển tab trong Phân tích chuyên sâu và Báo cáo tài chính.
+- **Lập trích trước kỳ mới:**
+  - Trước đây vẽ cùng lúc hàng nghìn dòng có ô nhập, làm treo giao diện 10–18 giây.
+  - Nay hiển thị 300 dòng mỗi lần, có ô tìm kiếm và nút "Hiển thị thêm".
+- Các bảng phân tích hiển thị tối đa 1.000 dòng (xuất Excel để xem đủ).
+- **Phân tích 1 tháng:**
+  - Quy tắc "nghi trùng lặp" chỉ so với các dòng cùng TK Nợ / TK Có / số tiền, có chỉ mục riêng.
+  - Bảng đếm lỗi chỉ dựng lại các tháng trong kỳ.
+  - Tiến độ hiện chi tiết từng quy tắc toàn cục.
+- Trang Quản lý dữ liệu đếm số dòng mỗi tháng theo chỉ mục: 82 ms thay vì quét toàn bảng.
+- Đo trên 1,3 triệu dòng với 3 triệu cảnh báo:
+  - Mở ứng dụng ~1,5 giây.
+  - Lần đầu mở mỗi trang 0,1–2,4 giây; lần sau 0,1–0,5 giây.
+  - Trước đây nhiều trang 5–18 giây.
+
 ## v4.0.0 – 31/10/2026
 **Sổ số dư tổng hợp theo tháng: lập báo cáo tài chính tức thì cho dữ liệu nhiều năm**
 - **Sổ số dư tổng hợp (khoá sổ theo tháng)** được lưu sẵn trong CSDL:

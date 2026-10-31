@@ -139,9 +139,9 @@ function make(db, { INC, all, get, okYm }) {
   /* #5 Phiếu chấm điểm nhân viên */
   function staff(from, to) {
     const R = (okYm(from) ? ` AND e.ym>='${okYm(from)}'` : '') + (okYm(to) ? ` AND e.ym<='${okYm(to)}'` : '');
-    const ent = new Map(all(`SELECT e.created_by u, count(*) n FROM entries e WHERE ${INC}${R} AND ifnull(e.source_table,'')<>'OPENING_BALANCE' GROUP BY 1`).map(r => [r.u, r.n]));
-    const er = all(`SELECT er.u u, er.rule k, er.sev s, er.ym ym, coalesce(er.st,'open') st, count(*) n FROM errors er
-      WHERE er.ym IN (SELECT ym FROM months WHERE included=1)${R.replace(/e\.ym/g, 'er.ym')} GROUP BY 1,2,3,4,5`);
+    const ent = new Map(all(`SELECT s.u u, sum(s.nx) n FROM ent_sum s WHERE s.ym IN (SELECT ym FROM months WHERE included=1)${R.replace(/e\.ym/g, 's.ym')} GROUP BY 1`).map(r => [r.u, r.n]));
+    const er = all(`SELECT s.u u, s.rule k, s.sev s, s.ym ym, s.st st, sum(s.n) n FROM err_sum s
+      WHERE s.ym IN (SELECT ym FROM months WHERE included=1)${R.replace(/e\.ym/g, 's.ym')} GROUP BY 1,2,3,4,5`);
     const months = [...new Set(er.map(r => r.ym))].sort().slice(-6), out = new Map();
     for (const [u, n] of ent) out.set(u, { u, entries: n, errors: 0, staff: 0, audit: 0, high: 0, fixed: 0, ignore: 0, open: 0, rules: {}, ruleMonths: {}, byMonth: {} });
     for (const r of er) {
@@ -149,7 +149,7 @@ function make(db, { INC, all, get, okYm }) {
       o.errors += r.n; o[GROUP[r.k] || 'staff'] += r.n; if (r.s === 'H') o.high += r.n; o[r.st === 'fixed' ? 'fixed' : r.st === 'ignore' ? 'ignore' : 'open'] += r.n;
       o.rules[r.k] = (o.rules[r.k] || 0) + r.n; (o.ruleMonths[r.k] ??= new Set()).add(r.ym); o.byMonth[r.ym] = (o.byMonth[r.ym] || 0) + r.n;
     }
-    const entByMonth = all(`SELECT e.created_by u, e.ym, count(*) n FROM entries e WHERE ${INC}${R} GROUP BY 1,2`);
+    const entByMonth = all(`SELECT s.u u, s.ym, s.n FROM ent_sum s WHERE s.ym IN (SELECT ym FROM months WHERE included=1)${R.replace(/e\.ym/g, 's.ym')}`);
     const em = new Map(entByMonth.map(r => [r.u + '|' + r.ym, r.n]));
     const items = [...out.values()].filter(o => o.entries || o.errors).map(o => {
       const top = Object.entries(o.rules).sort((a, b) => b[1] - a[1]).slice(0, 3);

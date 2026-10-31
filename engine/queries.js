@@ -30,6 +30,23 @@ function make(db) {
   function RV(t = 'e') { const { from, to } = reviewPeriod(); return (from ? ` AND ${t}.ym>='${from}'` : '') + (to ? ` AND ${t}.ym<='${to}'` : ''); }
   // Lọc lỗi trực tiếp trên bảng errors (cột ym/u/dept/doc/st ghi sẵn) – không nối entries trừ khi cần
   const EINC = `er.ym IN (SELECT ym FROM months WHERE included=1)`;
+  // Bảng đếm lỗi tổng hợp err_sum / err_ent (db.rebuildErrSum) – dùng cho mọi con số tổng, không quét bảng errors
+  const SINC = `s.ym IN (SELECT ym FROM months WHERE included=1)`, SW = () => `WHERE ${SINC}${RV('s')}`;
+  const SUMMABLE = ['rule', 'group', 'sev', 'minSev', 'user', 'month', 'dept', 'status', 'statusIn'];
+  function sumWhere(f) { // điều kiện tương đương where() nhưng trên err_sum; null nếu bộ lọc cần dữ liệu chi tiết
+    if (Object.keys(f).some(k => f[k] != null && f[k] !== '' && !SUMMABLE.includes(k))) return null;
+    const w = [SINC + RV('s')], a = [];
+    if (f.rule) { w.push('s.rule=?'); a.push(f.rule); }
+    if (f.group === 'staff' || f.group === 'audit') w.push(`s.rule IN (${RULES_OF(f.group)})`);
+    if (f.sev) { w.push('s.sev=?'); a.push(f.sev); }
+    if (f.minSev) w.push({ H: `s.sev='H'`, M: `s.sev IN ('H','M')`, L: '1' }[f.minSev] || '1');
+    if (f.user) { w.push('s.u=?'); a.push(f.user); }
+    if (f.month) { w.push('s.ym=?'); a.push(f.month); }
+    if (f.dept) { w.push('s.dept=?'); a.push(f.dept); }
+    if (f.status) { w.push('s.st=?'); a.push(f.status); }
+    if (f.statusIn) { w.push(`s.st IN (${f.statusIn.map(() => '?').join(',')})`); a.push(...f.statusIn); }
+    return { sql: 'WHERE ' + w.join(' AND '), args: a };
+  }
 
   /* ---------- Lỗi nhập liệu ---------- */
   function where(f = {}) {
@@ -60,8 +77,8 @@ function make(db) {
   const SORTS = { sev: SEVN, date: 'e.account_date', amt: 'abs(e.amount)', doc: 'e.document_no', rule: 'er.rule', user: 'e.created_by', st: STATUS };
 
   function errors(f = {}, sort = { k: 'sev', d: 1 }, offset = 0, limit = 200) {
-    const { sql, args, from } = where(f);
-    const total = get(`SELECT count(*) n ${from} ${sql}`, ...args).n;
+    const { sql, args, from } = where(f), sw = sumWhere(f);
+    const total = sw ? (get(`SELECT sum(n) n FROM err_sum s ${sw.sql}`, ...sw.args).n || 0) : get(`SELECT count(*) n ${from} ${sql}`, ...args).n;
     const k = SORTS[sort.k] ? sort.k : 'sev', dir = sort.d < 0 ? 'DESC' : 'ASC';
     if (['sev', 'rule', 'user', 'st', 'doc'].includes(k)) { // sắp xếp được trên chính bảng errors: lấy trang id trước rồi mới nối entries
       const lite = { sev: SEVN, rule: 'er.rule', user: 'er.u', st: STATUS, doc: 'er.doc' }[k];
@@ -84,9 +101,9 @@ function make(db) {
     return { total, rows };
   }
   function errorFacets() {
-    const base = `FROM errors er WHERE ${EINC}${RV('er')}`;
+    const base = `FROM err_sum s ${SW()}`;
     const sc = Object.fromEntries(Object.keys(ST).map(k => [k, 0]));
-    for (const r of all(`SELECT ${STATUS} s, count(*) n ${base} GROUP BY s`)) sc[r.s] = r.n;
+    for (const r of all(`SELECT s.st s, sum(s.n) n ${base} GROUP BY 1`)) sc[r.s] = r.n;
     const P = reviewPeriod();
     const gone = all(`SELECT rv.err_key key, rv.rule, rv.document_no doc, rv.status, rv.note, rv.updated_at at, rv.snapshot FROM reviews rv
       WHERE NOT EXISTS (SELECT 1 FROM errors x WHERE x.err_key=rv.err_key)`).filter(r => {
@@ -94,10 +111,10 @@ function make(db) {
     });
     return {
       status: sc, gone,
-      rules: all(`SELECT er.rule k, count(*) n ${base} GROUP BY er.rule ORDER BY n DESC`),
-      users: all(`SELECT DISTINCT er.u u ${base} ORDER BY 1`).map(r => r.u),
-      months: all(`SELECT DISTINCT er.ym m ${base} ORDER BY 1`).map(r => r.m),
-      depts: all(`SELECT DISTINCT er.dept d ${base} AND er.dept IS NOT NULL ORDER BY 1`).map(r => r.d),
+      rules: all(`SELECT s.rule k, sum(s.n) n ${base} GROUP BY 1 ORDER BY n DESC`),
+      users: all(`SELECT DISTINCT s.u u ${base} AND s.u<>'' ORDER BY 1`).map(r => r.u),
+      months: all(`SELECT DISTINCT s.ym m ${base} ORDER BY 1`).map(r => r.m),
+      depts: all(`SELECT DISTINCT s.dept d ${base} AND s.dept<>'' ORDER BY 1`).map(r => r.d),
     };
   }
   function errorDetail(eid) {
@@ -117,10 +134,15 @@ function make(db) {
   }
   function setReviews(list) {
     const del = db.prepare('DELETE FROM reviews WHERE err_key=?'), st = db.prepare('UPDATE errors SET st=? WHERE err_key=?');
+    const grp = db.prepare(`SELECT ifnull(ym,'') ym, rule, sev, coalesce(st,'open') st, ifnull(u,'') u, ifnull(dept,'') dept, count(*) n FROM errors WHERE err_key=? GROUP BY 1,2,3,4,5,6`);
+    const dec = db.prepare('UPDATE err_sum SET n=n-? WHERE ym=? AND rule=? AND sev=? AND st=? AND u=? AND dept=?');
+    const inc = db.prepare('INSERT INTO err_sum VALUES(?,?,?,?,?,?,?) ON CONFLICT DO UPDATE SET n=n+excluded.n');
+    const move = (key, to) => { for (const g of grp.all(key)) if (g.st !== to) { dec.run(g.n, g.ym, g.rule, g.sev, g.st, g.u, g.dept); inc.run(g.ym, g.rule, g.sev, to, g.u, g.dept, g.n); } };
     const up = db.prepare(`INSERT INTO reviews(err_key,rule,document_no,status,note,snapshot,updated_at) VALUES(?,?,?,?,?,?,datetime('now','localtime'))
       ON CONFLICT(err_key) DO UPDATE SET status=excluded.status,note=excluded.note,snapshot=excluded.snapshot,updated_at=excluded.updated_at`);
     db.exec('BEGIN');
-    for (const r of list) { if (!r.status && !r.note) del.run(r.key); else up.run(r.key, r.rule, r.doc, r.status || '', r.note || '', r.snapshot || ''); st.run(r.status || 'open', r.key); }
+    for (const r of list) { if (!r.status && !r.note) del.run(r.key); else up.run(r.key, r.rule, r.doc, r.status || '', r.note || '', r.snapshot || ''); move(r.key, r.status || 'open'); st.run(r.status || 'open', r.key); }
+    db.exec('DELETE FROM err_sum WHERE n<=0');
     db.exec('COMMIT');
     return list.length;
   }
@@ -136,12 +158,13 @@ function make(db) {
 
   /* ---------- Tổng quan ---------- */
   function overview() {
-    const b = get(`SELECT count(*) rows, count(DISTINCT document_no) docs, min(account_date) dmin, max(account_date) dmax FROM entries e WHERE ${INC}`);
-    const er = get(`SELECT count(DISTINCT er.entry_id) rows, sum(er.sev='H') high, count(*) n FROM errors er WHERE ${EINC}${RV('er')}`);
-    const rvRows = get(`SELECT count(*) n FROM entries e WHERE ${INC}${RV()}`).n;
-    const byRule = all(`SELECT er.rule k, er.sev, count(*) n FROM errors er WHERE ${EINC}${RV('er')} GROUP BY er.rule ORDER BY n DESC`);
-    const tot = all(`SELECT created_by u, count(*) n FROM entries e WHERE ${INC}${RV()} GROUP BY u`);
-    const bad = Object.fromEntries(all(`SELECT er.u u, count(DISTINCT er.entry_id) n FROM errors er WHERE ${EINC}${RV('er')} AND er.sev IN ('H','M') GROUP BY u`).map(r => [r.u, r.n]));
+    const ES = `FROM ent_sum s WHERE ${SINC}`;
+    const b = get(`SELECT sum(n) rows, sum(docs) docs, min(dmin) dmin, max(dmax) dmax ${ES}`);
+    const er = { ...get(`SELECT sum(s.n * (s.sev='H')) high, sum(s.n) n FROM err_sum s ${SW()}`), rows: get(`SELECT sum(s.n) n FROM err_ent s ${SW()}`).n };
+    const rvRows = get(`SELECT sum(n) n ${ES}${RV('s')}`).n || 0;
+    const byRule = all(`SELECT s.rule k, max(s.sev) sev, sum(s.n) n FROM err_sum s ${SW()} GROUP BY 1 ORDER BY n DESC`);
+    const tot = all(`SELECT u, sum(n) n ${ES}${RV('s')} GROUP BY u`);
+    const bad = Object.fromEntries(all(`SELECT s.u u, sum(s.nhm) n FROM err_ent s ${SW()} GROUP BY 1`).map(r => [r.u, r.n]));
     const byUser = tot.map(r => ({ u: r.u, total: r.n, bad: bad[r.u] || 0 })).sort((a, c) => c.bad - a.bad).slice(0, 12);
     const P = pl(), last = P.years.at(-1) || {};
     const trend = P.months.slice(-12);
@@ -368,11 +391,11 @@ function make(db) {
 
   /* ---------- Báo cáo & thông báo ---------- */
   function report() {
-    const cross = col => all(`SELECT ${col} k, count(*) n, sum(er.sev='H') high, sum(${STATUS}='open') open, sum(${STATUS}='doing') doing,
-        sum(${STATUS}='fixed') fixed, sum(${STATUS}='ignore') ignore FROM errors er WHERE ${EINC}${RV('er')} GROUP BY k ORDER BY n DESC`);
+    const cross = col => all(`SELECT ${col} k, sum(s.n) n, sum(s.n*(s.sev='H')) high, sum(s.n*(s.st='open')) open, sum(s.n*(s.st='doing')) doing,
+        sum(s.n*(s.st='fixed')) fixed, sum(s.n*(s.st='ignore')) ignore FROM err_sum s ${SW()} GROUP BY k ORDER BY n DESC`);
     const P = reviewPeriod();
     const months = all(`SELECT ym FROM months WHERE included=1 ORDER BY ym`).map(r => r.ym).filter(m => (!P.from || m >= P.from) && (!P.to || m <= P.to));
-    return { review: P, byRule: cross('er.rule'), byUser: cross('er.u'), months };
+    return { review: P, byRule: cross('s.rule'), byUser: cross('s.u'), months };
   }
   function todo(minSev, group) {
     const { sql, args, from } = where({ minSev, group, statusIn: ['open', 'doing'] });
@@ -384,8 +407,10 @@ function make(db) {
   }
 
   /* ---------- Dữ liệu ---------- */
-  const months = () => all(`SELECT m.ym, m.included, m.analyzed_ver, (SELECT count(*) FROM entries e WHERE e.ym=m.ym) n,
-      (SELECT group_concat(DISTINCT i.file_name) FROM entries e JOIN imports i ON i.id=e.import_id WHERE e.ym=m.ym) files FROM months m ORDER BY m.ym`);
+  // Đếm theo chỉ mục (ym, import_id) – không quét/nối từng dòng hạch toán
+  const months = () => all(`SELECT m.ym, m.included, m.analyzed_ver, coalesce(c.n,0) n, c.files FROM months m LEFT JOIN
+      (SELECT x.ym, sum(x.n) n, group_concat(i.file_name, ', ') files FROM (SELECT ym, import_id, count(*) n FROM entries GROUP BY ym, import_id) x JOIN imports i ON i.id=x.import_id GROUP BY x.ym) c
+      ON c.ym=m.ym ORDER BY m.ym`);
   const imports = () => all(`SELECT id, file_name file, row_count rows, date_from "from", date_to "to", imported_at at FROM imports WHERE status='ok' ORDER BY date_from, id`);
   function setMonths(list, included) { const st = db.prepare('UPDATE months SET included=? WHERE ym=?'); db.exec('BEGIN'); for (const m of list) st.run(included ? 1 : 0, m); db.exec('COMMIT'); }
   function setAllMonths(included) { db.prepare('UPDATE months SET included=?').run(included ? 1 : 0); }
@@ -400,7 +425,8 @@ function make(db) {
     const ms = all(`SELECT ym, analyzed_ver v FROM months WHERE 1${P.from ? ` AND ym>='${P.from}'` : ''}${P.to ? ` AND ym<='${P.to}'` : ''} ORDER BY ym`);
     return { review: P, version: V, months: ms.length, pending: ms.filter(m => m.v !== V).map(m => ({ ym: m.ym, old: m.v != null })) };
   }
-  const aggEmpty = () => !get('SELECT 1 x FROM agg LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1');
+  const aggEmpty = () => !!get('SELECT 1 x FROM entries LIMIT 1') && (!get('SELECT 1 x FROM agg LIMIT 1') || !get('SELECT 1 x FROM ent_sum LIMIT 1')
+    || String(getSetting('err_sum_n')) !== String(get('SELECT count(*) n FROM errors').n));
   // Ngưỡng cảnh báo
   try { setConfig(JSON.parse(getSetting('thresholds') || '{}')); } catch (e) { /* mặc định */ }
   const getThresholds = () => ({ cfg: { ...CFG }, def: { ...CFG_DEFAULT } });

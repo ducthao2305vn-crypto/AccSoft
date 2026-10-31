@@ -141,7 +141,7 @@ function deleteMonths(months, exceptImport = -1) {
 /* ---------- Quy tắc toàn cục (trùng lặp, bất thường) ---------- */
 // scope = {from,to}: so sánh trên toàn bộ dữ liệu đã nạp nhưng chỉ gắn lỗi cho bút toán trong kỳ
 function setRules(scope = {}) {
-  post({ type: 'progress', label: 'Đang rà soát trùng lặp, bất thường, chứng từ, chia nhỏ khoản chi, tồn kho…' });
+  post({ type: 'progress', label: 'Quy tắc toàn cục: nghi trùng lặp chứng từ…' });
   db.exec('BEGIN');
   // Điều kiện kỳ đưa thẳng vào truy vấn: chỉ lấy ứng viên trong kỳ, phép so sánh vẫn dựa trên toàn bộ dữ liệu
   const S = t => (scope.from ? ` AND ${t}ym>='${scope.from}'` : '') + (scope.to ? ` AND ${t}ym<='${scope.to}'` : '');
@@ -149,20 +149,20 @@ function setRules(scope = {}) {
   if (!scope.from && !scope.to) db.exec(`DELETE FROM errors WHERE rule IN ('DUPLICATE','OUTLIER','DOC_MULTI_MONTH','SPLIT_PAYMENT','RARE_PAIR','INV_NEGATIVE','ACCRUAL_NOT_REVERSED')`);
   const keyOf = (k, r) => errKey(k, { doc: r.doc, line: r.line, dr: r.dr, cr: r.cr, amt: r.amt });
   const F = (t = '') => `${t}amount<>0 AND ifnull(${t}source_table,'') NOT LIKE '%Depreciation%' AND ifnull(${t}source_table,'') NOT LIKE '%Distribution%' AND ifnull(${t}source_table,'') NOT LIKE '%CIP%'`;
-  db.exec(`DROP TABLE IF EXISTS temp.dg;
-    CREATE TEMP TABLE dg AS SELECT acc_debit a, acc_credit b, ifnull(partner_debit,'') p, ifnull(partner_credit,'') q, amount m, lower(trim(ifnull(description,''))) d
-      FROM entries WHERE ${F()} GROUP BY 1,2,3,4,5,6 HAVING count(DISTINCT document_no)>1${scope.from || scope.to ? ` AND sum(1${S('')})>0` : ''};
+  // Phân tích theo kỳ: chỉ so các dòng cùng TK Nợ / TK Có / số tiền với dòng trong kỳ (chỉ mục ix_e_dup) thay vì gom cả CSDL
+  db.exec(scope.from || scope.to ? `DROP TABLE IF EXISTS temp.dk; DROP TABLE IF EXISTS temp.dg;
+    CREATE TEMP TABLE dk AS SELECT DISTINCT acc_debit a, acc_credit b, amount m FROM entries WHERE ${F()}${S('')};
+    CREATE TEMP TABLE dg AS SELECT e.acc_debit a, e.acc_credit b, ifnull(e.partner_debit,'') p, ifnull(e.partner_credit,'') q, e.amount m, lower(trim(ifnull(e.description,''))) d, count(DISTINCT e.document_no) nd, substr(group_concat(DISTINCT e.document_no),1,300) ds
+      FROM dk JOIN entries e ON e.acc_debit=dk.a AND e.acc_credit=dk.b AND e.amount=dk.m WHERE ${F('e.')} GROUP BY 1,2,3,4,5,6 HAVING count(DISTINCT e.document_no)>1 AND sum(1${S('e.')})>0;
+    CREATE INDEX temp.ix_dg ON dg(a,b,m);` : `DROP TABLE IF EXISTS temp.dg;
+    CREATE TEMP TABLE dg AS SELECT acc_debit a, acc_credit b, ifnull(partner_debit,'') p, ifnull(partner_credit,'') q, amount m, lower(trim(ifnull(description,''))) d, count(DISTINCT document_no) nd, substr(group_concat(DISTINCT document_no),1,300) ds
+      FROM entries WHERE ${F()} GROUP BY 1,2,3,4,5,6 HAVING count(DISTINCT document_no)>1;
     CREATE INDEX temp.ix_dg ON dg(a,b,m);`);
-  const dups = db.prepare(`SELECT e.id, e.document_no doc, e.line_no line, e.acc_debit dr, e.acc_credit cr, e.amount amt, dg.rowid grp
-    FROM entries e JOIN dg ON dg.a=e.acc_debit AND dg.b=e.acc_credit AND dg.m=e.amount AND dg.p=ifnull(e.partner_debit,'')
-      AND dg.q=ifnull(e.partner_credit,'') AND dg.d=lower(trim(ifnull(e.description,''))) WHERE ${F('e.')}`).all();
-  const dupIn = db.prepare('SELECT ym FROM entries WHERE id=?');
-  const groups = new Map();
-  for (const r of dups) (groups.get(r.grp) || groups.set(r.grp, []).get(r.grp)).push(r);
-  for (const arr of groups.values()) {
-    const docs = [...new Set(arr.map(x => x.doc))];
-    for (const r of arr) if (inYm(dupIn.get(r.id).ym)) insErr.run(r.id, 'DUPLICATE', 'H', `${docs.length} chứng từ: ${docs.slice(0, 4).join(', ')}`, keyOf('DUPLICATE', r));
-  }
+  const dups = db.prepare(`SELECT e.id, e.document_no doc, e.line_no line, e.acc_debit dr, e.acc_credit cr, e.amount amt, dg.nd, dg.ds
+    FROM ${scope.from || scope.to ? 'entries e CROSS JOIN dg' : 'dg CROSS JOIN entries e'} ON dg.a=e.acc_debit AND dg.b=e.acc_credit AND dg.m=e.amount AND dg.p=ifnull(e.partner_debit,'')
+      AND dg.q=ifnull(e.partner_credit,'') AND dg.d=lower(trim(ifnull(e.description,''))) WHERE ${F('e.')}${S('e.')}`).all(); // chỉ các dòng trong kỳ; danh sách chứng từ trùng đã gom sẵn ở dg
+  for (const r of dups) insErr.run(r.id, 'DUPLICATE', 'H', `${r.nd} chứng từ: ${String(r.ds || '').split(',').slice(0, 4).join(', ')}`, keyOf('DUPLICATE', r));
+  post({ type: 'progress', label: 'Quy tắc toàn cục: số tiền bất thường (so với trung vị khoản mục)…' });
   const EXP = `substr(acc_debit,1,1) IN ('6','8') AND acc_debit NOT LIKE '911%' AND type_of_cost IS NOT NULL AND amount>0
     AND ifnull(source_table,'') NOT LIKE '%Depreciation%' AND ifnull(source_table,'') NOT LIKE '%Distribution%' AND ifnull(source_table,'') NOT LIKE '%CIP%'`;
   // Trung vị theo khoản mục: một lượt đọc đã sắp xếp (nhanh hơn nhiều so với truy vấn từng khoản mục)
@@ -178,15 +178,18 @@ function setRules(scope = {}) {
     if (m != null && r.amt > CFG.outlierFactor * m) insErr.run(r.id, 'OUTLIER', 'M', `${fmt2(r.amt)} so với trung vị ${fmt2(m)}`, keyOf('OUTLIER', r));
   }
   const SELR = `e.id, e.document_no doc, e.line_no line, e.acc_debit dr, e.acc_credit cr, e.amount amt, e.quantity qty`;
+  post({ type: 'progress', label: 'Quy tắc toàn cục: chứng từ trải nhiều kỳ…' });
   // Chứng từ có dòng thuộc nhiều tháng
   for (const r of db.prepare(`SELECT ${SELR}, d.ms FROM entries e JOIN (SELECT document_no, group_concat(DISTINCT ym) ms FROM entries
       WHERE document_no IS NOT NULL GROUP BY document_no HAVING count(DISTINCT ym)>1) d ON d.document_no=e.document_no WHERE 1${S('e.')}`).all())
     insErr.run(r.id, 'DOC_MULTI_MONTH', 'M', `Các tháng: ${r.ms}`, keyOf('DOC_MULTI_MONTH', r));
+  post({ type: 'progress', label: 'Quy tắc toàn cục: nghi chia nhỏ khoản chi…' });
   // Nhiều khoản chi tiền cho cùng đối tượng trong một ngày
   for (const r of db.prepare(`SELECT ${SELR}, g.n, g.tot FROM entries e JOIN (SELECT partner_debit p, account_date d, count(DISTINCT document_no) n, sum(amount) tot FROM entries
       WHERE (acc_credit LIKE '111%' OR acc_credit LIKE '112%') AND partner_debit IS NOT NULL AND amount>0${S('')} GROUP BY partner_debit, account_date HAVING count(DISTINCT document_no)>=3) g
       ON g.p=e.partner_debit AND g.d=e.account_date WHERE (e.acc_credit LIKE '111%' OR e.acc_credit LIKE '112%') AND e.amount>0${S('e.')}`).all())
     insErr.run(r.id, 'SPLIT_PAYMENT', 'M', `${r.n} chứng từ chi trong ngày, tổng ${fmt2(r.tot)}`, keyOf('SPLIT_PAYMENT', r));
+  post({ type: 'progress', label: 'Quy tắc toàn cục: xuất kho vượt tồn…' });
   // Xuất kho vượt tồn: luỹ kế giá trị theo mặt hàng, chỉ xét mặt hàng có chứng từ đầu tiên là nhập (đã thấy từ đầu lịch sử)
   const INV = c => `(${c} LIKE '15%' AND substr(${c},1,3) BETWEEN '151' AND '158' AND ${c} NOT LIKE '154%')`;
   let cur = null, bal = 0, valid = false;
@@ -203,6 +206,7 @@ function setRules(scope = {}) {
     insErr.run(x.id, 'ACCRUAL_NOT_REVERSED', g.sev, `Kỳ ${g.per}: đã trích ${fmt2(g.accrued)} (${g.accDocs.slice(0, 2).map(sh).join(', ')}), mới huỷ ${fmt2(g.released)}, còn treo ${fmt2(g.remain)}; chi phí thực tế ${fmt2(g.actual)}${g.invs.length ? ' HĐ ' + g.invs.slice(0, 2).join(', ') : ''}`,
       errKey('ACCRUAL_NOT_REVERSED', { doc: x.doc, line: x.line, dr: x.dr, cr: x.cr, amt: x.a }));
   }
+  post({ type: 'progress', label: 'Quy tắc toàn cục: cặp tài khoản đối ứng hiếm…' });
   // Cặp tài khoản đối ứng hiếm
   if (db.prepare('SELECT count(*) n FROM entries').get().n >= 1000)
     for (const r of db.prepare(`SELECT ${SELR}, g.n FROM entries e JOIN (SELECT substr(acc_debit,1,3) a, substr(acc_credit,1,3) b, count(*) n FROM entries
@@ -254,7 +258,7 @@ async function analyze({ from = '', to = '' } = {}) {
   setRules({ from, to });
   db.exec(`DELETE FROM errors WHERE entry_id IN (SELECT id FROM entries WHERE source_table='OPENING_BALANCE')`); // số dư đầu kỳ không phải bút toán của nhân viên
   post({ type: 'progress', label: big ? 'Đang dựng chỉ mục kết quả rà soát…' : 'Đang hoàn tất…', pct: 95 });
-  require('./db').fillErrCols(db); if (big) createErrIndexes(db); db.exec('PRAGMA optimize');
+  require('./db').fillErrCols(db); if (big) createErrIndexes(db); require('./db').rebuildErrSum(db, from, to); db.exec('PRAGMA optimize');
   const ms = db.prepare(`UPDATE months SET analyzed_ver=? WHERE 1${sc.replace(/e\.ym/g, 'ym')} RETURNING ym`).all(RULES_VERSION).map(r => r.ym);
   return { rows: total, months: ms.length, secs: (Date.now() - t0) / 1000 };
 }
@@ -361,7 +365,7 @@ const TASKS = {
   deleteMonth({ ym }) { deleteMonths([ym]); refreshImports(); rebuildAgg(db, [ym]); return {}; },
   buildAgg() { post({ type: 'progress', label: 'Đang tổng hợp sổ số dư theo tháng và bảng báo cáo…' }); rebuildAgg(db); return {}; },
   deleteImport({ id }) { post({ type: 'progress', label: 'Đang xoá lần nạp…' }); db.prepare('DELETE FROM imports WHERE id=?').run(id); refreshImports(); rebuildAgg(db); return {}; },
-  clear() { post({ type: 'progress', label: 'Đang xoá toàn bộ dữ liệu…' }); db.exec(`DELETE FROM errors; DELETE FROM entries; DELETE FROM imports; DELETE FROM months; DELETE FROM agg; DELETE FROM fin_mv; DELETE FROM fin_pmv; DELETE FROM fin_close;`); db.exec('VACUUM'); return {}; },
+  clear() { post({ type: 'progress', label: 'Đang xoá toàn bộ dữ liệu…' }); db.exec(`DELETE FROM errors; DELETE FROM entries; DELETE FROM imports; DELETE FROM months; DELETE FROM agg; DELETE FROM fin_mv; DELETE FROM fin_pmv; DELETE FROM fin_close; DELETE FROM err_sum; DELETE FROM err_ent; DELETE FROM settings WHERE k='err_sum_n';`); db.exec('VACUUM'); return {}; },
   recheck() { return analyze({}); },
   analyze: args => analyze(args),
   scan: args => scanRange(args),
