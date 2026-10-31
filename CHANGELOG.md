@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v3.7.0 – 31/10/2026
+**Báo cáo tài chính theo tháng, quý, năm**
+- Trang Báo cáo tài chính thêm ô chọn "Kỳ báo cáo": Tháng, Quý, Năm, Luỹ kế từ đầu năm, Khoảng tháng. Áp dụng cho cả Bảng cân đối số phát sinh, B01, B02, B03 và file Excel.
+- Kỳ chưa đủ tháng (ví dụ quý 4 hoặc năm 2026 mới có dữ liệu đến tháng 10) được tính đến tháng cuối có dữ liệu và có nhãn báo rõ.
+- So sánh B02 luôn trên cùng số tháng:
+  - Cùng kỳ năm trước.
+  - Kỳ liền trước: tháng trước, quý trước hoặc năm trước.
+
 ## v3.6.0 – 31/10/2026
 **Báo cáo lưu chuyển tiền tệ (B03-DN), cập nhật theo Thông tư 99/2025/TT-BTC**
 - **Phương pháp trực tiếp:**

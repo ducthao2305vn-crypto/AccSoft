@@ -705,15 +705,27 @@ let FT=ls.get('finTab','tb');const FP=ls.get('finPick',{});
 async function vFin(){
   $$('#fnTabs [data-f]').forEach(b=>b.classList.toggle('on',b.dataset.f===FT));
   const yms=(await api.q('months')).map(m=>m.ym).sort(),last=yms.at(-1)||'';if(!last){$('#fnBody').innerHTML='<div class="empty"><h2>Chưa có dữ liệu</h2></div>';return}
-  if(!yms.includes(FP.to))FP.to=last;if(!yms.includes(FP.from))FP.from=yms.find(m=>m.slice(0,4)===FP.to.slice(0,4))||yms[0];FP.level??='1';FP.cmp??='ly';
+  if(!yms.includes(FP.to))FP.to=last;if(!yms.includes(FP.from))FP.from=yms.find(m=>m.slice(0,4)===FP.to.slice(0,4))||yms[0];FP.level??='1';FP.cmp??='ly';FP.mode??='y';
+  // Kỳ báo cáo: tháng / quý / năm / luỹ kế từ đầu năm / khoảng tháng – suy ra from/to
+  const qOf=m=>`${m.slice(0,4)}-Q${Math.floor((+m.slice(5)-1)/3)+1}`,yrs=[...new Set(yms.map(m=>m.slice(0,4)))].reverse(),qs=[...new Set(yms.map(qOf))].reverse();
+  FP.pm??=FP.to;FP.pq??=qOf(FP.to);FP.py??=FP.to.slice(0,4);if(!yms.includes(FP.pm))FP.pm=last;if(!qs.includes(FP.pq))FP.pq=qs[0];if(!yrs.includes(FP.py))FP.py=yrs[0];
+  if(FP.mode==='m'){FP.from=FP.to=FP.pm}
+  else if(FP.mode==='q'){const y=FP.pq.slice(0,4),q=+FP.pq.slice(-1);FP.from=`${y}-${String(q*3-2).padStart(2,'0')}`;FP.to=`${y}-${String(q*3).padStart(2,'0')}`}
+  else if(FP.mode==='y'){FP.from=FP.py+'-01';FP.to=FP.py+'-12'}
+  else if(FP.mode==='ytd'){FP.from=FP.pm.slice(0,4)+'-01';FP.to=FP.pm}
+  const lastIn=yms.filter(m=>m>=FP.from&&m<=FP.to).at(-1),partial=lastIn&&lastIn<FP.to;if(partial)FP.to=lastIn; // kỳ chưa đủ tháng: cắt đến tháng cuối có dữ liệu
   const opt=v=>yms.slice().reverse().map(m=>`<option value="${m}" ${m===v?'selected':''}>${ymLbl(m)}</option>`).join('');
-  $('#fnCtl').innerHTML=`<div class="row" style="flex-wrap:wrap;gap:12px"><label>Từ tháng <select data-fk="from">${opt(FP.from)}</select></label><label>Đến tháng <select data-fk="to">${opt(FP.to)}</select></label>
+  const sel=(k,arr,lab)=>`<select data-fk="${k}">${arr.map(v=>`<option value="${v}" ${v===FP[k]?'selected':''}>${lab(v)}</option>`).join('')}</select>`;
+  const pick=FP.mode==='m'||FP.mode==='ytd'?`<label>${FP.mode==='m'?'Tháng':'Đến tháng'} <select data-fk="pm">${opt(FP.pm)}</select></label>`:FP.mode==='q'?`<label>Quý ${sel('pq',qs,v=>`Quý ${v.slice(-1)}/${v.slice(0,4)}`)}</label>`:FP.mode==='y'?`<label>Năm ${sel('py',yrs,v=>v)}</label>`
+    :`<label>Từ tháng <select data-fk="from">${opt(FP.from)}</select></label><label>Đến tháng <select data-fk="to">${opt(FP.to)}</select></label>`;
+  $('#fnCtl').innerHTML=`<div class="row" style="flex-wrap:wrap;gap:12px"><label>Kỳ báo cáo <select data-fk="mode">${[['m','Tháng'],['q','Quý'],['y','Năm'],['ytd','Luỹ kế từ đầu năm'],['r','Khoảng tháng']].map(([v,t])=>`<option value="${v}" ${FP.mode===v?'selected':''}>${t}</option>`).join('')}</select></label>${pick}
+    ${partial?`<span class="badge b-M">Dữ liệu đến ${ymLbl(FP.to)}</span>`:''}
     ${FT==='tb'?`<label>Cấp TK <select data-fk="level"><option value="1" ${FP.level==='1'?'selected':''}>Cấp 1 (3 số)</option><option value="0" ${FP.level==='0'?'selected':''}>Chi tiết</option></select></label>`:''}
-    ${FT==='pl'?`<label>So sánh <select data-fk="cmp"><option value="ly" ${FP.cmp==='ly'?'selected':''}>Cùng kỳ năm trước</option><option value="prev" ${FP.cmp==='prev'?'selected':''}>Kỳ liền trước</option><option value="none" ${FP.cmp==='none'?'selected':''}>Không</option></select></label>`:''}
+    ${FT==='pl'?`<label>So sánh <select data-fk="cmp"><option value="ly" ${FP.cmp==='ly'?'selected':''}>Cùng kỳ năm trước</option><option value="prev" ${FP.cmp==='prev'?'selected':''}>Kỳ liền trước (${FP.mode==='m'?'tháng trước':FP.mode==='q'?'quý trước':FP.mode==='y'?'năm trước':'cùng độ dài'})</option><option value="none" ${FP.cmp==='none'?'selected':''}>Không</option></select></label>`:''}
     <span class="hint">Số đầu kỳ = luỹ kế các tháng đã nạp trước "Từ tháng"; không có dữ liệu trước đó thì bằng 0.</span></div>`;
   const B=$('#fnBody');B.innerHTML='<div class="card"><span class="spin"></span> Đang lập báo cáo…</div>';
-  const n=mdiff(FP.from,FP.to)+1,cmp=FP.cmp==='ly'?[addM(FP.from,-12),addM(FP.to,-12)]:FP.cmp==='prev'?[addM(FP.from,-n),addM(FP.from,-1)]:[null,null];
-  const per=`${ymLbl(FP.from)} – ${ymLbl(FP.to)}`;
+  const n={m:1,q:3,y:12,ytd:12}[FP.mode]||mdiff(FP.from,FP.to)+1,cmp=FP.cmp==='ly'?[addM(FP.from,-12),addM(FP.to,-12)]:FP.cmp==='prev'?[addM(FP.from,-n),addM(FP.to,-n)]:[null,null]; // so sánh tương đương: cùng số tháng
+  const per=FP.mode==='m'?`Tháng ${ymLbl(FP.from)}`:FP.mode==='q'?`Quý ${FP.pq.slice(-1)}/${FP.pq.slice(0,4)}${partial?` (đến ${ymLbl(FP.to)})`:''}`:FP.mode==='y'?`Năm ${FP.py}${partial?` (đến ${ymLbl(FP.to)})`:''}`:FP.mode==='ytd'?`Luỹ kế ${ymLbl(FP.from)} – ${ymLbl(FP.to)}`:`${ymLbl(FP.from)} – ${ymLbl(FP.to)}`;
   const N=v=>Math.abs(v)<0.005?'':`<span class="${v<0?'neg':''}">${v<0?'('+fmt2(-v)+')':fmt2(v)}</span>`;
   if(FT==='tb'){const r=await api.q('finTrial',FP.from,FP.to,+FP.level),t=r.tot,ok=Math.abs(t.dr-t.cr)<0.01&&Math.abs(t.cbDr-t.cbCr)<0.01;
     B.innerHTML=(r.hasOpening?'':`<div class="card" style="background:#FFFAEB"><b>Không có số dư đầu kỳ</b> – trước ${ymLbl(FP.from)} chưa có dữ liệu nên số dư đầu kỳ = 0. Có thể nạp "Số dư đầu kỳ" ở Quản lý dữ liệu.</div>`)+
@@ -746,7 +758,7 @@ async function vFin(){
   FP._cmp=cmp;
 }
 $('#fnTabs').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;FT=b.dataset.f;ls.set('finTab',FT);vFin()};
-$('#fnCtl').onchange=e=>{const k=e.target.dataset.fk;if(!k)return;FP[k]=e.target.value;if(FP.from>FP.to)k==='from'?FP.to=FP.from:FP.from=FP.to;ls.set('finPick',{from:FP.from,to:FP.to,level:FP.level,cmp:FP.cmp});vFin()};
+$('#fnCtl').onchange=e=>{const k=e.target.dataset.fk;if(!k)return;FP[k]=e.target.value;if(FP.mode==='r'&&FP.from>FP.to)k==='from'?FP.to=FP.from:FP.from=FP.to;ls.set('finPick',{from:FP.from,to:FP.to,level:FP.level,cmp:FP.cmp,mode:FP.mode,pm:FP.pm,pq:FP.pq,py:FP.py});vFin()};
 $('#fnXls').onclick=async()=>{try{const f=await api.finXlsx({from:FP.from,to:FP.to,level:+FP.level,cmpFrom:FP._cmp?.[0],cmpTo:FP._cmp?.[1]});if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
 
 /* ---------- Lập trích trước kỳ mới (file GL Journal import ERP) ---------- */
