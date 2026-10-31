@@ -27,34 +27,71 @@ Mục đích phần mềm: **quản trị rủi ro khi nhân viên hạch toán*
 
 DB: `<thư mục app>/AccSoft_Data/accsoft.db` (portable: `PORTABLE_EXECUTABLE_DIR`). Log: `AccSoft_Data/logs/`. Sao lưu: `AccSoft_Data/backups` (giữ 10 bản). Không commit `AccSoft_Data`.
 
-## Hiệu năng dữ liệu lớn (v3.9) – bắt buộc giữ
-- **Bảng `errors` có cột ghi sẵn `ym, u, dept, doc, st`:**
-  - Ghi khi chèn: `insErrFull` cho quy tắc từng dòng; `insErr` (INSERT … SELECT từ entries) cho quy tắc toàn cục.
-  - Dòng còn trống được bổ sung bằng `fillErrCols()`.
-  - `setReviews` cập nhật `errors.st`.
-  - Truy vấn lỗi lọc theo `EINC` + `RV('er')` trên `errors er`; chỉ nối `entries` khi lọc theo TK, số tiền hoặc chữ (`where().from`).
-  - `STATUS = coalesce(er.st,'open')`.
-- **Chỉ mục lỗi khai báo trong `ERR_IDX` (db.js):**
-  - Phân tích kỳ lớn (trên 200k dòng) thì `dropErrIndexes` trước, `createErrIndexes` sau.
-  - Thêm chỉ mục mới cho bảng lỗi thì thêm vào `ERR_IDX`.
-- **Phân tích song song:** `analyze()` (async) chia khoảng id cho K luồng phụ chạy task `scan`. Luồng phụ mở DB với `{ light: true }`, chỉ đọc, gửi `errs` về; luồng chính ghi kết quả.
-- **Nhóm worker truy vấn (v4.1, `main.js`):**
-  - `qPool` gồm 2–3 `engine/qworker.js`; qworker mở DB `{light: true}` và chỉ thực thi truy vấn.
-  - Hàng đợi `qQueue`; bộ nhớ đệm `qCache` ở main, chỉ cho tên trong `READ`, xoá khi có truy vấn ghi hoặc task ghi xong (`invalidateQueries`); `qInflight` gộp các truy vấn trùng đang chạy.
-  - `warmJob()` chỉ chạy khi còn ít nhất 2 luồng rảnh. Danh sách `WARM` cộng thêm aging/inventory/todo theo tham số mặc định của giao diện. **Không** để việc tính sẵn chiếm luồng người dùng đang cần.
-  - Debug: đặt `ACCSOFT_QDEBUG=<file>` để ghi thời gian từng truy vấn.
-- **Bảng đếm:**
-  - `err_sum` (tháng × quy tắc × mức × trạng thái × người nhập × bộ phận) và `err_ent` (dòng có lỗi / lỗi mức H–M theo tháng × người nhập): `rebuildErrSum(db, from, to)` sau phân tích, `syncErrSum` khi số lượng lệch.
-  - `setReviews` cộng trừ tại chỗ.
-  - `ent_sum` (bút toán theo tháng × người nhập) dựng trong `rebuildAgg`.
-  - overview / errorFacets / report / deepStaff / tổng của `errors()` đọc từ các bảng này (`sumWhere`).
-- **Giao diện:**
-  - `aq()` thay cho `api.q()`: đếm số truy vấn để vẽ thanh tiến độ. **Không** khai báo lại `api` (trùng biến contextBridge làm hỏng toàn bộ app.js).
-  - `loadWith(key, sec, fn)` hiện thanh tiến độ (ước lượng theo `pageMs` lưu trong localStorage).
-  - Bảng lớn: `tbl()` giới hạn 1.000 dòng; bảng có ô nhập phải phân trang (xem `mkTable`). Không vẽ hàng nghìn ô nhập cùng lúc.
-- **Đo hiệu năng:**
-  - Chạy `node /tmp/.../an.js` với `new Worker('engine/worker.js', {workerData:{task:'analyze'}})` và in mốc thời gian theo nhãn tiến độ.
-  - Gọi `require('./engine/queries')(db)` rồi đo từng hàm.
+## Hiệu năng dữ liệu lớn (v3.9–4.1) – bắt buộc giữ
+Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng trăm nghìn tới hàng triệu cảnh báo. **Mọi tính năng mới phải chạy được ở quy mô này.**
+
+**Mục tiêu đo trên 1,3 triệu dòng / 3 triệu cảnh báo:**
+
+| Thao tác | Mục tiêu |
+|---|---|
+| Mở app đến khi thấy Tổng quan | ~1,5 s |
+| Mở trang lần đầu | ≤ 2,5 s |
+| Mở lại trang | ≤ 0,5 s |
+| Báo cáo tài chính | ≤ 0,2 s |
+| Phân tích 1 tháng | ~15 s |
+| Phân tích toàn bộ | ~140 s (song song) |
+
+### Nguyên tắc
+1. **Không quét `entries` hoặc `errors` để đếm hay tổng hợp khi đã có bảng tổng hợp.** Các bảng sẵn có:
+
+   | Bảng | Nội dung | Dựng / cập nhật ở đâu |
+   |---|---|---|
+   | `agg` | P&L, doanh thu – chi phí theo tháng × TK × bộ phận × khoản mục | `rebuildAgg` |
+   | `fin_mv`, `fin_pmv`, `fin_close` | Sổ số dư tháng cho BCTC | `rebuildFin`, gọi trong `rebuildAgg` |
+   | `ent_sum` | Bút toán theo tháng × người nhập: n, nx (không tính số dư đầu kỳ), docs, dmin/dmax | `rebuildAgg` |
+   | `err_sum` | Cảnh báo theo tháng × quy tắc × mức × trạng thái × người nhập × bộ phận | `rebuildErrSum(db, from, to)` sau phân tích (chỉ các tháng trong kỳ); `setReviews` cộng trừ tại chỗ |
+   | `err_ent` | Số dòng có lỗi / có lỗi mức H–M theo tháng × người nhập | cùng `rebuildErrSum` |
+
+   - `syncErrSum` tự dựng lại khi `settings.err_sum_n` khác `count(errors)`.
+   - Khi khởi động, `aggEmpty()` kiểm tra thiếu hoặc lệch → chạy task nền `buildAgg`, không khoá cửa sổ.
+   - **Không** gọi `rebuildErrSum` trong `open()`: chậm, khoá cửa sổ.
+   - Thêm thống kê mới thì mở rộng các bảng này; đừng viết `GROUP BY` trên entries hoặc errors trong truy vấn trang.
+2. **Bảng `errors` ghi sẵn `ym, u, dept, doc, st`:**
+   - Ghi khi chèn: `insErrFull` cho quy tắc từng dòng; `insErr` (INSERT … SELECT) cho quy tắc toàn cục.
+   - `fillErrCols()` bổ sung các dòng còn trống.
+   - Lọc lỗi bằng `EINC + RV('er')`; chỉ nối `entries` khi lọc theo TK, số tiền hoặc chữ (`where().from`).
+   - Trang danh sách: lấy id theo trang trước (sắp xếp theo sev/rule/user/st/doc) rồi mới nối dữ liệu chi tiết.
+   - Tổng số dòng lấy từ `err_sum` qua `sumWhere(f)`, trả null nếu bộ lọc cần dữ liệu chi tiết.
+3. **Chỉ mục:**
+   - Chỉ mục lỗi khai báo trong `ERR_IDX`. Phân tích kỳ trên 200k dòng thì `dropErrIndexes` trước, `createErrIndexes` sau; kỳ nhỏ giữ nguyên.
+   - Chỉ mục `entries` cần có: `ix_e_ym`, `ix_e_ym_imp` (để `months()` đếm theo chỉ mục), `ix_e_dup(acc_debit, acc_credit, amount)` (quy tắc trùng), `ix_e_accd`, `ix_e_accc`, `ix_e_doc`.
+   - Lọc TK theo khoảng (`acc>='335' AND acc<'336'`), không dùng `LIKE`.
+4. **Phân tích:**
+   - `analyze()` (async) chia khoảng id cho K = số nhân − 1 (tối đa 6) luồng phụ chạy task `scan`. Luồng phụ mở DB với `{light: true}`, chỉ đọc, gửi `errs` về; luồng chính ghi.
+   - Quy tắc toàn cục khi phân tích theo kỳ phải giới hạn theo kỳ. Ví dụ DUPLICATE: dựng bảng tạm `dk` gồm các khoá (TK Nợ, TK Có, số tiền) của dòng trong kỳ; `dg` gom trước `nd` và `ds` (danh sách chứng từ); duyệt từ dòng trong kỳ (`entries e CROSS JOIN dg`).
+   - Mỗi bước có nhãn tiến độ "Quy tắc toàn cục: …".
+5. **Nhóm worker truy vấn (`main.js`):**
+   - `qPool` gồm 2–3 `qworker`. Hàng đợi `qQueue`. Bộ nhớ đệm `qCache` chỉ cho tên trong `READ`; xoá khi có truy vấn ghi hoặc task ghi xong (`invalidateQueries`). `qInflight` gộp các truy vấn trùng đang chạy.
+   - `warmJob()` chỉ chạy khi còn ít nhất 2 luồng rảnh. `WARM` gồm overview, errorFacets, report, pl…, cộng thêm aging/inventory/todo theo tham số mặc định của giao diện. Nếu đổi mặc định ô chọn trên giao diện thì sửa `WARM` theo.
+   - Truy vấn đọc mới **phải** thêm vào `READ`; nếu không, nó bị coi là truy vấn ghi và xoá cache.
+   - Debug: `ACCSOFT_QDEBUG=/tmp/q.log` ghi thời gian từng truy vấn, số việc trong hàng đợi, số luồng bận.
+6. **Giao diện:**
+   - Gọi truy vấn bằng `aq()` (đếm phần để vẽ thanh tiến độ). **Không** khai báo lại `api`: trùng biến của contextBridge làm hỏng toàn bộ app.js.
+   - Chuyển trang hoặc tab nặng thì bọc trong `loadWith(key, sec, fn)` để có thanh tiến độ (ước lượng theo `pageMs` trong localStorage).
+   - Không vẽ quá 1.000 dòng (`tbl()` tự cắt). Bảng có ô nhập phải phân trang và có ô tìm (`mkTable`): hàng nghìn ô nhập làm treo giao diện 10–20 giây.
+
+### Đo hiệu năng (`scripts/bench/`)
+- `node scripts/bench/queries.js [db]`: thời gian lạnh từng truy vấn chính; dòng vượt 1 s có dấu ⚠.
+- `node scripts/bench/analyze.js '{"from":"2026-10","to":"2026-10"}' [db]`: mốc thời gian từng bước phân tích.
+- `node scripts/bench/make-big-db.js <db-thử> [N]`: nhân đôi dữ liệu (lùi N năm) để tạo dữ liệu thử lớn. **Chỉ chạy trên bản sao.**
+  - Sau đó chạy `analyze.js '{}'` và `rebuildAgg`.
+- Đo giao diện bằng Playwright Electron (`xvfb-run -a`):
+  - Đợi `.content>section:not(.hide)` hết class `loading` và `#pageLoad` có class `hide`, rồi đo từng trang hai vòng (lạnh / có cache).
+  - Nếu có thời gian chờ mà không có truy vấn nào (xem bằng `ACCSOFT_QDEBUG`), nguyên nhân là phía giao diện. Dùng CDP `Profiler` để tìm hàm tốn thời gian (thường là bảng quá nhiều phần tử).
+- Kiểm tra tính đúng sau tối ưu:
+  - `sum(err_sum.n) = count(errors)` và phép EXCEPT giữa hai cách nhóm cho 0 dòng lệch.
+  - Số cảnh báo theo quy tắc trước và sau phải bằng nhau.
+  - BCTC: tổng Nợ = tổng Có, B01 `diff` = 0, B03 `check` = 0.
 
 ## Quy ước nghiệp vụ (bắt buộc giữ)
 - Công nợ / tồn kho: **TK Nợ ↔ đối tượng Nợ (partner_debit), TK Có ↔ đối tượng Có (partner_credit)**. Dùng `sidePairs`.
