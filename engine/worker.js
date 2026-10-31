@@ -139,7 +139,7 @@ function setRules(scope = {}) {
   // Điều kiện kỳ đưa thẳng vào truy vấn: chỉ lấy ứng viên trong kỳ, phép so sánh vẫn dựa trên toàn bộ dữ liệu
   const S = t => (scope.from ? ` AND ${t}ym>='${scope.from}'` : '') + (scope.to ? ` AND ${t}ym<='${scope.to}'` : '');
   const inYm = y => (!scope.from || y >= scope.from) && (!scope.to || y <= scope.to);
-  if (!scope.from && !scope.to) db.exec(`DELETE FROM errors WHERE rule IN ('DUPLICATE','OUTLIER','DOC_MULTI_MONTH','SPLIT_PAYMENT','RARE_PAIR','INV_NEGATIVE')`);
+  if (!scope.from && !scope.to) db.exec(`DELETE FROM errors WHERE rule IN ('DUPLICATE','OUTLIER','DOC_MULTI_MONTH','SPLIT_PAYMENT','RARE_PAIR','INV_NEGATIVE','ACCRUAL_NOT_REVERSED')`);
   const keyOf = (k, r) => errKey(k, { doc: r.doc, line: r.line, dr: r.dr, cr: r.cr, amt: r.amt });
   const F = (t = '') => `${t}amount<>0 AND ifnull(${t}source_table,'') NOT LIKE '%Depreciation%' AND ifnull(${t}source_table,'') NOT LIKE '%Distribution%' AND ifnull(${t}source_table,'') NOT LIKE '%CIP%'`;
   db.exec(`DROP TABLE IF EXISTS temp.dg;
@@ -188,6 +188,13 @@ function setRules(scope = {}) {
     if (r.product !== cur) { cur = r.product; bal = 0; valid = !!r.isIn && !r.isOut && r.qty > 0; } // chứng từ đầu tiên phải là phiếu nhập thật (từ ngoài kho, có số lượng)
     if (r.isIn && !r.isOut) bal += r.amt; else if (r.isOut && !r.isIn) bal -= r.amt;
     if (valid && r.isOut && !r.isIn && bal < -0.01 && inYm(r.ym)) insErr.run(r.id, 'INV_NEGATIVE', 'H', `Tồn luỹ kế ${fmt2(bal)} sau khi xuất ngày ${r.d.split('-').reverse().join('/')}`, keyOf('INV_NEGATIVE', r));
+  }
+  // Đã ghi chi phí thực tế nhưng chưa huỷ trích 335
+  post({ type: 'progress', label: 'Đang đối chiếu trích trước 335 với chi phí thực tế…' });
+  for (const x of require('./accrual').match((q, ...a) => db.prepare(q).all(...a)).flagged) if (inYm(x.ym)) {
+    const g = x.g, sh = s => String(s || '').split('_').slice(0, 2).join('_');
+    insErr.run(x.id, 'ACCRUAL_NOT_REVERSED', g.sev, `Kỳ ${g.per}: đã trích ${fmt2(g.accrued)} (${g.accDocs.slice(0, 2).map(sh).join(', ')}), mới huỷ ${fmt2(g.released)}, còn treo ${fmt2(g.remain)}; chi phí thực tế ${fmt2(g.actual)}${g.invs.length ? ' HĐ ' + g.invs.slice(0, 2).join(', ') : ''}`,
+      errKey('ACCRUAL_NOT_REVERSED', { doc: x.doc, line: x.line, dr: x.dr, cr: x.cr, amt: x.a }));
   }
   // Cặp tài khoản đối ứng hiếm
   if (db.prepare('SELECT count(*) n FROM entries').get().n >= 1000)

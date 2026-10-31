@@ -127,6 +127,7 @@ const FIX={
  WEEKEND:'Xác nhận nghiệp vụ có thực sự phát sinh ngày nghỉ; nếu nhập nhầm ngày thì sửa Account Date.',
  CASH_ROUND:'Kiểm tra chứng từ gốc, phê duyệt và mục đích chi; tạm ứng số tròn lớn phải có kế hoạch quyết toán.',
  DUPLICATE:'So sánh các chứng từ trùng: nếu thanh toán/hạch toán hai lần thì huỷ một chứng từ và thu hồi tiền nếu đã chi.',
+ ACCRUAL_NOT_REVERSED:'Đã ghi chi phí thực tế (Nợ 6xx/Có 331…) nhưng chưa huỷ khoản trích trước 335 cùng đối tượng, khoản mục, kỳ dịch vụ → chi phí bị ghi 2 lần. Lập bút toán huỷ trích (Nợ 6xx/Có 335 số âm, hoặc Nợ 335/Có 6xx) đúng số đã trích, hoặc ghi nhận chi phí thực tế qua Nợ 335/Có 331.',
  OUTLIER:'Kiểm tra nhầm đơn vị/thừa số 0 so với chứng từ gốc; nếu đúng thì ghi chú lý do số tiền lớn bất thường.',
 };
 // Quy tắc cần nhìn toàn bộ dữ liệu – được tính bằng SQL trong engine/setrules.js
@@ -136,6 +137,7 @@ const SET_RULES=[
  {k:'SPLIT_PAYMENT',s:'M',n:'Nghi chia nhỏ khoản chi',d:'Cùng đối tượng nhận tiền có từ 3 chứng từ chi tiền mặt/ngân hàng khác nhau trở lên trong cùng một ngày.'},
  {k:'RARE_PAIR',s:'L',n:'Cặp tài khoản đối ứng bất thường',d:'Cặp TK Nợ – Có (cấp 3) chỉ xuất hiện 1–2 lần trong toàn bộ dữ liệu (≥ 1.000 dòng).'},
  {k:'DUPLICATE',s:'H',n:'Nghi trùng lặp',d:'Cùng đối tượng, tài khoản, số tiền, diễn giải nhưng khác số chứng từ (loại trừ khấu hao/phân bổ).'},
+ {k:'ACCRUAL_NOT_REVERSED',s:'H',n:'Đã ghi chi phí thực tế nhưng chưa huỷ trích',d:'Có chi phí thực tế (hoá đơn) cho cùng đối tượng × khoản mục × kỳ dịch vụ (đọc từ diễn giải "In April 2026", "tháng 10/2026"…) với khoản trích trước 335, nhưng số trích chưa được huỷ/quyết toán. Mức Cao: khớp đúng kỳ dịch vụ; Trung bình: kỳ suy ra từ tháng hạch toán.'},
  {k:'OUTLIER',s:'M',n:'Số tiền bất thường',d:'Số tiền lớn hơn 10 lần trung vị của cùng khoản mục chi phí (≥ 10 dòng, không tính khấu hao/phân bổ tự động) – kiểm tra nhầm số 0, nhầm đơn vị.'},
 ];
 const ALL_RULES=[...RULES,...SET_RULES];
@@ -175,5 +177,5 @@ const AUDIT_WHY={
 const GROUP=Object.fromEntries(ALL_RULES.map(r=>[r.k,AUDIT_WHY[r.k]?'audit':'staff']));
 const GROUPS={staff:'Sai sót nhân viên',audit:'Sai sót dễ bị kiểm toán'};
 const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||'',g:GROUP[k],why:AUDIT_WHY[k]||''})),status:ST,groups:GROUPS});
-const RULES_VERSION=11; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
+const RULES_VERSION=12; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
 module.exports={CFG,CFG_DEFAULT,setConfig,GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};

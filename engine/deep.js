@@ -200,6 +200,14 @@ function make(db, { INC, all, get, okYm }) {
   }
 
   /* #13 Số liệu cho báo cáo tổng hợp rủi ro */
-  return { recurring, variance, accruals, prepaid, benford, staff, vendors, fx };
+  /* Đã ghi chi phí thực tế nhưng chưa huỷ trích 335 */
+  function reversal(from, to) {
+    const r = require('./accrual').match(all), f = okYm(from), t = okYm(to);
+    const groups = r.groups.filter(g => (!f || g.per >= f || (g.firstAct || '').slice(0, 7) >= f) && (!t || g.per <= t)).map(g => ({ ...g, name: nameOf(g.p) }));
+    const byUser = new Map();
+    for (const g of groups) if (g.status === 'Chưa huỷ trích') for (const u of g.users) { const o = byUser.get(u) || byUser.set(u, { u, n: 0, amt: 0, H: 0 }).get(u); o.n++; o.amt += Math.min(g.remain, g.actual); if (g.sev === 'H') o.H++; }
+    return { groups, users: [...byUser.values()].sort((a, b) => b.amt - a.amt) };
+  }
+  return { recurring, variance, accruals, prepaid, benford, staff, vendors, fx, reversal };
 }
 module.exports = { make, addM };

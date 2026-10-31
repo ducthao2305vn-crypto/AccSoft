@@ -1,5 +1,19 @@
 # Lịch sử phiên bản
 
+## v3.1.0 – 31/10/2026
+**Phát hiện "đã ghi chi phí thực tế nhưng chưa huỷ trích 335"**
+- Cách ghép: đối chiếu khoản trích trước (Nợ 6xx/Có 335), khoản huỷ trích (Có 335 số âm hoặc Nợ 335/Có 6xx) và chi phí thực tế (Nợ 6xx/Có 331, 111, 112…) theo đối tượng × khoản mục × kỳ dịch vụ.
+- Kỳ dịch vụ đọc từ diễn giải, ví dụ "In April 2026" hoặc "tháng 10/2026".
+- Quy tắc lỗi mới "Đã ghi chi phí thực tế nhưng chưa huỷ trích":
+  - Mức Cao: khớp đúng kỳ dịch vụ.
+  - Mức Trung bình: kỳ suy ra từ tháng hạch toán.
+  - Gắn vào bút toán chi phí thực tế của nhân viên, nên vào báo cáo và email nhắc nhở.
+- Trang "Phân tích chuyên sâu → Chưa huỷ trích 335":
+  - Tổng chi phí nghi ghi 2 lần, tổng hợp theo nhân viên.
+  - Bảng đối chiếu: đã trích / đã huỷ / còn treo / thực tế, kèm chứng từ, hoá đơn, mức độ tin cậy.
+  - Lọc: chưa huỷ, huỷ vượt, chưa có thực tế, đã huỷ đúng.
+- Đây là thay đổi quy tắc: cần "Phân tích dữ liệu" lại.
+
 ## v3.0.0 – 31/10/2026
 **Phân tích chuyên sâu & vận hành an toàn**
 - Trang mới "Phân tích chuyên sâu":

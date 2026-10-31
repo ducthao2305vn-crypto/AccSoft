@@ -32,6 +32,7 @@ DB: `<thư mục app>/AccSoft_Data/accsoft.db` (portable: `PORTABLE_EXECUTABLE_D
 - Import **không** phân tích. Phân tích riêng bằng nút "Phân tích dữ liệu" theo kỳ rà soát (tháng/quý/năm). Trạng thái lưu ở `months.analyzed_ver`.
 - Dòng `source_table='OPENING_BALANCE'` (TK giả `OB`) không bao giờ là lỗi và không vào `agg`.
 - Trạng thái và ghi chú lỗi lưu ở `reviews` theo `err_key`, giữ qua các lần phân tích lại.
+- Huỷ trích 335 (`engine/accrual.js`): trích = Nợ 6xx/Có 335 dương; huỷ = Có 335 số âm hoặc Nợ 335; thực tế = Nợ 6xx/Có khác 335. Ghép đối tượng × khoản mục × kỳ dịch vụ (`period()` đọc diễn giải). Test: dựng bảng `entries` in-memory với các ca trích/huỷ/thực tế.
 - Dữ liệu thật: RateToVND = 0 nên kiểm tra tỷ giá báo "không có dữ liệu".
 
 ## Thêm / sửa quy tắc
