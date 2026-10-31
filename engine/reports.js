@@ -41,11 +41,17 @@ function reversalErpBook(lines, o) {
     const row = new Array(headers.length).fill(null);
     if (i === 0) { row[1] = o.dept || null; row[2] = o.docType || 'GL Journal (Sub)'; row[3] = o.docNo || null; row[5] = dmy; row[6] = per; row[7] = o.desc || 'VTL: Adjust Estimate expense (AccSoft)'; }
     const bp = bpVd(r.bpCr || r.bp);
-    Object.assign(row, { 12: due, 13: (o.prefix ?? 'VTL: Adjust ') + String(r.ds || '').replace(/^VTL[:_\s]*/i, ''), 14: 0, 15: 0, 16: r.currency || 'USD', 17: 1, 18: vd(r.drName), 19: -r.rev, 20: vd(r.crName), 21: -r.rev,
+    const amt = r.out != null ? r.out : -r.rev;
+    Object.assign(row, { 12: due, 13: r.outDesc != null ? r.outDesc : (o.prefix ?? 'VTL: Adjust ') + String(r.ds || '').replace(/^VTL[:_\s]*/i, ''), 14: 0, 15: 0, 16: r.currency || 'USD', 17: 1, 18: vd(r.drName), 19: amt, 20: vd(r.crName), 21: amt,
       22: bp, 23: bp, 24: vd(r.t), 25: r.deptSub || null, 27: vd(r.grpCost), 29: vd(r.services), 36: vd(r.location), 44: vd(r.project), 46: 1, 47: 0, 51: 'N', 55: 'N' });
     aoa.push(row);
   });
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), sheet.slice(0, 31)); return wb;
+}
+function accrueCheckBook(lines, o) {
+  return book([['Doi chieu trich truoc', lines.map(r => ({ 'Kỳ trích mới': o.target, 'Từ CT trích kỳ': r.per, 'CT gốc': r.doc, 'TK Nợ': r.drName, 'TK Có': r.crName, 'Đối tượng': r.bpCr || r.bp, 'Đối tượng (ERP)': bpVd(r.bpCr || r.bp),
+    'Khoản mục': r.t, 'Số kỳ gốc': r.a, 'Số trích mới': r.out, 'Diễn giải mới': r.outDesc, 'Đã có trích kỳ mới': r.dup ? 'CÓ – kiểm tra trùng' : '',
+    'Thiếu thông tin': [!r.grpCost && 'Group cost', !r.services && 'Services', !r.deptSub && 'Department Sub'].filter(Boolean).join(', ') }))]]);
 }
 function reversalCheckBook(lines, o) {
   return book([['Doi chieu huy trich', lines.map(r => ({ 'Kỳ dịch vụ': r.per, 'CT trích gốc': r.doc, 'Ngày trích': r.d, 'TK Nợ': r.drName, 'TK Có': r.crName, 'Đối tượng': r.bpCr || r.bp, 'Đối tượng (ERP)': bpVd(r.bpCr || r.bp),
@@ -128,4 +134,4 @@ function mailHtml(user, rows, o) {
 const mailSubject = u => `[AccSoft] Danh sách bút toán cần khắc phục – ${shortName(u)}`;
 
 const ruleInfo = () => ({ RULE_NAMES: Object.fromEntries(ALL_RULES.map(r => [r.k, r.n])), GROUPS, GROUP });
-module.exports = { accrualBook, reversalErpBook, reversalCheckBook, bpVd, ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };
+module.exports = { accrueCheckBook, accrualBook, reversalErpBook, reversalCheckBook, bpVd, ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };

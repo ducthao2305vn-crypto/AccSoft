@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v3.4.0 – 31/10/2026
+**Lập file trích trước chi phí để import vào ERP**
+- Màn hình mới: "Trích – huỷ trích 335 → Lập trích trước kỳ mới".
+  - Chọn kỳ dịch vụ mẫu và kỳ trích mới.
+  - Các dòng trích kỳ mẫu được sao chép sang kỳ mới, giữ nguyên TK, đối tượng, khoản mục, Group cost, Services, Location.
+  - Diễn giải tự đổi tháng, ví dụ "December 2026" thành "January 2027", hoặc "tháng 12/2026" thành "tháng 01/2027".
+- Trên màn hình có thể sửa số tiền ước tính và diễn giải từng dòng, bỏ chọn dòng không trích.
+- Cảnh báo khi kỳ mới đã có trích của cùng đối tượng × khoản mục, để tránh trích trùng. Các dòng này mặc định bỏ chọn.
+- Xuất file .xls đúng mẫu GL Journal (126 cột) kèm file _DoiChieu.xlsx.
+
 ## v3.3.0 – 31/10/2026
 **Xuất file huỷ trích để import vào ERP**
 - Cách dùng:

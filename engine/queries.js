@@ -401,6 +401,20 @@ function make(db) {
   function backup(file) { db.prepare('VACUUM INTO ?').run(file); return file; }
   const D = deep.make(db, { INC, all, get, okYm });
   // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
+  // Dòng trích trước của một kỳ dịch vụ (làm mẫu lập trích kỳ mới) + đánh dấu khoản đã có trích ở kỳ đích
+  function accrualSource(per, target) {
+    const G = require('./accrual').match(all).groups, has = new Set(G.filter(g => g.per === target && g.accrued > 0).map(g => g.p + '|' + g.t)), ids = [];
+    for (const g of G) if (g.per === per) ids.push(...g.accIds);
+    const pers = [...new Set(G.filter(g => g.accrued > 0).map(g => g.per))].sort().reverse();
+    if (!ids.length) return { pers, rows: [] };
+    const rows = [];
+    for (let i = 0; i < ids.length; i += 500) { const c = ids.slice(i, i + 500);
+      rows.push(...all(`SELECT id, document_no doc, account_date d, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, type_of_cost t, description ds,
+        department_sub deptSub, group_cost grpCost, services, location, project, currency, created_by u FROM entries WHERE id IN (${c.map(() => '?').join(',')}) ORDER BY partner_credit, type_of_cost, id`, ...c)); }
+    return { pers, rows: rows.map(r => ({ ...r, per, dup: has.has((r.bpCr || '') + '|' + (r.t || '')) })) };
+  }
+  function accrualLinesByIds(ids) { return ids.length ? all(`SELECT id, document_no doc, account_date d, due_date due, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, type_of_cost t,
+    description ds, department_sub deptSub, group_cost grpCost, services, location, project, currency FROM entries WHERE id IN (${ids.map(() => '?').join(',')})`, ...ids) : []; }
   function reversalLines(keys) {
     const want = new Set(keys), out = [];
     for (const g of require('./accrual').match(all).groups) {
@@ -414,7 +428,7 @@ function make(db) {
   }
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, deepReversal: D.reversal, reversalLines, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, deepReversal: D.reversal, reversalLines, accrualSource, accrualLinesByIds, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };
