@@ -18,7 +18,7 @@ const ls={get:(k,d)=>{try{const v=localStorage.getItem('accsoft.'+k);return v==n
 const SEVL={H:'Cao',M:'Trung bình',L:'Thấp'};
 let META={rules:[],status:{}},RULE={},PAGE='overview',charts={};
 const TITLES={overview:['Tổng quan','Bức tranh chung về dữ liệu hạch toán'],errors:['Lỗi nhập liệu','Phát hiện, theo dõi và xử lý bút toán sai'],inv:['Tuổi hàng tồn kho','Tồn kho theo mặt hàng, kho, đối tượng – FIFO theo ngày nhập'],aging:['Công nợ & tuổi nợ','Phải thu, phải trả, tạm ứng theo đối tượng'],
-  pl:['Kết quả kinh doanh','Doanh thu, chi phí, lợi nhuận theo năm và tháng'],cost:['Doanh thu & Chi phí','Phân tích theo tài khoản, khoản mục, bộ phận và kỳ'],deep:['Phân tích chuyên sâu','Chi phí định kỳ, biến động, 335/242, nhân viên, Benford, nhà cung cấp, tỷ giá'],report:['Báo cáo & Thông báo','Báo cáo kiểm tra và gửi yêu cầu khắc phục'],data:['Quản lý dữ liệu','Tháng dữ liệu, lần nạp file và bảo trì CSDL']};
+  pl:['Kết quả kinh doanh','Doanh thu, chi phí, lợi nhuận theo năm và tháng'],cost:['Doanh thu & Chi phí','Phân tích theo tài khoản, khoản mục, bộ phận và kỳ'],fin:['Báo cáo tài chính','Bảng cân đối số phát sinh, Bảng cân đối kế toán, Kết quả kinh doanh – lập tự động từ dữ liệu hạch toán'],deep:['Phân tích chuyên sâu','Chi phí định kỳ, biến động, 335/242, nhân viên, Benford, nhà cung cấp, tỷ giá'],report:['Báo cáo & Thông báo','Báo cáo kiểm tra và gửi yêu cầu khắc phục'],data:['Quản lý dữ liệu','Tháng dữ liệu, lần nạp file và bảo trì CSDL']};
 
 /* ---------- Biểu đồ: bảng màu TLM, cam chủ đạo ---------- */
 const C={brand:'#FA4700',brand3:'#FF9C6B',brand1:'#FFD4BD',navy:'#001A79',ok:'#17B26A',err:'#F04438',gray:'#D5D7DA',grid:'#F5F5F5',txt:'#535862'};
@@ -700,6 +700,45 @@ async function vDeep(){
       :card('Nhiều tỷ giá trong cùng ngày','',tbl(['Ngày','Tiền tệ','#Số tỷ giá','#Thấp','#Cao','#Số dòng'],r.multi.map(x=>`<tr><td>${vn(x.d)}</td><td>${esc(x.c)}</td><td class=n>${x.k}</td><td class=n>${fmt(x.lo)}</td><td class=n>${fmt(x.hi)}</td><td class=n>${num(x.n)}</td></tr>`)))+
        card('Tỷ giá lệch > 2% so với bình quân tháng','',tbl(['Ngày','Chứng từ','Tiền tệ','#Tỷ giá','#BQ tháng','#Số tiền','Người nhập'],r.dev.map(x=>`<tr><td>${vn(x.d)}</td><td>${esc(x.doc)}</td><td>${esc(x.c)}</td><td class=n>${fmt(x.r)}</td><td class=n>${fmt(x.avg)}</td><td class=n>${fmt2(x.amt)}</td><td>${esc(short(x.u))}</td></tr>`)));}
 }
+/* ---------- Báo cáo tài chính ---------- */
+let FT=ls.get('finTab','tb');const FP=ls.get('finPick',{});
+async function vFin(){
+  $$('#fnTabs [data-f]').forEach(b=>b.classList.toggle('on',b.dataset.f===FT));
+  const yms=(await api.q('months')).map(m=>m.ym).sort(),last=yms.at(-1)||'';if(!last){$('#fnBody').innerHTML='<div class="empty"><h2>Chưa có dữ liệu</h2></div>';return}
+  if(!yms.includes(FP.to))FP.to=last;if(!yms.includes(FP.from))FP.from=yms.find(m=>m.slice(0,4)===FP.to.slice(0,4))||yms[0];FP.level??='1';FP.cmp??='ly';
+  const opt=v=>yms.slice().reverse().map(m=>`<option value="${m}" ${m===v?'selected':''}>${ymLbl(m)}</option>`).join('');
+  $('#fnCtl').innerHTML=`<div class="row" style="flex-wrap:wrap;gap:12px"><label>Từ tháng <select data-fk="from">${opt(FP.from)}</select></label><label>Đến tháng <select data-fk="to">${opt(FP.to)}</select></label>
+    ${FT==='tb'?`<label>Cấp TK <select data-fk="level"><option value="1" ${FP.level==='1'?'selected':''}>Cấp 1 (3 số)</option><option value="0" ${FP.level==='0'?'selected':''}>Chi tiết</option></select></label>`:''}
+    ${FT==='pl'?`<label>So sánh <select data-fk="cmp"><option value="ly" ${FP.cmp==='ly'?'selected':''}>Cùng kỳ năm trước</option><option value="prev" ${FP.cmp==='prev'?'selected':''}>Kỳ liền trước</option><option value="none" ${FP.cmp==='none'?'selected':''}>Không</option></select></label>`:''}
+    <span class="hint">Số đầu kỳ = luỹ kế các tháng đã nạp trước "Từ tháng"; không có dữ liệu trước đó thì bằng 0.</span></div>`;
+  const B=$('#fnBody');B.innerHTML='<div class="card"><span class="spin"></span> Đang lập báo cáo…</div>';
+  const n=mdiff(FP.from,FP.to)+1,cmp=FP.cmp==='ly'?[addM(FP.from,-12),addM(FP.to,-12)]:FP.cmp==='prev'?[addM(FP.from,-n),addM(FP.from,-1)]:[null,null];
+  const per=`${ymLbl(FP.from)} – ${ymLbl(FP.to)}`;
+  const N=v=>Math.abs(v)<0.005?'':`<span class="${v<0?'neg':''}">${v<0?'('+fmt2(-v)+')':fmt2(v)}</span>`;
+  if(FT==='tb'){const r=await api.q('finTrial',FP.from,FP.to,+FP.level),t=r.tot,ok=Math.abs(t.dr-t.cr)<0.01&&Math.abs(t.cbDr-t.cbCr)<0.01;
+    B.innerHTML=(r.hasOpening?'':`<div class="card" style="background:#FFFAEB"><b>Không có số dư đầu kỳ</b> – trước ${ymLbl(FP.from)} chưa có dữ liệu nên số dư đầu kỳ = 0. Có thể nạp "Số dư đầu kỳ" ở Quản lý dữ liệu.</div>`)+
+      `<div class="card"><div class="card-h"><div><h3>BẢNG CÂN ĐỐI SỐ PHÁT SINH</h3><div class="hint">Kỳ ${per} · ${num(r.rows.length)} tài khoản · ${ok?'<span class=pos>✓ Tổng Nợ = Tổng Có</span>':'<span class=neg>Lệch Nợ/Có – kiểm tra dữ liệu</span>'}</div></div></div>
+      <div class="tbl" style="max-height:calc(100vh - 300px)"><table><thead><tr><th rowspan=2>Số hiệu TK</th><th rowspan=2>Tên tài khoản</th><th colspan=2 style="text-align:center">Số dư đầu kỳ</th><th colspan=2 style="text-align:center">Số phát sinh trong kỳ</th><th colspan=2 style="text-align:center">Số dư cuối kỳ</th></tr>
+      <tr><th class=n>Nợ</th><th class=n>Có</th><th class=n>Nợ</th><th class=n>Có</th><th class=n>Nợ</th><th class=n>Có</th></tr></thead><tbody>
+      ${r.rows.map(x=>`<tr><td class=nw><b>${esc(x.a)}</b></td><td>${esc(x.n)}</td>${['obDr','obCr','dr','cr','cbDr','cbCr'].map(k=>`<td class=n>${x[k]?fmt2(x[k]):''}</td>`).join('')}</tr>`).join('')}
+      <tr style="font-weight:700;background:#FFF6F2"><td></td><td>TỔNG CỘNG</td>${['obDr','obCr','dr','cr','cbDr','cbCr'].map(k=>`<td class=n>${fmt2(t[k])}</td>`).join('')}</tr></tbody></table></div></div>`}
+  if(FT==='bs'){const r=await api.q('finBalance',FP.from,FP.to),ok=Math.abs(r.diff)<0.01;
+    B.innerHTML=`<div class="card"><div class="card-h"><div><h3>BẢNG CÂN ĐỐI KẾ TOÁN (Mẫu B01-DN)</h3><div class="hint">Tại ngày cuối tháng ${ymLbl(FP.to)}; số đầu kỳ tại cuối tháng trước ${ymLbl(FP.from)} · ${ok?'<span class=pos>✓ Tổng tài sản = Tổng nguồn vốn</span>':`<span class=neg>Chênh lệch ${fmt2(r.diff)}</span>`} · Công nợ 131/331/138/338/141/136/336 tách dư Nợ – dư Có theo từng đối tượng.</div></div></div>
+      ${r.unmapped.length?`<p class=neg style="font-size:13px">TK chưa đưa vào chỉ tiêu: ${r.unmapped.map(u=>esc(u.a)+' ('+fmt2(u.bal)+')').join(', ')}</p>`:''}
+      <div class="tbl" style="max-height:calc(100vh - 300px)"><table><thead><tr><th>Chỉ tiêu</th><th>Mã số</th><th class=n>Số cuối kỳ</th><th class=n>Số đầu kỳ</th></tr></thead><tbody>
+      ${r.lines.map(l=>`<tr style="${l.lvl===0?'font-weight:700;background:#FFF6F2':l.lvl===1?'font-weight:600':''}"><td style="padding-left:${12+l.lvl*18}px">${esc(l.name)}</td><td>${/^\d+$/.test(l.code)?l.code:''}</td><td class=n>${N(l.cb)}</td><td class=n>${N(l.ob)}</td></tr>`).join('')}</tbody></table></div></div>`}
+  if(FT==='pl'){const r=await api.q('finIncome',FP.from,FP.to,cmp[0],cmp[1]);
+    B.innerHTML=`<div class="card"><div class="card-h"><div><h3>BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH (Mẫu B02-DN)</h3><div class="hint">Kỳ ${per}${cmp[0]?` · so sánh ${ymLbl(cmp[0])} – ${ymLbl(cmp[1])}`:''} · loại trừ bút toán kết chuyển 911</div></div></div>
+      <div class="tbl"><table><thead><tr><th>Chỉ tiêu</th><th>Mã số</th><th class=n>Kỳ này</th>${cmp[0]?'<th class=n>Kỳ so sánh</th><th class=n>Chênh lệch</th><th class=n>%</th>':''}</tr></thead><tbody>
+      ${r.lines.map(l=>`<tr style="${l.bold?'font-weight:700;background:#FFF6F2':''}" class="dbl" data-plk="${l.k}"><td>${esc(l.name)}</td><td>${l.code}</td><td class=n>${N(l.cur)}</td>${cmp[0]?`<td class=n>${N(l.prev)}</td><td class=n>${N(l.cur-l.prev)}</td>${chgTd(l.cur,l.prev,['11','22','25','26','32','51','02'].includes(l.code)?-1:1)}`:''}</tr>`).join('')}</tbody></table></div><p class="mut" style="font-size:12px">Nhấn đúp một chỉ tiêu để xem bút toán chi tiết.</p></div>`;
+    B.ondblclick=e=>{const tr=e.target.closest('[data-plk]');if(tr)openLedger(tr.cells[0].innerText,'Kỳ '+per,{kind:'pl',key:tr.dataset.plk,from:FP.from,to:FP.to},PLNAT(tr.dataset.plk))}}
+  else B.ondblclick=null;
+  FP._cmp=cmp;
+}
+$('#fnTabs').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;FT=b.dataset.f;ls.set('finTab',FT);vFin()};
+$('#fnCtl').onchange=e=>{const k=e.target.dataset.fk;if(!k)return;FP[k]=e.target.value;if(FP.from>FP.to)k==='from'?FP.to=FP.from:FP.from=FP.to;ls.set('finPick',{from:FP.from,to:FP.to,level:FP.level,cmp:FP.cmp});vFin()};
+$('#fnXls').onclick=async()=>{try{const f=await api.finXlsx({from:FP.from,to:FP.to,level:+FP.level,cmpFrom:FP._cmp?.[0],cmpTo:FP._cmp?.[1]});if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
+
 /* ---------- Lập trích trước kỳ mới (file GL Journal import ERP) ---------- */
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function swapPeriod(s,from,to){const [fy,fm]=[+from.slice(0,4),+from.slice(5)],[ty,tm]=[+to.slice(0,4),+to.slice(5)];let x=String(s||'');
@@ -769,7 +808,7 @@ $('#obTpl').onclick=()=>api.openingTemplate().catch(e=>alert(e.message));
 $('#obImp').onclick=async()=>{try{const r=await api.importOpening();if(r){alert(`Đã nạp số dư đầu kỳ: ${num(r.rows)} dòng`+(r.skipped?`, bỏ qua ${num(r.skipped)} dòng ví dụ`:''));await refreshSide();vData()}}catch(e){alert(e.message)}};
 $('#repPdf').onclick=async()=>{try{const f=await api.riskPdf();if(f)alert('Đã lưu báo cáo: '+f)}catch(e){alert(e.message)}};
 
-const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),inv:()=>vInv(true),pl:vPL,cost:()=>vCost(true),deep:vDeep,report:vReport,data:vData};
+const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),inv:()=>vInv(true),pl:vPL,cost:()=>vCost(true),deep:vDeep,fin:vFin,report:vReport,data:vData};
 (async()=>{
   META=await api.q('meta');RULE=Object.fromEntries(META.rules.map(r=>[r.k,r]));
   const info=await api.info();$('#ver').textContent='v'+info.version;

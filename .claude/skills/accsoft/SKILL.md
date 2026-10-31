@@ -6,7 +6,10 @@ description: Phát triển, sửa lỗi, kiểm thử và phát hành AccSoft �
 # AccSoft – hướng dẫn làm việc
 
 Người dùng: chuyên gia tài chính/kiểm toán, giao tiếp tiếng Việt, ngắn gọn, chỉ thẳng nếu họ sai.
-Mục đích phần mềm: **quản trị rủi ro khi nhân viên hạch toán**. Không làm báo cáo tài chính.
+Mục đích phần mềm: **quản trị rủi ro khi nhân viên hạch toán**. Từ v3.5 có thêm trang Báo cáo tài chính (`engine/fin.js`): bảng cân đối số phát sinh, B01-DN, B02-DN theo TT200 rút gọn.
+  - Số liệu được gom một lượt theo tháng × TK Nợ × TK Có rồi tính trong JS; không lọc tháng bằng điều kiện `INC` trên toàn bảng vì chậm (khoảng 10 giây).
+  - B02 dùng lại `plRange`.
+  - B01 tách dư Nợ/Có theo đối tượng bằng `partnerSplits`.
 
 ## Kiến trúc
 | File | Vai trò |

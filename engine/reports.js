@@ -59,6 +59,15 @@ function reversalCheckBook(lines, o) {
     'Thiếu thông tin': [!r.grpCost && 'Group cost', !r.services && 'Services', !r.deptSub && 'Department Sub'].filter(Boolean).join(', ') }))],
     ['Thong tin chung tu', [{ 'Ngày hạch toán': o.date, 'Kỳ': o.date.slice(0, 7), 'Bộ phận': o.dept, 'Loại CT': o.docType, 'Diễn giải': o.desc, 'Số dòng': lines.length, 'Tổng huỷ trích': -lines.reduce((s, r) => s + r.rev, 0) }]]]);
 }
+function finBook(tb, bs, pl, o) {
+  const T = tb.rows.map(r => ({ 'Số hiệu TK': r.a, 'Tên tài khoản': r.n, 'Dư Nợ đầu kỳ': r.obDr, 'Dư Có đầu kỳ': r.obCr, 'Phát sinh Nợ': r.dr, 'Phát sinh Có': r.cr, 'Dư Nợ cuối kỳ': r.cbDr, 'Dư Có cuối kỳ': r.cbCr }));
+  T.push({ 'Số hiệu TK': '', 'Tên tài khoản': 'TỔNG CỘNG', 'Dư Nợ đầu kỳ': tb.tot.obDr, 'Dư Có đầu kỳ': tb.tot.obCr, 'Phát sinh Nợ': tb.tot.dr, 'Phát sinh Có': tb.tot.cr, 'Dư Nợ cuối kỳ': tb.tot.cbDr, 'Dư Có cuối kỳ': tb.tot.cbCr });
+  const B = bs.lines.map(l => ({ 'Chỉ tiêu': l.name, 'Mã số': /^\d+$/.test(l.code) ? l.code : '', 'Số cuối kỳ': l.cb, 'Số đầu kỳ': l.ob }));
+  const P = pl.lines.map(l => ({ 'Chỉ tiêu': l.name, 'Mã số': l.code, 'Kỳ này': l.cur, ...(pl.cmpFrom ? { 'Kỳ so sánh': l.prev } : {}) }));
+  const info = [{ 'Đơn vị': o.org || '', 'Kỳ báo cáo': `${tb.from || 'đầu dữ liệu'} → ${tb.to || 'cuối dữ liệu'}`, 'Kỳ so sánh (B02)': pl.cmpFrom ? `${pl.cmpFrom} → ${pl.cmpTo}` : '', 'Có số dư đầu kỳ': tb.hasOpening ? 'Có (luỹ kế các tháng trước kỳ)' : 'Không – số đầu kỳ = 0',
+    'Chênh lệch TS − NV': bs.diff, 'Ghi chú': 'Lập tự động từ dữ liệu hạch toán đã nạp (AccSoft); B01/B02 theo mẫu TT200 rút gọn – cần kế toán trưởng rà soát trước khi sử dụng.' }];
+  return book([['CDSPS', T], ['B01-DN', B], ['B02-DN', P], ['Thong tin', info]]);
+}
 function accrualBook(r) {
   const { summarize, AGE } = require('./accrual');
   const sh = s => String(s || '').split('_').slice(2).join('_') || String(s || '');
@@ -134,4 +143,4 @@ function mailHtml(user, rows, o) {
 const mailSubject = u => `[AccSoft] Danh sách bút toán cần khắc phục – ${shortName(u)}`;
 
 const ruleInfo = () => ({ RULE_NAMES: Object.fromEntries(ALL_RULES.map(r => [r.k, r.n])), GROUPS, GROUP });
-module.exports = { accrueCheckBook, accrualBook, reversalErpBook, reversalCheckBook, bpVd, ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };
+module.exports = { finBook, accrueCheckBook, accrualBook, reversalErpBook, reversalCheckBook, bpVd, ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };

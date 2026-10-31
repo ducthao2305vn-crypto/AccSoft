@@ -1,5 +1,19 @@
 # Lịch sử phiên bản
 
+## v3.5.0 – 31/10/2026
+**Báo cáo tài chính lập tự động từ dữ liệu hạch toán**
+- Trang mới "Báo cáo tài chính", chọn kỳ từ tháng đến tháng:
+  - **Bảng cân đối số phát sinh:** dư đầu kỳ, phát sinh, dư cuối kỳ (Nợ/Có); xem theo TK cấp 1 hoặc chi tiết; kiểm tra tổng Nợ = tổng Có.
+  - **Bảng cân đối kế toán (B01-DN, TT200 rút gọn):**
+    - Số cuối kỳ và số đầu kỳ.
+    - Công nợ 131/331/138/338/141/136/336 được tách dư Nợ và dư Có theo từng đối tượng.
+    - Kết quả chưa kết chuyển được đưa vào chỉ tiêu LNST chưa phân phối.
+    - Kiểm tra tổng tài sản = tổng nguồn vốn và cảnh báo TK chưa được đưa vào chỉ tiêu nào.
+  - **Kết quả kinh doanh (B02-DN):** so sánh với cùng kỳ năm trước hoặc kỳ liền trước; nhấn đúp một chỉ tiêu để xem bút toán.
+- Số dư đầu kỳ = luỹ kế các tháng đã nạp trước kỳ (kể cả số dư đầu kỳ nhập từ file mẫu); không có dữ liệu trước kỳ thì bằng 0.
+- Xuất Excel 4 sheet: CĐSPS, B01-DN, B02-DN, Thông tin.
+- Bảng cân đối số phát sinh lập trong khoảng 1 giây trên 650.000 dòng.
+
 ## v3.4.0 – 31/10/2026
 **Lập file trích trước chi phí để import vào ERP**
 - Màn hình mới: "Trích – huỷ trích 335 → Lập trích trước kỳ mới".

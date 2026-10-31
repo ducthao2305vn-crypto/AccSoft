@@ -193,6 +193,7 @@ section.loading{opacity:.55;transition:opacity .2s;pointer-events:none}
     <button data-p="inv"><svg class="icon"><use href="#i-box"/></svg>Tuổi hàng tồn kho</button>
     <button data-p="pl"><svg class="icon"><use href="#i-chart"/></svg>Kết quả kinh doanh</button>
     <button data-p="cost"><svg class="icon"><use href="#i-pie"/></svg>Doanh thu & Chi phí</button>
+    <button data-p="fin"><svg class="icon"><use href="#i-file"/></svg>Báo cáo tài chính</button>
     <button data-p="deep"><svg class="icon"><use href="#i-trend"/></svg>Phân tích chuyên sâu</button>
     <div class="sec">Kiểm soát</div>
     <button data-p="report"><svg class="icon"><use href="#i-mail"/></svg>Báo cáo & Thông báo</button>
@@ -336,6 +337,13 @@ section.loading{opacity:.55;transition:opacity .2s;pointer-events:none}
       <div class="card"><div class="card-h"><h3>Cơ cấu</h3></div><div class="cv" style="height:360px"><canvas id="chAnPie"></canvas></div></div>
     </div>
     <div class="card"><div class="card-h"><h3 id="anTblT">Bảng phân tích</h3><span class="hint" id="anHint"></span></div><div class="tbl" style="max-height:640px"><table id="tAn"></table></div></div>
+  </section>
+
+  <section id="fin" class="hide">
+    <div class="card" style="padding:12px 16px"><div class="row" style="flex-wrap:wrap;gap:12px"><div class="tabs" id="fnTabs"><button data-f="tb" class="on">Bảng cân đối số phát sinh</button><button data-f="bs">Bảng cân đối kế toán (B01-DN)</button><button data-f="pl">Kết quả kinh doanh (B02-DN)</button></div>
+      <div style="flex:1"></div><button class="btn primary" id="fnXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel (3 báo cáo)</button></div></div>
+    <div class="card pick" id="fnCtl"></div>
+    <div id="fnBody" style="display:flex;flex-direction:column;gap:20px"></div>
   </section>
 
   <section id="deep" class="hide">
