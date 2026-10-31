@@ -149,6 +149,24 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
   - Kiểm tra: tổng Nợ = tổng Có (đầu kỳ, phát sinh, cuối kỳ); B01 `diff` ≈ 0 và `diffOb` ≈ 0; B03 `check` ≈ 0; bản gián tiếp cộng ra đúng mã 20.
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
+## Phải thu theo đối tượng – TK 138812 (v4.3, `engine/recv.js`)
+- **Dữ liệu thật:**
+  - Có 138812 là thu tiền (Nợ 1122, từ sổ phụ ngân hàng). Đối tượng ghi ở `partner_credit`. Diễn giải chứa mã thuê bao (`dil0046_gftth_thao`), số điện thoại `7xxxxxxx` và kỳ ("AUGUST 2026").
+  - Nợ 138812 là ghi nhận doanh thu trả sau, đối tượng ở `partner_debit`. File tháng 10 chưa có dòng nào → hiển thị banner `noRevenue`.
+- **`analyze(acc, asOf, term)`:**
+  - Phân bổ theo trình tự thời gian (sự kiện doanh thu trước, thu tiền sau trong cùng ngày). Ưu tiên: mã tham chiếu (`refs()`), rồi đúng số tiền + kỳ (`period()`), rồi cũ trước. Tiền trả trước nằm trong `avail`, trừ dần cho doanh thu sau.
+  - Hạn = `due_date`, nếu trống thì ngày ghi nhận + `term`.
+- **Cảnh báo:**
+  - PAY_OTHER: tiền thu có thể của đối tượng khác (theo mã, số tiền hoặc tên ≥ 2 từ đặc trưng, nhiều hơn số từ khớp với tên chính đối tượng).
+  - REV_OTHER, REV_MISSING (một dòng mỗi đối tượng; mức L nếu thuộc 2 tháng đầu dữ liệu hoặc không có doanh thu nào), REV_PERIOD, REV_GAP, OVERPAID, CREDIT_BAL, GENERIC_PARTNER.
+  - OVERPAID và GENERIC_PARTNER gộp một dòng cho mỗi đối tượng để tránh nhiễu.
+- **Mức rủi ro:** Cao nếu có cảnh báo H hoặc điểm ≥ 4 (H = 3, M = 1, quá hạn > 90 ngày = 2, tuổi > 365 ngày = 2, dư Có = 1).
+- **Giao diện:**
+  - Tab `recv`: tab con của Phân tích chuyên sâu; `recvDetail(p)` mở bảng chi tiết bên phải.
+  - Xuất Excel: IPC `report:recv` (`reports.recvBook`).
+  - `vDeep` xoá các sự kiện `B.on*` ở đầu hàm; mỗi tab tự gắn sự kiện của mình. **Không** dùng `else B.onclick=null` sau từng khối.
+- **Test:** `/tmp`-style bảng in-memory với các ca: mã tham chiếu chéo, số tiền khớp đối tượng khác, thu không có doanh thu, thiếu tháng, trả trước.
+
 ## Trích trước – huỷ trích 335 (v3.1–3.4)
 Mẫu hạch toán trong ERP:
 | Nghiệp vụ | Bút toán | Diễn giải mẫu |

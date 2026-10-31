@@ -84,6 +84,14 @@ function finBook(tb, bs, pl, o, cf, nt, txt) {
   return book([['CDSPS', T], ['B01-DN', B], ['B02-DN', P], ['B03-DN truc tiep', cf ? C(cf.direct) : []], ['B03-DN gian tiep', cf ? C(cf.indirect) : []],
     ['B09-DN', nt ? b09Rows(nt, txt || {}) : []], ['B03 phan loai', cf ? cf.detail.map(d => ({ 'Mã số': d.code, 'Thu/Chi': d.dir, 'TK đối ứng': d.a, 'Tên TK': d.n, 'Số tiền': d.v })) : []], ['Thong tin', info]]);
 }
+function recvBook(r) {
+  const TY = { PAY_OTHER: 'Tiền thu có thể của đối tượng khác', REV_OTHER: 'Doanh thu / khoản nợ nghi sai đối tượng', REV_MISSING: 'Thu tiền nhưng chưa có doanh thu', OVERPAID: 'Thu vượt phải thu', REV_PERIOD: 'Thu tiền kỳ chưa ghi doanh thu', REV_GAP: 'Doanh thu định kỳ thiếu tháng', CREDIT_BAL: 'Dư Có', GENERIC_PARTNER: 'Thu tiền ghi vào đối tượng chung' };
+  const RK = { H: 'Cao', M: 'Trung bình', L: 'Thấp' };
+  return book([['Doi tuong', r.partners.map(o => Object.assign({ 'Rủi ro': RK[o.risk], 'Đối tượng': o.p, 'Phải thu': o.rev, 'Giảm trừ': o.adj, 'Đã thu': o.paid, 'Còn nợ': o.bal },
+      ...r.buckets.map((b, i) => ({ [b]: o.b[i] })), { 'Tuổi tối đa (ngày)': o.maxAge, 'Ghi nhận gần nhất': o.lastRev, 'Thu gần nhất': o.lastPay, 'Số cảnh báo': o.flagN }))],
+    ['Canh bao', r.flags.map(f => ({ 'Mức': RK[f.sev], 'Loại': TY[f.type] || f.type, 'Đối tượng ghi sổ': f.p, 'Ngày': f.d, 'Chứng từ': f.doc, 'Số tiền': f.amt, 'Nhận định': f.msg, 'Đối tượng nghi ngờ': f.cand.map(c => c.p).join('; '), 'Người nhập': f.u }))],
+    ['Tong hop', [{ 'Tài khoản': r.acc + ' – ' + r.accName, 'Tại ngày': r.asOf, 'Hạn thanh toán (ngày)': r.term, 'Phải thu': r.summary.rev, 'Đã thu': r.summary.paid, 'Giảm trừ': r.summary.adj, 'Còn nợ': r.summary.bal, 'Quá hạn': r.summary.overdue, 'Quá hạn > 90 ngày': r.summary.od90, 'Đối tượng rủi ro cao': r.summary.high }]]]);
+}
 function accrualBook(r) {
   const { summarize, AGE } = require('./accrual');
   const sh = s => String(s || '').split('_').slice(2).join('_') || String(s || '');
@@ -159,4 +167,4 @@ function mailHtml(user, rows, o) {
 const mailSubject = u => `[AccSoft] Danh sách bút toán cần khắc phục – ${shortName(u)}`;
 
 const ruleInfo = () => ({ RULE_NAMES: Object.fromEntries(ALL_RULES.map(r => [r.k, r.n])), GROUPS, GROUP });
-module.exports = { finBook, accrueCheckBook, accrualBook, reversalErpBook, reversalCheckBook, bpVd, ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };
+module.exports = { recvBook, finBook, accrueCheckBook, accrualBook, reversalErpBook, reversalCheckBook, bpVd, ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };

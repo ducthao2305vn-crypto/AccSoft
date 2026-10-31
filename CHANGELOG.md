@@ -1,5 +1,33 @@
 # Lịch sử phiên bản
 
+## v4.3.0 – 31/10/2026
+**Phân tích chuyên sâu phải thu 138812 theo đối tượng (nghi chọn sai đối tượng khi giảm trừ công nợ)**
+- Trang mới "Phân tích chuyên sâu → Phải thu 138812 theo đối tượng". Nhập được TK khác (ví dụ 138811, 131), chọn ngày tính và số ngày hạn thanh toán.
+- **Phân bổ tiền thu cho từng khoản phải thu**, theo trình tự thời gian:
+  - Ưu tiên khoản có cùng mã tham chiếu trong diễn giải (mã thuê bao `dil0046_gftth_…`, số điện thoại, số hoá đơn, số hợp đồng).
+  - Sau đó khoản đúng số tiền và cùng kỳ dịch vụ, rồi đến khoản cũ nhất.
+  - Tiền trả trước được giữ lại và trừ cho doanh thu ghi nhận sau.
+- **(1) Tiền thu có thể thuộc đối tượng khác:**
+  - Mã tham chiếu trong diễn giải thuộc khoản phải thu của đối tượng khác.
+  - Thu tiền khi đối tượng không còn nợ, mà số tiền khớp đúng khoản đang nợ của đối tượng khác.
+  - Diễn giải nêu tên đối tượng khác (ít nhất 2 từ đặc trưng).
+- **(2) Doanh thu sai đối tượng / ghi thiếu doanh thu:**
+  - Khoản nợ còn treo trong khi tiền thu cùng mã lại ghi cho đối tượng khác.
+  - Khoản nợ có thể đã được thu nhưng tiền ghi cho đối tượng khác.
+  - Thu tiền nhưng đối tượng chưa có doanh thu.
+  - Thu tiền kỳ X nhưng không có doanh thu kỳ X.
+  - Doanh thu định kỳ thiếu tháng.
+  - Thu vượt phải thu, dư Có.
+  - Thu tiền ghi vào đối tượng chung (chi nhánh) dù diễn giải có mã khách hàng.
+- **(3) Theo đối tượng:**
+  - Phải thu, giảm trừ, đã thu, còn nợ, tuổi nợ 7 nhóm, tuổi tối đa, lần thu gần nhất, số cảnh báo.
+  - Mức rủi ro Cao / Trung bình / Thấp.
+- **Chi tiết đối tượng (nhấn đúp):**
+  - Từng khoản doanh thu được trừ bởi chứng từ thu nào, theo cách khớp nào; còn nợ, hạn, số ngày quá hạn.
+  - Từng lần thu trừ cho khoản nào, phần chưa phân bổ.
+- Xuất Excel gồm các sheet Đối tượng, Cảnh báo, Tổng hợp.
+- **Sửa lỗi:** chuyển giữa các tab con của Phân tích chuyên sâu đôi khi làm mất thao tác nhấn đúp.
+
 ## v4.2.0 – 31/10/2026
 **Gom lỗi theo chứng từ nhanh hơn**
 - **Bảng gom sẵn:** lỗi theo chứng từ × tháng × người nhập × bộ phận × trạng thái × nhóm lỗi.

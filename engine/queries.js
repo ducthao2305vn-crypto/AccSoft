@@ -460,6 +460,7 @@ function make(db) {
   function backup(file) { db.prepare('VACUUM INTO ?').run(file); return file; }
   const D = deep.make(db, { INC, all, get, okYm });
   // BCTC dùng toàn bộ dữ liệu (không lọc tháng "đưa vào phân tích") để số liệu liên tục với sổ số dư
+  const RECV = require('./recv').make(all, okYm);
   const FIN = require('./fin').make(all, okYm, '1', (f, t) => plBy(`'x'`, f, t, true)[0] || plRange('9999-01', '9999-01'));
   // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
   // Dòng trích trước của một kỳ dịch vụ (làm mẫu lập trích kỳ mới) + đánh dấu khoản đã có trích ở kỳ đích
@@ -489,7 +490,7 @@ function make(db) {
   }
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, finTrial: FIN.trial, finBalance: FIN.balanceSheet, finIncome: FIN.income, finCash: FIN.cashFlow, finNotes: FIN.notes, finStatus: FIN.status, finEmpty: () => !get('SELECT 1 x FROM fin_close LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1'), getB09Info: () => JSON.parse(getSetting('b09Info') || 'null'), setB09Info: o => { setSetting('b09Info', JSON.stringify(o || {})); return o; }, deepReversal: D.reversal, reversalLines, accrualSource, accrualLinesByIds, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, recvAnalyze: RECV.analyze, recvDetail: RECV.detail, finTrial: FIN.trial, finBalance: FIN.balanceSheet, finIncome: FIN.income, finCash: FIN.cashFlow, finNotes: FIN.notes, finStatus: FIN.status, finEmpty: () => !get('SELECT 1 x FROM fin_close LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1'), getB09Info: () => JSON.parse(getSetting('b09Info') || 'null'), setB09Info: o => { setSetting('b09Info', JSON.stringify(o || {})); return o; }, deepReversal: D.reversal, reversalLines, accrualSource, accrualLinesByIds, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };
