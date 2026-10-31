@@ -257,6 +257,7 @@ async function init() {
       await runTask('buildAgg', {}, 'Đang cập nhật bảng tổng hợp'); log.info(`Nạp số dư đầu kỳ ${filePaths[0]}: ${r.rows} dòng`); return r; });
   });
   handle('report:pdf', () => riskPdf());
+  handle('report:accrual', async (_e, from, to) => saveXlsx(`AccSoft_TrichTruoc_HuyTrich_${new Date().toISOString().slice(0, 10)}.xlsx`, R.accrualBook(await qa('deepReversal', from, to))));
   handle('enrich:pick', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file ERP chỉ gồm các dòng TK 151–158', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Dữ liệu hạch toán', extensions: ['xlsx', 'csv', 'txt'] }] });
     return canceled ? null : enrichFiles(filePaths);

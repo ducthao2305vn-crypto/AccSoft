@@ -1,5 +1,22 @@
 # Lịch sử phiên bản
 
+## v3.2.0 – 31/10/2026
+**Báo cáo quản lý trích trước – huỷ trích – chi phí thực tế – thanh toán (TK 335)**
+- Trang "Phân tích chuyên sâu → Trích – huỷ trích 335", 6 chế độ xem:
+  - Đối chiếu chi tiết.
+  - Theo kỳ dịch vụ (có biểu đồ).
+  - Theo đối tượng.
+  - Theo khoản mục.
+  - Theo nhân viên.
+  - Tuổi khoản trích còn treo.
+- KPI: đã trích, đã huỷ / quyết toán, còn treo 335, chi phí thực tế (đã / chưa thanh toán), chi phí nghi ghi 2 lần.
+- Thanh toán thực tế:
+  - Các khoản Nợ 331 của đối tượng được phân bổ cho hoá đơn cũ trước (FIFO).
+  - Hiển thị số đã thanh toán, số chưa thanh toán và ngày thanh toán của từng khoản.
+- Thêm tình trạng "Đã huỷ / quyết toán" và "Huỷ trích của kỳ trước dữ liệu".
+- Chênh lệch thực tế − trích cho thấy độ chính xác của số ước tính theo đối tượng và khoản mục.
+- Xuất Excel 6 sheet: Đối chiếu chi tiết, Theo kỳ dịch vụ, Theo đối tượng, Theo khoản mục, Theo nhân viên, Tuổi khoản treo.
+
 ## v3.1.0 – 31/10/2026
 **Phát hiện "đã ghi chi phí thực tế nhưng chưa huỷ trích 335"**
 - Cách ghép: đối chiếu khoản trích trước (Nợ 6xx/Có 335), khoản huỷ trích (Có 335 số âm hoặc Nợ 335/Có 6xx) và chi phí thực tế (Nợ 6xx/Có 331, 111, 112…) theo đối tượng × khoản mục × kỳ dịch vụ.

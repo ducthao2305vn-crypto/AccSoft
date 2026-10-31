@@ -23,6 +23,20 @@ function book(sheets) {
 }
 const toBuffer = wb => XLSX.write(wb, { type: 'buffer', bookType: 'xlsx', compression: true });
 
+function accrualBook(r) {
+  const { summarize, AGE } = require('./accrual');
+  const sh = s => String(s || '').split('_').slice(2).join('_') || String(s || '');
+  const S = (by, label) => summarize(r.groups, by).sort((a, b) => by === 'per' ? a.key.localeCompare(b.key) : b.remain - a.remain).map(o => ({ [label]: by === 'p' ? o.key : by === 'u' ? String(o.key).split('_')[0] : o.key,
+    'Số khoản': o.n, 'Đã trích': o.accrued, 'Đã huỷ / quyết toán': o.released, 'Còn treo 335': o.remain, 'Chi phí thực tế': o.actual, 'Chênh lệch thực tế − trích': o.actual - o.accrued,
+    'Đã thanh toán': o.paid, 'Chưa thanh toán': o.unpaid, 'Khoản chưa huỷ trích': o.open, 'Chi phí nghi ghi 2 lần': o.dbl }));
+  const det = r.groups.map(g => ({ 'Tình trạng': g.status, 'Mức': g.sev === 'H' ? 'Cao' : g.sev === 'M' ? 'Trung bình' : '', 'Đối tượng': g.p, 'Khoản mục': g.t, 'Kỳ dịch vụ': g.per,
+    'Đã trích': g.accrued, 'Đã huỷ / quyết toán': g.released, 'Còn treo 335': g.remain, 'Chi phí thực tế': g.actual, 'Chênh lệch thực tế − trích': g.actual && g.accrued ? g.diff : null,
+    'Đã thanh toán': g.paid, 'Chưa thanh toán': g.unpaid, 'Ngày thanh toán gần nhất': g.lastPay, 'CT trích': g.accDocs.join(', '), 'CT huỷ': g.relDocs.join(', '), 'CT thực tế': g.actDocs.join(', '), 'Hoá đơn': g.invs.join(', '),
+    'Trích gần nhất': g.lastAcc, 'Tuổi khoản treo (ngày)': g.age, 'Người ghi chi phí thực tế': g.users.map(u => String(u).split('_')[0]).join(', '), 'Độ tin cậy': g.conf }));
+  const open = r.groups.filter(g => g.remain > 0.005 && g.age != null);
+  const age = AGE.map(([d, l], i) => { const xs = open.filter(g => g.age <= d && (i === 0 || g.age > AGE[i - 1][0])); return { 'Tuổi khoản trích còn treo': l, 'Số khoản': xs.length, 'Số tiền': xs.reduce((s, g) => s + g.remain, 0), 'Trong đó đã có chi phí thực tế': xs.filter(g => g.actual).reduce((s, g) => s + g.remain, 0) }; });
+  return book([['Doi chieu chi tiet', det], ['Theo ky dich vu', S('per', 'Kỳ dịch vụ')], ['Theo doi tuong', S('p', 'Đối tượng')], ['Theo khoan muc', S('t', 'Khoản mục')], ['Theo nhan vien', S('u', 'Nhân viên')], ['Tuoi khoan treo', age]]);
+}
 function errorsBook(rows, byUser) {
   return book([['Loi nhap lieu', rows.map(errRow)], ['Theo nguoi nhap', byUser]]);
 }
@@ -84,4 +98,4 @@ function mailHtml(user, rows, o) {
 const mailSubject = u => `[AccSoft] Danh sách bút toán cần khắc phục – ${shortName(u)}`;
 
 const ruleInfo = () => ({ RULE_NAMES: Object.fromEntries(ALL_RULES.map(r => [r.k, r.n])), GROUPS, GROUP });
-module.exports = { ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };
+module.exports = { accrualBook, ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };
