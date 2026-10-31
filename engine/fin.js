@@ -1,5 +1,5 @@
 'use strict';
-// Bảng cân đối số phát sinh + Báo cáo tài chính (B01-DN, B02-DN theo TT200) dựng từ dữ liệu hạch toán.
+// Bảng cân đối số phát sinh + Báo cáo tài chính (B01, B02, B03-DN theo Thông tư 99/2025/TT-BTC, rút gọn) dựng từ dữ liệu hạch toán.
 // Không có số dư đầu kỳ thì số đầu kỳ = 0 (chỉ cộng các bút toán trước kỳ đã nạp, kể cả số dư đầu kỳ nhập từ file mẫu – TK giả 'OB').
 const L1 = { '111': 'Tiền mặt', '112': 'Tiền gửi ngân hàng', '113': 'Tiền đang chuyển', '121': 'Chứng khoán kinh doanh', '128': 'Đầu tư nắm giữ đến ngày đáo hạn',
   '131': 'Phải thu của khách hàng', '133': 'Thuế GTGT được khấu trừ', '136': 'Phải thu nội bộ', '138': 'Phải thu khác', '141': 'Tạm ứng', '151': 'Hàng mua đang đi đường',
@@ -115,6 +115,62 @@ function make(all, okYm, INC, plRange) {
       ['60', '16. Lợi nhuận sau thuế TNDN (60 = 50 − 51)', 'pat']];
     return { from, to, cmpFrom, cmpTo, lines: L.map(([code, name, k]) => ({ code, name, k, cur: c[k] || 0, prev: p ? p[k] || 0 : null, bold: ['10', '20', '30', '50', '60'].includes(code) })) };
   }
-  return { trial, balanceSheet, income };
+  /* B03-DN: Báo cáo lưu chuyển tiền tệ (TT99/2025) – trực tiếp và gián tiếp.
+     Tiền = TK 111, 112, 113. Mỗi bút toán thu/chi tiền được phân loại theo TK đối ứng; chuyển tiền nội bộ giữa các TK tiền bị loại. */
+  const CASH = a => /^11[123]/.test(a || '');
+  const IN = [['31', /^411/], ['33', /^34[13]/], ['24', /^128|^1288/], ['26', /^22[128]/], ['22', /^711.*|^211|^213|^217/], ['27', /^515/], ['01', /^511|^131|^3331|^3387|^512/], ['61', /^413/], ['06', /./]];
+  const OUT = [['21', /^21[1-7]|^241/], ['23', /^128/], ['25', /^22[128]/], ['32', /^411|^419/], ['34', /^341|^343/], ['36', /^421|^3388.*DIV/i], ['03', /^334/], ['04', /^635|^3351/], ['05', /^3334|^821/],
+    ['02', /^331|^15[1-8]|^611|^62[1-7]|^632|^64[12]|^133|^242|^335/], ['61', /^413/], ['07', /./]];
+  const cls = (a, T) => T.find(([, rx]) => rx.test(a))[0];
+  function cashFlows(from, to) {
+    const f = okYm(from) || '0000-00', t = okYm(to) || '9999-12', inc = incl();
+    const q = (cashSide, other) => all(`SELECT ym, acc_${other} a, max(acc_${other}_name) n, sum(amount) v FROM entries WHERE ym>=? AND ym<=? AND acc_${cashSide}>='111' AND acc_${cashSide}<'114' GROUP BY 1,2`, f, t)
+      .filter(r => inc.has(r.ym) && !CASH(r.a));
+    const by = {}, det = [];
+    for (const r of q('debit', 'credit')) { const c = cls(r.a, IN); by[c] = (by[c] || 0) + r.v; det.push({ code: c, dir: 'Thu', a: r.a, n: r.n, v: r.v }); }
+    for (const r of q('credit', 'debit')) { const c = cls(r.a, OUT); by[c] = (by[c] || 0) - r.v; det.push({ code: c, dir: 'Chi', a: r.a, n: r.n, v: -r.v }); }
+    return { by, det };
+  }
+  function cashFlow(from, to) {
+    const { by, det } = cashFlows(from, to), g = c => by[c] || 0, tb = trial(from, to, 1), B = new Map(tb.rows.map(r => [r.a, r]));
+    const ob = accs => accs.reduce((s, a) => s + (B.get(a) ? B.get(a).obDr - B.get(a).obCr : 0), 0), cb = accs => accs.reduce((s, a) => s + (B.get(a) ? B.get(a).bal : 0), 0);
+    const mv = accs => cb(accs) - ob(accs); // tăng (+) / giảm (−) số dư Nợ
+    const cash0 = ob(['111', '112', '113']), cash1 = cb(['111', '112', '113']);
+    const s = (...cs) => cs.reduce((x, c) => x + g(c), 0);
+    const op = s('01', '02', '03', '04', '05', '06', '07'), inv = s('21', '22', '23', '24', '25', '26', '27'), fin = s('31', '32', '33', '34', '35', '36');
+    const sec = (code, name, v, bold) => ({ code, name, v, bold: !!bold });
+    const tail = [sec('50', 'Lưu chuyển tiền thuần trong kỳ (50 = 20 + 30 + 40)', op + inv + fin, 1), sec('60', 'Tiền và tương đương tiền đầu kỳ', cash0, 1),
+      sec('61', 'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ', g('61')), sec('70', 'Tiền và tương đương tiền cuối kỳ (70 = 50 + 60 + 61)', op + inv + fin + cash0 + g('61'), 1)];
+    const invFin = [sec('', 'II. Lưu chuyển tiền từ hoạt động đầu tư', null, 1),
+      sec('21', '1. Tiền chi để mua sắm, xây dựng TSCĐ và các tài sản dài hạn khác', g('21')), sec('22', '2. Tiền thu từ thanh lý, nhượng bán TSCĐ và các tài sản dài hạn khác', g('22')),
+      sec('23', '3. Tiền chi cho vay, mua các công cụ nợ của đơn vị khác', g('23')), sec('24', '4. Tiền thu hồi cho vay, bán lại các công cụ nợ của đơn vị khác', g('24')),
+      sec('25', '5. Tiền chi đầu tư góp vốn vào đơn vị khác', g('25')), sec('26', '6. Tiền thu hồi đầu tư góp vốn vào đơn vị khác', g('26')), sec('27', '7. Tiền thu lãi cho vay, cổ tức và lợi nhuận được chia', g('27')),
+      sec('30', 'Lưu chuyển tiền thuần từ hoạt động đầu tư', inv, 1),
+      sec('', 'III. Lưu chuyển tiền từ hoạt động tài chính', null, 1),
+      sec('31', '1. Tiền thu từ phát hành cổ phiếu, nhận vốn góp của chủ sở hữu', g('31')), sec('32', '2. Tiền trả lại vốn góp cho các chủ sở hữu, mua lại cổ phiếu', g('32')),
+      sec('33', '3. Tiền thu từ đi vay', g('33')), sec('34', '4. Tiền trả nợ gốc vay', g('34')), sec('35', '5. Tiền trả nợ gốc thuê tài chính', g('35')), sec('36', '6. Cổ tức, lợi nhuận đã trả cho chủ sở hữu', g('36')),
+      sec('40', 'Lưu chuyển tiền thuần từ hoạt động tài chính', fin, 1)];
+    const direct = [sec('', 'I. Lưu chuyển tiền từ hoạt động kinh doanh', null, 1),
+      sec('01', '1. Tiền thu từ bán hàng, cung cấp dịch vụ và doanh thu khác', g('01')), sec('02', '2. Tiền chi trả cho người cung cấp hàng hóa và dịch vụ', g('02')),
+      sec('03', '3. Tiền chi trả cho người lao động', g('03')), sec('04', '4. Tiền lãi vay đã trả', g('04')), sec('05', '5. Thuế thu nhập doanh nghiệp đã nộp', g('05')),
+      sec('06', '6. Tiền thu khác từ hoạt động kinh doanh', g('06')), sec('07', '7. Tiền chi khác cho hoạt động kinh doanh', g('07')),
+      sec('20', 'Lưu chuyển tiền thuần từ hoạt động kinh doanh', op, 1), ...invFin, ...tail];
+    // Gián tiếp: từ lợi nhuận trước thuế, điều chỉnh khoản phi tiền và biến động vốn lưu động (theo số dư đầu/cuối kỳ trên bảng CĐSPS)
+    const pl = plRange(from, to), dep = -mv(['214']), prov = -mv(['229', '352']);
+    const d09 = -mv(['131', '136', '138', '141', '133', '244']), d10 = -mv(['151', '152', '153', '154', '155', '156', '157', '158']);
+    const d11 = -mv(['331', '333', '334', '335', '336', '338', '344', '337']), d12 = -mv(['242']);
+    const known = pl.pbt + dep + prov - pl.finInc + d09 + d10 + d11 + d12 + g('04') + g('05');
+    const indirect = [sec('', 'I. Lưu chuyển tiền từ hoạt động kinh doanh', null, 1), sec('01', '1. Lợi nhuận trước thuế', pl.pbt), sec('', '2. Điều chỉnh cho các khoản', null),
+      sec('02', '- Khấu hao TSCĐ (tăng hao mòn luỹ kế TK 214)', dep), sec('03', '- Các khoản dự phòng (TK 229, 352)', prov), sec('04', '- Lãi, lỗ chênh lệch tỷ giá do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ', 0),
+      sec('05', '- Lãi, lỗ từ hoạt động đầu tư (doanh thu tài chính TK 515)', -pl.finInc), sec('06', '- Chi phí lãi vay', 0),
+      sec('07', '- Các khoản điều chỉnh khác (chênh lệch đối chiếu với dòng tiền thực tế)', op - known), sec('08', '3. Lợi nhuận từ HĐKD trước thay đổi vốn lưu động', pl.pbt + dep + prov - pl.finInc + (op - known), 1),
+      sec('09', '- Tăng, giảm các khoản phải thu', d09), sec('10', '- Tăng, giảm hàng tồn kho', d10), sec('11', '- Tăng, giảm các khoản phải trả (không kể lãi vay, thuế TNDN phải nộp)', d11),
+      sec('12', '- Tăng, giảm chi phí trả trước', d12), sec('13', '- Tăng, giảm chứng khoán kinh doanh', 0), sec('14', '- Tiền lãi vay đã trả', g('04')), sec('15', '- Thuế thu nhập doanh nghiệp đã nộp', g('05')),
+      sec('16', '- Tiền thu khác từ hoạt động kinh doanh', 0), sec('17', '- Tiền chi khác cho hoạt động kinh doanh', 0),
+      sec('20', 'Lưu chuyển tiền thuần từ hoạt động kinh doanh', op, 1), ...invFin, ...tail];
+    const agg = new Map(); for (const d of det) { const k = d.code + '|' + d.dir + '|' + d.a.slice(0, 3); const o = agg.get(k) || agg.set(k, { code: d.code, dir: d.dir, a: d.a.slice(0, 3), n: L1[d.a.slice(0, 3)] || d.n, v: 0 }).get(k); o.v += d.v; }
+    return { from: tb.from, to: tb.to, direct, indirect, check: op + inv + fin + cash0 + g('61') - cash1, cash0, cash1, detail: [...agg.values()].sort((a, b) => a.code.localeCompare(b.code) || Math.abs(b.v) - Math.abs(a.v)), hasOpening: tb.hasOpening };
+  }
+  return { trial, balanceSheet, income, cashFlow };
 }
 module.exports = { make, L1 };

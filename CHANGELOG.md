@@ -1,5 +1,19 @@
 # Lịch sử phiên bản
 
+## v3.6.0 – 31/10/2026
+**Báo cáo lưu chuyển tiền tệ (B03-DN), cập nhật theo Thông tư 99/2025/TT-BTC**
+- **Phương pháp trực tiếp:**
+  - Mỗi bút toán thu/chi TK 111, 112, 113 được xếp vào chỉ tiêu theo TK đối ứng. Ví dụ: 131/511 vào mã 01; 331, hàng tồn kho, chi phí vào mã 02; 334 vào mã 03; 3334/821 vào mã 05; TSCĐ/XDCB vào mã 21; 128 vào mã 23/24; 411 vào mã 31/32; 341 vào mã 33/34; 421 vào mã 36.
+  - Chuyển tiền giữa các TK tiền được loại ra.
+- **Phương pháp gián tiếp:**
+  - Đi từ lợi nhuận trước thuế, điều chỉnh khấu hao (TK 214), dự phòng, lãi đầu tư.
+  - Biến động phải thu, hàng tồn kho, phải trả, chi phí trả trước lấy theo số dư đầu kỳ và cuối kỳ.
+  - Mã 07 là phần chênh lệch để mã 20 khớp với dòng tiền thực tế.
+- Kiểm tra: tiền đầu kỳ + lưu chuyển thuần + ảnh hưởng tỷ giá = tiền cuối kỳ trên sổ.
+- Bảng phân loại dòng tiền theo TK đối ứng để kiểm tra.
+- Đổi tên mẫu theo TT99: "Báo cáo tình hình tài chính" (B01-DN), B02-DN, B03-DN.
+- Excel bộ báo cáo tài chính gồm 7 sheet: CĐSPS, B01, B02, B03 trực tiếp, B03 gián tiếp, phân loại dòng tiền, thông tin.
+
 ## v3.5.0 – 31/10/2026
 **Báo cáo tài chính lập tự động từ dữ liệu hạch toán**
 - Trang mới "Báo cáo tài chính", chọn kỳ từ tháng đến tháng:

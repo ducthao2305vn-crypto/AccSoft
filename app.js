@@ -18,7 +18,7 @@ const ls={get:(k,d)=>{try{const v=localStorage.getItem('accsoft.'+k);return v==n
 const SEVL={H:'Cao',M:'Trung bình',L:'Thấp'};
 let META={rules:[],status:{}},RULE={},PAGE='overview',charts={};
 const TITLES={overview:['Tổng quan','Bức tranh chung về dữ liệu hạch toán'],errors:['Lỗi nhập liệu','Phát hiện, theo dõi và xử lý bút toán sai'],inv:['Tuổi hàng tồn kho','Tồn kho theo mặt hàng, kho, đối tượng – FIFO theo ngày nhập'],aging:['Công nợ & tuổi nợ','Phải thu, phải trả, tạm ứng theo đối tượng'],
-  pl:['Kết quả kinh doanh','Doanh thu, chi phí, lợi nhuận theo năm và tháng'],cost:['Doanh thu & Chi phí','Phân tích theo tài khoản, khoản mục, bộ phận và kỳ'],fin:['Báo cáo tài chính','Bảng cân đối số phát sinh, Bảng cân đối kế toán, Kết quả kinh doanh – lập tự động từ dữ liệu hạch toán'],deep:['Phân tích chuyên sâu','Chi phí định kỳ, biến động, 335/242, nhân viên, Benford, nhà cung cấp, tỷ giá'],report:['Báo cáo & Thông báo','Báo cáo kiểm tra và gửi yêu cầu khắc phục'],data:['Quản lý dữ liệu','Tháng dữ liệu, lần nạp file và bảo trì CSDL']};
+  pl:['Kết quả kinh doanh','Doanh thu, chi phí, lợi nhuận theo năm và tháng'],cost:['Doanh thu & Chi phí','Phân tích theo tài khoản, khoản mục, bộ phận và kỳ'],fin:['Báo cáo tài chính','Theo Thông tư 99/2025/TT-BTC – Bảng CĐSPS, B01, B02, B03 lập tự động từ dữ liệu hạch toán'],deep:['Phân tích chuyên sâu','Chi phí định kỳ, biến động, 335/242, nhân viên, Benford, nhà cung cấp, tỷ giá'],report:['Báo cáo & Thông báo','Báo cáo kiểm tra và gửi yêu cầu khắc phục'],data:['Quản lý dữ liệu','Tháng dữ liệu, lần nạp file và bảo trì CSDL']};
 
 /* ---------- Biểu đồ: bảng màu TLM, cam chủ đạo ---------- */
 const C={brand:'#FA4700',brand3:'#FF9C6B',brand1:'#FFD4BD',navy:'#001A79',ok:'#17B26A',err:'#F04438',gray:'#D5D7DA',grid:'#F5F5F5',txt:'#535862'};
@@ -723,16 +723,26 @@ async function vFin(){
       ${r.rows.map(x=>`<tr><td class=nw><b>${esc(x.a)}</b></td><td>${esc(x.n)}</td>${['obDr','obCr','dr','cr','cbDr','cbCr'].map(k=>`<td class=n>${x[k]?fmt2(x[k]):''}</td>`).join('')}</tr>`).join('')}
       <tr style="font-weight:700;background:#FFF6F2"><td></td><td>TỔNG CỘNG</td>${['obDr','obCr','dr','cr','cbDr','cbCr'].map(k=>`<td class=n>${fmt2(t[k])}</td>`).join('')}</tr></tbody></table></div></div>`}
   if(FT==='bs'){const r=await api.q('finBalance',FP.from,FP.to),ok=Math.abs(r.diff)<0.01;
-    B.innerHTML=`<div class="card"><div class="card-h"><div><h3>BẢNG CÂN ĐỐI KẾ TOÁN (Mẫu B01-DN)</h3><div class="hint">Tại ngày cuối tháng ${ymLbl(FP.to)}; số đầu kỳ tại cuối tháng trước ${ymLbl(FP.from)} · ${ok?'<span class=pos>✓ Tổng tài sản = Tổng nguồn vốn</span>':`<span class=neg>Chênh lệch ${fmt2(r.diff)}</span>`} · Công nợ 131/331/138/338/141/136/336 tách dư Nợ – dư Có theo từng đối tượng.</div></div></div>
+    B.innerHTML=`<div class="card"><div class="card-h"><div><h3>BÁO CÁO TÌNH HÌNH TÀI CHÍNH (Mẫu B01-DN – TT99/2025)</h3><div class="hint">Tại ngày cuối tháng ${ymLbl(FP.to)}; số đầu kỳ tại cuối tháng trước ${ymLbl(FP.from)} · ${ok?'<span class=pos>✓ Tổng tài sản = Tổng nguồn vốn</span>':`<span class=neg>Chênh lệch ${fmt2(r.diff)}</span>`} · Công nợ 131/331/138/338/141/136/336 tách dư Nợ – dư Có theo từng đối tượng.</div></div></div>
       ${r.unmapped.length?`<p class=neg style="font-size:13px">TK chưa đưa vào chỉ tiêu: ${r.unmapped.map(u=>esc(u.a)+' ('+fmt2(u.bal)+')').join(', ')}</p>`:''}
       <div class="tbl" style="max-height:calc(100vh - 300px)"><table><thead><tr><th>Chỉ tiêu</th><th>Mã số</th><th class=n>Số cuối kỳ</th><th class=n>Số đầu kỳ</th></tr></thead><tbody>
       ${r.lines.map(l=>`<tr style="${l.lvl===0?'font-weight:700;background:#FFF6F2':l.lvl===1?'font-weight:600':''}"><td style="padding-left:${12+l.lvl*18}px">${esc(l.name)}</td><td>${/^\d+$/.test(l.code)?l.code:''}</td><td class=n>${N(l.cb)}</td><td class=n>${N(l.ob)}</td></tr>`).join('')}</tbody></table></div></div>`}
   if(FT==='pl'){const r=await api.q('finIncome',FP.from,FP.to,cmp[0],cmp[1]);
-    B.innerHTML=`<div class="card"><div class="card-h"><div><h3>BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH (Mẫu B02-DN)</h3><div class="hint">Kỳ ${per}${cmp[0]?` · so sánh ${ymLbl(cmp[0])} – ${ymLbl(cmp[1])}`:''} · loại trừ bút toán kết chuyển 911</div></div></div>
+    B.innerHTML=`<div class="card"><div class="card-h"><div><h3>BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH (Mẫu B02-DN – TT99/2025)</h3><div class="hint">Kỳ ${per}${cmp[0]?` · so sánh ${ymLbl(cmp[0])} – ${ymLbl(cmp[1])}`:''} · loại trừ bút toán kết chuyển 911</div></div></div>
       <div class="tbl"><table><thead><tr><th>Chỉ tiêu</th><th>Mã số</th><th class=n>Kỳ này</th>${cmp[0]?'<th class=n>Kỳ so sánh</th><th class=n>Chênh lệch</th><th class=n>%</th>':''}</tr></thead><tbody>
       ${r.lines.map(l=>`<tr style="${l.bold?'font-weight:700;background:#FFF6F2':''}" class="dbl" data-plk="${l.k}"><td>${esc(l.name)}</td><td>${l.code}</td><td class=n>${N(l.cur)}</td>${cmp[0]?`<td class=n>${N(l.prev)}</td><td class=n>${N(l.cur-l.prev)}</td>${chgTd(l.cur,l.prev,['11','22','25','26','32','51','02'].includes(l.code)?-1:1)}`:''}</tr>`).join('')}</tbody></table></div><p class="mut" style="font-size:12px">Nhấn đúp một chỉ tiêu để xem bút toán chi tiết.</p></div>`;
     B.ondblclick=e=>{const tr=e.target.closest('[data-plk]');if(tr)openLedger(tr.cells[0].innerText,'Kỳ '+per,{kind:'pl',key:tr.dataset.plk,from:FP.from,to:FP.to},PLNAT(tr.dataset.plk))}}
   else B.ondblclick=null;
+  if(FT==='cf'){const r=await api.q('finCash',FP.from,FP.to),M=FP.cfm||'d',L=M==='d'?r.direct:r.indirect,ok=Math.abs(r.check)<0.01;
+    B.innerHTML=(r.hasOpening?'':`<div class="card" style="background:#FFFAEB"><b>Không có số dư đầu kỳ</b> – tiền đầu kỳ = 0.</div>`)+`<div class="card"><div class="card-h"><div><h3>BÁO CÁO LƯU CHUYỂN TIỀN TỆ (Mẫu B03-DN – TT99/2025) · ${M==='d'?'Phương pháp trực tiếp':'Phương pháp gián tiếp'}</h3>
+      <div class="hint">Kỳ ${per} · Tiền = TK 111, 112, 113 · ${ok?'<span class=pos>✓ Tiền đầu kỳ + lưu chuyển = tiền cuối kỳ trên sổ</span>':`<span class=neg>Lệch ${fmt2(r.check)}</span>`}</div></div><div class="sp" style="flex:1"></div>
+      <div class="tabs" id="cfM"><button data-cfm="d" class="${M==='d'?'on':''}">Trực tiếp</button><button data-cfm="i" class="${M==='i'?'on':''}">Gián tiếp</button></div></div>
+      <div class="tbl"><table><thead><tr><th>Chỉ tiêu</th><th>Mã số</th><th class=n>Kỳ này</th></tr></thead><tbody>
+      ${L.map(l=>`<tr style="${l.bold?'font-weight:700;background:#FFF6F2':''}"><td style="padding-left:${l.code&&!l.bold?30:12}px">${esc(l.name)}</td><td>${l.code}</td><td class=n>${l.v==null?'':N(l.v)}</td></tr>`).join('')}</tbody></table></div>
+      ${M==='i'?'<p class="mut" style="font-size:12px">Mã 07 là phần chênh lệch để LCT thuần HĐKD (mã 20) khớp với dòng tiền thực tế – thường do số dư đầu kỳ chưa đầy đủ hoặc bút toán phi tiền tệ chưa phân loại.</p>':''}</div>
+      <div class="card"><div class="card-h"><div><h3>Phân loại dòng tiền theo TK đối ứng</h3><div class="hint">Cơ sở lập phương pháp trực tiếp: mỗi bút toán Nợ/Có TK tiền được xếp vào chỉ tiêu theo TK đối ứng (chuyển tiền giữa các TK tiền bị loại).</div></div></div>
+      ${tbl(['Mã số','Thu / Chi','TK đối ứng','Tên TK','#Số tiền'],r.detail.map(d=>`<tr><td>${d.code}</td><td>${d.dir}</td><td>${esc(d.a)}</td><td>${esc(d.n)}</td><td class=n>${N(d.v)}</td></tr>`))}</div>`;
+    $('#cfM').onclick=e=>{const b=e.target.closest('[data-cfm]');if(b){FP.cfm=b.dataset.cfm;vFin()}}}
   FP._cmp=cmp;
 }
 $('#fnTabs').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;FT=b.dataset.f;ls.set('finTab',FT);vFin()};
