@@ -2,10 +2,12 @@
 // Tiến trình nền: mọi thao tác ghi nặng (nạp file, xoá tháng, tính lại lỗi) chạy ở đây để giao diện không bị treo
 const { parentPort, workerData } = require('worker_threads');
 const fs = require('fs');
-const { open, COLS, SEL_ENTRY, rowFromDb, rebuildAgg } = require('./db');
+const { open, COLS, SEL_ENTRY, rowFromDb, rebuildAgg, dropErrIndexes, createErrIndexes } = require('./db');
+const os = require('os');
+const { Worker } = require('worker_threads');
 const { checkRow, errKey, code, fmt2, RULES_VERSION, setConfig, CFG } = require('./rules');
 
-const { db } = open(workerData.dbPath);
+const { db } = open(workerData.dbPath, { light: workerData.task === 'scan' });
 const post = m => parentPort.postMessage(m);
 try { setConfig(JSON.parse(db.prepare(`SELECT v FROM settings WHERE k='thresholds'`).get()?.v || '{}')); } catch (e) { /* dùng mặc định */ }
 const BATCH = 5000;
@@ -65,7 +67,11 @@ function normalize(vals, map) {
 
 /* ---------- Ghi CSDL ---------- */
 const insEntry = db.prepare(`INSERT INTO entries(import_id, ym, ${COLS.map(c => c[1]).join(',')}) VALUES(?,?${',?'.repeat(COLS.length)})`);
-const insErrRaw = db.prepare('INSERT INTO errors(entry_id, rule, sev, msg, err_key) VALUES(?,?,?,?,?)'), insErr = insErrRaw;
+// Ghi lỗi kèm sẵn tháng / người nhập / bộ phận / chứng từ / trạng thái (để lọc, đếm lỗi không phải nối bảng entries)
+const insErrFull = db.prepare('INSERT INTO errors(entry_id, rule, sev, msg, err_key, ym, u, dept, doc, st) VALUES(?,?,?,?,?,?,?,?,?,?)');
+const insErrSel = db.prepare(`INSERT INTO errors(entry_id, rule, sev, msg, err_key, ym, u, dept, doc, st)
+  SELECT e.id, ?, ?, ?, ?, e.ym, e.created_by, e.department, e.document_no, coalesce((SELECT nullif(r.status,'') FROM reviews r WHERE r.err_key=?),'open') FROM entries e WHERE e.id=?`);
+const insErr = { run: (id, k, s, msg, key) => insErrSel.run(k, s, msg, key, key, id) };
 function writeRow(importId, r) {
   const { lastInsertRowid: id } = insEntry.run(importId, r.date ? r.date.slice(0, 7) : null, ...COLS.map(([k]) => r[k] ?? null));
   void id; // nạp nhanh: không chạy quy tắc – phân tích riêng bằng nút "Phân tích dữ liệu"
@@ -206,26 +212,49 @@ function setRules(scope = {}) {
 }
 
 /* ---------- Phân tích dữ liệu theo kỳ (chạy toàn bộ quy tắc) ---------- */
-function analyze({ from = '', to = '' } = {}) {
+// Quy tắc từng dòng chạy song song trên nhiều luồng CPU (mỗi luồng quét một khoảng id, chỉ đọc); luồng này gom kết quả và ghi.
+function scanRange({ lo, hi, sc }) { // chạy trong luồng phụ
+  const page = db.prepare(`SELECT ${SEL_ENTRY}, e.department AS _dept FROM entries e WHERE e.id>? AND e.id<=?${sc} ORDER BY e.id LIMIT ${BATCH}`);
+  let last = lo, n = 0;
+  for (;;) {
+    const rows = page.all(last, hi); if (!rows.length) break;
+    const out = [];
+    for (const raw of rows) { const r = rowFromDb(raw); for (const e of checkRow(r)) out.push([raw.id, e.k, e.s, e.msg, errKey(e.k, r), raw.ym, r.user, raw._dept ?? null, r.doc ?? null]); }
+    last = rows.at(-1).id; n += rows.length; post({ type: 'errs', list: out, n: rows.length });
+  }
+  return { n };
+}
+async function analyze({ from = '', to = '' } = {}) {
   const sc = (from ? ` AND e.ym>='${from}'` : '') + (to ? ` AND e.ym<='${to}'` : '');
   const total = db.prepare(`SELECT count(*) n FROM entries e WHERE 1${sc}`).get().n;
+  const t0 = Date.now();
   post({ type: 'progress', label: 'Đang xoá kết quả phân tích cũ của kỳ', pct: 0 });
+  const big = total > 200000; // kỳ lớn: gỡ chỉ mục lỗi để xoá/chèn hàng loạt nhanh, dựng lại một lần ở cuối; kỳ nhỏ (1 tháng) giữ chỉ mục
+  if (big) dropErrIndexes(db);
   db.exec('BEGIN');
   if (sc) db.exec(`DELETE FROM errors WHERE entry_id IN (SELECT e.id FROM entries e WHERE 1${sc})`); else db.exec('DELETE FROM errors');
   db.exec('COMMIT');
-  const page = db.prepare(`SELECT ${SEL_ENTRY} FROM entries e WHERE e.id>?${sc} ORDER BY e.id LIMIT ${BATCH}`);
-  let last = 0, done = 0, t0 = Date.now();
-  for (;;) {
-    const rows = page.all(last);
-    if (!rows.length) break;
-    db.exec('BEGIN');
-    for (const raw of rows) { const r = rowFromDb(raw); for (const e of checkRow(r)) insErrRaw.run(raw.id, e.k, e.s, e.msg, errKey(e.k, r)); }
-    db.exec('COMMIT');
-    last = rows.at(-1).id; done += rows.length;
-    post({ type: 'progress', label: 'Đang phân tích từng bút toán', rows: done, pct: done / total * 90, secs: (Date.now() - t0) / 1000 });
+  const rv = new Map(db.prepare(`SELECT err_key k, status s FROM reviews WHERE ifnull(status,'')<>''`).all().map(r => [r.k, r.s]));
+  const ids = db.prepare(`SELECT min(e.id) lo, max(e.id) hi FROM entries e WHERE 1${sc}`).get();
+  const K = total < 50000 ? 1 : Math.max(1, Math.min(6, os.cpus().length - 1));
+  let done = 0;
+  const write = list => { db.exec('BEGIN'); for (const x of list) insErrFull.run(...x, rv.get(x[4]) || 'open'); db.exec('COMMIT'); };
+  if (ids.lo != null) {
+    const step = Math.ceil((ids.hi - ids.lo + 1) / K), parts = [];
+    for (let k = 0; k < K; k++) parts.push({ lo: ids.lo - 1 + k * step, hi: Math.min(ids.hi, ids.lo - 1 + (k + 1) * step), sc });
+    await Promise.all(parts.map(a => new Promise((res, rej) => {
+      const w = new Worker(__filename, { workerData: { dbPath: workerData.dbPath, task: 'scan', args: a } });
+      w.on('message', m => {
+        if (m.type === 'errs') { write(m.list); done += m.n; post({ type: 'progress', label: `Đang phân tích từng bút toán (${K} luồng song song)`, rows: done, pct: done / total * 80, secs: (Date.now() - t0) / 1000 }); }
+        else if (m.type === 'done') res(); else if (m.type === 'error') rej(new Error(m.error));
+      });
+      w.on('error', rej);
+    })));
   }
   setRules({ from, to });
   db.exec(`DELETE FROM errors WHERE entry_id IN (SELECT id FROM entries WHERE source_table='OPENING_BALANCE')`); // số dư đầu kỳ không phải bút toán của nhân viên
+  post({ type: 'progress', label: big ? 'Đang dựng chỉ mục kết quả rà soát…' : 'Đang hoàn tất…', pct: 95 });
+  require('./db').fillErrCols(db); if (big) createErrIndexes(db); db.exec('PRAGMA optimize');
   const ms = db.prepare(`UPDATE months SET analyzed_ver=? WHERE 1${sc.replace(/e\.ym/g, 'ym')} RETURNING ym`).all(RULES_VERSION).map(r => r.ym);
   return { rows: total, months: ms.length, secs: (Date.now() - t0) / 1000 };
 }
@@ -335,6 +364,7 @@ const TASKS = {
   clear() { post({ type: 'progress', label: 'Đang xoá toàn bộ dữ liệu…' }); db.exec(`DELETE FROM errors; DELETE FROM entries; DELETE FROM imports; DELETE FROM months; DELETE FROM agg;`); db.exec('VACUUM'); return {}; },
   recheck() { return analyze({}); },
   analyze: args => analyze(args),
+  scan: args => scanRange(args),
 };
 (async () => {
   try { post({ type: 'done', result: await TASKS[workerData.task](workerData.args || {}) }); }

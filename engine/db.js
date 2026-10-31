@@ -17,9 +17,22 @@ const COLS = [
 ];
 const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, e.enriched AS _enriched, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
 
-function open(file, { cleanup = false } = {}) {
+// Điền các cột phi chuẩn hoá cho dòng lỗi mới (sau mỗi lần phân tích) – chỉ đụng các dòng còn trống
+function fillErrCols(db) {
+  if (!db.prepare('SELECT 1 FROM errors WHERE ym IS NULL OR st IS NULL LIMIT 1').get()) return 0;
+  db.exec(`UPDATE errors SET ym=e.ym, u=e.created_by, dept=e.department, doc=e.document_no FROM entries e WHERE e.id=errors.entry_id AND errors.ym IS NULL;
+    UPDATE errors SET st=coalesce((SELECT nullif(r.status,'') FROM reviews r WHERE r.err_key=errors.err_key),'open') WHERE st IS NULL;`);
+  return 1;
+}
+// Chỉ mục của bảng lỗi: gỡ ra khi xoá/chèn hàng loạt (phân tích lại) rồi dựng lại một lần – nhanh hơn nhiều so với cập nhật từng dòng
+const ERR_IDX = [['ix_err_entry', 'errors(entry_id)'], ['ix_err_rule', 'errors(rule)'], ['ix_err_key', 'errors(err_key)'],
+  ['ix_err_cov', 'errors(ym, rule, sev, st, u, doc, entry_id)'], ['ix_err_u', 'errors(u, ym)'], ['ix_err_doc', 'errors(doc)']];
+const dropErrIndexes = db => { for (const [n] of ERR_IDX) db.exec(`DROP INDEX IF EXISTS ${n}`); };
+const createErrIndexes = db => { for (const [n, d] of ERR_IDX) db.exec(`CREATE INDEX IF NOT EXISTS ${n} ON ${d}`); };
+function open(file, { cleanup = false, light = false } = {}) {
   const db = new DatabaseSync(file);
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=60000; PRAGMA cache_size=-200000;`);
+  if (light) return { db, needRecheck: false }; // luồng phụ chỉ đọc (quét quy tắc song song): không chạy nâng cấp/tạo chỉ mục
   db.exec(`
     CREATE TABLE IF NOT EXISTS imports(id INTEGER PRIMARY KEY, file_name TEXT NOT NULL, file_hash TEXT, row_count INTEGER,
       date_from TEXT, date_to TEXT, imported_at TEXT DEFAULT (datetime('now','localtime')), status TEXT DEFAULT 'ok');
@@ -66,6 +79,11 @@ function open(file, { cleanup = false } = {}) {
     CREATE INDEX IF NOT EXISTS ix_e_accc ON entries(acc_credit);
     CREATE INDEX IF NOT EXISTS ix_err_rule ON errors(rule);
     CREATE INDEX IF NOT EXISTS ix_err_key ON errors(err_key);`);
+  // v3.9: ghi sẵn tháng / người nhập / bộ phận / chứng từ / trạng thái vào bảng lỗi → đếm, lọc lỗi không phải nối với bảng entries (1,5 triệu dòng)
+  const xcols = db.prepare('PRAGMA table_info(errors)').all().map(c => c.name);
+  for (const c of ['ym', 'u', 'dept', 'doc', 'st']) if (!xcols.includes(c)) db.exec(`ALTER TABLE errors ADD COLUMN ${c} TEXT`);
+  db.exec(`DROP INDEX IF EXISTS ix_err_ym;`);
+  fillErrCols(db); createErrIndexes(db);
   // Lần nạp bị gián đoạn (tắt máy giữa chừng) thì xoá – chỉ làm khi ứng dụng khởi động
   if (cleanup) db.exec(`DELETE FROM imports WHERE status='pending'`);
   return { db, needRecheck };
@@ -86,4 +104,4 @@ function rebuildAgg(db, months = null) {
       GROUP BY ym, acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue`);
   db.exec('COMMIT');
 }
-module.exports = { rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };
+module.exports = { fillErrCols, dropErrIndexes, createErrIndexes, rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };

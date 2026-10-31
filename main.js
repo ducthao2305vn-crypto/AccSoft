@@ -17,7 +17,7 @@ function qa(name, ...args) {
   return new Promise((resolve, reject) => { const id = ++qSeq; qPending.set(id, { resolve, reject, name, t: Date.now() }); qw.postMessage({ id, name, args }); });
 }
 function startQueryWorker() {
-  qw = new Worker(path.join(__dirname, 'engine', 'qworker.js'), { workerData: { dbPath: dbFile } });
+  qw = new Worker(path.join(__dirname, 'engine', 'qworker.js'), { workerData: { dbPath: dbFile, cache: READ } });
   qw.on('message', m => { const p = qPending.get(m.id); if (!p) return; qPending.delete(m.id);
     const ms = Date.now() - p.t; if (ms > 3000) log.info(`Truy vấn chậm "${p.name}": ${ms} ms`);
     if (m.ok) p.resolve(m.result); else p.reject(Object.assign(new Error(m.error), { stack: m.stack })); });
@@ -30,6 +30,7 @@ function runTask(task, args, label) {
   return new Promise((resolve, reject) => {
     const w = new Worker(path.join(__dirname, 'engine', 'worker.js'), { workerData: { dbPath: dbFile, task, args } });
     w.on('message', m => {
+      if (m.type === 'done' || m.type === 'error') qw && qw.postMessage({ invalidate: true }); // dữ liệu đã đổi → bỏ bộ nhớ đệm truy vấn
       if (m.type === 'progress') send('progress', { label, ...m });
       else if (m.type === 'done') resolve(m.result);
       else if (m.type === 'error') reject(Object.assign(new Error(m.error), { stack: m.stack || m.error }));

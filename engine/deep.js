@@ -140,9 +140,8 @@ function make(db, { INC, all, get, okYm }) {
   function staff(from, to) {
     const R = (okYm(from) ? ` AND e.ym>='${okYm(from)}'` : '') + (okYm(to) ? ` AND e.ym<='${okYm(to)}'` : '');
     const ent = new Map(all(`SELECT e.created_by u, count(*) n FROM entries e WHERE ${INC}${R} AND ifnull(e.source_table,'')<>'OPENING_BALANCE' GROUP BY 1`).map(r => [r.u, r.n]));
-    const ST = `coalesce(nullif(rv.status,''),'open')`;
-    const er = all(`SELECT e.created_by u, er.rule k, er.sev s, e.ym, ${ST} st, count(*) n FROM errors er JOIN entries e ON e.id=er.entry_id LEFT JOIN reviews rv ON rv.err_key=er.err_key
-      WHERE ${INC}${R} GROUP BY 1,2,3,4,5`);
+    const er = all(`SELECT er.u u, er.rule k, er.sev s, er.ym ym, coalesce(er.st,'open') st, count(*) n FROM errors er
+      WHERE er.ym IN (SELECT ym FROM months WHERE included=1)${R.replace(/e\.ym/g, 'er.ym')} GROUP BY 1,2,3,4,5`);
     const months = [...new Set(er.map(r => r.ym))].sort().slice(-6), out = new Map();
     for (const [u, n] of ent) out.set(u, { u, entries: n, errors: 0, staff: 0, audit: 0, high: 0, fixed: 0, ignore: 0, open: 0, rules: {}, ruleMonths: {}, byMonth: {} });
     for (const r of er) {

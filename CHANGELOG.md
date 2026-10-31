@@ -1,5 +1,31 @@
 # Lịch sử phiên bản
 
+## v3.9.0 – 31/10/2026
+**Tối ưu cho dữ liệu 1–2 triệu dòng và hàng triệu cảnh báo**
+
+Đo trên 647.000 dòng với 1,17 triệu cảnh báo:
+
+| Thao tác | Trước | Sau |
+|---|---|---|
+| Tổng quan (lần đầu) | 7,0 s | ~0 s (tính sẵn) |
+| Bộ lọc trang Lỗi | 9,4 s | 0,01 s |
+| Danh sách lỗi | 3,1 s | 0,4 s |
+| Gom theo chứng từ | 4,9 s | 1,6 s |
+| Báo cáo & Thông báo | 4,7 s | ~0 s |
+| Phân tích toàn bộ dữ liệu | 102 s | 42 s |
+| Phân tích 1 tháng | 16 s | 7,6 s |
+| Mở lại trang đã xem | như lần đầu | < 0,1 s |
+
+- **Bảng lỗi ghi sẵn thông tin:** tháng, người nhập, bộ phận, chứng từ và trạng thái xử lý được lưu ngay trong bảng lỗi, kèm chỉ mục bao phủ. Đếm và lọc cảnh báo không còn phải nối với bảng 1,5 triệu dòng hạch toán. Trạng thái tự đồng bộ khi bấm Đã khắc phục / Không phải lỗi.
+- **Danh sách lỗi lấy trang trước:** chỉ lấy đúng 200 dòng của trang đang xem rồi mới đọc chi tiết bút toán.
+- **Phân tích chạy song song:** quy tắc từng dòng chạy trên nhiều luồng CPU (số luồng = số nhân − 1, tối đa 6).
+  - Phân tích kỳ lớn: tạm gỡ chỉ mục khi xoá và ghi hàng loạt, dựng lại một lần ở cuối.
+  - Phân tích một tháng: giữ nguyên chỉ mục.
+- **Bộ nhớ đệm truy vấn:**
+  - Kết quả các trang được giữ lại cho tới khi dữ liệu thay đổi.
+  - Khi rảnh, ứng dụng tính sẵn các trang Tổng quan, bộ lọc lỗi, Báo cáo.
+- **Lần mở đầu tiên sau khi nâng cấp:** ứng dụng tự bổ sung các cột mới cho bảng lỗi. Bước này mất khoảng 20–40 giây với 1–2 triệu cảnh báo và chỉ chạy một lần.
+
 ## v3.8.0 – 31/10/2026
 **Thuyết minh báo cáo tài chính (B09-DN, TT99/2025)**
 - Phần I–IV và VII là nội dung văn bản: đặc điểm hoạt động, kỳ kế toán và đơn vị tiền tệ, chế độ kế toán áp dụng, chính sách kế toán, thông tin khác.

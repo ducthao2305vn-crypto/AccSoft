@@ -27,6 +27,24 @@ Mục đích phần mềm: **quản trị rủi ro khi nhân viên hạch toán*
 
 DB: `<thư mục app>/AccSoft_Data/accsoft.db` (portable: `PORTABLE_EXECUTABLE_DIR`). Log: `AccSoft_Data/logs/`. Sao lưu: `AccSoft_Data/backups` (giữ 10 bản). Không commit `AccSoft_Data`.
 
+## Hiệu năng dữ liệu lớn (v3.9) – bắt buộc giữ
+- **Bảng `errors` có cột ghi sẵn `ym, u, dept, doc, st`:**
+  - Ghi khi chèn: `insErrFull` cho quy tắc từng dòng; `insErr` (INSERT … SELECT từ entries) cho quy tắc toàn cục.
+  - Dòng còn trống được bổ sung bằng `fillErrCols()`.
+  - `setReviews` cập nhật `errors.st`.
+  - Truy vấn lỗi lọc theo `EINC` + `RV('er')` trên `errors er`; chỉ nối `entries` khi lọc theo TK, số tiền hoặc chữ (`where().from`).
+  - `STATUS = coalesce(er.st,'open')`.
+- **Chỉ mục lỗi khai báo trong `ERR_IDX` (db.js):**
+  - Phân tích kỳ lớn (trên 200k dòng) thì `dropErrIndexes` trước, `createErrIndexes` sau.
+  - Thêm chỉ mục mới cho bảng lỗi thì thêm vào `ERR_IDX`.
+- **Phân tích song song:** `analyze()` (async) chia khoảng id cho K luồng phụ chạy task `scan`. Luồng phụ mở DB với `{ light: true }`, chỉ đọc, gửi `errs` về; luồng chính ghi kết quả.
+- **qworker có bộ nhớ đệm** cho các truy vấn trong mảng `READ` (main truyền vào qua `workerData.cache`):
+  - Xoá bộ nhớ đệm khi task ghi xong (`invalidate`) hoặc khi có truy vấn ghi.
+  - Khi rảnh, `WARM` tính sẵn overview, errorFacets, report… Truy vấn mới chỉ đọc thì thêm vào `READ` để được cache.
+- **Đo hiệu năng:**
+  - Chạy `node /tmp/.../an.js` với `new Worker('engine/worker.js', {workerData:{task:'analyze'}})` và in mốc thời gian theo nhãn tiến độ.
+  - Gọi `require('./engine/queries')(db)` rồi đo từng hàm.
+
 ## Quy ước nghiệp vụ (bắt buộc giữ)
 - Công nợ / tồn kho: **TK Nợ ↔ đối tượng Nợ (partner_debit), TK Có ↔ đối tượng Có (partner_credit)**. Dùng `sidePairs`.
 - Phải thu: 131/136/1388/141. Phải trả: 331/335/336/334/3388. Tồn kho: 151–158, trừ 154.
