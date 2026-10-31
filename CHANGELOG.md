@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.5.1 – 31/10/2026
+**Sửa lỗi lọc đối tượng ở trang phải thu 138812**
+- **Lỗi:** chọn đối tượng A xong thì không chọn lại được đối tượng khác. Ô gõ có gợi ý của trình duyệt chỉ hiện các tên chứa chữ đang có trong ô, nên chỉ còn lại A.
+- **Ô chọn thả xuống "Đối tượng":** liệt kê đủ mọi đối tượng theo tên (⚠ = rủi ro cao), dòng đầu "— Tất cả đối tượng —" để bỏ lọc.
+- **Ô "Tìm":** gõ một phần tên hoặc mã để lọc nhiều đối tượng; bấm vào ô thì chữ cũ tự được chọn để gõ đè.
+- Bấm tên đối tượng trong bảng thì ô chọn tự chuyển sang đối tượng đó.
+
 ## v4.5.0 – 31/10/2026
 **Lọc theo tài khoản chi tiết 335**
 - Ô chọn "TK chi tiết" (Tất cả TK 335 / 3353 – Accrued vas, roaming… / 3358 – Other accrued expenses…), danh sách tự lấy theo dữ liệu. Có ở:
