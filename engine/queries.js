@@ -206,11 +206,12 @@ function make(db) {
     ['331', 'Phải trả người bán', 'tra', -1], ['336', 'Phải trả nội bộ', 'tra', -1], ['334', 'Phải trả người lao động', 'tra', -1], ['3388', 'Phải trả, phải nộp khác', 'tra', -1]];
   const NO_BP = '(không có đối tượng)';
   // Đối tượng gắn theo phía hạch toán: TK bên Nợ ↔ Đối tượng Nợ (Business Partner), TK bên Có ↔ Đối tượng Có (Bpartner credit)
-  function aging(asOf, term = 30, level = 'l1') {
+  // dim: 'bp' = theo đối tượng; 'contract' = đối tượng × hợp đồng; 'adv' = đối tượng × đề nghị tạm ứng (Advance Request)
+  function aging(asOf, term = 30, level = 'l1', dim = 'bp') {
     const asD = new Date(asOf), map = new Map();
     const pres = AG_ACC.map(a => a[0]);
     const rows = all(`SELECT e.account_date date, e.due_date due, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName,
-        e.amount amt, e.partner_debit bp, e.partner_credit bpCr FROM entries e
+        e.amount amt, e.partner_debit bp, e.partner_credit bpCr, e.contract, e.advance_request adv FROM entries e
       WHERE ${INC} AND e.account_date<=? AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)})`, asOf);
     for (const r of rows) {
       for (const side of ['dr', 'cr']) {
@@ -221,8 +222,10 @@ function make(db) {
         const bp = (side === 'dr' ? r.bp : r.bpCr) || NO_BP;
         const acc = level === 'detail' ? accCode : pre;
         const accName = level === 'detail' ? (String(side === 'dr' ? r.drName : r.crName).split('_').slice(1).join('_') || name) : name;
-        const key = acc + '|' + bp; let o = map.get(key);
-        if (!o) map.set(key, o = { acc, accName, parent: pre, grp, bp, bal: 0, dr: 0, cr: 0, inc: [] });
+        const ref = dim === 'contract' ? (r.contract || '(không có hợp đồng)') : dim === 'adv' ? (r.adv || '(không có đề nghị tạm ứng)') : '';
+        const key = acc + '|' + bp + '|' + ref; let o = map.get(key);
+        if (!o) map.set(key, o = { acc, accName, parent: pre, grp, bp, ref, bal: 0, dr: 0, cr: 0, inc: [], first: r.date, last: r.date });
+        if (r.date < o.first) o.first = r.date; if (r.date > o.last) o.last = r.date;
         if (side === 'dr') o.dr += r.amt; else o.cr += r.amt;
         const v = (side === 'dr' ? 1 : -1) * nat * r.amt; o.bal += v;
         if (v > 0) { const d = r.due ? new Date(r.due) : new Date(new Date(r.date).getTime() + term * 864e5); o.inc.push({ d, v }); }

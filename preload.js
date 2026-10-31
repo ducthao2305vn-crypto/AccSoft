@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld('api', {
   exportErrors: (f, sort) => ipcRenderer.invoke('export:errors', f, sort),
   exportAnalysis: (title, rows) => ipcRenderer.invoke('export:analysis', title, rows),
   exportInventory: (asOf, by, level, acc) => ipcRenderer.invoke('export:inventory', asOf, by, level, acc),
-  exportAging: (asOf, term, level, grp, acc) => ipcRenderer.invoke('export:aging', asOf, term, level, grp, acc),
+  exportAging: (asOf, term, level, grp, acc, dim) => ipcRenderer.invoke('export:aging', asOf, term, level, grp, acc, dim),
   exportReport: (minSev, group) => ipcRenderer.invoke('export:report', minSev, group),
   exportEmployee: (u, minSev, group) => ipcRenderer.invoke('export:employee', u, minSev, group),
   mailPreview: (u, o) => ipcRenderer.invoke('mail:preview', u, o),

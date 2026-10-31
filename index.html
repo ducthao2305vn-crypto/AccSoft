@@ -258,11 +258,14 @@ td.up{color:var(--ok-700)}td.down{color:var(--err-700)}
       <div class="row" style="align-items:flex-end">
         <label class="field">Ngày báo cáo<input class="input" type="date" id="asOf"></label>
         <label class="field">Nhóm<select class="input" id="agGrp"><option value="">Phải thu & phải trả</option><option value="thu">Phải thu</option><option value="tra">Phải trả</option></select></label>
+        <label class="field">Phân tích theo<select class="input" id="agDim"><option value="bp">Đối tượng</option><option value="contract">Đối tượng × Hợp đồng</option><option value="adv">Đối tượng × Đề nghị tạm ứng</option></select></label>
         <label class="field">Cấp tài khoản<select class="input" id="agLevel"><option value="l1">Tài khoản tổng hợp</option><option value="detail">Tài khoản chi tiết</option></select></label>
         <label class="field">Tài khoản<select class="input" id="agAcc"></select></label>
         <label class="field">Hạn mặc định (ngày)<input class="input" type="number" id="term" value="30" style="width:110px"></label>
         <div class="sp"></div><button class="btn" id="expAg"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
       </div>
+      <div class="row" style="margin-top:12px"><span class="mut" style="font-size:13px">Xem nhanh:</span>
+        <button class="btn sm light" data-preset="331c">331 theo hợp đồng</button><button class="btn sm light" data-preset="1411a">1411 theo đề nghị tạm ứng</button><button class="btn sm ghost" data-preset="all">Tất cả công nợ theo đối tượng</button></div>
       <div class="note brand" style="margin-top:14px"><b>Đối tượng công nợ theo phía hạch toán:</b> tài khoản ghi <b>Nợ</b> lấy <b>Đối tượng Nợ</b> (Business Partner), tài khoản ghi <b>Có</b> lấy <b>Đối tượng Có</b> (Bpartner credit) – không lấy thay đối tượng phía kia.
         Tuổi nợ theo FIFO: số dư phân bổ cho các phát sinh tăng gần nhất, tính từ Due Date (hoặc ngày hạch toán + hạn mặc định).</div>
     </div>

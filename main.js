@@ -148,7 +148,7 @@ async function init() {
   });
   handle('export:analysis', (_e, title, rows) => saveXlsx(`AccSoft_${title}.xlsx`, R.book([[title.slice(0, 31), rows]])));
   handle('export:inventory', (_e, asOf, by, level, acc) => saveXlsx('AccSoft_TuoiHangTonKho.xlsx', R.inventoryBook(Q.inventory(asOf, by, level).items.filter(o => !acc || o.acc === acc))));
-  handle('export:aging', (_e, asOf, term, level, grp, acc) => saveXlsx('AccSoft_TuoiNo.xlsx', R.agingBook(Q.aging(asOf, term, level).items.filter(o => (!grp || o.grp === grp) && (!acc || o.acc === acc)))));
+  handle('export:aging', (_e, asOf, term, level, grp, acc, dim) => saveXlsx(`AccSoft_TuoiNo${dim === 'contract' ? '_HopDong' : dim === 'adv' ? '_TamUng' : ''}.xlsx`, R.agingBook(Q.aging(asOf, term, level, dim).items.filter(o => (!grp || o.grp === grp) && (!acc || o.acc === acc)), dim)));
   handle('export:report', (_e, minSev, group) => saveXlsx('AccSoft_BaoCaoKiemTra.xlsx',
     R.reportBook(Q.report(), Q.errors({ statusIn: ['fixed', 'ignore'] }, { k: 'user', d: 1 }, 0, 2e6).rows, Q.errors({ minSev, group, statusIn: ['open', 'doing'] }, { k: 'user', d: 1 }, 0, 2e6).rows)));
   handle('export:employee', (_e, user, minSev, group) => saveXlsx(`AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, R.book([['Can khac phuc', Q.employeeErrors(user, minSev, 100000, group).map(R.errRow)]])));

@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v2.8.0 – 31/10/2026
+Công nợ & tuổi nợ – **phân tích theo hợp đồng và đề nghị tạm ứng**:
+- Lựa chọn "Phân tích theo": Đối tượng · Đối tượng × Hợp đồng (cột Contract) · Đối tượng × Đề nghị tạm ứng (cột Advance Request). Đối tượng vẫn lấy theo phía hạch toán (Nợ ↔ Business Partner, Có ↔ Bpartner credit).
+- Nút xem nhanh: **331 theo hợp đồng**, **1411 theo đề nghị tạm ứng**.
+- Chi tiết có cột hợp đồng / đề nghị tạm ứng, ngày phát sinh đầu; đánh giá: thiếu hợp đồng / đề nghị, **tạm ứng quá 30 ngày chưa quyết toán**; dư ngược chiều (quyết toán vượt tạm ứng, trả vượt hợp đồng) hiện theo từng hợp đồng / đề nghị.
+- Excel tuổi nợ thêm cột hợp đồng / đề nghị tạm ứng, phát sinh đầu tiên và gần nhất.
+
 ## v2.7.0 – 31/10/2026
 **Chọn kỳ và so sánh** cho Kết quả kinh doanh và Doanh thu & Chi phí:
 - Kỳ phân tích: năm, quý, tháng, lũy kế từ đầu năm, khoảng tháng tuỳ chọn.
