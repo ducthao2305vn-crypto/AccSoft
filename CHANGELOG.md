@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v3.8.0 – 31/10/2026
+**Thuyết minh báo cáo tài chính (B09-DN, TT99/2025)**
+- Phần I–IV và VII là nội dung văn bản: đặc điểm hoạt động, kỳ kế toán và đơn vị tiền tệ, chế độ kế toán áp dụng, chính sách kế toán, thông tin khác.
+  - Có sẵn nội dung mẫu, sửa trực tiếp trên màn hình rồi bấm "Lưu nội dung"; nội dung được lưu trong CSDL để dùng lại cho các kỳ sau.
+- Phần V–VI lập tự động theo kỳ đang chọn, khớp với B01/B02:
+  - **Biến động đầu kỳ – tăng – giảm – cuối kỳ theo TK chi tiết:** tiền, đầu tư tài chính, phải thu khác, hàng tồn kho, chi phí trả trước, TSCĐ và hao mòn, XDCB, thuế, phải trả người lao động, chi phí phải trả, phải trả khác, vay, vốn chủ sở hữu, doanh thu, giá vốn.
+  - **10 đối tượng có số dư lớn nhất:** phải thu khách hàng, trả trước người bán, phải trả người bán, người mua trả trước.
+  - **Doanh thu, chi phí, thu nhập khác:** doanh thu và chi phí tài chính, chi phí bán hàng và quản lý doanh nghiệp, thu nhập và chi phí khác, chi phí theo 15 khoản mục lớn nhất, thuế TNDN.
+- Excel bộ báo cáo tài chính thêm sheet B09-DN.
+
 ## v3.7.0 – 31/10/2026
 **Báo cáo tài chính theo tháng, quý, năm**
 - Trang Báo cáo tài chính thêm ô chọn "Kỳ báo cáo": Tháng, Quý, Năm, Luỹ kế từ đầu năm, Khoảng tháng. Áp dụng cho cả Bảng cân đối số phát sinh, B01, B02, B03 và file Excel.

@@ -171,6 +171,55 @@ function make(all, okYm, INC, plRange) {
     const agg = new Map(); for (const d of det) { const k = d.code + '|' + d.dir + '|' + d.a.slice(0, 3); const o = agg.get(k) || agg.set(k, { code: d.code, dir: d.dir, a: d.a.slice(0, 3), n: L1[d.a.slice(0, 3)] || d.n, v: 0 }).get(k); o.v += d.v; }
     return { from: tb.from, to: tb.to, direct, indirect, check: op + inv + fin + cash0 + g('61') - cash1, cash0, cash1, detail: [...agg.values()].sort((a, b) => a.code.localeCompare(b.code) || Math.abs(b.v) - Math.abs(a.v)), hasOpening: tb.hasOpening };
   }
-  return { trial, balanceSheet, income, cashFlow };
+  /* B09-DN: Thuyết minh báo cáo tài chính – phần số liệu chi tiết lập tự động; phần chính sách là văn bản người dùng sửa */
+  function partnerTop(pres, at, n = 10, credit = false, raw) {
+    const m = new Map();
+    for (const r of raw) if (pres.includes(r.a) && r.ym <= at) m.set(r.p, (m.get(r.p) || 0) + r.s * r.v);
+    const list = [...m].map(([p, v]) => ({ p, v: credit ? -v : v })).filter(x => x.v > 0.005).sort((a, b) => b.v - a.v);
+    const tot = list.reduce((s, x) => s + x.v, 0), top = list.slice(0, n);
+    return { rows: top.map(x => ({ p: x.p, v: x.v })), other: tot - top.reduce((s, x) => s + x.v, 0), total: tot, count: list.length };
+  }
+  function notes(from, to) {
+    const tb = trial(from, to, 0), t = tb.to || '9999-12', f = tb.from, inc = incl();
+    const raw = ['debit', 'credit'].flatMap(side => all(`SELECT ym, substr(acc_${side},1,3) a, coalesce(partner_${side},'(không đối tượng)') p, sum(amount) v FROM entries WHERE substr(acc_${side},1,3) IN ('131','331') AND ym<=? GROUP BY 1,2,3`, t)
+      .filter(r => inc.has(r.ym)).map(r => ({ ...r, s: side === 'debit' ? 1 : -1 })));
+    const PT = (pres, at, credit) => partnerTop(pres, at, 10, credit, raw);
+    const prev = f ? (m => { const y = +m.slice(0, 4), mo = +m.slice(5) - 1; return mo ? `${y}-${String(mo).padStart(2, '0')}` : `${y - 1}-12`; })(f) : null;
+    // Bảng biến động theo TK chi tiết: nat = 1 (dư Nợ: tăng = PS Nợ), −1 (dư Có: tăng = PS Có)
+    const mov = (pres, nat = 1) => { const rows = tb.rows.filter(r => pres.some(p => r.a.startsWith(p))).map(r => ({ a: r.a, n: r.n, ob: nat * (r.obDr - r.obCr), inc: nat > 0 ? r.dr : r.cr, dec: nat > 0 ? r.cr : r.dr, cb: nat * r.bal }));
+      const tot = rows.reduce((s, r) => ({ ob: s.ob + r.ob, inc: s.inc + r.inc, dec: s.dec + r.dec, cb: s.cb + r.cb }), { ob: 0, inc: 0, dec: 0, cb: 0 }); return { rows, tot }; };
+    const pl = plRange(f, t), cost = all(`SELECT coalesce(tcost,'(chưa phân loại)') k, sum(CASE WHEN side='dr' THEN amount ELSE -amount END) v FROM agg e WHERE ${INC} AND (substr(acc,1,1) IN ('6','8')) AND acc NOT LIKE '911%'${f ? ` AND ym>='${f}'` : ''} AND ym<='${t}' GROUP BY 1 ORDER BY v DESC`);
+    const top = cost.slice(0, 15), costOther = cost.slice(15).reduce((s, r) => s + r.v, 0);
+    const N = (code, title, body) => ({ code, title, ...body });
+    return { from: f, to: tb.to, prev, hasOpening: tb.hasOpening, currency: (all(`SELECT currency c, count(*) n FROM entries WHERE currency IS NOT NULL AND currency<>'' GROUP BY 1 ORDER BY n DESC LIMIT 1`)[0] || {}).c || 'USD',
+      sections: [
+        N('V.1', 'Tiền và các khoản tương đương tiền', { type: 'mov', ...mov(['111', '112', '113']) }),
+        N('V.2', 'Các khoản đầu tư tài chính', { type: 'mov', ...mov(['121', '128', '221', '222', '228']) }),
+        N('V.3', 'Phải thu của khách hàng (10 khách hàng có số dư lớn nhất)', { type: 'top', ...PT(['131'], t), ob: prev ? PT(['131'], prev).total : 0 }),
+        N('V.4', 'Trả trước cho người bán (dư Nợ TK 331)', { type: 'top', ...PT(['331'], t), ob: prev ? PT(['331'], prev).total : 0 }),
+        N('V.5', 'Phải thu khác, tạm ứng, ký quỹ', { type: 'mov', ...mov(['136', '138', '141', '244']) }),
+        N('V.7', 'Hàng tồn kho', { type: 'mov', ...mov(['151', '152', '153', '154', '155', '156', '157', '158']) }),
+        N('V.8', 'Chi phí trả trước', { type: 'mov', ...mov(['242']) }),
+        N('V.9', 'Tài sản cố định hữu hình, vô hình – nguyên giá', { type: 'mov', ...mov(['211', '212', '213']) }),
+        N('V.10', 'Giá trị hao mòn luỹ kế', { type: 'mov', ...mov(['214'], -1) }),
+        N('V.11', 'Chi phí xây dựng cơ bản dở dang', { type: 'mov', ...mov(['241']) }),
+        N('V.12', 'Phải trả người bán (10 nhà cung cấp có số dư lớn nhất)', { type: 'top', ...PT(['331'], t, true), ob: prev ? PT(['331'], prev, true).total : 0 }),
+        N('V.13', 'Người mua trả tiền trước (dư Có TK 131)', { type: 'top', ...PT(['131'], t, true), ob: prev ? PT(['131'], prev, true).total : 0 }),
+        N('V.14', 'Thuế và các khoản phải nộp Nhà nước', { type: 'mov', cols: ['Đầu kỳ', 'Số phải nộp', 'Số đã nộp', 'Cuối kỳ'], ...mov(['333'], -1) }),
+        N('V.15', 'Phải trả người lao động', { type: 'mov', ...mov(['334'], -1) }),
+        N('V.16', 'Chi phí phải trả', { type: 'mov', ...mov(['335'], -1) }),
+        N('V.17', 'Phải trả nội bộ, phải trả khác', { type: 'mov', ...mov(['336', '338', '344'], -1) }),
+        N('V.18', 'Vay và nợ thuê tài chính', { type: 'mov', ...mov(['341', '343'], -1) }),
+        N('V.20', 'Vốn chủ sở hữu – bảng đối chiếu biến động', { type: 'mov', ...mov(['411', '412', '413', '414', '418', '419', '421', '441'], -1) }),
+        N('VI.1', 'Doanh thu bán hàng và cung cấp dịch vụ', { type: 'mov', cols: ['', 'Ghi Có', 'Ghi Nợ (giảm trừ/kết chuyển)', 'Thuần trong kỳ'], ...mov(['511', '521'], -1) }),
+        N('VI.3', 'Giá vốn hàng bán và chi phí sản xuất (621–627, 632)', { type: 'mov', cols: ['', 'Phát sinh Nợ', 'Phát sinh Có (kết chuyển)', 'Số dư'], ...mov(['621', '622', '623', '627', '632'], 1) }),
+        N('VI.4', 'Doanh thu và chi phí hoạt động tài chính', { type: 'kv', rows: [['Doanh thu hoạt động tài chính (515)', pl.finInc], ['Chi phí tài chính (635)', pl.finExp]] }),
+        N('VI.5', 'Chi phí bán hàng và chi phí quản lý doanh nghiệp', { type: 'kv', rows: [['Chi phí bán hàng (641)', pl.sell], ['Chi phí quản lý doanh nghiệp (642)', pl.admin]] }),
+        N('VI.6', 'Thu nhập khác và chi phí khác', { type: 'kv', rows: [['Thu nhập khác (711)', pl.othInc], ['Chi phí khác (811)', pl.othExp]] }),
+        N('VI.7', 'Chi phí sản xuất, kinh doanh theo khoản mục (15 khoản mục lớn nhất)', { type: 'kv', rows: [...top.map(r => [r.k, r.v]), ['Các khoản mục khác', costOther]] }),
+        N('VI.8', 'Chi phí thuế thu nhập doanh nghiệp hiện hành', { type: 'kv', rows: [['Lợi nhuận kế toán trước thuế', pl.pbt], ['Chi phí thuế TNDN (821)', pl.tax], ['Lợi nhuận sau thuế', pl.pat]] }),
+      ] };
+  }
+  return { trial, balanceSheet, income, cashFlow, notes };
 }
 module.exports = { make, L1 };

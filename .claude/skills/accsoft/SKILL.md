@@ -62,11 +62,18 @@ DB: `<thư mục app>/AccSoft_Data/accsoft.db` (portable: `PORTABLE_EXECUTABLE_D
   - Kỳ báo cáo `FP.mode`: m (tháng), q (quý), y (năm), ytd (luỹ kế đầu năm), r (khoảng tháng); mode suy ra `from/to`. Kỳ chưa đủ tháng được cắt đến tháng cuối có dữ liệu (`partial`).
   - So sánh B02: cùng kỳ năm trước = lùi 12 tháng; kỳ liền trước = lùi N tháng (m: 1, q: 3, y/ytd: 12), luôn cùng số tháng.
   - Nhấn đúp chỉ tiêu B02 mở `openLedger` kind 'pl'.
-- **Excel:** IPC `report:fin` gọi `reports.finBook(tb, bs, pl, o, cf)`, tạo 7 sheet: CDSPS, B01-DN, B02-DN, B03 trực tiếp, B03 gián tiếp, B03 phân loại, Thông tin.
+- **`notes` – B09:**
+  - Danh sách `sections`, mỗi mục có `code` (V.x, VI.x), `title`, `type`:
+    - 'mov': `mov(pres, nat)` lấy từ bảng CĐSPS chi tiết, gồm đầu kỳ / tăng / giảm / cuối kỳ (`nat` −1 cho TK dư Có).
+    - 'top': 10 đối tượng dư lớn nhất qua `partnerTop`; một truy vấn gom sẵn 131/331 để nhanh.
+    - 'kv': cặp tên – giá trị.
+  - Văn bản phần I–IV, VII lưu trong `settings` khoá `b09Info` (getB09Info/setB09Info); mặc định ở hàm `b09Def()` trong `app.js`.
+  - Kiểm tra: V.1 = mã 110, V.3 = 131, V.12 = 311 trên B01.
+- **Excel:** IPC `report:fin` gọi `reports.finBook(tb, bs, pl, o, cf)`, tạo 8 sheet: CDSPS, B01-DN, B02-DN, B03 trực tiếp, B03 gián tiếp, B09-DN, B03 phân loại, Thông tin.
 - **Kiểm thử:**
   - Gọi `require('./engine/queries')(db)` với DB chỉ đọc.
   - Kiểm tra: tổng Nợ = tổng Có (đầu kỳ, phát sinh, cuối kỳ); B01 `diff` ≈ 0 và `diffOb` ≈ 0; B03 `check` ≈ 0; bản gián tiếp cộng ra đúng mã 20.
-- **Chưa có:** thuyết minh B09; tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
+- **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Trích trước – huỷ trích 335 (v3.1–3.4)
 Mẫu hạch toán trong ERP:

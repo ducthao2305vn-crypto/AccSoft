@@ -59,7 +59,21 @@ function reversalCheckBook(lines, o) {
     'Thiếu thông tin': [!r.grpCost && 'Group cost', !r.services && 'Services', !r.deptSub && 'Department Sub'].filter(Boolean).join(', ') }))],
     ['Thong tin chung tu', [{ 'Ngày hạch toán': o.date, 'Kỳ': o.date.slice(0, 7), 'Bộ phận': o.dept, 'Loại CT': o.docType, 'Diễn giải': o.desc, 'Số dòng': lines.length, 'Tổng huỷ trích': -lines.reduce((s, r) => s + r.rev, 0) }]]]);
 }
-function finBook(tb, bs, pl, o, cf) {
+function b09Rows(nt, txt) {
+  const R = [], add = (a, b = null, c = null, d = null, e = null) => R.push({ 'Nội dung': a, 'Đầu kỳ': b, 'Tăng / Cột 2': c, 'Giảm / Cột 3': d, 'Cuối kỳ': e });
+  for (const [c, t, k] of [['I', 'Đặc điểm hoạt động của doanh nghiệp', 'p1'], ['II', 'Kỳ kế toán, đơn vị tiền tệ', 'p2'], ['III', 'Chuẩn mực và chế độ kế toán áp dụng', 'p3'], ['IV', 'Các chính sách kế toán áp dụng', 'p4']]) {
+    add(`${c}. ${t}`); for (const l of String(txt[k] || '').split('\n')) add('    ' + l);
+  }
+  for (const s of nt.sections) {
+    add(`${s.code}. ${s.title}`);
+    if (s.type === 'mov') { for (const x of s.rows) add(`    ${x.a} – ${x.n}`, x.ob, x.inc, x.dec, x.cb); add('    Cộng', s.tot.ob, s.tot.inc, s.tot.dec, s.tot.cb); }
+    else if (s.type === 'top') { for (const x of s.rows) add('    ' + x.p, null, null, null, x.v); add('    Các đối tượng khác', null, null, null, s.other); add('    Cộng', s.ob, null, null, s.total); }
+    else for (const [k, v] of s.rows) add('    ' + k, null, null, null, v);
+  }
+  add('VII. Những thông tin khác'); for (const l of String(txt.p7 || '').split('\n')) add('    ' + l);
+  return R;
+}
+function finBook(tb, bs, pl, o, cf, nt, txt) {
   const T = tb.rows.map(r => ({ 'Số hiệu TK': r.a, 'Tên tài khoản': r.n, 'Dư Nợ đầu kỳ': r.obDr, 'Dư Có đầu kỳ': r.obCr, 'Phát sinh Nợ': r.dr, 'Phát sinh Có': r.cr, 'Dư Nợ cuối kỳ': r.cbDr, 'Dư Có cuối kỳ': r.cbCr }));
   T.push({ 'Số hiệu TK': '', 'Tên tài khoản': 'TỔNG CỘNG', 'Dư Nợ đầu kỳ': tb.tot.obDr, 'Dư Có đầu kỳ': tb.tot.obCr, 'Phát sinh Nợ': tb.tot.dr, 'Phát sinh Có': tb.tot.cr, 'Dư Nợ cuối kỳ': tb.tot.cbDr, 'Dư Có cuối kỳ': tb.tot.cbCr });
   const B = bs.lines.map(l => ({ 'Chỉ tiêu': l.name, 'Mã số': /^\d+$/.test(l.code) ? l.code : '', 'Số cuối kỳ': l.cb, 'Số đầu kỳ': l.ob }));
@@ -68,7 +82,7 @@ function finBook(tb, bs, pl, o, cf) {
     'Chênh lệch TS − NV': bs.diff, 'Ghi chú': 'Lập tự động từ dữ liệu hạch toán đã nạp (AccSoft); B01/B02/B03 theo Thông tư 99/2025/TT-BTC (rút gọn) – cần kế toán trưởng rà soát trước khi sử dụng.' }];
   const C = L => L.map(l => ({ 'Chỉ tiêu': l.name, 'Mã số': l.code, 'Kỳ này': l.v }));
   return book([['CDSPS', T], ['B01-DN', B], ['B02-DN', P], ['B03-DN truc tiep', cf ? C(cf.direct) : []], ['B03-DN gian tiep', cf ? C(cf.indirect) : []],
-    ['B03 phan loai', cf ? cf.detail.map(d => ({ 'Mã số': d.code, 'Thu/Chi': d.dir, 'TK đối ứng': d.a, 'Tên TK': d.n, 'Số tiền': d.v })) : []], ['Thong tin', info]]);
+    ['B09-DN', nt ? b09Rows(nt, txt || {}) : []], ['B03 phan loai', cf ? cf.detail.map(d => ({ 'Mã số': d.code, 'Thu/Chi': d.dir, 'TK đối ứng': d.a, 'Tên TK': d.n, 'Số tiền': d.v })) : []], ['Thong tin', info]]);
 }
 function accrualBook(r) {
   const { summarize, AGE } = require('./accrual');
