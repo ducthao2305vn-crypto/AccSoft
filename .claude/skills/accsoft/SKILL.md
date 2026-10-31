@@ -162,7 +162,10 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
   - OVERPAID và GENERIC_PARTNER gộp một dòng cho mỗi đối tượng để tránh nhiễu.
 - **Mức rủi ro:** Cao nếu có cảnh báo H hoặc điểm ≥ 4 (H = 3, M = 1, quá hạn > 90 ngày = 2, tuổi > 365 ngày = 2, dư Có = 1).
 - **Giao diện:**
-  - Tab `recv`: tab con của Phân tích chuyên sâu; `recvDetail(p)` mở bảng chi tiết bên phải.
+  - Tab `recv`: tab con của Phân tích chuyên sâu; `recvDetail(p)` mở bảng chi tiết bên phải. Phần HTML dùng chung `recvDetailHtml(d, inline)`.
+  - Bộ lọc `RCF` (q, risk, type, flag) lưu ở `ls 'rcFilter'`, lọc phía giao diện trên kết quả `recvAnalyze` (đã cache).
+  - Lọc còn đúng một đối tượng thì hiện chi tiết ngay trong trang. Gõ tìm: chờ 600 ms rồi vẽ lại; giữ con trỏ trong ô bằng cờ `window.__rcFocus`.
+  - `#pageLoad` phải có `pointer-events:none`, nếu không sẽ che các tab.
   - Xuất Excel: IPC `report:recv` (`reports.recvBook`).
   - `vDeep` xoá các sự kiện `B.on*` ở đầu hàm; mỗi tab tự gắn sự kiện của mình. **Không** dùng `else B.onclick=null` sau từng khối.
 - **Test:** `/tmp`-style bảng in-memory với các ca: mã tham chiếu chéo, số tiền khớp đối tượng khác, thu không có doanh thu, thiếu tháng, trả trước.

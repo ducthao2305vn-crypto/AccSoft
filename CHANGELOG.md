@@ -1,5 +1,18 @@
 # Lịch sử phiên bản
 
+## v4.4.0 – 31/10/2026
+**Lọc chi tiết từng đối tượng trong phân tích phải thu 138812**
+- Thanh lọc mới:
+  - **Đối tượng:** gõ tên hoặc mã, có danh sách gợi ý.
+  - **Mức rủi ro:** Cao / Trung bình / Thấp.
+  - **Loại cảnh báo.**
+  - **Chỉ đối tượng có cảnh báo.**
+  - Nút "Xoá lọc", nhãn "Đang lọc x / y đối tượng". Bộ lọc được nhớ cho lần mở sau.
+- Các ô tổng hợp, biểu đồ tuổi nợ, bảng cảnh báo và bảng đối tượng tính lại theo bộ lọc.
+- Khi lọc còn đúng một đối tượng, chi tiết hiện ngay trong trang: cảnh báo, từng khoản doanh thu được trừ bởi chứng từ thu nào, còn nợ, quá hạn; từng lần thu trừ cho khoản nào.
+- Bấm vào tên đối tượng trong bảng để lọc nhanh theo đối tượng đó.
+- **Sửa lỗi:** thanh "Đang tải dữ liệu…" che hàng tab nên không bấm được tab trong lúc tải.
+
 ## v4.3.0 – 31/10/2026
 **Phân tích chuyên sâu phải thu 138812 theo đối tượng (nghi chọn sai đối tượng khi giảm trừ công nợ)**
 - Trang mới "Phân tích chuyên sâu → Phải thu 138812 theo đối tượng". Nhập được TK khác (ví dụ 138811, 131), chọn ngày tính và số ngày hạn thanh toán.
