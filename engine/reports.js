@@ -23,6 +23,36 @@ function book(sheets) {
 }
 const toBuffer = wb => XLSX.write(wb, { type: 'buffer', bookType: 'xlsx', compression: true });
 
+// File GL Journal để import vào ERP (đúng 126 cột như file mẫu Export_GL_Journal)
+const vd = s => s == null || s === '' ? null : String(s).replace('_', '-'); // '627_Overhead costs' → '627-Overhead costs'
+function bpVd(s) { // 'VTL_INTER_0002_TIMOR TELECOM, S.A (TT)' → 'VTL_INTER_0002-TIMOR TELECOM, S.A (TT)'
+  if (!s) return null; const seg = String(s).split('_');
+  if (seg.length < 2) return String(s);
+  let n = seg.findIndex((x, i) => i > 0 && /[a-z\s,.()&]/.test(x)); if (n < 0) n = seg.length - 1;
+  let c = n; while (c > 1 && !/[\d-]/.test(seg[c - 1])) c--; if (!/[\d-]/.test(seg[c - 1])) c = n;
+  return seg.slice(0, c).join('_') + '-' + seg.slice(c).join('_');
+}
+function reversalErpBook(lines, o) {
+  const { sheet, headers } = require('./gl_journal_headers.json');
+  const d8 = String(o.date), dmy = d8.split('-').reverse().join('/'), per = `${d8.slice(0, 4)}_${+d8.slice(5, 7)}`;
+  const due = o.due ? String(o.due).split('-').reverse().join('/') : dmy;
+  const aoa = [headers];
+  lines.forEach((r, i) => {
+    const row = new Array(headers.length).fill(null);
+    if (i === 0) { row[1] = o.dept || null; row[2] = o.docType || 'GL Journal (Sub)'; row[3] = o.docNo || null; row[5] = dmy; row[6] = per; row[7] = o.desc || 'VTL: Adjust Estimate expense (AccSoft)'; }
+    const bp = bpVd(r.bpCr || r.bp);
+    Object.assign(row, { 12: due, 13: (o.prefix ?? 'VTL: Adjust ') + String(r.ds || '').replace(/^VTL[:_\s]*/i, ''), 14: 0, 15: 0, 16: r.currency || 'USD', 17: 1, 18: vd(r.drName), 19: -r.rev, 20: vd(r.crName), 21: -r.rev,
+      22: bp, 23: bp, 24: vd(r.t), 25: r.deptSub || null, 27: vd(r.grpCost), 29: vd(r.services), 36: vd(r.location), 44: vd(r.project), 46: 1, 47: 0, 51: 'N', 55: 'N' });
+    aoa.push(row);
+  });
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), sheet.slice(0, 31)); return wb;
+}
+function reversalCheckBook(lines, o) {
+  return book([['Doi chieu huy trich', lines.map(r => ({ 'Kỳ dịch vụ': r.per, 'CT trích gốc': r.doc, 'Ngày trích': r.d, 'TK Nợ': r.drName, 'TK Có': r.crName, 'Đối tượng': r.bpCr || r.bp, 'Đối tượng (ERP)': bpVd(r.bpCr || r.bp),
+    'Khoản mục': r.t, 'Số trích gốc': r.a, 'Số huỷ trích': -r.rev, 'Diễn giải gốc': r.ds, 'Người ghi chi phí thực tế': (r.users || []).map(u => String(u).split('_')[0]).join(', '),
+    'Thiếu thông tin': [!r.grpCost && 'Group cost', !r.services && 'Services', !r.deptSub && 'Department Sub'].filter(Boolean).join(', ') }))],
+    ['Thong tin chung tu', [{ 'Ngày hạch toán': o.date, 'Kỳ': o.date.slice(0, 7), 'Bộ phận': o.dept, 'Loại CT': o.docType, 'Diễn giải': o.desc, 'Số dòng': lines.length, 'Tổng huỷ trích': -lines.reduce((s, r) => s + r.rev, 0) }]]]);
+}
 function accrualBook(r) {
   const { summarize, AGE } = require('./accrual');
   const sh = s => String(s || '').split('_').slice(2).join('_') || String(s || '');
@@ -98,4 +128,4 @@ function mailHtml(user, rows, o) {
 const mailSubject = u => `[AccSoft] Danh sách bút toán cần khắc phục – ${shortName(u)}`;
 
 const ruleInfo = () => ({ RULE_NAMES: Object.fromEntries(ALL_RULES.map(r => [r.k, r.n])), GROUPS, GROUP });
-module.exports = { accrualBook, ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };
+module.exports = { accrualBook, reversalErpBook, reversalCheckBook, bpVd, ruleInfo, inventoryBook, XLSX, errorsBook, agingBook, reportBook, toBuffer, book, errRow, mailHtml, mailSubject, emailOf, shortName };

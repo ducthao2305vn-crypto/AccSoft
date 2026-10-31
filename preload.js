@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
   openingTemplate: () => ipcRenderer.invoke('opening:template'),
   importOpening: () => ipcRenderer.invoke('opening:pick'),
   riskPdf: () => ipcRenderer.invoke('report:pdf'),
+  reversalErp: (keys, o) => ipcRenderer.invoke('report:reversalErp', keys, o),
   accrualXlsx: (f, t) => ipcRenderer.invoke('report:accrual', f, t),
   openDbFolder: () => ipcRenderer.invoke('db:openFolder'),
   onProgress: fn => ipcRenderer.on('progress', (_e, m) => fn(m)),

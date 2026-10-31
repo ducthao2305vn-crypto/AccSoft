@@ -46,6 +46,7 @@ const SRC = {
   contract: ['Contract', str], user: ['Created By', str], updUser: ['Updated By', str], cf: ['Cashflow activities', str], bts: ['BTS Site', str],
   product: ['Product', str], uom: ['UOM', str], loc: ['Locator', str], locCr: ['Locator Credit', str],
   distFrom: ['Distribution From', isoDate], distTo: ['Distribution To', isoDate], currency: ['Currency', str], rate: ['Rate', num], rateVnd: ['RateToVND', num],
+  grpCost: ['Group cost', str], services: ['Services', str], location: ['Location', str], project: ['Project', str], period: ['Period', str],
 };
 function headerMap(header) {
   const idx = {};
@@ -237,7 +238,8 @@ async function enrichFile({ file, name }) {
   // Khớp theo số chứng từ + line + TK Nợ + TK Có + số tiền
   const find = db.prepare(`SELECT id, product, uom, locator, locator_credit FROM entries WHERE document_no IS ? AND line_no IS ? AND acc_debit=? AND acc_credit=? AND abs(amount-?)<0.005`);
   const upd = db.prepare(`UPDATE entries SET product=coalesce(?,product), uom=coalesce(?,uom), locator=coalesce(?,locator), locator_credit=coalesce(?,locator_credit),
-    dist_from=coalesce(?,dist_from), dist_to=coalesce(?,dist_to), currency=coalesce(?,currency), rate=coalesce(?,rate), rate_vnd=coalesce(?,rate_vnd), enriched=1 WHERE id=?`);
+    dist_from=coalesce(?,dist_from), dist_to=coalesce(?,dist_to), currency=coalesce(?,currency), rate=coalesce(?,rate), rate_vnd=coalesce(?,rate_vnd),
+    group_cost=coalesce(?,group_cost), services=coalesce(?,services), location=coalesce(?,location), project=coalesce(?,project), period=coalesce(?,period), enriched=1 WHERE id=?`);
   const samples = [];
   db.exec('BEGIN');
   try {
@@ -250,7 +252,7 @@ async function enrichFile({ file, name }) {
       if (hit.length > 1) ambiguous++;
       matched++;
       if (!r.product && !r.loc && !r.locCr && !r.uom) skipped++; // file gốc cũng không có mã hàng/kho: chỉ đánh dấu đã đối chiếu
-      for (const h of hit) { upd.run(r.product, r.uom, r.loc, r.locCr, r.distFrom, r.distTo, r.currency, r.rate, r.rateVnd, h.id); if (h.product !== r.product || h.uom !== r.uom || h.locator !== r.loc || h.locator_credit !== r.locCr) updated++; }
+      for (const h of hit) { upd.run(r.product, r.uom, r.loc, r.locCr, r.distFrom, r.distTo, r.currency, r.rate, r.rateVnd, r.grpCost, r.services, r.location, r.project, r.period, h.id); if (h.product !== r.product || h.uom !== r.uom || h.locator !== r.loc || h.locator_credit !== r.locCr) updated++; }
       if (n % BATCH === 0) {
         db.exec('COMMIT'); db.exec('BEGIN');
         if (Date.now() - lastPost > 400) { lastPost = Date.now(); post({ type: 'progress', rows: n, pct: Math.min(99, read / size * 100), secs: (Date.now() - t0) / 1000 }); }

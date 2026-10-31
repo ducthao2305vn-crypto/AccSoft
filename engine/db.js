@@ -13,6 +13,7 @@ const COLS = [
   ['contract', 'contract', 'TEXT'], ['user', 'created_by', 'TEXT'], ['updUser', 'updated_by', 'TEXT'], ['cf', 'cashflow', 'TEXT'], ['bts', 'bts_site', 'TEXT'],
   ['product', 'product', 'TEXT'], ['uom', 'uom', 'TEXT'], ['loc', 'locator', 'TEXT'], ['locCr', 'locator_credit', 'TEXT'],
   ['distFrom', 'dist_from', 'TEXT'], ['distTo', 'dist_to', 'TEXT'], ['currency', 'currency', 'TEXT'], ['rate', 'rate', 'REAL'], ['rateVnd', 'rate_vnd', 'REAL'],
+  ['grpCost', 'group_cost', 'TEXT'], ['services', 'services', 'TEXT'], ['location', 'location', 'TEXT'], ['project', 'project', 'TEXT'], ['period', 'period', 'TEXT'],
 ];
 const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, e.enriched AS _enriched, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
 

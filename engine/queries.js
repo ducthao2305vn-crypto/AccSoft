@@ -400,9 +400,21 @@ function make(db) {
   // Sao lưu nóng an toàn (VACUUM INTO tạo bản sao nhất quán khi đang dùng)
   function backup(file) { db.prepare('VACUUM INTO ?').run(file); return file; }
   const D = deep.make(db, { INC, all, get, okYm });
+  // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
+  function reversalLines(keys) {
+    const want = new Set(keys), out = [];
+    for (const g of require('./accrual').match(all).groups) {
+      if (!want.has(g.key) || g.remain <= 0.005 || !g.accIds.length) continue;
+      const rows = all(`SELECT id, document_no doc, account_date d, due_date due, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, type_of_cost t,
+          description ds, department_sub deptSub, group_cost grpCost, services, location, project, currency, contract, invoice inv, product FROM entries WHERE id IN (${g.accIds.map(() => '?').join(',')}) ORDER BY account_date DESC, id DESC`, ...g.accIds);
+      let left = Math.round(g.remain * 100) / 100;
+      for (const r of rows) { if (left <= 0.005) break; const v = Math.min(left, r.a); left = Math.round((left - v) * 100) / 100; out.push({ ...r, rev: Math.round(v * 100) / 100, key: g.key, per: g.per, users: g.users }); }
+    }
+    return out;
+  }
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, deepReversal: D.reversal, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, deepReversal: D.reversal, reversalLines, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };

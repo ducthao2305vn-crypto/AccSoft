@@ -257,6 +257,17 @@ async function init() {
       await runTask('buildAgg', {}, 'Đang cập nhật bảng tổng hợp'); log.info(`Nạp số dư đầu kỳ ${filePaths[0]}: ${r.rows} dòng`); return r; });
   });
   handle('report:pdf', () => riskPdf());
+  handle('report:reversalErp', async (_e, keys, o) => {
+    const lines = await qa('reversalLines', keys);
+    if (!lines.length) throw new Error('Các khoản đã chọn không còn số trích treo để huỷ.');
+    const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `${o.date.slice(0, 7).replace('-', '.')}_HUY_TRICH_AccSoft.xls`, filters: [{ name: 'Excel 97-2003', extensions: ['xls'] }] });
+    if (canceled) return null;
+    fs.writeFileSync(filePath, R.XLSX.write(R.reversalErpBook(lines, o), { type: 'buffer', bookType: 'biff8' }));
+    const chk = filePath.replace(/\.xls$/i, '') + '_DoiChieu.xlsx';
+    fs.writeFileSync(chk, R.toBuffer(R.reversalCheckBook(lines, o)));
+    log.info(`Xuất file huỷ trích ${filePath}: ${lines.length} dòng`); shell.showItemInFolder(filePath);
+    return { file: filePath, check: chk, lines: lines.length, total: lines.reduce((s, r) => s + r.rev, 0) };
+  });
   handle('report:accrual', async (_e, from, to) => saveXlsx(`AccSoft_TrichTruoc_HuyTrich_${new Date().toISOString().slice(0, 10)}.xlsx`, R.accrualBook(await qa('deepReversal', from, to))));
   handle('enrich:pick', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file ERP chỉ gồm các dòng TK 151–158', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Dữ liệu hạch toán', extensions: ['xlsx', 'csv', 'txt'] }] });

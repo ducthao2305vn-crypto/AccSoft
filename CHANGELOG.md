@@ -1,5 +1,18 @@
 # Lịch sử phiên bản
 
+## v3.3.0 – 31/10/2026
+**Xuất file huỷ trích để import vào ERP**
+- Cách dùng:
+  - Vào "Trích – huỷ trích 335 → Đối chiếu chi tiết", tích chọn các khoản còn treo (có nút chọn nhanh mọi khoản "Chưa huỷ trích").
+  - Bấm "Xuất file huỷ trích (import ERP)".
+- File .xls đúng mẫu Export_GL_Journal của ERP (126 cột, theo file mẫu 2026.08_HUY_IT_SLA):
+  - Mỗi dòng đảo dòng trích gốc với số tiền âm bằng số còn treo.
+  - Giữ nguyên TK Nợ/Có, đối tượng, khoản mục, Department Sub, Group cost, Services, Location.
+- Nhập trên màn hình: ngày hạch toán (tự tính kỳ), hạn thanh toán, bộ phận, loại chứng từ, số chứng từ, diễn giải.
+- Kèm file _DoiChieu.xlsx liệt kê chứng từ trích gốc, số huỷ và các thông tin còn thiếu để kiểm tra trước khi import.
+- Nạp thêm các cột Group cost, Services, Location, Project, Period:
+  - Dữ liệu đã nạp trước đây: dùng "Bổ sung thông tin" với file gốc để điền các cột này.
+
 ## v3.2.0 – 31/10/2026
 **Báo cáo quản lý trích trước – huỷ trích – chi phí thực tế – thanh toán (TK 335)**
 - Trang "Phân tích chuyên sâu → Trích – huỷ trích 335", 6 chế độ xem:
