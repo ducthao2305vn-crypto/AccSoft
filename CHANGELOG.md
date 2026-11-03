@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v4.10.0 – 03/11/2026
+**Tuổi nợ theo từng đối tượng; tách TK 1412 (tạm ứng vật tư)**
+- TK 1412 – Tạm ứng vật tư có dòng riêng trong tuổi nợ; TK 141 tổng hợp không còn gồm 1412. Thêm nút xem nhanh "1412 tạm ứng vật tư theo đối tượng".
+- Tuổi hàng tồn kho có thêm TK 1412 (vật tư đã tạm ứng, chưa nhập kho).
+- Bảng mới **Tuổi nợ theo từng đối tượng**: gộp mọi TK công nợ của mỗi đối tượng, gồm phải thu, phải trả, ròng, các nhóm tuổi nợ, tuổi tối đa, dư ngược chiều.
+  - Đối tượng lấy theo đúng phía hạch toán: TK Nợ ↔ đối tượng Nợ, TK Có ↔ đối tượng Có.
+  - Có ô chọn đối tượng, ô tìm kiếm và 4 cách sắp xếp: số dư, quá hạn > 90 ngày, tuổi lâu nhất, dư ngược.
+  - Bấm một đối tượng để lọc bảng chi tiết; nhấn đúp để mở từng tài khoản của đối tượng, nhấn đúp tiếp để xem sổ bút toán.
+- File Excel tuổi nợ có thêm sheet "Theo doi tuong".
+
 ## v4.9.0 – 03/11/2026
 **Giao dịch nội bộ: điều chỉnh đối tượng chọn sai, xem chi tiết toàn màn hình**
 - Cửa sổ chi tiết mở toàn màn hình, có nút Thu nhỏ / Toàn màn hình.

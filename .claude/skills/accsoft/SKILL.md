@@ -150,6 +150,12 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Tuổi nợ theo đối tượng (v4.10)
+- `AG_ACC` đặt `1412` trước `141`, vì `find` lấy tiền tố khớp đầu tiên. Ledger `kind: 'ag'` loại các TK con đã tách riêng, qua `AG_LONG(acc)`. `INV_ACC` có thêm 1412.
+- UI `#tAgBp`: dữ liệu gộp theo `o.bp` từ `AGDATA.items`; `AGV.bpPick` dùng để lọc `#tAging`; `agBpDetail(x)` mở drawer theo từng TK.
+- Click trên bảng được trì hoãn bằng timer (`AGBT`), nếu không lần render lại sẽ làm mất sự kiện dblclick.
+- `agingBook` có thêm sheet 'Theo doi tuong'.
+
 ### Điều chỉnh đối tượng nội bộ (v4.9)
 - Lưu trong bảng `ig_adj(sig PK, scope row|doc, action out|move, to_key, doc, d, a, ds, from_key, note)`.
 - Khoá của dòng: `sig = 'r:'+doc|d|dr|cr|round(a*100)|bp|bpCr`. Khoá này không phụ thuộc id, nên vẫn khớp khi nạp lại dữ liệu. Khoá cả chứng từ: `'d:'+doc`.

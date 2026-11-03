@@ -272,9 +272,10 @@ function make(db) {
   /* ---------- Công nợ – tuổi nợ (FIFO) ---------- */
   // Tài khoản công nợ: [mã cấp 1, tên, nhóm, chiều số dư tự nhiên (1 = dư Nợ, -1 = dư Có)]
   const AG_ACC = [
-    ['131', 'Phải thu khách hàng', 'thu', 1], ['136', 'Phải thu nội bộ', 'thu', 1], ['1388', 'Phải thu khác', 'thu', 1], ['141', 'Tạm ứng', 'thu', 1],
+    ['131', 'Phải thu khách hàng', 'thu', 1], ['136', 'Phải thu nội bộ', 'thu', 1], ['1388', 'Phải thu khác', 'thu', 1], ['1412', 'Tạm ứng vật tư', 'thu', 1], ['141', 'Tạm ứng', 'thu', 1],
     ['331', 'Phải trả người bán', 'tra', -1], ['335', 'Chi phí phải trả (trích trước)', 'tra', -1], ['336', 'Phải trả nội bộ', 'tra', -1], ['334', 'Phải trả người lao động', 'tra', -1], ['3388', 'Phải trả, phải nộp khác', 'tra', -1]];
   const NO_BP = '(không có đối tượng)';
+  const AG_LONG = acc => acc && AG_ACC.some(a => a[0] === acc) ? AG_ACC.map(a => a[0]).filter(p => p.length > acc.length && p.startsWith(acc)) : [];
   // Đối tượng gắn theo phía hạch toán: TK bên Nợ ↔ Đối tượng Nợ (Business Partner), TK bên Có ↔ Đối tượng Có (Bpartner credit)
   const refOf = (dim, r) => dim === 'contract' ? (r.contract || '(không có hợp đồng)') : dim === 'adv' ? (r.adv || '(không có đề nghị tạm ứng)') : dim === 'tcost' ? (r.tcost || '(không có khoản mục)') : '';
   // dim: 'bp' = theo đối tượng; 'contract' = đối tượng × hợp đồng; 'adv' = đối tượng × đề nghị tạm ứng (Advance Request)
@@ -324,7 +325,7 @@ function make(db) {
 
   /* ---------- Tuổi hàng tồn kho (FIFO theo ngày nhập) ---------- */
   const INV_ACC = [['151', 'Hàng mua đang đi đường'], ['152', 'Nguyên liệu, vật liệu'], ['153', 'Công cụ, dụng cụ'], ['155', 'Thành phẩm'],
-    ['156', 'Hàng hoá'], ['157', 'Hàng gửi đi bán'], ['158', 'Hàng hoá kho bảo thuế']];
+    ['156', 'Hàng hoá'], ['157', 'Hàng gửi đi bán'], ['158', 'Hàng hoá kho bảo thuế'], ['1412', 'Tạm ứng vật tư (chưa nhập kho)']];
   // Đối tượng theo phía hạch toán: dòng ghi Nợ TK kho lấy thông tin phía Nợ, dòng ghi Có lấy thông tin phía Có
   const INV_OBJ = {
     product: () => '',
@@ -390,6 +391,7 @@ function make(db) {
       for (const [r, side] of pairs) {
         if (!String(r[side] || '').startsWith(acc)) continue;
         if (spec.kind === 'ag') {
+          if (AG_LONG(acc).some(p => String(r[side] || '').startsWith(p))) continue; // vd. TK 141 tổng hợp không gồm 1412 (đã tách riêng)
           if (spec.bp != null && ((side === 'dr' ? r.bp : r.bpCr) || NONE.bp) !== spec.bp) continue;
           if (spec.dim && spec.dim !== 'bp' && spec.ref != null && refOf(spec.dim, r) !== spec.ref) continue;
         } else if (spec.obj != null) {

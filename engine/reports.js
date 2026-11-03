@@ -120,7 +120,11 @@ function agingBook(items, dim = 'bp') {
   const detail = items.filter(o => o.bal > 0).sort((a, c) => a.acc.localeCompare(c.acc) || c.bal - a.bal).map(o => Object.assign({ 'Nhóm': GRP[o.grp], 'TK': o.acc, 'Tên TK': o.accName, 'Đối tượng': o.bp, ...(REF ? { [REF]: o.ref } : {}),
     'PS Nợ': o.dr, 'PS Có': o.cr, 'Số dư': o.bal }, ...BUCKETS.map((b, i) => ({ [b]: o.b[i] })), { 'Phát sinh đầu tiên': o.first, 'Phát sinh gần nhất': o.last, 'Tuổi tối đa (ngày)': o.maxAge }));
   const abn = items.filter(o => o.bal < 0).map(o => ({ 'Nhóm': GRP[o.grp], 'TK': o.acc, 'Tên TK': o.accName, 'Đối tượng': o.bp, ...(REF ? { [REF]: o.ref } : {}), 'PS Nợ': o.dr, 'PS Có': o.cr, 'Số dư ngược chiều': o.bal }));
-  return book([['Tong hop theo TK', [...sum.values()]], ['Chi tiet doi tuong', detail], ['Du nguoc chieu', abn]]);
+  const bpm = new Map();
+  for (const o of items) { const x = bpm.get(o.bp) || bpm.set(o.bp, { 'Đối tượng': o.bp, 'Tài khoản': new Set(), 'Phải thu': 0, 'Phải trả': 0, 'Ròng (thu − trả)': 0, ...Object.fromEntries(BUCKETS.map(b => [b, 0])), 'Tuổi tối đa (ngày)': 0, 'Dư ngược chiều': 0 }).get(o.bp);
+    x['Tài khoản'].add(o.acc); if (o.bal > 0) { x[o.grp === 'thu' ? 'Phải thu' : 'Phải trả'] += o.bal; BUCKETS.forEach((b, i) => { x[b] += o.b[i]; }); x['Tuổi tối đa (ngày)'] = Math.max(x['Tuổi tối đa (ngày)'], o.maxAge); } else x['Dư ngược chiều'] += o.bal; }
+  const byBp = [...bpm.values()].map(x => ({ ...x, 'Tài khoản': [...x['Tài khoản']].sort().join(', '), 'Ròng (thu − trả)': x['Phải thu'] - x['Phải trả'] })).sort((a, c) => (c['Phải thu'] + c['Phải trả']) - (a['Phải thu'] + a['Phải trả']));
+  return book([['Tong hop theo TK', [...sum.values()]], ['Theo doi tuong', byBp], ['Chi tiet doi tuong x TK', detail], ['Du nguoc chieu', abn]]);
 }
 const IBUCKETS = ['0–30 ngày', '31–90', '91–180', '181–365', '1–2 năm', '> 2 năm'];
 function inventoryBook(items) {
