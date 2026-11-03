@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v4.18.0 – 03/11/2026
+**Số dư nội bộ: chỉ tính TK công nợ, có đầu kỳ – phát sinh – cuối kỳ theo khoảng ngày**
+- Chỉ tính TK công nợ: 131, 136, 138, 141 (gồm 1412), 244, 1283, 1288, 331, 335, 336, 337, 338, 341, 344.
+- Bỏ hẳn tiền 111/112/113, tài sản 211/213/241/242, thuế 133/333, lương 334, quỹ 353, vốn và lợi nhuận 4xx. Hệ thống chỉ gắn đối tượng cho các TK này theo bút toán gốc, nên chúng không phải số dư nội bộ.
+- Chọn **Từ ngày – Đến ngày**. Số dư đầu kỳ là số dư trước "Từ ngày".
+  - Bảng nhóm → TK cấp 3 → TK chi tiết: đầu kỳ, phát sinh Nợ/Có, cuối kỳ (dư Nợ, dư Có, ròng), tăng/giảm so với đầu kỳ.
+  - Theo công ty: phải thu đầu kỳ/cuối kỳ, phải trả đầu kỳ/cuối kỳ, bù trừ và mức thay đổi.
+  - Chọn một công ty để xem riêng các TK của công ty đó.
+- Xuất Excel có đủ cột đầu kỳ và phát sinh.
+
 ## v4.17.0 – 03/11/2026
 **Sắp xếp theo tiêu đề cột; lỗi mới: bút toán tay VTLMN có phát sinh tiền**
 - **Sắp xếp:** nhấn tiêu đề cột của bất kỳ bảng nào để sắp xếp.
