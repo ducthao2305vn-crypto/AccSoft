@@ -1,5 +1,23 @@
 # Lịch sử phiên bản
 
+## v4.28.0 – 03/11/2026
+**Mới: Báo cáo quản trị chi phí theo vị trí**
+- Thêm trang **Phân tích → Chi phí theo vị trí**: ma trận **mã vị trí (Location) × nhóm chi phí × từng tháng**, chọn được kỳ từ tháng đến tháng.
+- 7 nhóm, gom theo mã khoản mục:
+  - Thuê trạm BTS / phòng máy / cột.
+  - Thuê văn phòng.
+  - Thuê nhà nghỉ.
+  - Thuê cửa hàng / kho / đất.
+  - Điện trạm BTS / phòng máy.
+  - Xăng dầu chạy trạm / máy phát.
+  - Điện văn phòng / nhà nghỉ / kho / cửa hàng.
+- **Phát hiện tháng thiếu chi phí:** ô **đỏ "thiếu"** là tháng bằng 0 trong khi vị trí đã phát sinh chi phí từ trước (xét cả 12 tháng trước kỳ, chỉ với nhóm phát sinh từ 2 tháng trở lên). Ô **cam** là tháng cao bất thường, trên 1,8 lần bình quân (nghi ghi trùng hoặc ghi bù). Có cột "Số tháng thiếu", lọc "Chỉ dòng có tháng thiếu" và tìm mã vị trí.
+- Các thẻ tổng hợp: tổng chi phí, số mã vị trí, số dòng có tháng thiếu, chi phí **không có mã vị trí**.
+- **Nhấn đúp một ô** để xem bút toán gốc của vị trí × nhóm × tháng; nhấn đúp tên vị trí để xem cả kỳ.
+  - Tích chọn bút toán, chọn mã vị trí đúng từ danh sách (hoặc tích "Nhập thủ công"), rồi bấm **Đổi mã vị trí**. Có nút "Trả về mã gốc".
+  - Dữ liệu gốc không bị sửa; điều chỉnh xem lại ở Kiểm soát → Điều chỉnh dữ liệu. Ma trận cập nhật ngay.
+- Xuất Excel kèm danh sách tháng thiếu.
+
 ## v4.27.1 – 03/11/2026
 **KQKD theo mẫu: EBT / LNST bằng đúng báo cáo tài chính**
 - Cộng theo **khoản mục doanh thu / chi phí**. Tài khoản chỉ dùng để xác định vế doanh thu (loại 5, 7) và vế chi phí (loại 6, 8) của bút toán; không gồm kết chuyển 911.

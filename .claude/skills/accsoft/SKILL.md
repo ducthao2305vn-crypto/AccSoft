@@ -150,6 +150,13 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Chi phí theo vị trí (v4.28, `engine/loccost.js`)
+- `GROUPS`: danh sách nhóm và mã khoản mục, có thể ghi đè bằng `settings.loc_groups`.
+- Mã vị trí hiệu lực = `coalesce(field_adj(location).value, e.location)`, lấy qua LEFT JOIN, không dùng subquery tương quan (chậm hơn khoảng 20 lần).
+- Truy vấn có điều kiện `type_of_cost LIKE 'E17.1.%'` để tăng tốc; nếu thêm nhóm với mã khác tiền tố này thì phải bỏ điều kiện.
+- `matrix(from, to, keys)` đọc thêm 12 tháng trước kỳ để xác định tháng đầu tiên phát sinh, trả về `gaps` (tháng thiếu) và `dbl` (tháng > 1,8 lần bình quân). `detail(loc, g, from, to)` trả bút toán; `locations()` trả danh sách mã vị trí.
+- UI: trang `locc` gồm `vLoc`, `locDraw`, `locDetail`. Đổi mã vị trí gọi `faSet(…, 'location')`. Lưu ý trùng id: ô nhập tháng trên trang dùng `lcPF`/`lcPT`, còn `lcT` là bảng trong cửa sổ chi tiết.
+
 ### KQKD khớp B02 (v4.27.1)
 - Cộng theo khoản mục, chỉ trên vế TK loại 5/7 (doanh thu) và 6/8 (chi phí, trừ 821); không gồm 911.
 - Thuế TNDN: khoản mục Profit/Minimum tax và 8211 vào dòng 74, 8212 vào dòng 75 (dòng label nhưng vẫn nhận giá trị).
