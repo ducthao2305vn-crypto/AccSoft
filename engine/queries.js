@@ -320,9 +320,16 @@ function make(db) {
       const { inc, ...rest } = o; void inc;
       out.push({ ...rest, b, maxAge });
     }
-    return { accounts: AG_ACC.map(a => ({ k: a[0], n: a[1], grp: a[2] })), items: out };
+    return { accounts: AG_ACC.map(a => ({ k: a[0], n: a[1], grp: a[2] })), items: out, ledger: Object.fromEntries(Object.entries(ledgerBal(AG_ACC, asOf, level)).map(([k, v]) => [k, v * (AG_ACC.find(a => k.startsWith(a[0]))?.[3] || 1)])) };
   }
 
+  // Số dư sổ cái (Nợ − Có, toàn bộ dữ liệu đến ngày, không lọc kỳ rà soát) theo TK – dùng để đối chiếu với số dư phân tích theo đối tượng / mặt hàng
+  function ledgerBal(defs, asOf, level) {
+    const pres = defs.map(a => a[0]), m = {};
+    for (const [col, sg] of [['acc_debit', 1], ['acc_credit', -1]]) for (const r of all(`SELECT ${col} a, sum(amount) v FROM entries e WHERE e.account_date<=? AND ${rng('e.' + col, pres)} GROUP BY 1`, asOf)) {
+      const code = String(r.a || ''), def = defs.find(x => code.startsWith(x[0])); if (!def) continue; const k = level === 'detail' ? code : def[0]; m[k] = (m[k] || 0) + sg * r.v; }
+    return m;
+  }
   /* ---------- Tuổi hàng tồn kho (FIFO theo ngày nhập) ---------- */
   const INV_ACC = [['151', 'Hàng mua đang đi đường'], ['152', 'Nguyên liệu, vật liệu'], ['153', 'Công cụ, dụng cụ'], ['155', 'Thành phẩm'],
     ['156', 'Hàng hoá'], ['157', 'Hàng gửi đi bán'], ['158', 'Hàng hoá kho bảo thuế'], ['1412', 'Tạm ứng vật tư (chưa nhập kho)']];
@@ -376,7 +383,7 @@ function make(db) {
       out.push({ ...rest, bal, qtyBal: o.qtyIn - o.qtyOut, b, maxAge, sinceOut, sinceIn });
     }
     const missing = get(`SELECT count(*) n FROM entries e JOIN imports i ON i.id=e.import_id WHERE ${INC} AND i.schema<2 AND e.product IS NULL AND ifnull(e.enriched,0)=0 AND (${like('e.acc_debit', pres)} OR ${like('e.acc_credit', pres)})`).n;
-    return { accounts: INV_ACC.map(a => ({ k: a[0], n: a[1] })), items: out, oldImportRows: missing };
+    return { accounts: INV_ACC.map(a => ({ k: a[0], n: a[1] })), items: out, oldImportRows: missing, ledger: ledgerBal(INV_ACC, asOf, level) };
   }
 
   /* ---------- Chi tiết bút toán (nhấn đúp vào số liệu) ---------- */

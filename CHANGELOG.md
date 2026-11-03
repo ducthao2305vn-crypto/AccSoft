@@ -1,5 +1,14 @@
 # Lịch sử phiên bản
 
+## v4.13.0 – 03/11/2026
+**Đối chiếu số dư phân tích với sổ cái (tuổi hàng tồn, tuổi nợ)**
+- Bảng tổng hợp theo tài khoản có thêm 3 cột:
+  - **Số dư thuần** = giá trị tồn dương + tồn âm (hoặc số dư + dư ngược chiều).
+  - **Số dư sổ cái** = Nợ − Có của toàn bộ bút toán đến ngày báo cáo.
+  - **Chênh lệch**: ✓ nếu khớp.
+- Thẻ "Giá trị hàng tồn" ghi thêm số dư thuần gồm cả tồn âm.
+- Khi đang lọc theo đối tượng, cột đối chiếu được ẩn, vì sổ cái tính cho toàn bộ đối tượng.
+
 ## v4.12.0 – 03/11/2026
 **Tuổi hàng tồn theo đối tượng; giao diện tràn màn hình**
 - Thêm ô chọn **Đối tượng**. Khi chọn, ứng dụng tự chuyển sang "Đối tượng × Mặt hàng", hiện đối tượng đó đang giữ mặt hàng nào, số lượng, giá trị, tồn bao lâu và nhóm tuổi; nhấn đúp để xem sổ bút toán.

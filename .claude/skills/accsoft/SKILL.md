@@ -150,6 +150,11 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Đối chiếu sổ cái (v4.13)
+- `ledgerBal(defs, asOf, level)` tính Nợ − Có theo TK (không lọc INC). Kết quả trả về trong `inventory().ledger` và `aging().ledger` (aging nhân với dấu bản chất TK).
+- UI: `LG` (tồn kho) và `AGLG` (công nợ) so sánh số dư thuần với sổ cái.
+- "Giá trị tồn" và "Số dư" chỉ cộng các dòng dương; phần âm nằm ở cột "Tồn âm" / "Dư ngược".
+
 ### Tuổi hàng tồn theo đối tượng (v4.12)
 - `inventory(by='bp_product')`: `obj = bp + ' · ' + product`. Mỗi item có thêm `bp` và `prod`. Ledger `kind: 'inv'` nhận `by: 'bp_product'`.
 - UI `#ivBp`: lọc theo `o.bp`. Khi đang ở `by` product/loc/bp, chọn một đối tượng sẽ tự chuyển sang `bp_product`.
