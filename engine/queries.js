@@ -446,7 +446,7 @@ function make(db) {
     const ms = all(`SELECT ym, analyzed_ver v FROM months WHERE 1${P.from ? ` AND ym>='${P.from}'` : ''}${P.to ? ` AND ym<='${P.to}'` : ''} ORDER BY ym`);
     return { review: P, version: V, months: ms.length, pending: ms.filter(m => m.v !== V).map(m => ({ ym: m.ym, old: m.v != null })) };
   }
-  const aggEmpty = () => !!get('SELECT 1 x FROM entries LIMIT 1') && (!get('SELECT 1 x FROM agg LIMIT 1') || !get('SELECT 1 x FROM ent_sum LIMIT 1')
+  const aggEmpty = () => !!get('SELECT 1 x FROM entries LIMIT 1') && (!require('./db').hasPartnerIdx(db) ||!get('SELECT 1 x FROM agg LIMIT 1') || !get('SELECT 1 x FROM ent_sum LIMIT 1')
     || String(getSetting('err_sum_n')) !== String(get('SELECT count(*) n FROM errors').n) || (!get('SELECT 1 x FROM err_doc LIMIT 1') && !!get('SELECT 1 x FROM errors LIMIT 1')));
   // Ngưỡng cảnh báo
   try { setConfig(JSON.parse(getSetting('thresholds') || '{}')); } catch (e) { /* mặc định */ }
@@ -461,6 +461,7 @@ function make(db) {
   const D = deep.make(db, { INC, all, get, okYm });
   // BCTC dùng toàn bộ dữ liệu (không lọc tháng "đưa vào phân tích") để số liệu liên tục với sổ số dư
   const RECV = require('./recv').make(all, okYm);
+  const PC = require('./partners').make(db, all, get, okYm);
   const FIN = require('./fin').make(all, okYm, '1', (f, t) => plBy(`'x'`, f, t, true)[0] || plRange('9999-01', '9999-01'));
   // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
   // Dòng trích trước của một kỳ dịch vụ (làm mẫu lập trích kỳ mới) + đánh dấu khoản đã có trích ở kỳ đích
@@ -490,7 +491,7 @@ function make(db) {
   }
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, recvAnalyze: RECV.analyze, recvDetail: RECV.detail, acc335List: () => all(`SELECT acc, max(name) name, sum(dr) dr, sum(cr) cr FROM fin_mv WHERE acc>='335' AND acc<'336' GROUP BY acc ORDER BY acc`), finTrial: FIN.trial, finBalance: FIN.balanceSheet, finIncome: FIN.income, finCash: FIN.cashFlow, finNotes: FIN.notes, finStatus: FIN.status, finEmpty: () => !get('SELECT 1 x FROM fin_close LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1'), getB09Info: () => JSON.parse(getSetting('b09Info') || 'null'), setB09Info: o => { setSetting('b09Info', JSON.stringify(o || {})); return o; }, deepReversal: D.reversal, reversalLines, accrualSource, accrualLinesByIds, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, catList: PC.list, catUpsert: PC.upsert, catRemove: PC.remove, catImport: PC.importRows, catExport: PC.exportAll, catUnmatched: PC.unmatched, catStats: PC.kindStats, grpInternal: PC.internal, grpInternalRows: PC.internalRows, grpIntl: PC.intlPayments, recvAnalyze: RECV.analyze, recvDetail: RECV.detail, acc335List: () => all(`SELECT acc, max(name) name, sum(dr) dr, sum(cr) cr FROM fin_mv WHERE acc>='335' AND acc<'336' GROUP BY acc ORDER BY acc`), finTrial: FIN.trial, finBalance: FIN.balanceSheet, finIncome: FIN.income, finCash: FIN.cashFlow, finNotes: FIN.notes, finStatus: FIN.status, finEmpty: () => !get('SELECT 1 x FROM fin_close LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1'), getB09Info: () => JSON.parse(getSetting('b09Info') || 'null'), setB09Info: o => { setSetting('b09Info', JSON.stringify(o || {})); return o; }, deepReversal: D.reversal, reversalLines, accrualSource, accrualLinesByIds, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };

@@ -149,6 +149,20 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
   - Kiểm tra: tổng Nợ = tổng Có (đầu kỳ, phát sinh, cuối kỳ); B01 `diff` ≈ 0 và `diffOb` ≈ 0; B03 `check` ≈ 0; bản gián tiếp cộng ra đúng mã 20.
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
+## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+- **Bảng `partners_cat`** gồm `code_name` (khoá chính = đúng chuỗi partner_debit / partner_credit trong dữ liệu), code, name, kind, nb_code, nb_name, note.
+  - Nạp từ Excel bằng IPC `cat:import` (chấp nhận tiêu đề Code_Name/Code/Name/Kind Of Customer/Code_NB/Name_NB hoặc tiếng Việt), mode merge | replace.
+  - Truy vấn: `catList`, `catUpsert(r, oldKey)`, `catRemove(keys)`, `catExport`, `catUnmatched`, `catStats`. Các hàm ghi đã có trong mảng `WRITE`.
+- **`kindMap()`:** ghép theo `code_name`, nếu không khớp thì theo `code` (cắt dần từ phải các đoạn "_"). Dữ liệu tháng 10 khớp 622/624 đối tượng.
+- **Nhóm:** NV, BN_TM, BN_QT, ROAMING, NB (nội bộ, có nb_code như TFU, VTC), TT (business center), NH, NO.
+- **`internal(from,to,withTT)`:** phân loại nghiệp vụ bằng `category()` theo cặp TK; `internalRows` trả chi tiết.
+- **`intlPayments(from,to,fee)`:** lần chuyển = (chứng từ, đối tượng, tháng) có Có 111/112/113; phí = flat + % (trong khoảng min/max); so với phí đã hạch toán (Nợ 635/642/627 có từ khoá fee/charge/SWIFT).
+- **Chỉ mục `ix_e_pd`, `ix_e_pc`:** tạo ở tác vụ nền `buildAgg` (`ensurePartnerIdx`), vì mất khoảng 36 giây với 1,3 triệu dòng. **Không** tạo trong `open()`.
+- **Giao diện:**
+  - Trang `cat` (`vCat`, `catForm`); tab `intg` và `intl` trong Phân tích chuyên sâu.
+  - Xuất Excel chung qua IPC `xlsx:sheets(name, [[sheet, rows]])`.
+  - `dpCtl` xử lý checkbox bằng `checked`.
+
 ## Phải thu theo đối tượng – TK 138812 (v4.3, `engine/recv.js`)
 - **Dữ liệu thật:**
   - Có 138812 là thu tiền (Nợ 1122, từ sổ phụ ngân hàng). Đối tượng ghi ở `partner_credit`. Diễn giải chứa mã thuê bao (`dil0046_gftth_thao`), số điện thoại `7xxxxxxx` và kỳ ("AUGUST 2026").

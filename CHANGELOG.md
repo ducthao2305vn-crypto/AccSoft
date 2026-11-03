@@ -1,5 +1,23 @@
 # Lịch sử phiên bản
 
+## v4.7.0 – 03/11/2026
+**Danh mục đối tượng, phân tích giao dịch nội bộ và thanh toán quốc tế**
+- **Trang mới "Danh mục đối tượng":**
+  - Nạp từ Excel theo mẫu `2026.10_DANH_MUC_KHACH_HANG_TIMOR` (Code_Name, Code, Name, Kind Of Customer, Code_NB, Name_NB). Hai cách nạp: thêm / cập nhật, hoặc thay toàn bộ.
+  - Thêm, sửa, xoá từng dòng hoặc xoá nhiều dòng; tìm kiếm, lọc theo nhóm, chia trang; xuất Excel.
+  - Các nhóm: NV nhân viên, BN_TM đối tác Timor, BN_QT đối tác quốc tế, ROAMING, NB nội bộ (kèm mã / tên công ty nội bộ), TT trung tâm / chi nhánh, NH ngân hàng, NO khác. Có thể thêm nhóm khác.
+  - Khớp với đối tượng trong dữ liệu theo "Mã_Tên", nếu không có thì theo Mã. Có danh sách "đối tượng trong dữ liệu chưa có trong danh mục" để thêm nhanh.
+- **Phân tích chuyên sâu → Giao dịch nội bộ:**
+  - Giao dịch với các công ty nội bộ (NB, tuỳ chọn gồm cả TT), chia thành doanh thu, giảm trừ doanh thu, chi phí, mua hàng / vật tư / tài sản, bán / xuất hàng, thu tiền, trả tiền, công nợ / bù trừ.
+  - Xem theo tháng (biểu đồ), theo công ty nội bộ, theo mã đối tượng. Nhấn đúp một ô để xem bút toán. Xuất Excel.
+- **Phân tích chuyên sâu → Thanh toán quốc tế:**
+  - Các lần chi tiền (Có 111/112/113) cho đối tác BN_QT và ROAMING.
+  - Mỗi tháng: số lần chuyển, số đối tác, tổng tiền, TK ngân hàng.
+  - Phí chuyển tiền ước tính theo cài đặt: phí cố định / lần + %, có tối thiểu / tối đa.
+  - So sánh với phí ngân hàng đã hạch toán (Nợ 635/642/627, diễn giải có bank charge / fee / SWIFT / remittance).
+  - Xem theo đối tác và danh sách từng lần chuyển. Xuất Excel.
+- **Tác vụ nền:** thêm chỉ mục theo đối tượng (một lần, chạy nền khi mở ứng dụng) để các phân tích theo đối tượng chạy nhanh.
+
 ## v4.6.0 – 31/10/2026
 **Lọc theo số dư tại ngày đang chọn – phải thu 138812**
 - Ô chọn đối tượng hiện số dư tại "Tại ngày" ngay sau tên, ví dụ "ABC — còn nợ 2,200", "XYZ — dư Có 7,650", "… — hết số dư".

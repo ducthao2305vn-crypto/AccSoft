@@ -94,10 +94,13 @@ function open(file, { cleanup = false, light = false } = {}) {
     CREATE INDEX IF NOT EXISTS ix_e_ym ON entries(ym);
     CREATE INDEX IF NOT EXISTS ix_e_ym_imp ON entries(ym, import_id);
     CREATE INDEX IF NOT EXISTS ix_e_dup ON entries(acc_debit, acc_credit, amount);
+
     CREATE INDEX IF NOT EXISTS ix_e_doc ON entries(document_no);
     CREATE INDEX IF NOT EXISTS ix_e_docline ON entries(document_no, line_no);
     CREATE INDEX IF NOT EXISTS ix_e_user ON entries(created_by);
     CREATE INDEX IF NOT EXISTS ix_err_entry ON errors(entry_id);
+    CREATE TABLE IF NOT EXISTS partners_cat(code_name TEXT PRIMARY KEY, code TEXT, name TEXT, kind TEXT, nb_code TEXT, nb_name TEXT, note TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')));
+    CREATE INDEX IF NOT EXISTS ix_pcat_code ON partners_cat(code);
     CREATE TABLE IF NOT EXISTS ent_sum(ym TEXT, u TEXT, n INTEGER, nx INTEGER, docs INTEGER, dmin TEXT, dmax TEXT, PRIMARY KEY(ym, u)) WITHOUT ROWID;
     CREATE TABLE IF NOT EXISTS err_sum(ym TEXT, rule TEXT, sev TEXT, st TEXT, u TEXT, dept TEXT, n INTEGER, PRIMARY KEY(ym, rule, sev, st, u, dept)) WITHOUT ROWID;
     CREATE TABLE IF NOT EXISTS err_doc(doc TEXT, ym TEXT, u TEXT, dept TEXT, st TEXT, g TEXT, n INTEGER, high INTEGER, rules TEXT, eid INTEGER, PRIMARY KEY(doc, ym, u, dept, st, g)) WITHOUT ROWID;
@@ -130,7 +133,12 @@ const isoToDate = s => { if (!s) return null; const [y, m, d] = s.split('-').map
 function rowFromDb(r) { return { ...r, date: isoToDate(r.date), due: isoToDate(r.due) }; }
 
 // Bảng tổng hợp sẵn cho báo cáo KQKD / doanh thu – chi phí: phát sinh TK loại 5–8 theo tháng × phía × TK × bộ phận × khoản mục (đã loại kết chuyển 911)
+// Chỉ mục theo đối tượng (danh mục đối tượng, phân tích nội bộ / quốc tế, phải thu theo đối tượng) – tạo ở tác vụ nền vì mất vài chục giây với 1–2 triệu dòng
+const PARTNER_IDX = [['ix_e_pd', 'entries(partner_debit)'], ['ix_e_pc', 'entries(partner_credit)']];
+const ensurePartnerIdx = db => { for (const [n, d] of PARTNER_IDX) db.exec(`CREATE INDEX IF NOT EXISTS ${n} ON ${d}`); };
+const hasPartnerIdx = db => db.prepare(`SELECT count(*) n FROM sqlite_master WHERE type='index' AND name IN ('ix_e_pd','ix_e_pc')`).get().n === 2;
 function rebuildAgg(db, months = null) {
+  if (!months) ensurePartnerIdx(db);
   const IN = months ? ` AND ym IN (${months.map(m => `'${String(m).replace(/'/g, '')}'`).join(',')})` : '';
   db.exec('BEGIN');
   db.exec(`DELETE FROM agg WHERE 1${IN}`);
@@ -183,4 +191,4 @@ function rebuildFin(db, months = null) {
   db.prepare(`INSERT INTO settings(k,v) VALUES('fin_built', datetime('now','localtime')) ON CONFLICT(k) DO UPDATE SET v=excluded.v`).run();
   db.exec('COMMIT');
 }
-module.exports = { refreshErrDoc, syncErrSum, rebuildErrSum, rebuildFin, FIN_PS, fillErrCols, dropErrIndexes, createErrIndexes, rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };
+module.exports = { hasPartnerIdx, ensurePartnerIdx, refreshErrDoc, syncErrSum, rebuildErrSum, rebuildFin, FIN_PS, fillErrCols, dropErrIndexes, createErrIndexes, rebuildAgg, open, COLS, SEL_ENTRY, rowFromDb, isoToDate };

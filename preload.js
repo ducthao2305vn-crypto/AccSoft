@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('api', {
   openingTemplate: () => ipcRenderer.invoke('opening:template'),
   importOpening: () => ipcRenderer.invoke('opening:pick'),
   riskPdf: () => ipcRenderer.invoke('report:pdf'),
+  catImport: mode => ipcRenderer.invoke('cat:import', mode),
+  xlsxSheets: (name, sheets) => ipcRenderer.invoke('xlsx:sheets', name, sheets),
   recvXlsx: (acc, asOf, term) => ipcRenderer.invoke('report:recv', acc, asOf, term),
   finXlsx: p => ipcRenderer.invoke('report:fin', p),
   accrueErp: (items, o) => ipcRenderer.invoke('report:accrueErp', items, o),

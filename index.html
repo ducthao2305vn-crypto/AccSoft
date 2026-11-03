@@ -197,6 +197,7 @@ section.loading{opacity:.55;transition:opacity .2s;pointer-events:none}
     <button data-p="deep"><svg class="icon"><use href="#i-trend"/></svg>Phân tích chuyên sâu</button>
     <div class="sec">Kiểm soát</div>
     <button data-p="report"><svg class="icon"><use href="#i-mail"/></svg>Báo cáo & Thông báo</button>
+    <button data-p="cat"><svg class="icon"><use href="#i-users"/></svg>Danh mục đối tượng</button>
     <button data-p="data"><svg class="icon"><use href="#i-db"/></svg>Quản lý dữ liệu</button>
   </nav>
   <div class="side-rv" id="sideRv" title="Đổi kỳ rà soát trong tab Lỗi nhập liệu"></div>
@@ -348,7 +349,7 @@ section.loading{opacity:.55;transition:opacity .2s;pointer-events:none}
 
   <section id="deep" class="hide">
     <div class="card" style="padding:12px 16px"><div class="tabs" id="dpTabs">
-      <button data-d="recv">Phải thu 138812 theo đối tượng</button><button data-d="reversal" class="on">Trích – huỷ trích 335</button><button data-d="recurring">Chi phí định kỳ</button><button data-d="variance">Biến động bất thường</button><button data-d="accrual">Trích trước 335 & Phân bổ 242</button>
+      <button data-d="recv">Phải thu 138812 theo đối tượng</button><button data-d="intg">Giao dịch nội bộ</button><button data-d="intl">Thanh toán quốc tế</button><button data-d="reversal" class="on">Trích – huỷ trích 335</button><button data-d="recurring">Chi phí định kỳ</button><button data-d="variance">Biến động bất thường</button><button data-d="accrual">Trích trước 335 & Phân bổ 242</button>
       <button data-d="staff">Chấm điểm nhân viên</button><button data-d="benford">Benford & số tròn</button><button data-d="vendors">Nhà cung cấp</button><button data-d="fx">Tỷ giá</button></div></div>
     <div class="card pick" id="dpCtl"></div>
     <div id="dpBody" style="display:flex;flex-direction:column;gap:20px"></div>
@@ -395,6 +396,15 @@ Bộ phận Kế toán – Kiểm soát nội bộ</textarea></label>
         <p class="mut" style="font-size:12px">Office 365 / Gmail cần "App password". Mật khẩu được mã hoá bằng kho khoá của hệ điều hành.</p></div>
       <div class="card"><div class="card-h"><h3>Lịch sử gửi email</h3></div><div class="tbl" style="max-height:340px"><table id="tMailLog"></table></div></div>
     </div>
+  </section>
+
+  <section id="cat" class="hide">
+    <div class="card"><div class="card-h"><div><h3>Danh mục đối tượng</h3><div class="hint">Phân nhóm khách hàng / nhà cung cấp / nhân viên / nội bộ / quốc tế để phân tích giao dịch nội bộ và thanh toán quốc tế. Khớp với đối tượng trong dữ liệu theo "Mã_Tên" (Code_Name), nếu không có thì theo Mã.</div></div><div class="sp" style="flex:1"></div>
+      <button class="btn primary" id="catAdd"><svg class="icon"><use href="#i-file"/></svg>Thêm đối tượng</button><button class="btn" id="catImpM"><svg class="icon"><use href="#i-upload"/></svg>Nạp file (thêm / cập nhật)</button><button class="btn ghost" id="catImpR">Nạp file thay toàn bộ</button><button class="btn" id="catXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button></div>
+      <div id="catStats" class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+      <div class="row" style="flex-wrap:wrap;gap:12px;margin-bottom:10px"><input id="catQ" placeholder="Tìm mã, tên, công ty nội bộ, ghi chú…" style="width:320px"><select id="catKind"></select><span class="mut" id="catInfo"></span><div style="flex:1"></div><button class="btn sm danger" id="catDel" disabled>Xoá các dòng đã chọn</button></div>
+      <div class="tbl" style="max-height:calc(100vh - 380px)"><table id="tCat"></table></div><div class="row" id="pgCat" style="justify-content:flex-end;margin-top:8px"></div></div>
+    <div class="card"><div class="card-h"><div><h3>Đối tượng trong dữ liệu chưa có trong danh mục</h3><div class="hint">Bấm "Thêm" để phân nhóm ngay.</div></div></div><div class="tbl" style="max-height:340px"><table id="tCatMiss"></table></div></div>
   </section>
 
   <section id="data" class="hide">

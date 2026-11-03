@@ -236,8 +236,8 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'acc335List', 'recvAnalyze', 'recvDetail', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'finNotes', 'finStatus', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
-const WRITE = ['setB09Info', 'setThresholds', 'setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
+const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'acc335List', 'catList', 'catExport', 'catUnmatched', 'catStats', 'grpInternal', 'grpInternalRows', 'grpIntl', 'recvAnalyze', 'recvDetail', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'finNotes', 'finStatus', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const WRITE = ['catUpsert', 'catRemove', 'catImport', 'setB09Info', 'setThresholds', 'setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
 function appDir() {
@@ -324,6 +324,22 @@ async function init() {
     return saveXlsx(`AccSoft_BCTC_${(p.from || 'dau').replace('-', '')}-${(p.to || 'cuoi').replace('-', '')}.xlsx`, R.finBook(tb, bs, pl, p, cf, nt, txt || p.b09Def));
   });
   handle('report:recv', async (_e, acc, asOf, term) => saveXlsx(`AccSoft_PhaiThu_${acc}_${(asOf || '').replace(/-/g, '')}.xlsx`, R.recvBook(await qa('recvAnalyze', acc, asOf, term))));
+  // Danh mục đối tượng: nạp từ Excel (mẫu 2026.10_DANH_MUC_KHACH_HANG_TIMOR: Code_Name, Code, Name, Kind Of Customer, Code_NB, Name_NB)
+  handle('cat:import', async (_e, mode) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file danh mục đối tượng', filters: [{ name: 'Excel', extensions: ['xlsx', 'xls', 'csv'] }] });
+    if (canceled) return null;
+    const wb = R.XLSX.read(fs.readFileSync(filePaths[0]), { type: 'buffer' }), rows = R.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: null });
+    const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/[^a-z0-9]/g, '');
+    const pick = (r, ...names) => { for (const k of Object.keys(r)) if (names.includes(norm(k))) return r[k] == null ? null : String(r[k]).trim(); return null; };
+    const out = rows.map(r => { const code = pick(r, 'code', 'ma', 'madoituong'), name = pick(r, 'name', 'ten', 'tendoituong');
+      return { code_name: pick(r, 'codename', 'matendoituong', 'matenten', 'doituong') || (code && name ? code + '_' + name : null), code, name,
+        kind: pick(r, 'kindofcustomer', 'kind', 'nhom', 'loai', 'loaidoituong', 'nhomdoituong'), nb_code: pick(r, 'codenb', 'manoibo'), nb_name: pick(r, 'namenb', 'tennoibo', 'congtynoibo'), note: pick(r, 'note', 'ghichu') }; })
+      .filter(r => r.code_name);
+    if (!out.length) throw new Error('Không thấy cột "Code_Name" (hoặc Code + Name) trong file.');
+    const r = await qa('catImport', out, mode === 'replace' ? 'replace' : 'merge'); log.info(`Nạp danh mục đối tượng ${filePaths[0]}: ${r.n} dòng (${mode})`); return { ...r, file: path.basename(filePaths[0]) };
+  });
+  // Xuất Excel nhiều sheet từ dữ liệu giao diện đã tính: sheets = [[tên sheet, [ {cột: giá trị} ]]]
+  handle('xlsx:sheets', (_e, name, sheets) => saveXlsx(name, R.book(sheets)));
   handle('report:accrual', async (_e, from, to, acc) => saveXlsx(`AccSoft_TrichTruoc_HuyTrich_${acc || '335'}_${new Date().toISOString().slice(0, 10)}.xlsx`, R.accrualBook(await qa('deepReversal', from, to, acc || ''))));
   handle('enrich:pick', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file ERP chỉ gồm các dòng TK 151–158', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Dữ liệu hạch toán', extensions: ['xlsx', 'csv', 'txt'] }] });
