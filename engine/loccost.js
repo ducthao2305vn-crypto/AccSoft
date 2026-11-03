@@ -80,7 +80,7 @@ function make(db, all, get, okYm) {
     else { if (!codes.length) return []; W = ` AND ${CODE} IN (${codes.map(() => '?').join(',')})`; A = codes; }
     return all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount a, e.partner_debit bp, e.partner_credit bpCr,
         e.description ds, e.created_by u, e.type_of_cost t, e.location, e.plate, e.department_sub dept, e.department deptAcc, ${VAL(d)} val, f.value newVal
-      FROM entries e ${FJ(d)} WHERE e.ym>=? AND e.ym<=?${W} AND (${EXP('debit')} OR ${EXP('credit')}) AND ${VAL(d)}=? ORDER BY e.account_date, e.id LIMIT 20000`, okYm(from), okYm(to), ...A, key || '')
+      FROM entries e ${FJ(d)} WHERE e.ym>=? AND e.ym<=?${W} AND (${EXP('debit')} OR ${EXP('credit')})${key == null ? '' : ` AND ${VAL(d)}=?`} ORDER BY e.account_date, e.id LIMIT 30000`, okYm(from), okYm(to), ...A, ...(key == null ? [] : [key || '']))
       .map(r => ({ ...r, orig: d === 'location' ? r.location : d === 'plate' ? r.plate : r.dept, v: (/^[68]/.test(r.dr) && !/^911/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) && !/^911/.test(r.cr) ? r.a : 0) }));
   }
   // Giá trị đang dùng của chiều (để chọn khi điều chỉnh); phòng ban kèm tên danh mục

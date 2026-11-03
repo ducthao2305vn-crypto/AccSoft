@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.30.0 – 03/11/2026
+**Chi phí theo vị trí / xe / phòng ban: sắp theo khoản mục, lọc, nhấn đúp Tổng**
+- Vị trí và xe: bảng sắp theo **Khoản mục chi phí → Mã vị trí / Biển số xe**, có dòng **Cộng <khoản mục>** và **TỔNG CỘNG**.
+- Lọc theo khoản mục chi phí và theo mã vị trí / biển số / phòng ban (danh sách chọn).
+- Nhấn đúp ô **Tổng** (của dòng, dòng cộng khoản mục hoặc tổng cộng) mở toàn bộ bút toán chi tiết cả kỳ để điều chỉnh mã vị trí / biển số / phòng ban.
+
 ## v4.29.2 – 03/11/2026
 **Chi phí theo phòng ban dùng cột Department Sub (phòng ban ngân sách)**
 - Báo cáo **Chi phí theo phòng ban** đọc cột **Department Sub**, không dùng Department nữa. Trường "Phòng ban" ở Điều chỉnh dữ liệu cũng ghi vào Department Sub.

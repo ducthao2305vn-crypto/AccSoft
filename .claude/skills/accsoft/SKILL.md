@@ -160,6 +160,7 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - Khi thêm cột mới vào COLS/SRC, nhớ thêm cột đó vào `enrichFile` để dữ liệu đã nạp được bổ sung mà không cần nạp lại.
 
 ### Chi phí theo vị trí / xe / phòng ban (v4.29, `engine/loccost.js` dùng chung)
+- v4.30: vị trí/xe sắp khoản mục → mã, dòng cộng `data-dsub` + tổng `data-dtot`; lọc `dmG_<d>` (khoản mục) và `dK_<d>` (giá trị, `DIMF.key`). Nhấn đúp ô Tổng → `dimDetail` với `k:null` = mọi giá trị (`loccost.detail` key==null, giới hạn 30000 dòng).
 - `DIMS`: `location` (e.location, field_adj 'location'), `plate` (e.plate, 'plate'), `dept` (e.department, 'dept').
 - Nhóm chi phí:
   - `GROUPS.location` / `GROUPS.plate` ghi đè được bằng `settings.loc_groups` / `settings.veh_groups`.
