@@ -158,6 +158,24 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
   - `stylize` dùng CFB để mở gói zip và chèn font/fill/border/xf vào styles.xml, gán `s` cho từng ô, thêm freeze pane.
   - Tên file khớp `RAW` (mẫu số dư đầu kỳ, DANH_MUC) được giữ dạng thô.
 - Không dùng được xlsx-js-style (bị chặn cài code bên ngoài), nên phải tự chèn kiểu như trên.
+- **Thêm báo cáo Excel mới:**
+  - Đặt tên file theo dạng `AccSoft_<Ten>_<từ>_<đến>.xlsx`. Ngày dạng `YYYY-MM` hoặc `YYYY-MM-DD` trong tên file được đưa lên dòng "Kỳ báo cáo"; hai ngày thành "từ – đến", một ngày thành "Tại".
+  - Thêm một dòng `[/^AccSoft_<Ten>/, 'TIÊU ĐỀ']` vào `TITLE`, đặt trước các mẫu tổng quát hơn.
+  - Tên sheet không dấu (tối đa 31 ký tự) thì thêm vào `SHEET_VN`.
+  - Dữ liệu là mảng object, cột là key. Giữ số dạng number (không format sẵn thành chuỗi) và ngày dạng chuỗi `YYYY-MM-DD`.
+- **Quy tắc định dạng theo tên cột:**
+  - Có '%' và giá trị ≤ 5 → 0.0%.
+  - Tên cột đúng là Năm/Tháng/Kỳ/Mã/TK/Số hiệu/Line → để nguyên số.
+  - Bắt đầu bằng "SL" hoặc "Số lượng" → #,##0.##.
+  - Bắt đầu bằng "Số dòng", "Số lần", "Số TK", "Tuổi"… → #,##0.
+  - Còn lại → số tiền #,##0.00, âm màu đỏ, 0 hiện "-".
+- **Dòng in đậm:** dòng bắt đầu bằng Tổng/Cộng/Total, hoặc dòng chữ in hoa có khoảng trắng và dài hơn 10 ký tự (vd "A. TÀI SẢN NGẮN HẠN").
+- **File cần nạp lại** (vào ứng dụng hoặc ERP) phải giữ dạng thô: đặt tên khớp `RAW`, hoặc ghi trực tiếp bằng `R.XLSX.write` như file GL Journal (biff8).
+- **Nhóm nội bộ:**
+  - Mặc định nhóm 1 là `'TFU,VTC,STL,VTG'`, lưu trong `localStorage` (khoá `igPick.par`), so sánh với `coKey` (= nb_code trong danh mục). Mã công ty sai so với Code_NB thì công ty đó rơi sang nhóm 2.
+  - Lọc nhóm truyền qua tham số `company`/`key` sẵn có của `grpInternal`, `grpInternalRows`, `grpBalance`, `grpYears`, không thêm tham số mới.
+  - `SPL` chỉ tách khi `IG.split` bật và không chọn một công ty đơn lẻ.
+  - Khi thêm bảng mới theo công ty: dùng `SPL(list, o=>o.key, row, (L,lab)=>dòng cộng, số cột)`, và thêm cột `'Nhóm nội bộ': GN[gOf(o.key)]` khi xuất Excel.
 
 ### Sắp xếp theo tiêu đề cột (v4.17)
 - Cuối `app.js` có một IIFE bắt sự kiện click trên `thead th`. `colOf` tính vị trí cột khi tiêu đề có rowspan/colspan; `num_` chuyển ô thành số hoặc ngày để so sánh.
