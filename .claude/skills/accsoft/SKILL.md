@@ -150,6 +150,10 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Tuổi nợ cấp đối tượng (v4.24.2)
+- `vAging` luôn tải thêm `AGBP = aging(dim = 'bp')` khi dim khác 'bp'. KPI, bảng theo TK, biểu đồ và `#tAgBp` dùng `AGBP` (biến `sel`/`pos`/`abn`). Bảng `#tAging` và `#tAbn` dùng dữ liệu theo dim (biến `selD`/`posD`/`abnD`).
+- Quy tắc: tổng hợp theo đối tượng phải bằng số dư sổ cái. FIFO theo hợp đồng chỉ dùng để rà soát hợp đồng ghi lệch.
+
 ### Bút toán tự triệt tiêu (v4.24, cập nhật 4.24.1)
 - `grpSql(col, defs, level)`: khi level là `detail` thì dùng đúng mã TK; ngược lại dùng tiền tố trong defs (tiền tố dài xét trước), không khớp thì lấy 3 số đầu.
 - `selfX(AG_ACC, level)` dùng cho aging; `invSelf(by, level)` dùng cho tồn kho. Với recv/accrual, loại khi cả 2 vế cùng nằm trong khoảng TK phân tích và cùng đối tượng.

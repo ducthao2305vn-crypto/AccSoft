@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.24.2 – 03/11/2026
+**Tuổi nợ theo hợp đồng: phần tổng hợp phải bằng đúng số dư đối tượng**
+- **Lỗi cũ:** khi "Phân tích theo" là Đối tượng × Hợp đồng / Đề nghị TU / Khoản mục, FIFO được tính riêng cho từng hợp đồng. Các hợp đồng dư theo chiều bị cộng thành "Tổng phải trả", còn các hợp đồng dư ngược tách riêng. Ví dụ VTG TK 33121: tổng 26,1 triệu, dư ngược −25,6 triệu, trong khi số dư thật chỉ 454.084,06.
+- **Sửa:** các thẻ KPI, bảng tổng hợp theo TK, biểu đồ và bảng **Tuổi nợ theo từng đối tượng** luôn tính FIFO ở **cấp đối tượng**, bù trừ giữa các hợp đồng, nên bằng đúng số dư trên Trial Balance.
+- Bảng **Chi tiết đối tượng × hợp đồng** và **Dư ngược chiều** vẫn hiện theo từng hợp đồng, để thấy hợp đồng nào thanh toán / hoá đơn ghi lệch và đổi hợp đồng cho đúng.
+- Cửa sổ đối tượng, tab "Theo hợp đồng": các ô tổng lấy số dư cấp đối tượng; có ghi chú tổng dư theo chiều / dư ngược chiều theo hợp đồng.
+
 ## v4.24.1 – 03/11/2026
 **Bút toán tự triệt tiêu: xét cả TK chi tiết khác nhau trong cùng nhóm**
 - Xem theo **TK tổng hợp**: bút toán Nợ – Có thuộc cùng nhóm TK (vd 33111/33112, 15611/15614, 11212/11221) được coi là tự triệt tiêu nếu cùng đối tượng, và bị loại khỏi FIFO tuổi nợ / tuổi tồn kho. Xem theo **TK chi tiết**: vẫn tính, vì đây là chuyển thật giữa hai TK chi tiết.

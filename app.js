@@ -266,15 +266,18 @@ const refShort=v=>{const p=String(v??'').split('_'),h=p.length/2;return p.length
 const BUCKETS=['Chưa đến hạn','1–30','31–60','61–90','91–180','181–365','> 365'];
 const BCOL=[C.ok,'#FFD4BD','#FF9C6B','#FF6929','#FA4700','#D63600','#8A2200'];
 const GRPN={thu:'Phải thu',tra:'Phải trả'};
-let AGDATA=null,AGV={det:[],abn:[]};
+let AGDATA=null,AGBP=null,AGV={det:[],abn:[]};
 async function vAging(reload=true){
   if(!$('#asOf').value){const s=await aq('overview');if(s.dmax)$('#asOf').value=s.dmax}if(!$('#asOf').value)return;
-  if(reload||!AGDATA)AGDATA=await aq('aging',$('#asOf').value,+$('#term').value||0,$('#agLevel').value,$('#agDim').value);
+  if(reload||!AGDATA){const a=[$('#asOf').value,+$('#term').value||0,$('#agLevel').value];AGDATA=await aq('aging',...a,$('#agDim').value);
+    // Tổng hợp (KPI, theo TK, theo đối tượng) luôn tính FIFO ở cấp đối tượng – bù trừ giữa các hợp đồng / đề nghị TU / khoản mục để bằng đúng số dư
+    AGBP=$('#agDim').value==='bp'?AGDATA:await aq('aging',...a,'bp')}
   const grp=$('#agGrp').value,cur=$('#agAcc').value,find=$('#agFind').value.trim().toLowerCase();
   const inGrp=AGDATA.items.filter(o=>!grp||o.grp===grp);
   const accs=[...new Map(inGrp.map(o=>[o.acc,o])).values()].sort((a,b)=>a.acc.localeCompare(b.acc));
   fillSel('#agAcc',accs.map(o=>[o.acc,`${o.acc} – ${o.accName}`]),'Tất cả tài khoản',accs.some(o=>o.acc===cur)?cur:'');
-  const sel=inGrp.filter(o=>!$('#agAcc').value||o.acc===$('#agAcc').value),pos=sel.filter(o=>o.bal>0),abn=sel.filter(o=>o.bal<0);
+  const selD=inGrp.filter(o=>!$('#agAcc').value||o.acc===$('#agAcc').value),posD=selD.filter(o=>o.bal>0),abnD=selD.filter(o=>o.bal<0);
+  const sel=AGBP.items.filter(o=>(!grp||o.grp===grp)&&(!$('#agAcc').value||o.acc===$('#agAcc').value)),pos=sel.filter(o=>o.bal>0),abn=sel.filter(o=>o.bal<0);
   // KPI theo nhóm
   const tot=g=>{const L=pos.filter(o=>o.grp===g),b=Array(7).fill(0);L.forEach(o=>o.b.forEach((v,i)=>b[i]+=v));const t=b.reduce((x,y)=>x+y,0);return {t,over:t-b[0],o90:b[4]+b[5]+b[6],n:L.length}};
   const T=tot('thu'),P=tot('tra');
@@ -294,9 +297,9 @@ async function vAging(reload=true){
     ['thu','tra'].map(g=>SL.filter(x=>x.grp===g).map(row).join('')+sub(g)).join('')+'</tbody>';
   chart('chAging',{type:'bar',data:{labels:SL.map(x=>x.acc),datasets:BUCKETS.map((b,i)=>({label:b,data:SL.map(x=>x.b[i]),backgroundColor:BCOL[i],borderRadius:0,maxBarThickness:48}))},
     options:{scales:{x:{stacked:true},y:{stacked:true}},plugins:{tooltip:{callbacks:{title:i=>{const x=SL[i[0].dataIndex];return x.acc+' – '+x.name}}}}}});
-  const REFH0={contract:'Hợp đồng',adv:'Đề nghị TU',tcost:'Khoản mục'}[$('#agDim').value];AGV.abn=abn;
+  const REFH0={contract:'Hợp đồng',adv:'Đề nghị TU',tcost:'Khoản mục'}[$('#agDim').value];AGV.abn=abnD;
   $('#tAbn').innerHTML='<thead><tr><th>TK</th><th>Đối tượng</th>'+(REFH0?`<th>${REFH0}</th>`:'')+'<th class=n>PS Nợ</th><th class=n>PS Có</th><th class=n>Dư ngược</th></tr></thead><tbody>'+
-    abn.sort((a,b)=>a.bal-b.bal).map((o,i)=>`<tr class=dbl data-agn="${i}"><td title="${esc(o.accName)}">${esc(o.acc)}</td><td>${esc(o.bp)}</td>${REFH0?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class="n neg">${fmt2(o.bal)}</td></tr>`).join('')+'</tbody>';
+    abnD.sort((a,b)=>a.bal-b.bal).map((o,i)=>`<tr class=dbl data-agn="${i}"><td title="${esc(o.accName)}">${esc(o.acc)}</td><td>${esc(o.bp)}</td>${REFH0?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class="n neg">${fmt2(o.bal)}</td></tr>`).join('')+'</tbody>';
   const dim=$('#agDim').value,REFH={contract:'Hợp đồng',adv:'Đề nghị tạm ứng',tcost:'Khoản mục chi phí'}[dim],refCell=o=>REFH?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:'';
   // Tuổi nợ theo từng đối tượng (gộp mọi TK)
   const BPM=new Map();for(const o of sel){const x=BPM.get(o.bp)||BPM.set(o.bp,{bp:o.bp,accs:new Set(),thu:0,tra:0,abn:0,b:Array(7).fill(0),maxAge:0,items:[]}).get(o.bp);
@@ -309,7 +312,7 @@ async function vAging(reload=true){
   $('#tAgBp').innerHTML='<thead><tr><th>Đối tượng</th><th>Tài khoản</th><th class=n>Phải thu</th><th class=n>Phải trả</th><th class=n>Ròng (thu − trả)</th>'+BUCKETS.map(b=>`<th class=n>${b}</th>`).join('')+'<th class=n>Tuổi tối đa</th><th class=n>Dư ngược chiều</th></tr></thead><tbody>'+
     (BPV.slice(0,2000).map((x,i)=>`<tr class="click dbl" data-agb="${i}"${bsel===x.bp||AGV.bpPick===x.bp?' style="background:var(--brand-25)"':''}><td><b>${esc(x.bp)}</b></td><td style="font-size:12px">${[...x.accs].sort().map(esc).join(', ')}</td><td class=n>${x.thu?fmt2(x.thu):''}</td><td class=n>${x.tra?fmt2(x.tra):''}</td><td class="n ${x.thu-x.tra<0?'neg':''}"><b>${fmt2(x.thu-x.tra)}</b></td>${x.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${x.maxAge||''}</td><td class="n neg">${Math.abs(x.abn)>=0.005?fmt2(x.abn):''}</td></tr>`).join('')||'<tr><td colspan=14 class=mut style="text-align:center;padding:20px">Không có đối tượng</td></tr>')+(BPV.length>2000?`<tr><td colspan=14 class=mut style="text-align:center">… còn ${num(BPV.length-2000)} đối tượng – dùng ô tìm kiếm</td></tr>`:'')+'</tbody>';
   const pickBp=bsel||AGV.bpPick||'';
-  const det=pos.filter(o=>(!pickBp||o.bp===pickBp)&&(!find||(o.bp+' '+(o.ref||'')).toLowerCase().includes(find))).sort((a,b)=>b.bal-a.bal);
+  const det=posD.filter(o=>(!pickBp||o.bp===pickBp)&&(!find||(o.bp+' '+(o.ref||'')).toLowerCase().includes(find))).sort((a,b)=>b.bal-a.bal);
   AGV.det=det;
   $('#tAging').innerHTML='<thead><tr><th>Nhóm</th><th>TK</th><th>Đối tượng</th>'+(REFH?`<th>${REFH}</th><th>Phát sinh đầu</th>`:'')+'<th class=n>PS Nợ</th><th class=n>PS Có</th><th class=n>Số dư</th>'+BUCKETS.map(b=>`<th class=n>${b}</th>`).join('')+'<th class=n>Tuổi tối đa</th><th>Đánh giá</th></tr></thead><tbody>'+
    det.slice(0,3000).map((o,i)=>{const o90=o.b[4]+o.b[5]+o.b[6];
@@ -331,16 +334,19 @@ async function agBpDetail(x,tab='acc'){CUR=-1;const asOf=$('#asOf').value,term=+
   $('#dPane').innerHTML=head+`<div class="pb"><div class="card"><span class="spin"></span> Đang tính…</div></div>`;$('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
   const bind=()=>{$('#dClose').onclick=closeDetail;$('#abTab').onclick=e=>{const b=e.target.closest('[data-abt]');if(b)agBpDetail(x,b.dataset.abt)}};bind();
   // Dữ liệu tuổi nợ của đối tượng (theo TK hoặc theo hợp đồng)
-  const data=tab==='ct'?(dim0==='contract'&&AGDATA?AGDATA:await aq('aging',asOf,term,level,'contract')):(AGDATA||await aq('aging',asOf,term,level,dim0));
+  const data=tab==='ct'?(dim0==='contract'&&AGDATA?AGDATA:await aq('aging',asOf,term,level,'contract')):(AGBP||await aq('aging',asOf,term,level,'bp'));
   const L=data.items.filter(o=>o.bp===x.bp).sort((a,b)=>a.grp.localeCompare(b.grp)*-1||a.acc.localeCompare(b.acc)||String(a.ref).localeCompare(String(b.ref)));AGV.bpItems=L;
-  const S=g=>L.filter(o=>o.grp===g).reduce((s,o)=>s+o.bal,0),thu=S('thu'),tra=S('tra'),b=Array(7).fill(0);L.forEach(o=>o.bal>0&&o.b.forEach((v,i)=>b[i]+=v));const maxAge=Math.max(0,...L.map(o=>o.maxAge||0));
+  const PB=tab==='ct'?(AGBP||await aq('aging',asOf,term,level,'bp')).items.filter(o=>o.bp===x.bp):L;
+  const S=g=>PB.filter(o=>o.grp===g).reduce((s,o)=>s+o.bal,0),thu=S('thu'),tra=S('tra'),b=Array(7).fill(0);PB.forEach(o=>o.bal>0&&o.b.forEach((v,i)=>b[i]+=v));const maxAge=Math.max(0,...PB.map(o=>o.maxAge||0));
+  const ctPos=L.filter(o=>o.bal>0).reduce((s,o)=>s+o.bal,0),ctNeg=L.filter(o=>o.bal<0).reduce((s,o)=>s+o.bal,0);
   // Đối chiếu với CĐPS theo đối tượng (dữ liệu gốc, đến cuối tháng của ngày báo cáo)
   const accs=uniq(L.map(o=>o.acc)),ptb=accs.length?await aq('finPartnerTB','',asOf.slice(0,7),accs,[],'',x.bp):{rows:[]};
   const pr=ptb.rows.filter(o=>o.p===x.bp),ptNet=g=>pr.filter(o=>accs.some(a=>o.acc.startsWith(a))&&(AG_GRP(o.acc)===g)).reduce((s,o)=>s+(g==='thu'?o.cb:-o.cb),0);
   const pThu=ptNet('thu'),pTra=ptNet('tra'),eom=asOf===new Date(Date.UTC(+asOf.slice(0,4),+asOf.slice(5,7),0)).toISOString().slice(0,10),ok=Math.abs(pThu-thu)<0.01&&Math.abs(pTra-tra)<0.01;
-  const REF=tab==='ct'?'Hợp đồng':{contract:'Hợp đồng',adv:'Đề nghị TU',tcost:'Khoản mục'}[dim0];
+  const REF=tab==='ct'?'Hợp đồng':null;
   $('#dPane').innerHTML=head+`<div class="pb"><div class="kpis">${kpi('blue','wallet','Phải thu (ròng)',fmt2(thu))}${kpi('','coins','Phải trả (ròng)',fmt2(tra))}${kpi(thu-tra<0?'red':'green','wallet','Bù trừ thu − trả',fmt2(thu-tra))}${kpi('red','alert','Quá hạn > 90 ngày',fmt2(b[4]+b[5]+b[6]),'tuổi tối đa '+maxAge+' ngày')}</div>
     <div class="card" style="background:${ok?'#ECFDF3':'#FFFAEB'}"><b>${ok?'✓ Khớp':'⚠ Chênh lệch'} với Bảng cân đối phát sinh theo đối tượng</b> (dữ liệu gốc, TK ${esc(accs.join(', '))}, đến ${eom?vn(asOf):'cuối tháng '+ymLbl(asOf.slice(0,7))}): phải thu ${fmt2(pThu)} · phải trả ${fmt2(pTra)}${ok?'':` · lệch thu ${fmt2(thu-pThu)}, trả ${fmt2(tra-pTra)}${eom?'':' – ngày báo cáo không phải cuối tháng nên CĐPS (theo tháng) gồm cả phát sinh sau ngày này'}`}</div>
+    ${tab==='ct'&&ctNeg<-0.005?`<div class="card" style="background:#FFF6F2"><b>Lưu ý:</b> tuổi nợ và số dư của đối tượng (các ô phía trên) tính FIFO ở cấp đối tượng – bù trừ giữa các hợp đồng. Theo từng hợp đồng: dư theo chiều ${fmt2(ctPos)} · dư ngược chiều ${fmt2(ctNeg)} (thường do thanh toán / hoá đơn ghi khác hợp đồng). Nhấn đúp hợp đồng dư ngược để xem bút toán và <b>đổi hợp đồng</b> cho đúng.</div>`:''}
     <div class="card"><div class="card-h"><h3>${tab==='ct'?'Theo hợp đồng':'Theo tài khoản'}</h3><span class="dblhint">🖱 nhấn đúp để xem bút toán${tab==='ct'?' & đổi hợp đồng':''}</span><div class="sp"></div><input id="abQ" placeholder="Tìm ${tab==='ct'?'hợp đồng':'tài khoản'}…" style="width:220px"></div><div id="abT"></div></div></div>`;
   bind();
   const draw=()=>{const q=$('#abQ').value.trim().toLowerCase(),V=L.map((o,i)=>({...o,i})).filter(o=>!q||[o.acc,o.accName,o.ref].some(v=>String(v||'').toLowerCase().includes(q)));
@@ -348,7 +354,7 @@ async function agBpDetail(x,tab='acc'){CUR=-1;const asOf=$('#asOf').value,term=+
     $('#abT').innerHTML=tbl0(['Nhóm','TK','Tên tài khoản',...(REF?[REF]:[]),'#PS Nợ','#PS Có','#Số dư',...BUCKETS.map(b=>'#'+b),'#Tuổi tối đa','PS đầu','PS cuối'],V.map(o=>`<tr class=dbl data-agi="${o.i}"><td><span class="badge ${o.grp==='thu'?'b-L':'s-doing'}">${GRPN[o.grp]}</span></td><td class=nw><b>${esc(o.acc)}</b></td><td>${esc(o.accName)}</td>${REF?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class="n ${o.bal<0?'neg':''}"><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${o.maxAge||''}</td><td class=nw>${vn(o.first)}</td><td class=nw>${vn(o.last)}</td></tr>`)
       .concat([`<tr style="font-weight:700;background:#FFF6F2"><td colspan=${REF?4:3}>Cộng (${num(V.length)} dòng)</td><td class=n>${fmt2(V.reduce((s,o)=>s+o.dr,0))}</td><td class=n>${fmt2(V.reduce((s,o)=>s+o.cr,0))}</td><td class=n>${fmt2(V.reduce((s,o)=>s+o.bal,0))}</td>${tot.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td></td><td></td><td></td></tr>`]),'Không có số dư')};
   $('#abQ').oninput=draw;draw();
-  $('#abT').ondblclick=e=>{const tr=e.target.closest('[data-agi]');if(!tr)return;const o=AGV.bpItems[+tr.dataset.agi],dim=tab==='ct'?'contract':dim0;
+  $('#abT').ondblclick=e=>{const tr=e.target.closest('[data-agi]');if(!tr)return;const o=AGV.bpItems[+tr.dataset.agi],dim=tab==='ct'?'contract':'bp';
     openLedger(o.bp+(o.ref?' · '+refShort(o.ref):''),`TK ${o.acc} – ${o.accName} · đến ${vn(asOf)}`,{kind:'ag',acc:o.acc,bp:o.bp,dim,ref:o.ref,asOf},AGNAT(o.acc),()=>{})};
 }
 const AG_GRP=a=>/^(331|335|336|334|3388)/.test(a)?'tra':'thu';
