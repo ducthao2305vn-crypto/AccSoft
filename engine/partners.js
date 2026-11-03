@@ -151,7 +151,8 @@ function make(db, all, get, okYm) {
   const ibAcc = a => A(a, ...IB_ACC);
   // (1) Số dư nội bộ: đầu kỳ (trước ngày `from`), phát sinh trong kỳ, cuối kỳ (đến ngày `asOf`) theo đúng phía đối tượng (TK Nợ ↔ đối tượng Nợ, TK Có ↔ đối tượng Có)
   function internalBalance(asOf, withTT = false, excl = false, company = '', from = '') {
-    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, '', String(asOf || '').slice(0, 7)), adj = adjMap(), ci = coIndex(map, kinds);
+    // Số dư tôn trọng dữ liệu gốc: KHÔNG áp dụng điều chỉnh loại / gán lại (điều chỉnh chỉ dùng cho chi tiết giao dịch nội bộ)
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, '', String(asOf || '').slice(0, 7)), adj = new Map(), ci = coIndex(map, kinds);
     from = /^\d{4}-\d{2}-\d{2}$/.test(from || '') ? from : '';
     const m = new Map();
     for (const r of rows) { if (asOf && r.d > asOf) continue; const ad = adjOf(adj, r); if (ad && ad.action === 'out') continue;
@@ -192,6 +193,26 @@ function make(db, all, get, okYm) {
     return { years, cols: YCOL, rows: list, tot, excl, company };
   }
 
+  // Bảng cân đối phát sinh theo đối tượng công nợ (dữ liệu gốc): TK Nợ ↔ đối tượng Nợ, TK Có ↔ đối tượng Có.
+  // from/to: tháng YYYY-MM; accs: tiền tố TK (rỗng = mọi TK có đối tượng); kinds: nhóm danh mục; company: mã công ty nội bộ / 'G:1:…' / 'G:2:…'; q: tìm đối tượng
+  function partnerTB(from, to, accs = [], kinds = [], company = '', q = '', withEmpty = false) {
+    const f = okYm(from) || '0000-00', t = okYm(to) || '9999-12', pres = [].concat(accs || []).map(x => String(x).replace(/[^0-9A-Za-z]/g, '')).filter(Boolean);
+    const W = c => pres.length ? ' AND (' + pres.map(x => `${c} LIKE '${x}%'`).join(' OR ') + ')' : '';
+    const { map } = kindMap(), m = new Map(), Q = String(q || '').trim().toLowerCase();
+    for (const [col, pcol, nm, sg] of [['acc_debit', 'partner_debit', 'acc_debit_name', 1], ['acc_credit', 'partner_credit', 'acc_credit_name', -1]])
+      for (const r of all(`SELECT ${col} a, max(${nm}) n, ifnull(${pcol},'') p, CASE WHEN ym<? THEN 0 ELSE 1 END k, sum(amount) v FROM entries WHERE ym<=?${W(col)}${withEmpty ? '' : ` AND ${pcol} IS NOT NULL AND ${pcol}<>''`} GROUP BY 1,3,4`, f, t)) {
+        const c = map.get(r.p);
+        if (kinds && kinds.length && !(c && kinds.includes(c.kind))) continue;
+        if (company && !(c && ['NB', 'TT'].includes(c.kind) && coMatch(coKey(c, r.p), company))) continue;
+        if (Q && !(r.p.toLowerCase().includes(Q) || String(c?.nb_code || '').toLowerCase().includes(Q) || String(c?.nb_name || '').toLowerCase().includes(Q))) continue;
+        const key = r.p + '|' + r.a, o = m.get(key) || m.set(key, { p: r.p || '(không có đối tượng)', kind: c?.kind || '', company: c && ['NB', 'TT'].includes(c.kind) ? coName(c, r.p) : '', coKey: c && ['NB', 'TT'].includes(c.kind) ? coKey(c, r.p) : '', acc: r.a, accName: r.n || r.a, ob: 0, dr: 0, cr: 0 }).get(key);
+        if (r.k === 0) o.ob += sg * r.v; else sg > 0 ? o.dr += r.v : o.cr += r.v;
+      }
+    const rows = [...m.values()].map(o => ({ ...o, cb: o.ob + o.dr - o.cr })).filter(o => Math.abs(o.ob) > 0.004 || Math.abs(o.cb) > 0.004 || o.dr || o.cr).sort((a, b) => a.p.localeCompare(b.p) || a.acc.localeCompare(b.acc));
+    const S = k => rows.reduce((x, o) => x + o[k], 0), sp = (v, s) => s > 0 ? Math.max(0, v) : Math.max(0, -v);
+    const tot = { obDr: rows.reduce((x, o) => x + sp(o.ob, 1), 0), obCr: rows.reduce((x, o) => x + sp(o.ob, -1), 0), dr: S('dr'), cr: S('cr'), cbDr: rows.reduce((x, o) => x + sp(o.cb, 1), 0), cbCr: rows.reduce((x, o) => x + sp(o.cb, -1), 0) };
+    return { from: f === '0000-00' ? null : f, to: t === '9999-12' ? null : t, accs: pres, rows, tot, partners: new Set(rows.map(o => o.p)).size };
+  }
   // Nghi ngờ chọn sai đối tượng: diễn giải nhắc tới mã / tên công ty nội bộ khác với công ty đang gắn
   function suspect(map, kinds) {
     const toks = []; for (const [p, c] of coIndex(map, kinds)) { for (const t of [c.nb_code, c.nb_name].filter(x => x && String(x).trim().length >= 3)) toks.push([p, new RegExp('(^|[^a-z0-9])' + String(t).trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-z0-9])')]); }
@@ -246,6 +267,6 @@ function make(db, all, get, okYm) {
     for (const p of parts) { const k = map.get(p)?.kind || '(chưa phân loại)'; c[k] = (c[k] || 0) + 1; }
     return { partners: parts.length, matched: map.size, byKind: c, catalog: get('SELECT count(*) n FROM partners_cat').n };
   }
-  return { list, upsert, remove, importRows, exportAll, unmatched, internal, internalRows, internalBalance, internalYears, companies, adjList, adjSet, adjRemove, docLines, intlPayments, kindStats, KINDS };
+  return { list, upsert, remove, importRows, exportAll, unmatched, internal, internalRows, internalBalance, internalYears, companies, partnerTB, adjList, adjSet, adjRemove, docLines, intlPayments, kindStats, KINDS };
 }
 module.exports = { make, KINDS };

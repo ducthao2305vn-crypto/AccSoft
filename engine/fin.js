@@ -232,11 +232,11 @@ function make(all, okYm, INC, plRange, run) {
   function drill(spec = {}) {
     const pres = [].concat(spec.accs || []).map(String).filter(Boolean), [f, t] = rngP(spec.from, spec.to); if (!pres.length) return { accounts: [], rows: [], total: 0 };
     const M = a => pres.some(p => String(a || '').startsWith(p)), tb = trial(spec.from, spec.to, 0);
-    const accounts = tb.rows.filter(r => M(r.a)).map(r => ({ a: r.a, n: r.n, ob: r.obDr - r.obCr, dr: r.dr, cr: r.cr, cb: r.bal }));
+    const accounts = spec.bp != null ? [] : tb.rows.filter(r => M(r.a)).map(r => ({ a: r.a, n: r.n, ob: r.obDr - r.obCr, dr: r.dr, cr: r.cr, cb: r.bal }));
     const like = c => '(' + pres.map(p => `${c} LIKE '${p.replace(/'/g, '')}%'`).join(' OR ') + ')';
     const rows = all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t, department dep, cashflow cf
-      FROM entries WHERE ym>=? AND ym<=? AND (${like('acc_debit')} OR ${like('acc_credit')})${spec.pl ? ` AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%'` : ''} ORDER BY account_date, id LIMIT 50001`, f, t)
-      .map(r => { const md = M(r.dr), mc = M(r.cr); return { ...r, side: md && mc ? 'Nợ & Có' : md ? 'Nợ' : 'Có', v: (md ? r.a : 0) - (mc ? r.a : 0), acc: md ? r.dr : r.cr, accName: md ? r.drName : r.crName, ctr: md ? r.cr : r.dr, ctrName: md ? r.crName : r.drName, bpS: md ? r.bp : r.bpCr }; });
+      FROM entries WHERE ym>=? AND ym<=? AND (${like('acc_debit')} OR ${like('acc_credit')})${spec.bp != null ? ` AND (ifnull(partner_debit,'')=? OR ifnull(partner_credit,'')=?)` : ''}${spec.pl ? ` AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%'` : ''} ORDER BY account_date, id LIMIT 50001`, f, t, ...(spec.bp != null ? [String(spec.bp), String(spec.bp)] : []))
+      .map(r => { const md = M(r.dr) && (spec.bp == null || (r.bp || '') === spec.bp), mc = M(r.cr) && (spec.bp == null || (r.bpCr || '') === spec.bp); if (!md && !mc) return null; return { ...r, side: md && mc ? 'Nợ & Có' : md ? 'Nợ' : 'Có', v: (md ? r.a : 0) - (mc ? r.a : 0), acc: md ? r.dr : r.cr, accName: md ? r.drName : r.crName, ctr: md ? r.cr : r.dr, ctrName: md ? r.crName : r.drName, bpS: md ? r.bp : r.bpCr }; }).filter(Boolean);
     return { accounts, rows: rows.slice(0, 50000), total: rows.length, truncated: rows.length > 50000 };
   }
   /* B09-DN: Thuyết minh báo cáo tài chính – phần số liệu chi tiết lập tự động; phần chính sách là văn bản người dùng sửa */

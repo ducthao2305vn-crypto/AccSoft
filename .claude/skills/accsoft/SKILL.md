@@ -150,6 +150,12 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### CĐPS theo đối tượng (v4.21)
+- `partners.partnerTB(from, to, accs, kinds, company, q)` (IPC `finPartnerTB`, nằm trong READ): gom bút toán theo (TK, đối tượng cùng phía, trước/trong kỳ) bằng 2 truy vấn SQL (phía Nợ, phía Có). Kết quả gồm `rows {p, kind, company, coKey, acc, ob, dr, cr, cb}` và `tot`.
+- UI: `FT = 'ptb'`, tham số lưu trong `FP.ptbAcc | ptbCustom | ptbKind | ptbCo | ptbQ | ptbV`.
+- `fin.drill` nhận thêm `bp`, chỉ lấy phía có đúng đối tượng; khi có `bp` thì không trả bảng TK cấu thành.
+- Quy tắc: `internalBalance` không áp dụng `ig_adj` (luôn dùng dữ liệu gốc). Kiểm tra: số dư nội bộ của một công ty phải bằng CĐPS theo đối tượng khi lọc cùng công ty và cùng danh sách TK.
+
 ### Phân cấp tab (v4.20)
 - **Cấp 1** (chọn chuyên đề, vd `#dpTabs`): class `navtabs`, kiểu gạch chân, kèm nhãn `navlbl`.
 - **Cấp 2** (chọn báo cáo trong chuyên đề): `subbar` gồm `.crumb` (tên chuyên đề) và `.subtabs` (nút tròn).

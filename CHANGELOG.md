@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v4.21.0 – 03/11/2026
+**Bảng cân đối phát sinh theo đối tượng công nợ; số dư nội bộ theo dữ liệu gốc**
+- **Mới – Báo cáo tài chính → "CĐPS theo đối tượng":** lấy từ dữ liệu gốc, theo đúng phía (TK ghi Nợ ↔ đối tượng Nợ, TK ghi Có ↔ đối tượng Có).
+  - Cột: dư đầu kỳ Nợ/Có, phát sinh Nợ/Có, dư cuối kỳ Nợ/Có. Kỳ báo cáo dùng chung bộ chọn kỳ của báo cáo tài chính.
+  - Lọc: tài khoản (TK công nợ, mọi TK có đối tượng, hoặc tự nhập), nhóm đối tượng trong danh mục, công ty nội bộ hoặc nhóm 1/2, tìm đối tượng.
+  - Xem theo: đối tượng × TK, đối tượng, hoặc TK.
+  - Nhấn đúp để xem bút toán của đúng đối tượng và TK đó. Có xuất Excel.
+- **Sửa – Số dư giao dịch nội bộ:** không còn áp dụng các điều chỉnh "loại khỏi nội bộ / gán lại" vào số dư, để số dư khớp sổ gốc. Điều chỉnh chỉ còn áp dụng cho tổng hợp kỳ, chi tiết giao dịch và tổng hợp theo năm.
+- Bảng truy nguồn số liệu báo cáo tài chính lọc được theo đối tượng (tham số `bp`).
+
 ## v4.20.1 – 03/11/2026
 **Sửa lỗi Excel báo "Repaired… XML error" khi mở file xuất**
 - Bản 4.19 chèn thẻ định dạng dòng (`sheetFormatPr`) sai vị trí trong sheet, nên Excel từ chối và xoá toàn bộ dữ liệu sheet. Đã bỏ thẻ này. Định dạng số, tiêu đề, màu, cố định dòng tiêu đề vẫn giữ nguyên.

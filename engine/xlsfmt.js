@@ -14,10 +14,10 @@ const SHEET_VN = {
   'Theo nguoi nhap': 'Theo người nhập', 'Theo nhan vien': 'Theo nhân viên', 'Theo nhom tai khoan': 'Theo nhóm tài khoản', 'Theo thang': 'Theo tháng', 'Thong tin': 'Thông tin',
   'Thong tin chung tu': 'Thông tin chứng từ', 'Ton am': 'Tồn âm', 'Tong hop': 'Tổng hợp', 'Tong hop theo TK': 'Tổng hợp theo TK', 'Tuoi khoan treo': 'Tuổi khoản treo',
   'CDSPS': 'Bảng CĐSPS', 'B03-DN truc tiep': 'B03-DN trực tiếp', 'B03-DN gian tiep': 'B03-DN gián tiếp', 'B03 gian tiep - ma 07': 'B03 gián tiếp - mã 07', 'B03 phan loai': 'B03 phân loại',
-  'Cach tinh phi': 'Cách tính phí', 'Theo nhom': 'Theo nhóm',
+  'Cach tinh phi': 'Cách tính phí', 'Theo nhom': 'Theo nhóm', 'CDPS theo doi tuong': 'CĐPS theo đối tượng',
 };
 // Tên báo cáo theo tên file
-const TITLE = [[/^AccSoft_BCTC/, 'BÁO CÁO TÀI CHÍNH'], [/^AccSoft_BaoCaoKiemTra/, 'BÁO CÁO KIỂM TRA DỮ LIỆU HẠCH TOÁN'], [/^AccSoft_BaoCaoRuiRo/, 'BÁO CÁO RỦI RO HẠCH TOÁN'],
+const TITLE = [[/^AccSoft_CDPS_DoiTuong/, 'BẢNG CÂN ĐỐI PHÁT SINH THEO ĐỐI TƯỢNG'], [/^AccSoft_BCTC/, 'BÁO CÁO TÀI CHÍNH'], [/^AccSoft_BaoCaoKiemTra/, 'BÁO CÁO KIỂM TRA DỮ LIỆU HẠCH TOÁN'], [/^AccSoft_BaoCaoRuiRo/, 'BÁO CÁO RỦI RO HẠCH TOÁN'],
   [/^AccSoft_CanKhacPhuc/, 'DANH SÁCH LỖI CẦN KHẮC PHỤC'], [/^AccSoft_LoiNhapLieu/, 'DANH SÁCH LỖI NHẬP LIỆU'], [/^AccSoft_NoiBo_SoDu/, 'SỐ DƯ GIAO DỊCH NỘI BỘ'],
   [/^AccSoft_NoiBo_TheoNam/, 'TỔNG HỢP GIAO DỊCH NỘI BỘ THEO NĂM'], [/^AccSoft_NoiBo_ChiTiet/, 'CHI TIẾT GIAO DỊCH NỘI BỘ'], [/^AccSoft_NoiBo_TongHop/, 'TỔNG HỢP GIAO DỊCH NỘI BỘ'],
   [/^AccSoft_NoiBo_DieuChinh/, 'ĐIỀU CHỈNH ĐỐI TƯỢNG NỘI BỘ'], [/^AccSoft_NoiBo/, 'GIAO DỊCH NỘI BỘ'], [/^AccSoft_PhaiThu/, 'PHÂN TÍCH PHẢI THU THEO ĐỐI TƯỢNG'],
