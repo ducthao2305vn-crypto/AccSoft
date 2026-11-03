@@ -150,6 +150,13 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Phân cấp tab (v4.20)
+- **Cấp 1** (chọn chuyên đề, vd `#dpTabs`): class `navtabs`, kiểu gạch chân, kèm nhãn `navlbl`.
+- **Cấp 2** (chọn báo cáo trong chuyên đề): `subbar` gồm `.crumb` (tên chuyên đề) và `.subtabs` (nút tròn).
+- Mọi phần tử `.tabs` nằm trong `#dpCtl` tự hiển thị kiểu nút tròn.
+- Bộ lọc đặt trong `.filterrow`.
+- Không dùng `.tabs` cho cả hai cấp nữa.
+
 ### Nhóm nội bộ & định dạng Excel (v4.19)
 - **Lọc công ty:** `partners.js` có `coMatch(k, f)`. Giá trị `f` có thể là '' (tất cả), một mã công ty, hoặc `'G:1:TFU,VTC,…'` / `'G:2:…'` (nhóm 2 = ngoài danh sách nhóm 1).
 - **UI:** `IG.par` (danh sách nhóm 1) và `IG.split`. Hàm `SPL(list, key, row, sub, nc)` tạo dòng tiêu đề nhóm và dòng "Cộng nhóm".

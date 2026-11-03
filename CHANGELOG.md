@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.20.0 – 03/11/2026
+**Giao diện: tách rõ thanh chuyên đề và thanh báo cáo**
+- Thanh trên **"Chuyên đề phân tích"** có nhãn nhỏ phía trên, kiểu tab gạch chân: tab đang mở có chữ cam, gạch chân cam, nền nhạt.
+- Thanh dưới là các **báo cáo của chuyên đề đang mở**, hiển thị dạng nút tròn; nút đang chọn tô cam đặc, chữ trắng. Phía trước có tên chuyên đề (vd "▌Giao dịch nội bộ"). Bộ lọc nằm ở hàng riêng, cách thanh báo cáo bằng đường kẻ.
+- Các chuyên đề khác (phải thu 138812, trích – huỷ trích…) dùng cùng kiểu nút cho thanh báo cáo con.
+- Biểu đồ "Theo tháng" của giao dịch nội bộ hiển thị ổn định, luôn đủ chiều cao.
+
 ## v4.19.0 – 03/11/2026
 **Giao dịch nội bộ chia 2 nhóm; file Excel xuất ra định dạng chuyên nghiệp**
 - **Hai nhóm nội bộ:**
