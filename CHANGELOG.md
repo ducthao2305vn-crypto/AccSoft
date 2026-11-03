@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.7.1 – 03/11/2026
+**Giao dịch nội bộ / Thanh toán quốc tế: báo rõ lý do khi chưa có số liệu**
+- Khi trang không có số liệu, ứng dụng nêu đúng nguyên nhân:
+  1. Chưa nạp danh mục đối tượng. Có nút "Nạp file danh mục đối tượng" ngay trên trang, nạp xong số liệu hiện luôn.
+  2. Danh mục có nhưng không đối tượng nào trong dữ liệu thuộc nhóm NB / TT / BN_QT / ROAMING.
+  3. Có đối tượng nhưng không phát sinh trong kỳ đang chọn.
+- Hiện thống kê danh mục: số đối tượng, số khớp với dữ liệu, số đối tượng theo từng nhóm.
+
 ## v4.7.0 – 03/11/2026
 **Danh mục đối tượng, phân tích giao dịch nội bộ và thanh toán quốc tế**
 - **Trang mới "Danh mục đối tượng":**
