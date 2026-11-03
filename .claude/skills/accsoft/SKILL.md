@@ -150,6 +150,10 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Số dư nội bộ theo nhóm (v4.11)
+- `accGroup(acc, bal)` trả về `{grp: thu|tra|von, grpName, a3, a3Name (ACC3), rev, revName}`.
+- `internalBalance` trả thêm `groups[]` (nhóm → accs (TK cấp 3) → sub (TK chi tiết)). Mỗi phần tử trong `companies[]` có thêm `thu, tra, von, est, rev`.
+
 ### Tuổi nợ theo đối tượng (v4.10)
 - `AG_ACC` đặt `1412` trước `141`, vì `find` lấy tiền tố khớp đầu tiên. Ledger `kind: 'ag'` loại các TK con đã tách riêng, qua `AG_LONG(acc)`. `INV_ACC` có thêm 1412.
 - UI `#tAgBp`: dữ liệu gộp theo `o.bp` từ `AGDATA.items`; `AGV.bpPick` dùng để lọc `#tAging`; `agBpDetail(x)` mở drawer theo từng TK.

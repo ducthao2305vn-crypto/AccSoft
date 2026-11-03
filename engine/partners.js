@@ -131,6 +131,15 @@ function make(db, all, get, okYm) {
     out.sort((a, b) => a.d.localeCompare(b.d) || a.doc.localeCompare(b.doc));
     return { total: out.length, rows: out.slice(0, limit) };
   }
+  // Nhóm số dư theo tài khoản: loại 1–2 → nhóm phải thu (tài sản), loại 3 → nhóm phải trả (nợ phải trả), loại 4 → vốn; dư ngược chiều được đánh dấu (vd 331 dư Nợ = trả trước người bán)
+  const ACC3 = { '128': 'Đầu tư nắm giữ đến ngày đáo hạn', '131': 'Phải thu của khách hàng', '133': 'Thuế GTGT được khấu trừ', '136': 'Phải thu nội bộ', '138': 'Phải thu khác', '141': 'Tạm ứng', '151': 'Hàng mua đang đi đường', '152': 'Nguyên liệu, vật liệu', '153': 'Công cụ, dụng cụ', '156': 'Hàng hoá', '211': 'TSCĐ hữu hình', '241': 'XDCB dở dang', '242': 'Chi phí trả trước', '244': 'Cầm cố, thế chấp, ký quỹ, ký cược',
+    '331': 'Phải trả người bán', '333': 'Thuế và các khoản phải nộp Nhà nước', '334': 'Phải trả người lao động', '335': 'Chi phí phải trả', '336': 'Phải trả nội bộ', '337': 'Thanh toán theo tiến độ HĐXD', '338': 'Phải trả, phải nộp khác', '341': 'Vay và nợ thuê tài chính', '344': 'Nhận ký quỹ, ký cược', '411': 'Vốn đầu tư của chủ sở hữu', '421': 'Lợi nhuận sau thuế chưa phân phối' };
+  const GRPS = { thu: 'Nhóm phải thu (tài sản – loại 1, 2)', tra: 'Nhóm phải trả (nợ phải trả – loại 3)', von: 'Nhóm vốn (loại 4)' };
+  function accGroup(acc, bal) {
+    const a = String(acc || ''), g = a[0] === '3' ? 'tra' : a[0] === '4' ? 'von' : 'thu', a3 = a.slice(0, 3), rev = g === 'thu' ? bal < 0 : bal > 0;
+    const revName = { '331': 'trả trước cho người bán', '131': 'người mua trả tiền trước', '336': 'dư Nợ phải trả nội bộ', '136': 'dư Có phải thu nội bộ', '141': 'tạm ứng chi vượt', '335': 'dư Nợ chi phí phải trả' }[a3];
+    return { grp: g, grpName: GRPS[g], a3, a3Name: ACC3[a3] || '', rev, revName: rev ? (revName || 'dư ngược chiều') : '' };
+  }
   // (1) Số dư nội bộ tại ngày: cộng dồn phát sinh của TK bảng cân đối (loại 1–4) theo đúng phía đối tượng (TK Nợ ↔ đối tượng Nợ, TK Có ↔ đối tượng Có)
   function internalBalance(asOf, withTT = false, excl = false, company = '') {
     const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, '', String(asOf || '').slice(0, 7)), adj = adjMap(), ci = coIndex(map, kinds);
@@ -142,9 +151,15 @@ function make(db, all, get, okYm) {
         if (excl && A(acc, '335', '1317')) continue; const k = coKey(c, p); if (company && k !== company) continue;
         const key = k + '|' + acc, o = m.get(key) || m.set(key, { key: k, company: coName(c, p), acc, accName: accName || acc, bal: 0, dr: 0, cr: 0, last: null, est: A(acc, '335', '1317') }).get(key);
         o.bal += sgn * r.a; sgn > 0 ? o.dr += r.a : o.cr += r.a; if (!o.last || r.d > o.last) o.last = r.d; } }
-    const lines = [...m.values()].filter(o => Math.abs(o.bal) > 0.005).sort((a, b) => a.company.localeCompare(b.company) || a.acc.localeCompare(b.acc));
-    const by = new Map(); for (const o of lines) { const x = by.get(o.key) || by.set(o.key, { key: o.key, company: o.company, dr: 0, cr: 0, net: 0, n: 0 }).get(o.key); o.bal > 0 ? x.dr += o.bal : x.cr -= o.bal; x.net += o.bal; x.n++; }
-    return { asOf, excl, lines, companies: [...by.values()].sort((a, b) => Math.abs(b.net) - Math.abs(a.net)), tot: lines.reduce((t, o) => (o.bal > 0 ? t.dr += o.bal : t.cr -= o.bal, t), { dr: 0, cr: 0 }) };
+    const lines = [...m.values()].filter(o => Math.abs(o.bal) > 0.005).map(o => ({ ...o, ...accGroup(o.acc, o.bal) })).sort((a, b) => a.company.localeCompare(b.company) || a.acc.localeCompare(b.acc));
+    const by = new Map(); for (const o of lines) { const x = by.get(o.key) || by.set(o.key, { key: o.key, company: o.company, dr: 0, cr: 0, net: 0, n: 0, thu: 0, tra: 0, von: 0, est: 0, rev: 0 }).get(o.key); o.bal > 0 ? x.dr += o.bal : x.cr -= o.bal; x.net += o.bal; x.n++;
+      x[o.grp] += o.grp === 'thu' ? o.bal : -o.bal; if (o.est) x.est += o.bal; if (o.rev) x.rev++; }
+    // Cơ cấu theo nhóm → tài khoản cấp 3 → tài khoản chi tiết
+    const gm = new Map(); for (const o of lines) { const g = gm.get(o.grp) || gm.set(o.grp, { grp: o.grp, name: o.grpName, dr: 0, cr: 0, accs: new Map() }).get(o.grp); const t = g.accs.get(o.a3) || g.accs.set(o.a3, { a3: o.a3, name: o.a3Name, dr: 0, cr: 0, cos: new Set(), sub: new Map() }).get(o.a3);
+      const u = t.sub.get(o.acc) || t.sub.set(o.acc, { acc: o.acc, name: o.accName, dr: 0, cr: 0, cos: new Set(), est: o.est }).get(o.acc);
+      for (const x of [g, t, u]) o.bal > 0 ? x.dr += o.bal : x.cr -= o.bal; t.cos.add(o.key); u.cos.add(o.key); }
+    const groups = ['thu', 'tra', 'von'].filter(k => gm.has(k)).map(k => { const g = gm.get(k); return { ...g, accs: [...g.accs.values()].sort((a, b) => a.a3.localeCompare(b.a3)).map(t => ({ ...t, cos: t.cos.size, sub: [...t.sub.values()].sort((a, b) => a.acc.localeCompare(b.acc)).map(u => ({ ...u, cos: u.cos.size })) })) }; });
+    return { asOf, excl, lines, groups, companies: [...by.values()].sort((a, b) => Math.abs(b.net) - Math.abs(a.net)), tot: lines.reduce((t, o) => (o.bal > 0 ? t.dr += o.bal : t.cr -= o.bal, t), { dr: 0, cr: 0 }) };
   }
   // (4) Tổng hợp theo năm: mua (ghi chi phí 627 / 641 / 642 / chi phí khác; hàng hoá – vật tư 15x; tài sản 211/213/241/242), bán (doanh thu 511/512/515/711, trừ giảm trừ)
   const YCOL = [['buy627', 'Mua – ghi chi phí 627'], ['buy641', 'Mua – ghi chi phí 641'], ['buy642', 'Mua – ghi chi phí 642'], ['buyExpO', 'Mua – chi phí khác (6xx/8xx)'], ['buyGoods', 'Mua hàng hoá, vật tư (15x)'], ['buyAsset', 'Mua tài sản, XDCB, trả trước (211/213/241/242)'], ['buyTot', 'Tổng mua'], ['sales', 'Bán – doanh thu (511/512/515/711)'], ['salesAdj', 'Giảm trừ / điều chỉnh doanh thu'], ['salesNet', 'Bán thuần']];

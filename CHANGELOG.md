@@ -1,5 +1,16 @@
 # Lịch sử phiên bản
 
+## v4.11.0 – 03/11/2026
+**Số dư nội bộ theo nhóm và tài khoản**
+- Số dư nội bộ tại ngày được chia thành 3 nhóm:
+  - Nhóm phải thu: TK loại 1–2 (131, 136, 138, 141…).
+  - Nhóm phải trả: TK loại 3 (331, 335, 336, 338…).
+  - Nhóm vốn: TK loại 4.
+- Mỗi nhóm chia tiếp: tài khoản cấp 3 → tài khoản chi tiết, kèm dư Nợ, dư Có, số dư ròng theo bản chất nhóm và số công ty.
+- Bảng theo công ty có các cột phải thu, phải trả, bù trừ (thu − trả), phần ước tính (335/1317).
+- Cảnh báo tài khoản dư ngược chiều, vd. 331 dư Nợ (trả trước người bán), 131 dư Có (người mua trả trước).
+- Nhấn đúp nhóm tài khoản hoặc tài khoản chi tiết để xem bút toán. File Excel có thêm sheet "Theo nhom tai khoan".
+
 ## v4.10.0 – 03/11/2026
 **Tuổi nợ theo từng đối tượng; tách TK 1412 (tạm ứng vật tư)**
 - TK 1412 – Tạm ứng vật tư có dòng riêng trong tuổi nợ; TK 141 tổng hợp không còn gồm 1412. Thêm nút xem nhanh "1412 tạm ứng vật tư theo đối tượng".
