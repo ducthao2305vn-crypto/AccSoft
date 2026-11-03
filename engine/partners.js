@@ -61,7 +61,7 @@ function make(db, all, get, okYm) {
     const f = okYm(from), t = okYm(to), R = (f ? ` AND ym>='${f}'` : '') + (t ? ` AND ym<='${t}'` : ''), out = new Map();
     for (let i = 0; i < ps.length; i += 400) { const c = ps.slice(i, i + 400), ph = c.map(() => '?').join(',');
       for (const side of ['debit', 'credit']) for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t
-          FROM entries WHERE partner_${side} IN (${ph})${R} AND amount<>0`, ...c)) out.set(r.id, r); }
+          FROM entries WHERE partner_${side} IN (${ph})${R} AND amount<>0 AND NOT (acc_debit=acc_credit AND ifnull(partner_debit,'')=ifnull(partner_credit,''))`, ...c)) out.set(r.id, r); }
     try { const docs = [...new Set(all(`SELECT doc FROM ig_adj WHERE action='move'`).map(x => x.doc).filter(Boolean))];
       for (let i = 0; i < docs.length; i += 400) { const c = docs.slice(i, i + 400);
         for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t

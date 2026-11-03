@@ -1,5 +1,16 @@
 # Lịch sử phiên bản
 
+## v4.24.0 – 03/11/2026
+**Loại bút toán Nợ – Có cùng tài khoản, cùng đối tượng khỏi các phân tích**
+- Bút toán ghi Nợ và Có cùng một tài khoản cho cùng một đối tượng (vd chuyển giữa các tài khoản ngân hàng cùng mã 112) không làm thay đổi số dư. Nhưng nếu tính vào, chúng làm sai:
+  - FIFO tuổi nợ và tuổi tồn kho (tuổi bị "trẻ" lại).
+  - Ghép thu tiền – doanh thu của phải thu 138812.
+  - Nhận diện trích / huỷ trích 335.
+  - Giao dịch nội bộ, chi phí định kỳ, biến động, Benford, nhà cung cấp, tỷ giá.
+- Đã loại các bút toán này khỏi những phân tích trên. Với tồn kho, chỉ loại khi cùng TK, cùng đối tượng và cùng kho; chuyển kho thì vẫn giữ.
+- **Vẫn giữ** bút toán cùng tài khoản nhưng **khác đối tượng** (vd chuyển tạm ứng 141 từ nhân viên A sang B, chuyển công nợ 331 giữa nhà cung cấp), vì đây là chuyển số dư thật giữa các đối tượng.
+- Bảng cân đối số phát sinh, CĐPS theo đối tượng và báo cáo tài chính vẫn ghi đủ phát sinh, để khớp với ERP. Số dư ở mọi báo cáo không đổi.
+
 ## v4.23.0 – 03/11/2026
 **Tuổi nợ theo hợp đồng của từng đối tượng, khớp CĐPS; đổi hợp đồng ngay trong sổ chi tiết; mọi cửa sổ mở toàn màn hình**
 - **Cửa sổ đối tượng (nhấn đúp ở "Tuổi nợ theo từng đối tượng"):**

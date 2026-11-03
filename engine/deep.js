@@ -18,7 +18,7 @@ function make(db, { INC, all, get, okYm }) {
     const from = addM(end, -(span - 1)), months = monthsIn(from, end);
     if (months.length < 4) return { items: [], months, note: `Cần ít nhất 4 tháng dữ liệu trong khoảng ${from} → ${end} (hiện có ${months.length}).` };
     const rows = all(`SELECT e.type_of_cost t, coalesce(e.partner_credit, e.partner_debit) p, e.ym, sum(e.amount) v, count(DISTINCT e.document_no) d
-      FROM entries e WHERE ${INC} AND e.ym>=? AND e.ym<=? AND ${EXP_D} AND ${AUTO} AND e.type_of_cost IS NOT NULL GROUP BY 1,2,3`, from, end);
+      FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'')) AND e.ym>=? AND e.ym<=? AND ${EXP_D} AND ${AUTO} AND e.type_of_cost IS NOT NULL GROUP BY 1,2,3`, from, end);
     const g = new Map();
     for (const r of rows) { const k = r.t + '|' + r.p; const o = g.get(k) || g.set(k, { t: r.t, p: r.p, by: {} }).get(k); o.by[r.ym] = { v: r.v, d: r.d }; }
     const need = Math.max(3, Math.ceil(months.length * CFG.recurringShare / 100)), items = [];
@@ -46,7 +46,7 @@ function make(db, { INC, all, get, okYm }) {
     let rows;
     if (by === 'tcost_bp') {
       rows = all(`SELECT coalesce(e.type_of_cost,'(chưa phân loại)')||' · '||coalesce(e.partner_credit,e.partner_debit,'(không đối tượng)') g, e.ym, sum(e.amount) v
-        FROM entries e WHERE ${INC} AND e.ym>=? AND e.ym<=? AND ${EXP_D} AND ${AUTO} GROUP BY 1,2`, from, ym);
+        FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'')) AND e.ym>=? AND e.ym<=? AND ${EXP_D} AND ${AUTO} GROUP BY 1,2`, from, ym);
     } else {
       const G = by === 'acc' ? 'coalesce(e.acc_name,e.acc)' : by === 'dept' ? `coalesce(e.dept,'(trống)')` : kind === 'rev' ? `coalesce(e.trev,'(chưa phân loại)')` : `coalesce(e.tcost,'(chưa phân loại)')`;
       rows = all(`SELECT ${G} g, e.ym, sum(e.amount*${sign}) v FROM agg e WHERE ${INC} AND e.ym>=? AND e.ym<=? AND ${accF} GROUP BY 1,2`, from, ym);
@@ -69,7 +69,7 @@ function make(db, { INC, all, get, okYm }) {
   function accruals(asOf, acc = '') {
     const a = /^335\d*$/.test(String(acc || '')) ? String(acc) : '335';
     const rows = all(`SELECT e.account_date d, e.ym, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.type_of_cost t
-      FROM entries e WHERE ${INC} AND e.account_date<=? AND (e.acc_debit LIKE '${a}%' OR e.acc_credit LIKE '${a}%')`, asOf);
+      FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'')) AND e.account_date<=? AND (e.acc_debit LIKE '${a}%' OR e.acc_credit LIKE '${a}%')`, asOf);
     const g = new Map(), asD = new Date(asOf);
     for (const r of rows) for (const side of ['dr', 'cr']) {
       if (!String(r[side]).startsWith(a)) continue;
@@ -99,7 +99,7 @@ function make(db, { INC, all, get, okYm }) {
   /* #3b TK 242: lịch phân bổ theo hợp đồng (kỳ phân bổ lấy từ Distribution From/To của dòng ghi Nợ 242) */
   function prepaid(asOf) {
     const rows = all(`SELECT e.account_date d, e.acc_debit dr, e.acc_credit cr, e.amount a, e.contract c, coalesce(e.partner_debit,e.partner_credit) p, e.type_of_cost t,
-        e.dist_from f, e.dist_to tt, e.description ds FROM entries e WHERE ${INC} AND e.account_date<=? AND (e.acc_debit LIKE '242%' OR e.acc_credit LIKE '242%')`, asOf);
+        e.dist_from f, e.dist_to tt, e.description ds FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'')) AND e.account_date<=? AND (e.acc_debit LIKE '242%' OR e.acc_credit LIKE '242%')`, asOf);
     const g = new Map(), mdiff = (a, b) => (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7));
     for (const r of rows) {
       const k = r.c || `(không HĐ) ${nameOf(r.p) || ''} · ${r.t || ''}`;
@@ -129,7 +129,7 @@ function make(db, { INC, all, get, okYm }) {
   const BEN = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => Math.log10(1 + 1 / d));
   function benford(from, to) {
     const rows = all(`SELECT e.created_by u, substr(printf('%d', abs(e.amount)),1,1) d, count(*) n, sum(CASE WHEN abs(e.amount)>=100 AND CAST(abs(e.amount) AS INTEGER) % 100 = 0 AND abs(e.amount)=CAST(abs(e.amount) AS INTEGER) THEN 1 ELSE 0 END) r
-      FROM entries e WHERE ${INC} AND abs(e.amount)>=10 AND ${AUTO}${okYm(from) ? ` AND e.ym>='${okYm(from)}'` : ''}${okYm(to) ? ` AND e.ym<='${okYm(to)}'` : ''} GROUP BY 1,2`);
+      FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'')) AND abs(e.amount)>=10 AND ${AUTO}${okYm(from) ? ` AND e.ym>='${okYm(from)}'` : ''}${okYm(to) ? ` AND e.ym<='${okYm(to)}'` : ''} GROUP BY 1,2`);
     const g = new Map(), tot = { u: 'Toàn bộ', c: Array(9).fill(0), r: 0 };
     for (const r of rows) { const d = +r.d; if (!(d >= 1 && d <= 9)) continue; const o = g.get(r.u) || g.set(r.u, { u: r.u, c: Array(9).fill(0), r: 0 }).get(r.u); o.c[d - 1] += r.n; o.r += r.r; tot.c[d - 1] += r.n; tot.r += r.r; }
     const fin = o => { const n = o.c.reduce((a, b) => a + b, 0), obs = o.c.map(x => n ? x / n : 0), mad = obs.reduce((s, x, i) => s + Math.abs(x - BEN[i]), 0) / 9;
@@ -168,7 +168,7 @@ function make(db, { INC, all, get, okYm }) {
     .replace(/\b(company|co|ltd|limited|unipessoal|lda|jsc|joint|stock|corporation|corp|trading|cong ty|tnhh|co phan|group|the|sarl|sa|pte|inc|llc)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
   function vendors(from, to) {
     const R = (okYm(from) ? ` AND e.ym>='${okYm(from)}'` : '') + (okYm(to) ? ` AND e.ym<='${okYm(to)}'` : '');
-    const buy = all(`SELECT e.partner_credit p, sum(e.amount) v, count(*) n, min(e.account_date) f FROM entries e WHERE ${INC}${R} AND e.acc_credit LIKE '331%' AND e.partner_credit IS NOT NULL AND ifnull(e.source_table,'')<>'OPENING_BALANCE' GROUP BY 1`);
+    const buy = all(`SELECT e.partner_credit p, sum(e.amount) v, count(*) n, min(e.account_date) f FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,''))${R} AND e.acc_credit LIKE '331%' AND e.partner_credit IS NOT NULL AND ifnull(e.source_table,'')<>'OPENING_BALANCE' GROUP BY 1`);
     const firstAll = new Map(all(`SELECT p, min(d) d FROM (SELECT e.partner_credit p, e.account_date d FROM entries e WHERE e.acc_credit LIKE '331%' UNION ALL SELECT e.partner_debit, e.account_date FROM entries e WHERE e.acc_debit LIKE '331%') WHERE p IS NOT NULL GROUP BY p`).map(r => [r.p, r.d]));
     const total = buy.reduce((s, r) => s + r.v, 0);
     buy.sort((a, b) => b.v - a.v);
@@ -189,11 +189,11 @@ function make(db, { INC, all, get, okYm }) {
   /* #7 Tỷ giá */
   function fx(from, to) {
     const R = (okYm(from) ? ` AND e.ym>='${okYm(from)}'` : '') + (okYm(to) ? ` AND e.ym<='${okYm(to)}'` : '');
-    const s = get(`SELECT count(*) n, sum(CASE WHEN ifnull(e.rate_vnd,0)>0 THEN 1 ELSE 0 END) has, count(DISTINCT e.currency) cur FROM entries e WHERE ${INC}${R}`);
-    if (!s.has) return { noData: true, rows: s.n, currencies: all(`SELECT e.currency c, count(*) n FROM entries e WHERE ${INC}${R} GROUP BY 1`) };
+    const s = get(`SELECT count(*) n, sum(CASE WHEN ifnull(e.rate_vnd,0)>0 THEN 1 ELSE 0 END) has, count(DISTINCT e.currency) cur FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,''))${R}`);
+    if (!s.has) return { noData: true, rows: s.n, currencies: all(`SELECT e.currency c, count(*) n FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,''))${R} GROUP BY 1`) };
     const multi = all(`SELECT e.account_date d, e.currency c, count(DISTINCT e.rate_vnd) k, min(e.rate_vnd) lo, max(e.rate_vnd) hi, count(*) n FROM entries e
       WHERE ${INC}${R} AND e.rate_vnd>0 GROUP BY 1,2 HAVING count(DISTINCT e.rate_vnd)>1 ORDER BY (max(e.rate_vnd)-min(e.rate_vnd))/min(e.rate_vnd) DESC LIMIT 200`);
-    const dev = all(`WITH m AS (SELECT e.ym, e.currency c, avg(e.rate_vnd) a FROM entries e WHERE ${INC}${R} AND e.rate_vnd>0 GROUP BY 1,2)
+    const dev = all(`WITH m AS (SELECT e.ym, e.currency c, avg(e.rate_vnd) a FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,''))${R} AND e.rate_vnd>0 GROUP BY 1,2)
       SELECT e.id rid, e.account_date d, e.document_no doc, e.currency c, e.rate_vnd r, m.a avg, e.amount amt, e.created_by u FROM entries e JOIN m ON m.ym=e.ym AND m.c=e.currency
       WHERE ${INC}${R} AND e.rate_vnd>0 AND abs(e.rate_vnd-m.a)/m.a>0.02 ORDER BY abs(e.rate_vnd-m.a)/m.a DESC LIMIT 300`);
     return { noData: false, rows: s.n, has: s.has, multi, dev };
