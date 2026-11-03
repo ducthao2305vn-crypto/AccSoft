@@ -150,6 +150,14 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Báo cáo nội bộ (v4.8)
+- `partners.js` cung cấp các hàm sau:
+  - `EST`: nhận diện bút toán ước tính 335/1317, dùng cho tham số `excl`.
+  - `picker`: khi cả hai vế đều là NB thì chọn vế công nợ.
+  - `companies`, `internal`, `internalRows`, `internalBalance(asOf)`, `internalYears(years)`; danh sách cột theo năm nằm trong `YCOL`.
+- IPC tương ứng: `grpBalance`, `grpYears`, `grpCompanies` (đều nằm trong READ).
+- Trên UI: `vInternal` dùng state `IG {m:sum|bal|det|year, co, tt, ex, years}` và lưu vào localStorage với khoá `igPick`.
+
 - **Bảng `partners_cat`** gồm `code_name` (khoá chính = đúng chuỗi partner_debit / partner_credit trong dữ liệu), code, name, kind, nb_code, nb_name, note.
   - Nạp từ Excel bằng IPC `cat:import` (chấp nhận tiêu đề Code_Name/Code/Name/Kind Of Customer/Code_NB/Name_NB hoặc tiếng Việt), mode merge | replace.
   - Truy vấn: `catList`, `catUpsert(r, oldKey)`, `catRemove(keys)`, `catExport`, `catUnmatched`, `catStats`. Các hàm ghi đã có trong mảng `WRITE`.

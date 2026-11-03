@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.8.0 – 03/11/2026
+**Báo cáo giao dịch nội bộ (4 chế độ)**
+- Tổng hợp kỳ: chọn từ tháng – đến tháng, lọc theo công ty nội bộ, có ô tích **Không tính TK ước tính (335, 1317)**.
+- Số dư nội bộ tại ngày: số dư của các tài khoản thuộc nhóm 1–4 theo từng công ty và tài khoản, kèm dư Nợ / dư Có và ngày phát sinh cuối.
+- Chi tiết giao dịch từ ngày đến ngày, xuất được Excel.
+- Tổng hợp theo năm (chọn nhiều năm): phần mua tách riêng 627 / 641 / 642 / chi phí khác / hàng hoá – vật tư (15x) / tài sản (211, 213, 241, 242); phần bán gồm doanh thu 511/512/515/711, trừ các khoản giảm trừ.
+- Khi cả hai vế đều là đối tượng nội bộ, ứng dụng lấy vế công nợ (13x/14x/33x/34x/35x).
+
 ## v4.7.1 – 03/11/2026
 **Giao dịch nội bộ / Thanh toán quốc tế: báo rõ lý do khi chưa có số liệu**
 - Khi trang không có số liệu, ứng dụng nêu đúng nguyên nhân:

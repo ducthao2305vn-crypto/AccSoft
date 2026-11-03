@@ -78,26 +78,76 @@ function make(db, all, get, okYm) {
   }
   const CATS = ['Doanh thu', 'Giảm trừ / điều chỉnh doanh thu', 'Chi phí', 'Mua hàng hoá, vật tư, tài sản', 'Bán / xuất hàng', 'Thu tiền', 'Trả tiền', 'Công nợ, bù trừ, khác'];
 
-  function internal(from, to, withTT = false) {
-    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, from, to);
-    const pick = r => { const c = map.get(r.bpCr), d = map.get(r.bp); return c && kinds.includes(c.kind) ? [r.bpCr, c] : [r.bp, d]; };
+  // TK ước tính: 335 (chi phí phải trả – trích trước), 1317 (doanh thu ước tính)
+  const EST = r => A(r.dr, '335', '1317') || A(r.cr, '335', '1317');
+  // Đối tượng nội bộ của bút toán: nếu cả hai phía đều là đối tượng nội bộ thì lấy phía TK công nợ (13x, 14x, 33x, 34x, 35x), không thì phía Có
+  const DEBT = a => A(a, '13', '14', '33', '34', '35');
+  function picker(map, kinds) {
+    return r => { const c = map.get(r.bpCr), d = map.get(r.bp), okC = c && kinds.includes(c.kind), okD = d && kinds.includes(d.kind);
+      if (okC && okD) return DEBT(r.dr) && !DEBT(r.cr) ? [r.bp, d] : [r.bpCr, c];
+      return okC ? [r.bpCr, c] : okD ? [r.bp, d] : [null, null]; };
+  }
+  const coKey = (c, p) => c.nb_code || c.nb_name || c.name || nm(p), coName = (c, p) => c.nb_name || c.nb_code || c.name || nm(p);
+  // Danh sách công ty / đơn vị nội bộ trong danh mục (để lọc)
+  function companies(withTT = false) {
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], m = new Map();
+    for (const r of all(`SELECT * FROM partners_cat WHERE kind IN (${kinds.map(() => '?').join(',')})`, ...kinds)) { const k = coKey(r, r.code_name); const o = m.get(k) || m.set(k, { key: k, name: coName(r, r.code_name), kind: r.kind, codes: [] }).get(k); o.codes.push(r.code_name); }
+    return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  function internal(from, to, withTT = false, excl = false, company = '') {
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows: rows0, map } = rowsOfKinds(kinds, from, to), pick = picker(map, kinds);
+    const rows = rows0.filter(r => (!excl || !EST(r)) && (!company || (() => { const [p, c] = pick(r); return c && coKey(c, p) === company; })()));
     const months = [...new Set(rows.map(r => r.ym))].sort(), co = new Map(), pt = new Map(), mm = new Map();
     for (const r of rows) {
-      const [p, c] = pick(r); if (!c) continue; const cat = category(r), company = c.nb_name || c.nb_code || c.name || nm(p), key = c.nb_code || company;
+      const [p, c] = pick(r); if (!c) continue; const cat = category(r), company = coName(c, p), key = coKey(c, p);
       const o = co.get(key) || co.set(key, { key, company, code: c.nb_code, kind: c.kind, partners: new Set(), by: Object.fromEntries(CATS.map(k => [k, 0])), n: 0 }).get(key);
       o.by[cat] += r.a; o.n++; o.partners.add(p);
       const q = pt.get(p) || pt.set(p, { p, name: nm(p), company, kind: c.kind, by: Object.fromEntries(CATS.map(k => [k, 0])), n: 0 }).get(p); q.by[cat] += r.a; q.n++;
       const m = mm.get(r.ym) || mm.set(r.ym, Object.fromEntries(CATS.map(k => [k, 0]))).get(r.ym); m[cat] += r.a;
     }
     const tot = Object.fromEntries(CATS.map(k => [k, [...co.values()].reduce((s, o) => s + o.by[k], 0)]));
-    return { from: okYm(from) || months[0], to: okYm(to) || months.at(-1), withTT, cats: CATS, tot, n: rows.length, months: months.map(m => ({ ym: m, ...mm.get(m) })),
+    return { from: okYm(from) || months[0], to: okYm(to) || months.at(-1), withTT, excl, company, cats: CATS, tot, n: rows.length, months: months.map(m => ({ ym: m, ...mm.get(m) })),
       companies: [...co.values()].map(o => ({ ...o, partners: o.partners.size })).sort((a, b) => b.n - a.n), partners: [...pt.values()].sort((a, b) => b.n - a.n) };
   }
-  function internalRows(from, to, withTT, key, cat, limit = 2000) { // chi tiết bút toán của một công ty nội bộ / một loại nghiệp vụ
-    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, from, to);
-    return rows.filter(r => { const c = map.get(r.bpCr) && kinds.includes(map.get(r.bpCr).kind) ? map.get(r.bpCr) : map.get(r.bp); if (!c) return false;
-      const k = c.nb_code || c.nb_name || c.name; return (!key || k === key || c.nb_name === key) && (!cat || category(r) === cat); })
-      .sort((a, b) => a.d.localeCompare(b.d)).slice(0, limit).map(r => ({ ...r, cat: category(r) }));
+  function internalRows(from, to, withTT, key, cat, limit = 20000, excl = false) { // chi tiết bút toán nội bộ (lọc theo công ty / loại nghiệp vụ)
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, from, to), pick = picker(map, kinds);
+    const out = [];
+    for (const r of rows) { const [p, c] = pick(r); if (!c || (excl && EST(r))) continue; const k = coKey(c, p);
+      if ((key && k !== key) || (cat && category(r) !== cat)) continue; out.push({ ...r, cat: category(r), company: coName(c, p), coKey: k, ip: p, est: EST(r) }); }
+    out.sort((a, b) => a.d.localeCompare(b.d) || a.doc.localeCompare(b.doc));
+    return { total: out.length, rows: out.slice(0, limit) };
+  }
+  // (1) Số dư nội bộ tại ngày: cộng dồn phát sinh của TK bảng cân đối (loại 1–4) theo đúng phía đối tượng (TK Nợ ↔ đối tượng Nợ, TK Có ↔ đối tượng Có)
+  function internalBalance(asOf, withTT = false, excl = false, company = '') {
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, '', String(asOf || '').slice(0, 7));
+    const m = new Map();
+    for (const r of rows) { if (asOf && r.d > asOf) continue;
+      for (const [acc, accName, p, sgn] of [[r.dr, r.drName, r.bp, 1], [r.cr, r.crName, r.bpCr, -1]]) {
+        const c = map.get(p); if (!c || !kinds.includes(c.kind) || !/^[1-4]/.test(acc || '')) continue;
+        if (excl && A(acc, '335', '1317')) continue; const k = coKey(c, p); if (company && k !== company) continue;
+        const key = k + '|' + acc, o = m.get(key) || m.set(key, { key: k, company: coName(c, p), acc, accName: accName || acc, bal: 0, dr: 0, cr: 0, last: null, est: A(acc, '335', '1317') }).get(key);
+        o.bal += sgn * r.a; sgn > 0 ? o.dr += r.a : o.cr += r.a; if (!o.last || r.d > o.last) o.last = r.d; } }
+    const lines = [...m.values()].filter(o => Math.abs(o.bal) > 0.005).sort((a, b) => a.company.localeCompare(b.company) || a.acc.localeCompare(b.acc));
+    const by = new Map(); for (const o of lines) { const x = by.get(o.key) || by.set(o.key, { key: o.key, company: o.company, dr: 0, cr: 0, net: 0, n: 0 }).get(o.key); o.bal > 0 ? x.dr += o.bal : x.cr -= o.bal; x.net += o.bal; x.n++; }
+    return { asOf, excl, lines, companies: [...by.values()].sort((a, b) => Math.abs(b.net) - Math.abs(a.net)), tot: lines.reduce((t, o) => (o.bal > 0 ? t.dr += o.bal : t.cr -= o.bal, t), { dr: 0, cr: 0 }) };
+  }
+  // (4) Tổng hợp theo năm: mua (ghi chi phí 627 / 641 / 642 / chi phí khác; hàng hoá – vật tư 15x; tài sản 211/213/241/242), bán (doanh thu 511/512/515/711, trừ giảm trừ)
+  const YCOL = [['buy627', 'Mua – ghi chi phí 627'], ['buy641', 'Mua – ghi chi phí 641'], ['buy642', 'Mua – ghi chi phí 642'], ['buyExpO', 'Mua – chi phí khác (6xx/8xx)'], ['buyGoods', 'Mua hàng hoá, vật tư (15x)'], ['buyAsset', 'Mua tài sản, XDCB, trả trước (211/213/241/242)'], ['buyTot', 'Tổng mua'], ['sales', 'Bán – doanh thu (511/512/515/711)'], ['salesAdj', 'Giảm trừ / điều chỉnh doanh thu'], ['salesNet', 'Bán thuần']];
+  function internalYears(years, withTT = false, excl = false, company = '') {
+    years = [...new Set([].concat(years || []).map(String).filter(y => /^\d{4}$/.test(y)))].sort(); if (!years.length) return { years, cols: YCOL, rows: [] };
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, years[0] + '-01', years.at(-1) + '-12'), pick = picker(map, kinds);
+    const m = new Map(), z = () => Object.fromEntries(YCOL.map(([k]) => [k, 0]));
+    for (const r of rows) { const y = r.ym.slice(0, 4); if (!years.includes(y) || (excl && EST(r))) continue; const [p, c] = pick(r); if (!c) continue; const k = coKey(c, p); if (company && k !== company) continue;
+      const o = m.get(k) || m.set(k, { key: k, company: coName(c, p), kind: c.kind, y: Object.fromEntries(years.map(x => [x, z()])) }).get(k), t = o.y[y];
+      if (A(r.dr, '627')) t.buy627 += r.a; else if (A(r.dr, '641')) t.buy641 += r.a; else if (A(r.dr, '642')) t.buy642 += r.a;
+      else if (A(r.dr, '6', '8') && !A(r.dr, '911', '632')) t.buyExpO += r.a; else if (A(r.dr, '15')) t.buyGoods += r.a; else if (A(r.dr, '211', '213', '241', '242')) t.buyAsset += r.a;
+      if (A(r.cr, '511', '512', '515', '711')) t.sales += r.a; if (A(r.dr, '511', '512', '521')) t.salesAdj += r.a;
+      if (A(r.cr, '627', '641', '642')) { const col = A(r.cr, '627') ? 'buy627' : A(r.cr, '641') ? 'buy641' : 'buy642'; t[col] -= r.a; } // ghi giảm chi phí
+    }
+    for (const o of m.values()) for (const y of years) { const t = o.y[y]; t.buyTot = t.buy627 + t.buy641 + t.buy642 + t.buyExpO + t.buyGoods + t.buyAsset; t.salesNet = t.sales - t.salesAdj; }
+    const list = [...m.values()].sort((a, b) => Math.abs(b.y[years.at(-1)].buyTot) + Math.abs(b.y[years.at(-1)].salesNet) - Math.abs(a.y[years.at(-1)].buyTot) - Math.abs(a.y[years.at(-1)].salesNet));
+    const tot = Object.fromEntries(years.map(y => [y, Object.fromEntries(YCOL.map(([k]) => [k, list.reduce((s, o) => s + o.y[y][k], 0)]))]));
+    return { years, cols: YCOL, rows: list, tot, excl, company };
   }
 
   // Thanh toán cho đối tác quốc tế: bút toán Có TK tiền (111/112/113), đối tượng Nợ thuộc nhóm quốc tế
@@ -130,6 +180,6 @@ function make(db, all, get, okYm) {
     for (const p of parts) { const k = map.get(p)?.kind || '(chưa phân loại)'; c[k] = (c[k] || 0) + 1; }
     return { partners: parts.length, matched: map.size, byKind: c, catalog: get('SELECT count(*) n FROM partners_cat').n };
   }
-  return { list, upsert, remove, importRows, exportAll, unmatched, internal, internalRows, intlPayments, kindStats, KINDS };
+  return { list, upsert, remove, importRows, exportAll, unmatched, internal, internalRows, internalBalance, internalYears, companies, intlPayments, kindStats, KINDS };
 }
 module.exports = { make, KINDS };
