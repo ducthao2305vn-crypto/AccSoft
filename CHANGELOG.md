@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v4.22.1 – 03/11/2026
+**Điều chỉnh dữ liệu: mã vị trí lấy từ cột Location**
+- Mã vị trí đọc và điều chỉnh theo cột **Location** của ERP, không còn dùng BTS Site.
+- Biển số xe lấy từ cột **License Plate**.
+
 ## v4.22.0 – 03/11/2026
 **Mới: Điều chỉnh dữ liệu quản trị (Hợp đồng, Mã vị trí, Biển số xe, Loại dòng tiền)**
 - Thêm trang **Kiểm soát → Điều chỉnh dữ liệu**.

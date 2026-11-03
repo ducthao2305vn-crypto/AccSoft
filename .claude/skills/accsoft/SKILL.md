@@ -151,7 +151,7 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
 ### Điều chỉnh dữ liệu quản trị (v4.22, `engine/fieldadj.js`)
-- Bảng `field_adj(id, field, value, orig, sig, doc, d, ym, note, PK(id, field))`, với field là `contract | bts | plate`. Riêng `cf` ghi vào `cf_adj` qua `FIN.cfAdjSet` (sig dạng `'c:'+…`).
+- Bảng `field_adj(id, field, value, orig, sig, doc, d, ym, note, PK(id, field))`, với field là `contract | location | plate` (Mã vị trí = cột ERP **Location**, Biển số xe = **License Plate**). Riêng `cf` ghi vào `cf_adj` qua `FIN.cfAdjSet` (sig dạng `'c:'+…`).
 - Hàm: `search` (tối đa 5000 dòng, trả kèm `xxxNew`), `values`, `set`, `remove`, `list`, `rebind` (gắn lại theo `sig` sau khi nạp lại dữ liệu).
 - IPC: `faSearch`, `faValues`, `faList` nằm trong READ; `faSet`, `faRemove`, `faRebind` nằm trong WRITE.
 - Cột `entries.plate` lấy từ nhiều tên tiêu đề có thể có; `worker.SRC` chấp nhận mảng tên.

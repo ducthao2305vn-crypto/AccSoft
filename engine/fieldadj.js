@@ -1,7 +1,7 @@
 'use strict';
-// Điều chỉnh các trường quản trị của bút toán (không sửa dữ liệu gốc): Hợp đồng, Mã vị trí (BTS Site), Biển số xe, Loại dòng tiền.
+// Điều chỉnh các trường quản trị của bút toán (không sửa dữ liệu gốc): Hợp đồng, Mã vị trí (Location), Biển số xe, Loại dòng tiền.
 // Hợp đồng / vị trí / biển số lưu ở bảng field_adj (theo id bút toán + chữ ký nội dung); dòng tiền dùng chung bảng cf_adj của B03.
-const FIELDS = { contract: { col: 'contract', name: 'Hợp đồng' }, bts: { col: 'bts_site', name: 'Mã vị trí (BTS Site)' }, plate: { col: 'plate', name: 'Biển số xe' }, cf: { col: 'cashflow', name: 'Loại dòng tiền' } };
+const FIELDS = { contract: { col: 'contract', name: 'Hợp đồng' }, location: { col: 'location', name: 'Mã vị trí (Location)' }, plate: { col: 'plate', name: 'Biển số xe' }, cf: { col: 'cashflow', name: 'Loại dòng tiền' } };
 const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+r.a || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
 
 function make(db, all, run, okYm, FIN) {
@@ -22,13 +22,13 @@ function make(db, all, run, okYm, FIN) {
     if (!w.length) w.push('1');
     const lim = Math.min(+o.limit || 5000, 20000);
     const rows = all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount a, e.partner_debit bp, e.partner_credit bpCr,
-        e.description ds, e.created_by u, e.contract, e.bts_site bts, e.plate, e.cashflow cf FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.id LIMIT ${lim + 1}`, ...a);
+        e.description ds, e.created_by u, e.contract, e.location, e.plate, e.cashflow cf FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.id LIMIT ${lim + 1}`, ...a);
     const ids = rows.map(r => r.id), adj = new Map();
     for (let i = 0; i < ids.length; i += 500) { const c = ids.slice(i, i + 500); for (const x of all(`SELECT * FROM field_adj WHERE id IN (${c.map(() => '?').join(',')})`, ...c)) adj.set(x.id + '|' + x.field, x); }
     const cfa = new Map(); try { for (const x of all(`SELECT sig, code, note FROM cf_adj`)) cfa.set(x.sig, x); } catch { }
     const CFN = (FIN.cfRows ? null : null), out = rows.slice(0, lim).map(r => {
       const o2 = { ...r, sig: sigOf(r), cash: CASH(r.dr) !== CASH(r.cr) };
-      for (const k of ['contract', 'bts', 'plate']) { const x = adj.get(r.id + '|' + k); o2[k + 'New'] = x ? x.value : null; o2[k + 'Note'] = x ? x.note : ''; }
+      for (const k of ['contract', 'location', 'plate']) { const x = adj.get(r.id + '|' + k); o2[k + 'New'] = x ? x.value : null; o2[k + 'Note'] = x ? x.note : ''; }
       const c = cfa.get('c:' + o2.sig); o2.cfNew = c ? c.code : null; o2.cfNote = c ? c.note : '';
       return o2;
     });
@@ -47,7 +47,7 @@ function make(db, all, run, okYm, FIN) {
     if (field === 'cf') { const cash = items.filter(x => CASH(x.dr) !== CASH(x.cr)); if (!cash.length) throw new Error('Chỉ điều chỉnh dòng tiền cho bút toán có thu / chi tiền (TK 111, 112, 113)'); return FIN.cfAdjSet(cash.map(x => ({ ...x, sig: 'c:' + sigOf(x) })), value, note); }
     db.exec('BEGIN'); try { let n = 0;
       for (const x of items) { run(`INSERT OR REPLACE INTO field_adj(id, field, value, orig, sig, doc, d, ym, note, updated_at) VALUES(?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`,
-        x.id, field, String(value ?? '').trim(), x[field === 'bts' ? 'bts' : field] ?? null, sigOf(x), x.doc, x.d, String(x.d || '').slice(0, 7), note || ''); n++; }
+        x.id, field, String(value ?? '').trim(), x[field] ?? null, sigOf(x), x.doc, x.d, String(x.d || '').slice(0, 7), note || ''); n++; }
       db.exec('COMMIT'); return { n }; } catch (e) { db.exec('ROLLBACK'); throw e; }
   }
   function remove(keys) { let n = 0;
