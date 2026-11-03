@@ -230,7 +230,9 @@ async function riskPdf() {
 async function saveXlsx(defName, wb) {
   const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: defName, filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
   if (canceled) return null;
-  fs.writeFileSync(filePath, R.toBuffer(wb));
+  const XF = require('./engine/xlsfmt'), nm = path.basename(defName || filePath);
+  if (XF.RAW.test(nm)) fs.writeFileSync(filePath, R.toBuffer(wb));
+  else { const w2 = XF.prettify(wb, nm); fs.writeFileSync(filePath, XF.stylize(R.toBuffer(w2), w2)); }
   shell.showItemInFolder(filePath);
   return filePath;
 }

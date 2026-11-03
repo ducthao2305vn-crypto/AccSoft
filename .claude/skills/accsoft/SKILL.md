@@ -150,6 +150,15 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Nhóm nội bộ & định dạng Excel (v4.19)
+- **Lọc công ty:** `partners.js` có `coMatch(k, f)`. Giá trị `f` có thể là '' (tất cả), một mã công ty, hoặc `'G:1:TFU,VTC,…'` / `'G:2:…'` (nhóm 2 = ngoài danh sách nhóm 1).
+- **UI:** `IG.par` (danh sách nhóm 1) và `IG.split`. Hàm `SPL(list, key, row, sub, nc)` tạo dòng tiêu đề nhóm và dòng "Cộng nhóm".
+- **Excel (`engine/xlsfmt.js`):** `main.saveXlsx` gọi `prettify(wb, tên file)`, sau đó `stylize(buffer, wb)`.
+  - `prettify` thêm 4 dòng đầu (tiêu đề cột ở dòng 5), gán định dạng số theo kiểu cột, đặt độ rộng cột, autofilter, đổi tên sheet có dấu (`SHEET_VN`), lấy tên báo cáo theo tên file (`TITLE`).
+  - `stylize` dùng CFB để mở gói zip và chèn font/fill/border/xf vào styles.xml, gán `s` cho từng ô, thêm freeze pane.
+  - Tên file khớp `RAW` (mẫu số dư đầu kỳ, DANH_MUC) được giữ dạng thô.
+- Không dùng được xlsx-js-style (bị chặn cài code bên ngoài), nên phải tự chèn kiểu như trên.
+
 ### Sắp xếp theo tiêu đề cột (v4.17)
 - Cuối `app.js` có một IIFE bắt sự kiện click trên `thead th`. `colOf` tính vị trí cột khi tiêu đề có rowspan/colspan; `num_` chuyển ô thành số hoặc ngày để so sánh.
 - Dòng ghim cuối bảng: dòng colspan, hoặc dòng có style `font-weight:700` / `brand-25`.

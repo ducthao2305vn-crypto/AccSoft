@@ -102,6 +102,8 @@ function make(db, all, get, okYm) {
       if (okC2 && okD2) return DEBT(r.dr) && !DEBT(r.cr) ? [r.bp, d] : [r.bpCr, c];
       return okC2 ? [r.bpCr, c] : okD2 ? [r.bp, d] : [null, null]; };
   }
+  // Lọc công ty: '' = tất cả; 'TFU' = một công ty; 'G:1:TFU,VTC,STL,VTG' = nhóm 1 (mẹ – con, danh sách mã); 'G:2:…' = nhóm 2 (cùng tập đoàn = các đơn vị còn lại)
+  const coMatch = (k, f) => { if (!f) return true; const m = /^G:([12]):(.*)$/.exec(f); if (!m) return k === f; const L = m[2].split(',').map(x => x.trim().toUpperCase()).filter(Boolean), inG1 = L.includes(String(k).toUpperCase()); return m[1] === '1' ? inG1 : !inG1; };
   const coKey = (c, p) => c.nb_code || c.nb_name || c.name || nm(p), coName = (c, p) => c.nb_name || c.nb_code || c.name || nm(p);
   // Danh sách công ty / đơn vị nội bộ trong danh mục (để lọc)
   function companies(withTT = false) {
@@ -111,7 +113,7 @@ function make(db, all, get, okYm) {
   }
   function internal(from, to, withTT = false, excl = false, company = '') {
     const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows: rows0, map } = rowsOfKinds(kinds, from, to), pick = picker(map, kinds, adjMap());
-    const rows = rows0.filter(r => (!excl || !EST(r)) && (!company || (() => { const [p, c] = pick(r); return c && coKey(c, p) === company; })()));
+    const rows = rows0.filter(r => (!excl || !EST(r)) && (!company || (() => { const [p, c] = pick(r); return c && coMatch(coKey(c, p), company); })()));
     const months = [...new Set(rows.map(r => r.ym))].sort(), co = new Map(), pt = new Map(), mm = new Map();
     for (const r of rows) {
       const [p, c] = pick(r); if (!c) continue; const cat = category(r), company = coName(c, p), key = coKey(c, p);
@@ -128,7 +130,7 @@ function make(db, all, get, okYm) {
     const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, from, to), adj = adjMap(), pick = picker(map, kinds, adj), sus = suspect(map, kinds);
     const out = [];
     for (const r of rows) { const [p, c] = pick(r); if (!c || (excl && EST(r))) continue; const k = coKey(c, p);
-      if ((key && k !== key) || (cat && category(r) !== cat)) continue; const a = adjOf(adj, r);
+      if (!coMatch(k, key) || (cat && category(r) !== cat)) continue; const a = adjOf(adj, r);
       out.push({ ...r, cat: category(r), company: coName(c, p), coKey: k, ip: p, est: EST(r), sig: sigRow(r), adj: a ? (a.action === 'move' ? 'Gán lại → ' + a.to_key : '') : '', sus: sus(r, k) }); }
     out.sort((a, b) => a.d.localeCompare(b.d) || a.doc.localeCompare(b.doc));
     return { total: out.length, rows: out.slice(0, limit) };
@@ -156,7 +158,7 @@ function make(db, all, get, okYm) {
       const mv = ad && ad.action === 'move' && ci.get(ad.to_key), pre = from && r.d < from;
       for (const [acc, accName, p0, sgn] of [[r.dr, r.drName, r.bp, 1], [r.cr, r.crName, r.bpCr, -1]]) {
         let p = p0, c = map.get(p); if (mv && DEBT(acc)) [p, c] = mv; if (!c || !kinds.includes(c.kind) || !ibAcc(acc)) continue;
-        if (excl && A(acc, '335', '1317')) continue; const k = coKey(c, p); if (company && k !== company) continue;
+        if (excl && A(acc, '335', '1317')) continue; const k = coKey(c, p); if (!coMatch(k, company)) continue;
         const key = k + '|' + acc, o = m.get(key) || m.set(key, { key: k, company: coName(c, p), acc, accName: accName || acc, ob: 0, bal: 0, dr: 0, cr: 0, last: null, est: A(acc, '335', '1317') }).get(key);
         o.bal += sgn * r.a; if (pre) o.ob += sgn * r.a; else sgn > 0 ? o.dr += r.a : o.cr += r.a; if (!o.last || r.d > o.last) o.last = r.d; } }
     const nat = o => o.grp === 'thu' ? 1 : -1;
@@ -177,7 +179,7 @@ function make(db, all, get, okYm) {
     years = [...new Set([].concat(years || []).map(String).filter(y => /^\d{4}$/.test(y)))].sort(); if (!years.length) return { years, cols: YCOL, rows: [] };
     const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, years[0] + '-01', years.at(-1) + '-12'), pick = picker(map, kinds, adjMap());
     const m = new Map(), z = () => Object.fromEntries(YCOL.map(([k]) => [k, 0]));
-    for (const r of rows) { const y = r.ym.slice(0, 4); if (!years.includes(y) || (excl && EST(r))) continue; const [p, c] = pick(r); if (!c) continue; const k = coKey(c, p); if (company && k !== company) continue;
+    for (const r of rows) { const y = r.ym.slice(0, 4); if (!years.includes(y) || (excl && EST(r))) continue; const [p, c] = pick(r); if (!c) continue; const k = coKey(c, p); if (!coMatch(k, company)) continue;
       const o = m.get(k) || m.set(k, { key: k, company: coName(c, p), kind: c.kind, y: Object.fromEntries(years.map(x => [x, z()])) }).get(k), t = o.y[y];
       if (A(r.dr, '627')) t.buy627 += r.a; else if (A(r.dr, '641')) t.buy641 += r.a; else if (A(r.dr, '642')) t.buy642 += r.a;
       else if (A(r.dr, '6', '8') && !A(r.dr, '911', '632')) t.buyExpO += r.a; else if (A(r.dr, '15')) t.buyGoods += r.a; else if (A(r.dr, '211', '213', '241', '242')) t.buyAsset += r.a;

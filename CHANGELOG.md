@@ -1,5 +1,19 @@
 # Lịch sử phiên bản
 
+## v4.19.0 – 03/11/2026
+**Giao dịch nội bộ chia 2 nhóm; file Excel xuất ra định dạng chuyên nghiệp**
+- **Hai nhóm nội bộ:**
+  - **Nhóm 1 – Công ty mẹ & công ty con** (mặc định TFU, VTC, STL, VTG; sửa được ở ô "Nhóm 1 (mẹ – con)").
+  - **Nhóm 2 – Cùng tập đoàn** (các đơn vị còn lại).
+  - Ô "Công ty nội bộ" chọn được cả nhóm 1 hoặc nhóm 2. Mỗi công ty có nhãn [N1] hoặc [N2].
+  - Tích "Tách theo nhóm" để các bảng theo công ty (tổng hợp kỳ, số dư, theo năm) tách thành 2 phần, mỗi phần có dòng "Cộng nhóm". File Excel có thêm cột "Nhóm nội bộ".
+- **Excel (mọi báo cáo):**
+  - Phần đầu file: dòng tiêu đề báo cáo, dòng tên sheet và kỳ báo cáo, dòng ghi thời điểm lập.
+  - Tiêu đề cột in đậm, nền cam, cố định khi cuộn; có lọc tự động.
+  - Định dạng số: số tiền #,##0.00 (số âm màu đỏ, số 0 hiện "-"), số lượng và số dòng #,##0, ngày dd/mm/yyyy, tỷ lệ 0.0%.
+  - Độ rộng cột tự động, kẻ viền ô, dòng Tổng/Cộng in đậm, tên sheet có dấu.
+  - File mẫu số dư đầu kỳ và file danh mục đối tượng giữ dạng thô để nạp lại được. File GL Journal nhập ERP vẫn giữ đúng mẫu ERP.
+
 ## v4.18.1 – 03/11/2026
 **Giao dịch nội bộ: loại TK thuế ở mọi báo cáo**
 - Bút toán có vế đối tượng nội bộ là TK thuế 133 hoặc 333 (thuế GTGT, thuế nhà thầu, khấu trừ tại nguồn 33381…) bị loại khỏi Tổng hợp kỳ, Chi tiết giao dịch và Tổng hợp theo năm. Trước đây chỉ số dư nội bộ đã loại các TK này.
