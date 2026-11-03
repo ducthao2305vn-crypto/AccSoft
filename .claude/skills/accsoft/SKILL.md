@@ -150,6 +150,19 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### KQKD theo mẫu (v4.26, `engine/kqkd.js`)
+- **Đọc mẫu:** `parseTemplate(XLSX, wb)` đọc sheet đầu: cột A là STT, B là tên tiếng Anh, C là tên tiếng Việt; công thức chuẩn lấy ở cột Q (quý 1).
+  - Dòng lá: Q = SUM(E r : G r).
+  - Dòng tính: Q là công thức, `Qnn` được đổi thành `Rnn`.
+  - Dòng tham số: không có Q, chỉ có giá trị E.
+- **Lưu trữ:** mẫu mặc định ở `kqkd_template.json`; mẫu người dùng nạp lưu trong `settings.kqkd_tpl`. `compile(expr)` dịch R/SUM/IFERROR sang JS.
+- **Bảng ánh xạ:** `kq_map(row, cost[], rev[], acc[{p, side}])`.
+- **Tính số:** `compute(cols)` đọc bảng `agg` (ym, side, acc, tcost, trev), cộng vào các dòng lá, rồi tính các dòng tính theo từng kỳ. Kết quả gồm `values`, `totals` (rev/exp và phần đã map) và `unmapped`.
+- `autoMap` khớp theo tên trong `cost_cat` và tên trong dữ liệu. UI tự gọi `autoMap` khi chưa có ánh xạ nào.
+- IPC: `kqCompute`, `kqTpl`, `kqSources`, `kqMaps` nằm trong READ; `kq*` còn lại nằm trong WRITE; `kq:template` để nạp mẫu.
+- `fin.drill` nhận `tc` (mã khoản mục) và `tr` (loại doanh thu).
+- UI: `FT = 'kq'`, `kqMapDrawer(r)`.
+
 ### Danh mục phòng ban & khoản mục chi phí (v4.25, `engine/catalogs.js`)
 - Bảng dữ liệu:
   - `dept_cat(code, name, descr, note)`: danh mục phòng ban.

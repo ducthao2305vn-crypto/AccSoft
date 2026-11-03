@@ -129,7 +129,7 @@ function open(file, { cleanup = false, light = false } = {}) {
   // bảng đếm lỗi / bút toán (err_sum, ent_sum) được dựng ở tác vụ nền buildAgg khi khởi động nếu còn thiếu – không khoá cửa sổ
   // Lần nạp bị gián đoạn (tắt máy giữa chừng) thì xoá – chỉ làm khi ứng dụng khởi động
   if (cleanup) db.exec(`DELETE FROM imports WHERE status='pending'`);
-  require('./catalogs').ensure(db); // danh mục phòng ban / khoản mục chi phí
+  require('./catalogs').ensure(db); require('./kqkd').ensure(db); // danh mục phòng ban / khoản mục chi phí
   return { db, needRecheck };
 }
 

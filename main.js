@@ -238,8 +238,8 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'acc335List', 'catList', 'catExport', 'catUnmatched', 'catStats', 'grpInternal', 'grpInternalRows', 'grpBalance', 'grpYears', 'grpCompanies', 'igAdjList', 'igDocLines', 'grpIntl', 'recvAnalyze', 'recvDetail', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'dmDeptList', 'dmDeptSources', 'dmCostList', 'dmCostUnmatched', 'dmExport', 'faSearch', 'faContracts', 'faValues', 'faList', 'finPartnerTB', 'cfRows', 'cfAdjList', 'finDrill', 'finNotes', 'finStatus', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
-const WRITE = ['dmDeptUpsert', 'dmDeptRemove', 'dmDeptMapSet', 'dmDeptAutoMap', 'dmCostUpsert', 'dmCostRemove', 'dmImport', 'faSet', 'faRemove', 'faRebind', 'cfAdjSet', 'cfAdjRemove', 'igAdjSet', 'igAdjRemove', 'catUpsert', 'catRemove', 'catImport', 'setB09Info', 'setThresholds', 'setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
+const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'acc335List', 'catList', 'catExport', 'catUnmatched', 'catStats', 'grpInternal', 'grpInternalRows', 'grpBalance', 'grpYears', 'grpCompanies', 'igAdjList', 'igDocLines', 'grpIntl', 'recvAnalyze', 'recvDetail', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'kqCompute', 'kqTpl', 'kqSources', 'kqMaps', 'dmDeptList', 'dmDeptSources', 'dmCostList', 'dmCostUnmatched', 'dmExport', 'faSearch', 'faContracts', 'faValues', 'faList', 'finPartnerTB', 'cfRows', 'cfAdjList', 'finDrill', 'finNotes', 'finStatus', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const WRITE = ['kqAutoMap', 'kqSetMap', 'kqClearMap', 'kqSetParams', 'kqImportTpl', 'dmDeptUpsert', 'dmDeptRemove', 'dmDeptMapSet', 'dmDeptAutoMap', 'dmCostUpsert', 'dmCostRemove', 'dmImport', 'faSet', 'faRemove', 'faRebind', 'cfAdjSet', 'cfAdjRemove', 'igAdjSet', 'igAdjRemove', 'catUpsert', 'catRemove', 'catImport', 'setB09Info', 'setThresholds', 'setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
 function appDir() {
@@ -328,6 +328,13 @@ async function init() {
   handle('report:recv', async (_e, acc, asOf, term) => saveXlsx(`AccSoft_PhaiThu_${acc}_${(asOf || '').replace(/-/g, '')}.xlsx`, R.recvBook(await qa('recvAnalyze', acc, asOf, term))));
   // Danh mục đối tượng: nạp từ Excel (mẫu 2026.10_DANH_MUC_KHACH_HANG_TIMOR: Code_Name, Code, Name, Kind Of Customer, Code_NB, Name_NB)
   // Nạp danh mục phòng ban / khoản mục chi phí (tự tìm dòng tiêu đề có cột "Code")
+  handle('kq:template', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file mẫu báo cáo KQKD', filters: [{ name: 'Excel', extensions: ['xlsx', 'xls'] }] });
+    if (canceled) return null;
+    const lines = require('./engine/kqkd').parseTemplate(R.XLSX, R.XLSX.read(fs.readFileSync(filePaths[0]), { type: 'buffer', cellFormula: true }));
+    if (!lines.some(l => l.kind === 'leaf')) throw new Error('File không đúng cấu trúc mẫu (cần cột Q là công thức quý: SUM(E:G))');
+    return { ...(await qa('kqImportTpl', lines)), file: path.basename(filePaths[0]) };
+  });
   handle('dm:import', async (_e, kind, mode) => {
     const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: kind === 'dept' ? 'Chọn file danh mục phòng ban' : 'Chọn file danh mục khoản mục chi phí', filters: [{ name: 'Excel', extensions: ['xlsx', 'xls', 'csv'] }] });
     if (canceled) return null;

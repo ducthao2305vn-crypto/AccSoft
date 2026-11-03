@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
   openingTemplate: () => ipcRenderer.invoke('opening:template'),
   importOpening: () => ipcRenderer.invoke('opening:pick'),
   riskPdf: () => ipcRenderer.invoke('report:pdf'),
+  kqTemplate: () => ipcRenderer.invoke('kq:template'),
   dmImport: (kind, mode) => ipcRenderer.invoke('dm:import', kind, mode),
   catImport: mode => ipcRenderer.invoke('cat:import', mode),
   xlsxSheets: (name, sheets) => ipcRenderer.invoke('xlsx:sheets', name, sheets),

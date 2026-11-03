@@ -1,5 +1,22 @@
 # Lịch sử phiên bản
 
+## v4.26.0 – 03/11/2026
+**Mới: Báo cáo kết quả kinh doanh theo mẫu của đơn vị (MAU_BAO_CAO_KQKD)**
+- Thêm tab **Báo cáo tài chính → KQKD theo mẫu**, lập đúng cấu trúc file mẫu:
+  - Phần tóm tắt: 84 chỉ tiêu, từ Tổng doanh thu, EBT, thuế TNDN, LNST, lợi nhuận chuyển về nước đến EBITDA, EBITDA Margin.
+  - Phần chi tiết: khoảng 430 khoản mục (doanh thu, khấu hao, CLTG, lãi vay, Opex…).
+- Mẫu có 359 dòng lá (lấy số từ dữ liệu), 156 dòng tính bằng **chính công thức của mẫu** và 5 tham số. Đã kiểm tra: đưa số tháng 1/2025 của file mẫu vào thì cả 156 dòng tính ra đúng số trong file.
+- **Kỳ báo cáo:** tháng, quý, năm, luỹ kế, khoảng tháng. **So sánh cùng kỳ năm trước** (hoặc kỳ liền trước): kỳ này, cùng kỳ, chênh lệch, %. Có tuỳ chọn hiện từng tháng trong kỳ, ẩn dòng bằng 0, xem riêng phần tóm tắt hoặc chi tiết.
+- **Cách lấy số lá:**
+  - Chi phí = Nợ − Có TK 6xx/8xx theo khoản mục (Type of cost).
+  - Doanh thu = Có − Nợ TK 5xx/7xx theo loại doanh thu (Type of revenue).
+  - Hoặc theo tiền tố TK (vd 515:cr, 635:dr).
+  - Không gồm bút toán kết chuyển 911.
+- **Ánh xạ chỉ tiêu:** lần đầu tự ánh xạ theo tên tiếng Anh trùng danh mục khoản mục chi phí (263 dòng). Sửa được từng dòng trong cửa sổ "Ánh xạ chỉ tiêu"; một chỉ tiêu có thể gồm nhiều mã.
+- **Đối chiếu với sổ:** so tổng doanh thu / chi phí trên sổ với phần đã vào mẫu. Có danh sách khoản mục / loại doanh thu **chưa vào mẫu**, gán nhanh vào chỉ tiêu ngay trong danh sách.
+- **Tham số** (thuế suất TNDN, tỷ lệ miễn, tỷ lệ sở hữu VTG, thuế chuyển LN…) sửa được. Nạp được **mẫu khác** cùng cấu trúc.
+- Nhấn đúp dòng lá để xem bút toán (lọc đúng khoản mục / loại doanh thu). Xuất Excel theo mẫu.
+
 ## v4.25.0 – 03/11/2026
 **Mới: Danh mục phòng ban & khoản mục chi phí**
 - Thêm trang **Kiểm soát → Danh mục phòng ban & chi phí**, gồm 3 tab:
