@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v4.16.0 – 03/11/2026
+**Chuột phải để sao chép trên mọi bảng**
+- Nhấn chuột phải vào bất kỳ ô nào của bất kỳ bảng nào (bút toán, báo cáo tài chính, công nợ, tồn kho, nội bộ…) để chọn một trong các mục:
+  - Sao chép ô.
+  - Sao chép dòng, hoặc dòng kèm tiêu đề.
+  - Sao chép cả cột.
+  - Sao chép toàn bộ bảng, có hoặc không kèm tiêu đề.
+  - Sao chép vùng đang bôi đen.
+- Dữ liệu ngăn cách bằng Tab nên dán thẳng vào Excel đúng cột. Số được bỏ dấu phân cách hàng nghìn, số trong ngoặc (1,234) chuyển thành −1234. Tiêu đề nhiều tầng được ghép lại, vd "Số dư đầu kỳ Nợ".
+
 ## v4.15.0 – 03/11/2026
 **Báo cáo tài chính: truy nguồn số liệu, điều chỉnh dòng tiền, B03 trước / sau điều chỉnh**
 - **Truy nguồn:** nhấn đúp một tài khoản (CĐSPS) hoặc một chỉ tiêu (B01, B02, B03 gián tiếp) để mở cửa sổ toàn màn hình gồm:

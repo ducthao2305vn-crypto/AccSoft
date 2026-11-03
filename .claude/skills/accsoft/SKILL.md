@@ -150,6 +150,11 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Sao chép chuột phải (v4.16)
+- Cuối `app.js` có một IIFE bắt sự kiện `contextmenu` trên mọi `td/th` và mở menu `#ctxMenu`.
+- `hgrid` gộp tiêu đề nhiều tầng (rowspan/colspan). `clean` chuẩn hoá số trước khi sao chép.
+- Bảng mới không cần làm gì thêm. Lưu ý: bảng dùng `tbl()` chỉ hiện tối đa 1000 dòng; muốn đủ dữ liệu thì xuất Excel.
+
 ### Truy nguồn & điều chỉnh dòng tiền (v4.15, `engine/fin.js`)
 - **Mã dòng tiền:** `ERP(cf)` đổi mã trên ERP `0102_…` thành mã B03 `02` (01xx → 0x, 02xx → 2x, 03xx → 3x, 04 = chuyển nội bộ). `baseCode` = mã ERP, nếu không có thì dùng `autoCode` (phân loại theo TK đối ứng, tức IN/OUT).
 - **Bảng điều chỉnh:** `cf_adj(sig PK, code, note, doc, d, ym, dr, cr, a, cf, bp, bpCr)`, với `sig = 'c:'+doc|d|dr|cr|cent|bp|bpCr`. Các dòng giống hệt nhau được điều chỉnh cùng lúc (`a` = số tiền × số dòng).

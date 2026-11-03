@@ -145,6 +145,12 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
 #drawer{position:fixed;inset:0;background:rgba(10,13,18,.5);display:flex;justify-content:flex-end;z-index:30;backdrop-filter:blur(2px)}
 #drawer .pane{background:var(--gray-50);width:min(1120px,100%);height:100%;overflow:auto;box-shadow:var(--shadow-lg)}
 #drawer.full .pane{width:100%}
+#ctxMenu{position:fixed;z-index:100;background:#fff;border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-lg);padding:6px;min-width:250px;display:flex;flex-direction:column}
+#ctxMenu button{all:unset;cursor:pointer;padding:7px 10px;border-radius:6px;font-size:13px;display:flex;justify-content:space-between;gap:12px}#ctxMenu button:hover{background:#FFF6F2}#ctxMenu button span{color:var(--gray-500);font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ctxMenu hr{border:0;border-top:1px solid var(--gray-200);margin:4px 0}#ctxMenu.hide{display:none}
+.ctxToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#101828;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:101}
+td,th{user-select:text}
+
 #drawer .ph{position:sticky;top:0;z-index:2;background:#fff;border-bottom:1px solid var(--gray-200);padding:16px 24px;display:flex;align-items:center;gap:12px}
 #drawer .pb{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
 #toast{position:fixed;right:24px;bottom:24px;width:380px;background:#fff;border:1px solid var(--gray-200);border-radius:12px;box-shadow:var(--shadow-lg);padding:16px 18px;z-index:40}

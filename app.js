@@ -1244,3 +1244,39 @@ const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),inv:
   const info=await api.info();$('#ver').textContent='v'+info.version;
   await refreshSide();go('overview');
 })();
+
+/* ---------- Chuột phải trên mọi bảng: sao chép ô / dòng / cột / toàn bộ bảng (dạng Tab – dán thẳng vào Excel) ---------- */
+(()=>{
+  const menu=document.createElement('div');menu.id='ctxMenu';menu.className='hide';document.body.appendChild(menu);
+  const clean=t=>{t=String(t??'').replace(/\s+/g,' ').trim();const m=/^\(?-?[\d.,]+\)?$/.test(t)&&/\d/.test(t)?t:null;if(!m)return t;const neg=/^\(.*\)$/.test(t)||t.startsWith('-');const v=t.replace(/[(),\s-]/g,'');return (neg?'-':'')+v};
+  const cellTxt=c=>c.querySelector('input[type=checkbox]')?'':clean(c.innerText);
+  const rowTxt=tr=>[...tr.cells].map(cellTxt).join('\t');
+  // tiêu đề nhiều tầng (rowspan / colspan) → một dòng tiêu đề, mỗi cột ghép nhãn các tầng (vd "Số dư đầu kỳ Nợ")
+  const hgrid=tb=>{const h=tb.tHead;if(!h||!h.rows.length)return [];const G=[];[...h.rows].forEach((r,ri)=>{G[ri]??=[];let ci=0;for(const c of r.cells){while(G[ri][ci]!==undefined)ci++;const t=c.querySelector('input')?'':c.innerText.replace(/\s+/g,' ').trim();
+      for(let dr=0;dr<(c.rowSpan||1);dr++)for(let dc=0;dc<(c.colSpan||1);dc++){(G[ri+dr]??=[])[ci+dc]=dr?null:t}ci+=c.colSpan||1}});
+    const n=Math.max(...G.map(r=>r.length));return Array.from({length:n},(_,i)=>[...new Set(G.map(r=>r[i]).filter(Boolean))].join(' '))};
+  const head=tb=>{const g=hgrid(tb);return g.length?[g.join('\t')]:[]};
+  const bodyRows=tb=>[...tb.tBodies].flatMap(b=>[...b.rows]).filter(r=>!(r.cells.length===1&&r.cells[0].colSpan>1));
+  const colIdx=td=>{let i=0;for(const c of td.parentElement.cells){if(c===td)return i;i+=c.colSpan||1}return i};
+  const colTxt=(tb,i)=>bodyRows(tb).map(r=>{let k=0;for(const c of r.cells){if(k===i)return cellTxt(c);k+=c.colSpan||1}return ''});
+  const copy=async(t,msg)=>{try{await navigator.clipboard.writeText(t)}catch{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove()}
+    const n=document.createElement('div');n.className='ctxToast';n.textContent='✓ '+msg;document.body.appendChild(n);setTimeout(()=>n.remove(),1400)};
+  let ctx=null;
+  document.addEventListener('contextmenu',e=>{const td=e.target.closest('td,th'),tb=td&&td.closest('table');if(!tb){menu.classList.add('hide');return}
+    e.preventDefault();const tr=td.parentElement,sel=String(getSelection()||'').trim(),nRows=bodyRows(tb).length,hName=hgrid(tb)[colIdx(td)]||'';
+    ctx={td,tr,tb,sel};
+    menu.innerHTML=(sel?`<button data-cx="sel">Sao chép vùng đang bôi đen</button>`:'')+`<button data-cx="cell">Sao chép ô <span>${esc(clean(td.innerText).slice(0,30))}</span></button><button data-cx="row">Sao chép dòng</button><button data-cx="rowh">Sao chép dòng kèm tiêu đề</button>
+      <button data-cx="col">Sao chép cột${hName?` "${esc(hName.slice(0,24))}"`:''} <span>${num(nRows)} dòng</span></button><hr><button data-cx="all">Sao chép toàn bộ bảng <span>${num(nRows)} dòng + tiêu đề</span></button><button data-cx="allv">Sao chép bảng (không tiêu đề)</button>`;
+    menu.classList.remove('hide');const W=innerWidth,H=innerHeight,r=menu.getBoundingClientRect();
+    menu.style.left=Math.min(e.clientX,W-r.width-8)+'px';menu.style.top=Math.min(e.clientY,H-r.height-8)+'px'});
+  menu.addEventListener('click',e=>{const b=e.target.closest('[data-cx]');if(!b||!ctx)return;const {td,tr,tb,sel}=ctx,k=b.dataset.cx;menu.classList.add('hide');
+    if(k==='sel')return copy(sel,'Đã sao chép vùng chọn');
+    if(k==='cell')return copy(cellTxt(td),'Đã sao chép ô');
+    if(k==='row')return copy(rowTxt(tr),'Đã sao chép dòng');
+    if(k==='rowh')return copy([...head(tb),rowTxt(tr)].join('\n'),'Đã sao chép dòng kèm tiêu đề');
+    if(k==='col')return copy(colTxt(tb,colIdx(td)).join('\n'),'Đã sao chép cột');
+    const rows=bodyRows(tb).map(rowTxt);copy((k==='all'?[...head(tb),...rows]:rows).join('\n'),`Đã sao chép ${num(rows.length)} dòng – dán vào Excel`)});
+  document.addEventListener('click',e=>{if(!e.target.closest('#ctxMenu'))menu.classList.add('hide')});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.classList.add('hide')});
+  addEventListener('blur',()=>menu.classList.add('hide'));document.addEventListener('scroll',()=>menu.classList.add('hide'),true);
+})();
