@@ -97,8 +97,10 @@ function make(db, all, get, okYm) {
   }
   function picker0(map, kinds) {
     return r => { const c = map.get(r.bpCr), d = map.get(r.bp), okC = c && kinds.includes(c.kind), okD = d && kinds.includes(d.kind);
-      if (okC && okD) return DEBT(r.dr) && !DEBT(r.cr) ? [r.bp, d] : [r.bpCr, c];
-      return okC ? [r.bpCr, c] : okD ? [r.bp, d] : [null, null]; };
+      // TK thuế (133, 333 – GTGT, thuế nhà thầu, khấu trừ tại nguồn…) không phải giao dịch nội bộ: hệ thống chỉ gắn đối tượng theo bút toán gốc
+      const TAX = a => A(a, '133', '333'); const okC2 = okC && !TAX(r.cr), okD2 = okD && !TAX(r.dr);
+      if (okC2 && okD2) return DEBT(r.dr) && !DEBT(r.cr) ? [r.bp, d] : [r.bpCr, c];
+      return okC2 ? [r.bpCr, c] : okD2 ? [r.bp, d] : [null, null]; };
   }
   const coKey = (c, p) => c.nb_code || c.nb_name || c.name || nm(p), coName = (c, p) => c.nb_name || c.nb_code || c.name || nm(p);
   // Danh sách công ty / đơn vị nội bộ trong danh mục (để lọc)

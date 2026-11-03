@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.18.1 – 03/11/2026
+**Giao dịch nội bộ: loại TK thuế ở mọi báo cáo**
+- Bút toán có vế đối tượng nội bộ là TK thuế 133 hoặc 333 (thuế GTGT, thuế nhà thầu, khấu trừ tại nguồn 33381…) bị loại khỏi Tổng hợp kỳ, Chi tiết giao dịch và Tổng hợp theo năm. Trước đây chỉ số dư nội bộ đã loại các TK này.
+
 ## v4.18.0 – 03/11/2026
 **Số dư nội bộ: chỉ tính TK công nợ, có đầu kỳ – phát sinh – cuối kỳ theo khoảng ngày**
 - Chỉ tính TK công nợ: 131, 136, 138, 141 (gồm 1412), 244, 1283, 1288, 331, 335, 336, 337, 338, 341, 344.
