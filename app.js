@@ -348,7 +348,9 @@ async function vInv(reload=true){
   $('#ivOld').innerHTML=`⚠ ${num(d.oldImportRows)} dòng hàng tồn kho được nạp bằng phiên bản cũ nên chưa có mã hàng/kho. Hãy <b>nạp lại các file đó</b> (chọn "Thay thế") để tính tuổi theo mặt hàng chính xác.`;
   const accs=[...new Map(d.items.map(o=>[o.acc,o])).values()].sort((a,b)=>a.acc.localeCompare(b.acc));
   fillSel('#ivAcc',accs.map(o=>[o.acc,`${o.acc} – ${o.accName}`]),'Tất cả tài khoản',accs.some(o=>o.acc===cur)?cur:'');
-  const sel=d.items.filter(o=>!$('#ivAcc').value||o.acc===$('#ivAcc').value),pos=sel.filter(o=>o.bal>0.005),neg=sel.filter(o=>o.bal<-0.005);
+  const bpCur=$('#ivBp').value,bpS=new Map();d.items.forEach(o=>{if(o.bal>0.005)bpS.set(o.bp,(bpS.get(o.bp)||0)+o.bal);else if(!bpS.has(o.bp))bpS.set(o.bp,0)});
+  fillSel('#ivBp',[...bpS].sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,`${k} · ${fmt(v)}`]),`Tất cả đối tượng (${num(bpS.size)})`,bpS.has(bpCur)?bpCur:'');
+  const sel=d.items.filter(o=>(!$('#ivAcc').value||o.acc===$('#ivAcc').value)&&(!$('#ivBp').value||o.bp===$('#ivBp').value)),pos=sel.filter(o=>o.bal>0.005),neg=sel.filter(o=>o.bal<-0.005);
   const slow=o=>o.bal>0.005&&(o.sinceOut==null?o.sinceIn>180:o.sinceOut>180),old=o=>o.b[4]+o.b[5]>0.005,noprod=o=>/^\(không có/.test(o.obj);
   const b=Array(6).fill(0);pos.forEach(o=>o.b.forEach((v,i)=>b[i]+=v));const tot=b.reduce((x,y)=>x+y,0),o180=b[3]+b[4]+b[5],o365=b[4]+b[5];
   $('#ivKpi').innerHTML=kpi('','box','Giá trị hàng tồn',fmt(tot),`${num(pos.length)} mặt hàng/đối tượng còn tồn`)+kpi('','alert','Tồn trên 180 ngày',fmt(o180),pct(o180/tot)+' giá trị tồn')
@@ -360,24 +362,25 @@ async function vInv(reload=true){
   $('#tIvSum').innerHTML='<thead><tr><th>TK</th><th>Tên tài khoản</th><th class=n>Mặt hàng</th><th class=n>Giá trị tồn</th>'+IBUCKETS.map(x=>`<th class=n>${x}</th>`).join('')+'<th class=n>% > 180 ngày</th><th class=n>Tồn âm</th></tr></thead><tbody>'+
     SL.map(x=>`<tr class="click dbl" data-acc="${esc(x.acc)}"><td class=nw><b>${esc(x.acc)}</b></td><td style="min-width:220px">${esc(x.name)}</td><td class=n>${num(x.n)}</td><td class=n><b>${fmt2(x.bal)}</b></td>${x.b.map(v=>`<td class=n>${c(v)}</td>`).join('')}<td class=n>${pct((x.b[3]+x.b[4]+x.b[5])/x.bal)}</td><td class="n neg">${c(x.neg)}</td></tr>`).join('')+
     `<tr style="background:var(--brand-25)"><td colspan=2><b>Tổng cộng</b></td><td class=n><b>${num(pos.length)}</b></td><td class=n><b>${fmt2(tot)}</b></td>${b.map(v=>`<td class=n><b>${c(v)}</b></td>`).join('')}<td class=n><b>${pct(o180/tot)}</b></td><td class="n neg">${c(neg.reduce((s,o)=>s+o.bal,0))}</td></tr></tbody>`;
-  chart('chIv',{type:'bar',data:{labels:IBUCKETS,datasets:[{data:b,backgroundColor:IBCOL,barThickness:40}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>`${fmt(x.raw)} (${pct(x.raw/tot)})`}}}}});
-  const objH={product:'Mặt hàng',product_loc:'Mặt hàng @ Kho',loc:'Kho',bp:'Đối tượng'}[$('#ivBy').value];
+  setTimeout(()=>chart('chIv',{type:'bar',data:{labels:IBUCKETS,datasets:[{data:b,backgroundColor:IBCOL,barThickness:40}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>`${fmt(x.raw)} (${pct(x.raw/tot)})`}}},maintainAspectRatio:false}}),0);
+  const BYV=$('#ivBy').value,objH={product:'Mặt hàng',product_loc:'Mặt hàng @ Kho',loc:'Kho',bp:'Đối tượng',bp_product:'Đối tượng · Mặt hàng'}[BYV];
   $('#tIvNeg').innerHTML=`<thead><tr><th>TK</th><th>${objH}</th><th class=n>SL tồn</th><th class=n>Giá trị tồn</th><th>Xuất gần nhất</th></tr></thead><tbody>`+
     neg.sort((a,b)=>a.bal-b.bal).map((o,i)=>`<tr class=dbl data-ivn="${i}"><td>${esc(o.acc)}</td><td><div class=clamp title="${esc(o.obj)}">${esc(o.obj)}</div></td><td class="n neg">${fmt2(o.qtyBal)} ${esc(o.uom)}</td><td class="n neg">${fmt2(o.bal)}</td><td class=nw>${vn(o.lastOut)}</td></tr>`).join('')+'</tbody>';
   const f={slow,old,noprod}[IV.flag]||(()=>true);
   IVV.neg=neg;
   const det=pos.filter(f).filter(o=>!find||o.obj.toLowerCase().includes(find)).sort((a,b)=>b.bal-a.bal);
   IVV.det=det;
-  $('#tIv').innerHTML=`<thead><tr><th>TK</th><th>${objH}</th><th>ĐVT</th><th class=n>SL nhập</th><th class=n>SL xuất</th><th class=n>SL tồn</th><th class=n>Giá trị tồn</th>`+IBUCKETS.map(x=>`<th class=n>${x}</th>`).join('')+'<th>Nhập gần nhất</th><th>Xuất gần nhất</th><th>Đánh giá</th></tr></thead><tbody>'+
+  $('#tIv').innerHTML=`<thead><tr><th>TK</th>${BYV==='bp_product'?'<th>Đối tượng</th><th>Mặt hàng</th>':`<th>${objH}</th>`}<th>ĐVT</th><th class=n>SL nhập</th><th class=n>SL xuất</th><th class=n>SL tồn</th><th class=n>Giá trị tồn</th>`+IBUCKETS.map(x=>`<th class=n>${x}</th>`).join('')+'<th>Nhập gần nhất</th><th>Xuất gần nhất</th><th>Đánh giá</th></tr></thead><tbody>'+
     det.slice(0,3000).map((o,i)=>{const tags=[];if(noprod(o))tags.push('<span class="badge b-H">Thiếu mã hàng</span>');if(o.b[5]>0.005)tags.push('<span class="badge b-H">Tồn > 2 năm</span>');else if(old(o))tags.push('<span class="badge b-M">Tồn > 1 năm</span>');if(slow(o))tags.push(`<span class="badge b-M">${o.sinceOut==null?'Chưa xuất':o.sinceOut+' ngày không xuất'}</span>`);
-      return `<tr class=dbl data-iv="${i}"><td class=nw title="${esc(o.accName)}">${esc(o.acc)}</td><td><div class=clamp title="${esc(o.obj)}">${esc(o.obj)}</div></td><td>${esc(o.uom)}</td><td class=n>${o.qtyIn?fmt2(o.qtyIn):''}</td><td class=n>${o.qtyOut?fmt2(o.qtyOut):''}</td><td class=n>${o.qtyIn||o.qtyOut?fmt2(o.qtyBal):''}</td>
+      return `<tr class=dbl data-iv="${i}"><td class=nw title="${esc(o.accName)}">${esc(o.acc)}</td>${BYV==='bp_product'?`<td><div class="clamp s" title="${esc(o.bp)}">${esc(o.bp)}</div></td><td><div class=clamp title="${esc(o.prod)}">${esc(o.prod)}</div></td>`:`<td><div class=clamp title="${esc(o.obj)}">${esc(o.obj)}</div></td>`}<td>${esc(o.uom)}</td><td class=n>${o.qtyIn?fmt2(o.qtyIn):''}</td><td class=n>${o.qtyOut?fmt2(o.qtyOut):''}</td><td class=n>${o.qtyIn||o.qtyOut?fmt2(o.qtyBal):''}</td>
       <td class=n><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${c(v)}</td>`).join('')}<td class=nw>${vn(o.lastIn)}</td><td class=nw>${vn(o.lastOut)}</td><td>${tags.join(' ')}</td></tr>`}).join('')+'</tbody>';
 }
 ['#ivAsOf','#ivBy','#ivLevel'].forEach(s=>$(s).onchange=()=>{if(s!=='#ivAsOf')$('#ivAcc').value='';vInv(true)});
-$('#ivAcc').onchange=()=>vInv(false);$('#ivFind').oninput=()=>vInv(false);
+$('#ivAcc').onchange=()=>vInv(false);
+$('#ivBp').onchange=()=>{if($('#ivBp').value&&!['bp','bp_product'].includes($('#ivBy').value)||$('#ivBp').value&&$('#ivBy').value==='bp'){$('#ivBy').value='bp_product';vInv(true)}else vInv(false)};$('#ivFind').oninput=()=>vInv(false);
 $('#ivFlag').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;IV.flag=b.dataset.f;$$('#ivFlag button').forEach(x=>x.classList.toggle('on',x===b));vInv(false)};
 $('#tIvSum').onclick=e=>{const tr=e.target.closest('[data-acc]');if(tr){$('#ivAcc').value=tr.dataset.acc;vInv(false);$('#tIv').scrollIntoView({behavior:'smooth'})}};
-$('#ivXls').onclick=()=>api.exportInventory($('#ivAsOf').value,$('#ivBy').value,$('#ivLevel').value,$('#ivAcc').value);
+$('#ivXls').onclick=()=>api.exportInventory($('#ivAsOf').value,$('#ivBy').value,$('#ivLevel').value,$('#ivAcc').value,$('#ivBp').value);
 
 /* ---------- Bộ chọn kỳ phân tích & so sánh (dùng chung) ---------- */
 const MODES={y:'Năm',q:'Quý',m:'Tháng',ytd:'Lũy kế từ đầu năm',r:'Khoảng tháng'};

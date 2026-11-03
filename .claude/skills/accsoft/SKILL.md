@@ -150,6 +150,12 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Tuổi hàng tồn theo đối tượng (v4.12)
+- `inventory(by='bp_product')`: `obj = bp + ' · ' + product`. Mỗi item có thêm `bp` và `prod`. Ledger `kind: 'inv'` nhận `by: 'bp_product'`.
+- UI `#ivBp`: lọc theo `o.bp`. Khi đang ở `by` product/loc/bp, chọn một đối tượng sẽ tự chuyển sang `bp_product`.
+- `export:inventory` nhận thêm tham số `bp`.
+- CSS `section` không giới hạn chiều rộng (trước đây `max-width: 1500px`).
+
 ### Số dư nội bộ theo nhóm (v4.11)
 - `accGroup(acc, bal)` trả về `{grp: thu|tra|von, grpName, a3, a3Name (ACC3), rev, revName}`.
 - `internalBalance` trả thêm `groups[]` (nhóm → accs (TK cấp 3) → sub (TK chi tiết)). Mỗi phần tử trong `companies[]` có thêm `thu, tra, von, est, rev`.

@@ -360,7 +360,7 @@ async function init() {
     return saveXlsx('AccSoft_LoiNhapLieu.xlsx', R.errorsBook(rows, byUser));
   });
   handle('export:analysis', (_e, title, rows) => saveXlsx(`AccSoft_${title}.xlsx`, R.book([[title.slice(0, 31), rows]])));
-  handle('export:inventory', async (_e, asOf, by, level, acc) => saveXlsx('AccSoft_TuoiHangTonKho.xlsx', R.inventoryBook((await qa('inventory', asOf, by, level)).items.filter(o => !acc || o.acc === acc))));
+  handle('export:inventory', async (_e, asOf, by, level, acc, bp) => saveXlsx(`AccSoft_TuoiHangTonKho${bp ? '_' + String(bp).replace(/[^\w-]+/g, '_').slice(0, 40) : ''}.xlsx`, R.inventoryBook((await qa('inventory', asOf, by, level)).items.filter(o => (!acc || o.acc === acc) && (!bp || o.bp === bp)), by)));
   handle('export:aging', async (_e, asOf, term, level, grp, acc, dim) => saveXlsx(`AccSoft_TuoiNo${dim === 'contract' ? '_HopDong' : dim === 'adv' ? '_TamUng' : dim === 'tcost' ? '_KhoanMuc' : ''}.xlsx`,
     R.agingBook((await qa('aging', asOf, term, level, dim)).items.filter(o => (!grp || o.grp === grp) && (!acc || o.acc === acc)), dim)));
   handle('export:report', async (_e, minSev, group) => saveXlsx('AccSoft_BaoCaoKiemTra.xlsx', R.reportBook(await qa('report'),

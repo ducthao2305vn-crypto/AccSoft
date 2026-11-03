@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.12.0 – 03/11/2026
+**Tuổi hàng tồn theo đối tượng; giao diện tràn màn hình**
+- Thêm ô chọn **Đối tượng**. Khi chọn, ứng dụng tự chuyển sang "Đối tượng × Mặt hàng", hiện đối tượng đó đang giữ mặt hàng nào, số lượng, giá trị, tồn bao lâu và nhóm tuổi; nhấn đúp để xem sổ bút toán.
+- Cách tính mới "Đối tượng × Mặt hàng" có cột Đối tượng và Mặt hàng tách riêng. Xuất Excel theo đối tượng đang chọn.
+- Nội dung các trang trải hết chiều rộng màn hình, không còn bị giới hạn 1500px khiến hai bên trống.
+- Biểu đồ cơ cấu tuổi hàng tồn hiển thị đúng khi mới mở trang.
+
 ## v4.11.0 – 03/11/2026
 **Số dư nội bộ theo nhóm và tài khoản**
 - Số dư nội bộ tại ngày được chia thành 3 nhóm:

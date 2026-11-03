@@ -50,7 +50,7 @@ nav button.on .icon{color:var(--brand-500)}
 .topbar h1{font-size:20px}.topbar .sub{font-size:13px;color:var(--gray-500)}
 .topbar .sp{flex:1}
 .content{flex:1;overflow:auto;padding:24px 32px 48px}
-section{display:flex;flex-direction:column;gap:20px;max-width:1500px;margin:0 auto}
+section{display:flex;flex-direction:column;gap:20px;width:100%;min-width:0}
 
 /* ===== Components ===== */
 .btn{display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:9px 14px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid var(--gray-300);background:#fff;color:var(--gray-700);box-shadow:var(--shadow-xs);white-space:nowrap}
@@ -294,14 +294,15 @@ section.loading{opacity:.55;transition:opacity .2s;pointer-events:none}
     <div class="card">
       <div class="row" style="align-items:flex-end">
         <label class="field">Ngày báo cáo<input class="input" type="date" id="ivAsOf"></label>
-        <label class="field">Tính tuổi theo<select class="input" id="ivBy"><option value="product">Mặt hàng (Product)</option><option value="product_loc">Mặt hàng × Kho</option><option value="loc">Kho (Locator)</option><option value="bp">Đối tượng (Business Partner)</option></select></label>
+        <label class="field">Tính tuổi theo<select class="input" id="ivBy"><option value="product">Mặt hàng (Product)</option><option value="product_loc">Mặt hàng × Kho</option><option value="loc">Kho (Locator)</option><option value="bp">Đối tượng (Business Partner)</option><option value="bp_product">Đối tượng × Mặt hàng</option></select></label>
+        <label class="field">Đối tượng<select class="input" id="ivBp" style="width:280px"><option value="">Tất cả đối tượng</option></select></label>
         <label class="field">Cấp tài khoản<select class="input" id="ivLevel"><option value="l1">Tài khoản tổng hợp</option><option value="detail">Tài khoản chi tiết</option></select></label>
         <label class="field">Tài khoản<select class="input" id="ivAcc"></select></label>
         <label class="field" style="flex:1;min-width:200px">Tìm<input class="input" id="ivFind" placeholder="Mã hàng, tên hàng, kho…"></label>
         <button class="btn" id="ivXls"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
       </div>
       <div class="note brand" style="margin-top:14px"><b>Đối tượng theo phía hạch toán:</b> dòng ghi <b>Nợ</b> TK kho (nhập) lấy thông tin phía Nợ – kho <b>Locator</b>, đối tượng <b>Business Partner</b>; dòng ghi <b>Có</b> TK kho (xuất) lấy phía Có – kho <b>Locator Credit</b>, đối tượng <b>Bpartner credit</b>. Mặt hàng (Product) gắn với cả dòng.
-        Tuổi hàng tính FIFO từ ngày nhập: giá trị tồn được phân bổ cho các lần nhập gần nhất. TK 151–158, trừ 154.</div>
+        Tuổi hàng tính FIFO từ ngày nhập: giá trị tồn được phân bổ cho các lần nhập gần nhất. TK 151–158 (trừ 154) và 1412 – tạm ứng vật tư. Chọn <b>Đối tượng</b> để xem đối tượng đó đang giữ mặt hàng nào, tồn bao lâu.</div>
       <div class="note hide" id="ivOld" style="margin-top:10px;border-color:var(--warn-500);background:var(--warn-50)"></div>
     </div>
     <div class="kpis" id="ivKpi"></div>

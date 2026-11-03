@@ -331,6 +331,7 @@ function make(db) {
     product: () => '',
     loc: side => side === 'dr' ? 'loc' : 'locCr',
     bp: side => side === 'dr' ? 'bp' : 'bpCr',
+    bp_product: () => '',
     product_loc: side => side === 'dr' ? 'loc' : 'locCr',
   };
   function inventory(asOf, by = 'product', level = 'l1') {
@@ -349,9 +350,10 @@ function make(db) {
         let obj;
         if (by === 'product') obj = r.product || NONE.product;
         else if (by === 'product_loc') obj = (r.product || NONE.product) + ' @ ' + (r[INV_OBJ.loc(side)] || NONE.loc);
+        else if (by === 'bp_product') obj = (r[INV_OBJ.bp(side)] || NONE.bp) + ' · ' + (r.product || NONE.product);
         else obj = r[INV_OBJ[by](side)] || NONE[by];
         const key = acc + '|' + obj; let o = map.get(key);
-        if (!o) map.set(key, o = { acc, accName, obj, uom: r.uom || '', valIn: 0, valOut: 0, qtyIn: 0, qtyOut: 0, lastIn: null, lastOut: null, inc: [] });
+        if (!o) map.set(key, o = { acc, accName, obj, bp: r[INV_OBJ.bp(side)] || NONE.bp, prod: r.product || NONE.product, uom: r.uom || '', valIn: 0, valOut: 0, qtyIn: 0, qtyOut: 0, lastIn: null, lastOut: null, inc: [] });
         const q = Math.abs(r.qty || 0);
         if (side === 'dr') { o.valIn += r.amt; o.qtyIn += q; o.lastIn = r.date; if (r.amt > 0) o.inc.push({ d: new Date(r.date), v: r.amt }); }
         else { o.valOut += r.amt; o.qtyOut += q; o.lastOut = r.date; }
@@ -396,7 +398,7 @@ function make(db) {
           if (spec.dim && spec.dim !== 'bp' && spec.ref != null && refOf(spec.dim, r) !== spec.ref) continue;
         } else if (spec.obj != null) {
           const loc = (side === 'dr' ? r.loc : r.locCr) || NONE.loc, bp = (side === 'dr' ? r.bp : r.bpCr) || NONE.bp, prod = r.product || NONE.product;
-          const obj = spec.by === 'loc' ? loc : spec.by === 'bp' ? bp : spec.by === 'product_loc' ? prod + ' @ ' + loc : prod;
+          const obj = spec.by === 'loc' ? loc : spec.by === 'bp' ? bp : spec.by === 'bp_product' ? bp + ' · ' + prod : spec.by === 'product_loc' ? prod + ' @ ' + loc : prod;
           if (obj !== spec.obj) continue;
         }
         out.push({ ...r, side, debit: side === 'dr' ? r.amt : 0, credit: side === 'cr' ? r.amt : 0 });
