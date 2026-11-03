@@ -150,6 +150,17 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### B03 gián tiếp (v4.14, `engine/fin.js` `cashFlow`)
+- Gom bút toán theo cặp (TK Nợ, TK Có) trong kỳ:
+  - Bỏ bút toán chuyển giữa các TK tiền.
+  - `full[k]`: biến động Nợ − Có của TK k.
+  - `nop[k]`: phần biến động của k đến từ bút toán tiền có mã 21–36 hoặc 61.
+- Khoá `key()`: các TK 5–9 (trừ 821) và bút toán kết chuyển 421 ↔ 911 gộp vào khoá 'PL'. 3334 và 214 có khoá riêng.
+- Công thức:
+  - Mã 01 = −full.PL. Mã 05 = nop.PL.
+  - Các mã còn lại = −(full − nop) theo nhóm TK (hàm `take`). Phần còn lại vào mã 07, chi tiết trong `indOther`.
+  - Đồng nhất thức bút toán kép bảo đảm mã 20 gián tiếp = mã 20 trực tiếp; độ lệch trả về trong `indCheck`.
+
 ### Đối chiếu sổ cái (v4.13)
 - `ledgerBal(defs, asOf, level)` tính Nợ − Có theo TK (không lọc INC). Kết quả trả về trong `inventory().ledger` và `aging().ledger` (aging nhân với dấu bản chất TK).
 - UI: `LG` (tồn kho) và `AGLG` (công nợ) so sánh số dư thuần với sổ cái.

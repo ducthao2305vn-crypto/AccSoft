@@ -160,21 +160,42 @@ function make(all, okYm, INC, plRange) {
       sec('03', '3. Tiền chi trả cho người lao động', g('03')), sec('04', '4. Tiền lãi vay đã trả', g('04')), sec('05', '5. Thuế thu nhập doanh nghiệp đã nộp', g('05')),
       sec('06', '6. Tiền thu khác từ hoạt động kinh doanh', g('06')), sec('07', '7. Tiền chi khác cho hoạt động kinh doanh', g('07')),
       sec('20', 'Lưu chuyển tiền thuần từ hoạt động kinh doanh', op, 1), ...invFin, ...tail];
-    // Gián tiếp: từ lợi nhuận trước thuế, điều chỉnh khoản phi tiền và biến động vốn lưu động (theo số dư đầu/cuối kỳ trên bảng CĐSPS)
-    const pl = plRange(from, to), dep = -mv(['214']), prov = -mv(['229', '352']);
-    const d09 = -mv(['131', '136', '138', '141', '133', '244']), d10 = -mv(['151', '152', '153', '154', '155', '156', '157', '158']);
-    const d11 = -mv(['331', '333', '334', '335', '336', '338', '344', '337']), d12 = -mv(['242']);
-    const known = pl.pbt + dep + prov - pl.finInc + d09 + d10 + d11 + d12 + g('04') + g('05');
-    const indirect = [sec('', 'I. Lưu chuyển tiền từ hoạt động kinh doanh', null, 1), sec('01', '1. Lợi nhuận trước thuế', pl.pbt), sec('', '2. Điều chỉnh cho các khoản', null),
-      sec('02', '- Khấu hao TSCĐ (tăng hao mòn luỹ kế TK 214)', dep), sec('03', '- Các khoản dự phòng (TK 229, 352)', prov), sec('04', '- Lãi, lỗ chênh lệch tỷ giá do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ', 0),
-      sec('05', '- Lãi, lỗ từ hoạt động đầu tư (doanh thu tài chính TK 515)', -pl.finInc), sec('06', '- Chi phí lãi vay', 0),
-      sec('07', '- Các khoản điều chỉnh khác (chênh lệch đối chiếu với dòng tiền thực tế)', op - known), sec('08', '3. Lợi nhuận từ HĐKD trước thay đổi vốn lưu động', pl.pbt + dep + prov - pl.finInc + (op - known), 1),
-      sec('09', '- Tăng, giảm các khoản phải thu', d09), sec('10', '- Tăng, giảm hàng tồn kho', d10), sec('11', '- Tăng, giảm các khoản phải trả (không kể lãi vay, thuế TNDN phải nộp)', d11),
-      sec('12', '- Tăng, giảm chi phí trả trước', d12), sec('13', '- Tăng, giảm chứng khoán kinh doanh', 0), sec('14', '- Tiền lãi vay đã trả', g('04')), sec('15', '- Thuế thu nhập doanh nghiệp đã nộp', g('05')),
+    // Gián tiếp (chính xác theo bút toán kép): tiền thuần HĐKD = −Σ biến động (Nợ − Có) của các TK không phải tiền, sau khi loại các bút toán tiền đã xếp vào đầu tư / tài chính.
+    //   full[k]  = biến động trong kỳ của TK k (mọi bút toán, trừ chuyển tiền giữa các TK tiền)
+    //   nop[k]   = phần biến động do bút toán tiền thuộc hoạt động đầu tư / tài chính / tỷ giá (mã 21–36, 61)
+    const NOP = c => /^(2[1-7]|3[1-6]|61)$/.test(c);
+    const key = (a, o) => { a = String(a || ''); if (a.startsWith('421') && String(o || '').startsWith('911')) return 'PL'; if (a.startsWith('3334')) return '3334'; if (a.startsWith('2147')) return '214';
+      return /^[5-9]/.test(a) && !a.startsWith('821') ? 'PL' : a.slice(0, 3); };
+    const full = {}, nop = {}, add = (o, k, v) => { o[k] = (o[k] || 0) + v; };
+    const plAcc = {};
+    for (const r of all(`SELECT acc_debit d, acc_credit c, max(acc_debit_name) dn, max(acc_credit_name) cn, sum(amount) v FROM entries WHERE ym>=? AND ym<=? GROUP BY 1,2`, okYm(from) || '0000-00', okYm(to) || '9999-12')) {
+      const cd = CASH(r.d), cc = CASH(r.c); if (cd && cc) continue;
+      if (cd) { const k = key(r.c, r.d); add(full, k, -r.v); if (NOP(cls(r.c, IN))) add(nop, k, -r.v); continue; }
+      if (cc) { const k = key(r.d, r.c); add(full, k, r.v); if (NOP(cls(r.d, OUT))) add(nop, k, r.v); continue; }
+      add(full, key(r.d, r.c), r.v); add(full, key(r.c, r.d), -r.v);
+    }
+    const op_ = k => -((full[k] || 0) - (nop[k] || 0)), used = new Set();
+    const take = (...ks) => { let v = 0; for (const k of Object.keys(full)) if (!used.has(k) && ks.some(p => k === p || (p.length < k.length && k.startsWith(p)))) { v += op_(k); used.add(k); } return v; };
+    const pbt = -(full.PL || 0), l05 = nop.PL || 0; used.add('PL');
+    const l02 = take('214'), l03 = take('229', '352'), l04 = take('413'), l15 = take('821', '3334');
+    const l09 = take('131', '133', '136', '138', '141', '244', '1412'), l10 = take('151', '152', '153', '154', '155', '156', '157', '158'), l12 = take('242'), l13 = take('121');
+    const l11 = take('331', '333', '334', '335', '336', '337', '338', '344', '347', '353', '356');
+    const other = Object.keys(full).filter(k => !used.has(k)).map(k => ({ a: k, n: L1[k] || k, v: op_(k) })).filter(x => Math.abs(x.v) > 0.004).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
+    const l07 = other.reduce((x, o) => x + o.v, 0), l08 = pbt + l02 + l03 + l04 + l05 + l07, opI = l08 + l09 + l10 + l11 + l12 + l13 + l15;
+    const indirect = [sec('', 'I. Lưu chuyển tiền từ hoạt động kinh doanh', null, 1), sec('01', '1. Lợi nhuận trước thuế', pbt), sec('', '2. Điều chỉnh cho các khoản', null),
+      sec('02', '- Khấu hao TSCĐ và BĐSĐT (TK 214)', l02), sec('03', '- Các khoản dự phòng (TK 229, 352)', l03),
+      sec('04', '- Lãi, lỗ chênh lệch tỷ giá do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ (TK 413)', l04),
+      sec('05', '- Lãi, lỗ từ hoạt động đầu tư (thu lãi, cổ tức, thanh lý TSCĐ đã xếp vào mục II)', l05), sec('06', '- Chi phí lãi vay', 0),
+      sec('07', '- Các khoản điều chỉnh khác (biến động phi tiền tệ TK khác – xem bảng đối chiếu)', l07),
+      sec('08', '3. Lợi nhuận từ HĐKD trước thay đổi vốn lưu động', l08, 1),
+      sec('09', '- Tăng, giảm các khoản phải thu (131, 133, 136, 138, 141, 244)', l09), sec('10', '- Tăng, giảm hàng tồn kho (151–158)', l10),
+      sec('11', '- Tăng, giảm các khoản phải trả (331, 333, 334, 335, 336, 338… không kể thuế TNDN)', l11), sec('12', '- Tăng, giảm chi phí trả trước (242)', l12),
+      sec('13', '- Tăng, giảm chứng khoán kinh doanh (121)', l13), sec('14', '- Tiền lãi vay đã trả', 0), sec('15', '- Thuế thu nhập doanh nghiệp đã nộp (821, 3334)', l15),
       sec('16', '- Tiền thu khác từ hoạt động kinh doanh', 0), sec('17', '- Tiền chi khác cho hoạt động kinh doanh', 0),
-      sec('20', 'Lưu chuyển tiền thuần từ hoạt động kinh doanh', op, 1), ...invFin, ...tail];
+      sec('20', 'Lưu chuyển tiền thuần từ hoạt động kinh doanh', opI, 1), ...invFin, ...tail];
+    const indCheck = opI - op, pbtB02 = (plRange(from, to) || {}).pbt || 0;
     const agg = new Map(); for (const d of det) { const k = d.code + '|' + d.dir + '|' + d.a.slice(0, 3); const o = agg.get(k) || agg.set(k, { code: d.code, dir: d.dir, a: d.a.slice(0, 3), n: L1[d.a.slice(0, 3)] || d.n, v: 0 }).get(k); o.v += d.v; }
-    return { from: tb.from, to: tb.to, direct, indirect, check: op + inv + fin + cash0 + g('61') - cash1, cash0, cash1, detail: [...agg.values()].sort((a, b) => a.code.localeCompare(b.code) || Math.abs(b.v) - Math.abs(a.v)), hasOpening: tb.hasOpening };
+    return { from: tb.from, to: tb.to, direct, indirect, indCheck, indOther: other, pbtB02, check: op + inv + fin + cash0 + g('61') - cash1, cash0, cash1, detail: [...agg.values()].sort((a, b) => a.code.localeCompare(b.code) || Math.abs(b.v) - Math.abs(a.v)), hasOpening: tb.hasOpening };
   }
   /* B09-DN: Thuyết minh báo cáo tài chính – phần số liệu chi tiết lập tự động; phần chính sách là văn bản người dùng sửa */
   function partnerTop(pres, at, n = 10, credit = false, raw) {

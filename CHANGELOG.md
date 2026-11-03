@@ -1,5 +1,19 @@
 # Lịch sử phiên bản
 
+## v4.14.0 – 03/11/2026
+**B03-DN theo phương pháp gián tiếp: lập chính xác theo bút toán kép**
+- Phương pháp gián tiếp được lập lại từ biến động Nợ − Có trong kỳ của từng TK không phải tiền, loại phần thu/chi tiền đã xếp vào hoạt động đầu tư/tài chính.
+  - Mã 20 (gián tiếp) tự khớp với mã 20 (trực tiếp).
+  - Lợi nhuận trước thuế (mã 01) khớp B02 mã 50.
+  - Không còn dòng bù chênh lệch.
+- Các mã được tính theo nhóm tài khoản:
+  - 02 khấu hao: 214. 03 dự phòng: 229, 352. 04 chênh lệch tỷ giá: 413.
+  - 05 lãi/lỗ hoạt động đầu tư: phần thu nhập đã xếp vào mục II.
+  - 09 phải thu, 10 hàng tồn kho, 11 phải trả, 12 chi phí trả trước, 13 chứng khoán kinh doanh.
+  - 15 thuế TNDN: 821, 3334.
+- Mã 07 gồm biến động phi tiền tệ của các TK khác, vd. mua TSCĐ/XDCB qua công nợ. Có bảng chi tiết theo TK ở cả màn hình và file Excel.
+- Màn hình ghi rõ hai kết quả kiểm tra: mã 20 gián tiếp so với trực tiếp, và LNTT so với B02.
+
 ## v4.13.0 – 03/11/2026
 **Đối chiếu số dư phân tích với sổ cái (tuổi hàng tồn, tuổi nợ)**
 - Bảng tổng hợp theo tài khoản có thêm 3 cột:
