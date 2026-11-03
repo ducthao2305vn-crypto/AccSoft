@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.30.1 – 03/11/2026
+- Sửa: cửa sổ chi tiết vị trí / xe / phòng ban – nút **Đổi …** bị mờ khi chưa tích dòng. Nay nếu không tích dòng nào thì áp dụng cho **toàn bộ dòng đang lọc** (có hỏi xác nhận số dòng).
+
 ## v4.30.0 – 03/11/2026
 **Chi phí theo vị trí / xe / phòng ban: sắp theo khoản mục, lọc, nhấn đúp Tổng**
 - Vị trí và xe: bảng sắp theo **Khoản mục chi phí → Mã vị trí / Biển số xe**, có dòng **Cộng <khoản mục>** và **TỔNG CỘNG**.
