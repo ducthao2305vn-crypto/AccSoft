@@ -150,6 +150,12 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### KQKD khớp B02 (v4.27.1)
+- Cộng theo khoản mục, chỉ trên vế TK loại 5/7 (doanh thu) và 6/8 (chi phí, trừ 821); không gồm 911.
+- Thuế TNDN: khoản mục Profit/Minimum tax và 8211 vào dòng 74, 8212 vào dòng 75 (dòng label nhưng vẫn nhận giá trị).
+- `EXP_DEF`: chi phí chưa ánh xạ vào dòng mặc định theo TK.
+- `compute` trả thêm `b02` (từ `plBy`) để UI so dòng 68 với mã 50 và dòng 76 với mã 60.
+
 ### Cột bảng & tự phân loại doanh thu (v4.27)
 - `COLP` (cuối `app.js`) xử lý kéo đổi độ rộng ở mép phải `thead th` (vùng 7px) và ẩn / hiện cột qua menu chuột phải.
   - Cài đặt lưu trong `localStorage['accsoft.colPrefs']`, khoá = tên các cột lá, đọc từ `dataset.cn` (dùng textContent, không dùng innerText vì th đang ẩn sẽ ra chuỗi rỗng).

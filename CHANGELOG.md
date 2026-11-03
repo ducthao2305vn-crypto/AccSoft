@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v4.27.1 – 03/11/2026
+**KQKD theo mẫu: EBT / LNST bằng đúng báo cáo tài chính**
+- Cộng theo **khoản mục doanh thu / chi phí**. Tài khoản chỉ dùng để xác định vế doanh thu (loại 5, 7) và vế chi phí (loại 6, 8) của bút toán; không gồm kết chuyển 911.
+- Khoản mục **Profit Tax** (và Minimum tax), cùng TK 8211, vào dòng **Thuế TNDN (hiện hành)**. TK 8212 vào dòng **Thuế TNDN (hoãn lại)**. Các khoản này không cộng vào Tổng chi phí.
+- Phần chưa ánh xạ được tự đưa vào dòng mặc định, nên tổng luôn khớp sổ:
+  - Doanh thu: theo TK + tên loại doanh thu.
+  - Chi phí không có khoản mục: 632 → giá vốn hàng hoá khác, 635 → phí tài chính khác, 811 → chi trả khác, còn lại → chi phí bằng tiền khác.
+- Thêm dòng kiểm tra **"Khớp báo cáo tài chính (B02-DN)"**: so EBT (100% CLTG) với LN trước thuế B02 mã 50, và LNST với B02 mã 60.
+- Dữ liệu test: năm 2025, tháng 10/2026 và cả giai đoạn 2016–2026 đều khớp B02 ✓.
+
 ## v4.27.0 – 03/11/2026
 **KQKD theo mẫu: đủ phần doanh thu; mọi bảng chỉnh độ rộng / ẩn cột được**
 - **KQKD theo mẫu – doanh thu:**

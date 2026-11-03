@@ -49,7 +49,13 @@ const REV_RULES = [
 ];
 function autoRev(acc, trev, accName) { const a = String(acc || ''), t = String(trev || '') + ' ' + a + ' ' + String(accName || ''); for (const [ra, rs] of REV_RULES) if (ra.test(a)) { for (const [rx, row] of rs) if (rx.test(t)) return row; } return null; }
 
-function make(db, all, get, run, okYm) {
+// Phạm vi TK đúng như B02-DN (để EBT / LNST của mẫu bằng báo cáo tài chính); thuế TNDN tách riêng
+// Báo cáo quản trị: cộng theo khoản mục; TK chỉ để xác định vế doanh thu (loại 5, 7) / chi phí (loại 6, 8) của bút toán, trừ kết chuyển 911
+const REV_ACC = /^[57]/, EXP_ACC = /^[68](?!21)/, TAX_ACC = /^821/;
+// Chi phí chưa ánh xạ → dòng lá mặc định theo TK (đều nằm trong Tổng chi phí của mẫu)
+const EXP_DEF = [[/^632/, 198], [/^635/, 188], [/^811/, 533], [/./, 455]];
+
+function make(db, all, get, run, okYm, plr) {
   const tpl = () => { const s = get(`SELECT v FROM settings WHERE k='kqkd_tpl'`); if (s && s.v) return JSON.parse(s.v); return require('./kqkd_template.json'); };
   const params = () => { const s = get(`SELECT v FROM settings WHERE k='kqkd_params'`); return s && s.v ? JSON.parse(s.v) : {}; };
   const maps = () => new Map(all(`SELECT * FROM kq_map`).map(r => [r.row, { cost: JSON.parse(r.cost || '[]'), rev: JSON.parse(r.rev || '[]'), acc: JSON.parse(r.acc || '[]'), note: r.note }]));
@@ -78,13 +84,17 @@ function make(db, all, get, run, okYm) {
     const byCost = new Map(), byRev = new Map(), byAcc = [];
     for (const [row, m] of M) { for (const c of m.cost) (byCost.get(c) || byCost.set(c, []).get(c)).push(row); for (const v of m.rev) (byRev.get(v) || byRev.set(v, []).get(v)).push(row); for (const a of m.acc) if (a && a.p) byAcc.push({ row, p: String(a.p), side: a.side === 'dr' ? 'dr' : 'cr' }); }
     const accW = byAcc.length ? ' OR ' + byAcc.map(a => `acc LIKE '${a.p.replace(/[^0-9A-Za-z]/g, '')}%'`).join(' OR ') : '';
+    const taxCodes = new Set(all(`SELECT code FROM cost_cat WHERE lower(trim(name)) IN ('profit tax','minimum tax')`).map(x => x.code));
     const leafRows = new Set(L.filter(l => l.kind === 'leaf').map(l => l.row)), auto = new Map(), autoOn = (get(`SELECT v FROM settings WHERE k='kqkd_autorev'`) || { v: '1' }).v !== '0';
     const rows = all(`SELECT ym, side, acc, max(acc_name) an, tcost, trev, sum(amount) a FROM agg WHERE ym>=? AND ym<=? AND (substr(acc,1,1) IN ('5','6','7','8')${accW}) AND acc NOT LIKE '911%' GROUP BY 1,2,3,5,6`, lo, hi);
     const val = cols.map(() => new Map()), un = new Map(), tot = cols.map(() => ({ rev: 0, exp: 0, mRev: 0, mExp: 0 }));
     const add = (i, row, v) => val[i].set(row, (val[i].get(row) || 0) + v);
     for (const r of rows) {
       const ci = cols.map((c, i) => (r.ym >= c.from && r.ym <= c.to) ? i : -1).filter(i => i >= 0); if (!ci.length) continue;
-      const a1 = String(r.acc || '')[0], isExp = a1 === '6' || a1 === '8', isRev = a1 === '5' || a1 === '7';
+      const acc = String(r.acc || ''), isTax = TAX_ACC.test(acc), isExp = EXP_ACC.test(acc), isRev = REV_ACC.test(acc);
+      if (!isTax && isExp && taxCodes.has(tocCode(r.tcost))) { for (const i of ci) add(i, 74, (r.side === 'dr' ? 1 : -1) * r.a); continue; } // khoản mục Profit Tax = thuế TNDN
+      if (isTax) { const row = acc.startsWith('8212') ? 75 : 74; for (const i of ci) add(i, row, (r.side === 'dr' ? 1 : -1) * r.a); continue; }
+      if (!isExp && !isRev && !byAcc.some(m => acc.startsWith(m.p))) continue;
       const sgnE = r.side === 'dr' ? 1 : -1, sgnR = -sgnE; let hit = false;
       if (isExp) { const L1 = byCost.get(tocCode(r.tcost)); if (L1) { hit = true; for (const i of ci) for (const row of L1) add(i, row, sgnE * r.a); } }
       if (isRev) { const L2 = byRev.get(r.trev); if (L2) { hit = true; for (const i of ci) for (const row of L2) add(i, row, sgnR * r.a); } }
@@ -92,6 +102,7 @@ function make(db, all, get, run, okYm) {
       for (const m of byAcc) if (String(r.acc).startsWith(m.p) && !(isExp && byCost.has(tocCode(r.tcost))) && !(isRev && byRev.has(r.trev))) { hit = true; for (const i of ci) add(i, m.row, (m.side === 'dr' ? sgnE : sgnR) * r.a); }
       // doanh thu chưa ánh xạ tay → phân loại tự động theo TK + tên loại doanh thu
       if (isRev && !hit && !accHit && autoOn) { const row = autoRev(r.acc, r.trev, r.an); if (row && leafRows.has(row)) { hit = true; for (const i of ci) add(i, row, sgnR * r.a); const s = auto.get(row) || auto.set(row, new Set()).get(row); s.add((r.trev || '(không có loại DT)') + ' · TK ' + String(r.acc).slice(0, 4)); } }
+      if (isExp && !hit && !accHit && autoOn) { const row = (EXP_DEF.find(([rx]) => rx.test(acc)) || [])[1]; if (row && leafRows.has(row)) { hit = true; for (const i of ci) add(i, row, sgnE * r.a); const s = auto.get(row) || auto.set(row, new Set()).get(row); s.add((r.tcost || '(không có khoản mục)') + ' · TK ' + acc.slice(0, 4)); } }
       if (isExp || isRev) for (const i of ci) { const t = tot[i]; if (isExp) { t.exp += sgnE * r.a; if (hit) t.mExp += sgnE * r.a; } else { t.rev += sgnR * r.a; if (hit) t.mRev += sgnR * r.a; } }
       if (!hit && (isExp || isRev)) { const k = isExp ? 'C|' + (r.tcost || '(trống)') : 'R|' + (r.trev || '(trống)') + '|' + String(r.acc).slice(0, 3); const o = un.get(k) || un.set(k, { kind: isExp ? 'cost' : 'rev', key: isExp ? (r.tcost || '') : (r.trev || ''), acc: String(r.acc).slice(0, 3), v: cols.map(() => 0) }).get(k); for (const i of ci) o.v[i] += isExp ? sgnE * r.a : sgnR * r.a; }
     }
@@ -99,11 +110,12 @@ function make(db, all, get, run, okYm) {
     const fn = new Map(); for (const l of L) if (l.kind === 'calc') { try { fn.set(l.row, compile(l.expr)); } catch (e) { fn.set(l.row, null); } }
     const out = cols.map((c, i) => { const memo = new Map(), stack = new Set();
       const V = row => { row = +row; if (memo.has(row)) return memo.get(row); const l = L.find(x => x.row === row); let v = 0;
-        if (!l) v = 0; else if (l.kind === 'leaf') v = val[i].get(row) || 0; else if (l.kind === 'param') v = P[row] != null ? +P[row] : 0;
+        if (!l) v = 0; else if (l.kind === 'leaf' || (l.kind === 'label' && val[i].has(row))) v = val[i].get(row) || 0; else if (l.kind === 'param') v = P[row] != null ? +P[row] : 0;
         else if (l.kind === 'calc' && fn.get(row) && !stack.has(row)) { stack.add(row); try { v = fn.get(row)(V, (a, b) => { let s = 0; for (let k = +a; k <= +b; k++) s += V(k); return s; }, (x, y) => (isFinite(x) ? x : y)); } catch { v = 0; } stack.delete(row); }
         if (!isFinite(v)) v = 0; memo.set(row, v); return v; };
       return Object.fromEntries(L.map(l => [l.row, V(l.row)])); });
-    return { cols, autoOn, lines: L.map(l => ({ ...l, map: M.get(l.row) || null, auto: auto.has(l.row) ? [...auto.get(l.row)] : null })), values: out, unmapped: [...un.values()].filter(u => u.v.some(x => Math.abs(x) > 0.004)).sort((a, b) => Math.abs(b.v[0]) - Math.abs(a.v[0])), totals: tot, params: P };
+    const b02 = cols.map(c => { try { const p = plr ? plr(c.from, c.to) : null; return p ? { pbt: p.pbt, pat: p.pat, tax: p.tax } : null; } catch { return null; } });
+    return { cols, autoOn, b02, lines: L.map(l => ({ ...l, map: M.get(l.row) || null, auto: auto.has(l.row) ? [...auto.get(l.row)] : null })), values: out, unmapped: [...un.values()].filter(u => u.v.some(x => Math.abs(x) > 0.004)).sort((a, b) => Math.abs(b.v[0]) - Math.abs(a.v[0])), totals: tot, params: P };
   }
   // Danh sách khoản mục / loại doanh thu đang có trong dữ liệu (để chọn khi ánh xạ)
   function sources() {

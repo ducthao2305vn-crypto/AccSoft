@@ -482,7 +482,7 @@ function make(db) {
   const PC = require('./partners').make(db, all, get, okYm);
   const FIN = require('./fin').make(all, okYm, '1', (f, t) => plBy(`'x'`, f, t, true)[0] || plRange('9999-01', '9999-01'), (q, ...a) => db.prepare(q).run(...a));
   const DM = require('./catalogs').make(db, all, get, (q, ...a) => db.prepare(q).run(...a));
-  const KQ = require('./kqkd').make(db, all, get, (q, ...a) => db.prepare(q).run(...a), okYm);
+  const KQ = require('./kqkd').make(db, all, get, (q, ...a) => db.prepare(q).run(...a), okYm, (f, t) => plBy(`'x'`, f, t, true)[0] || null);
   const FA = require('./fieldadj').make(db, all, (q, ...a) => db.prepare(q).run(...a), okYm, FIN);
   // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
   // Dòng trích trước của một kỳ dịch vụ (làm mẫu lập trích kỳ mới) + đánh dấu khoản đã có trích ở kỳ đích
