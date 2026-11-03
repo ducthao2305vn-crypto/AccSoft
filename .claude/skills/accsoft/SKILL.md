@@ -164,6 +164,7 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
   - `prettify` thêm 4 dòng đầu (tiêu đề cột ở dòng 5), gán định dạng số theo kiểu cột, đặt độ rộng cột, autofilter, đổi tên sheet có dấu (`SHEET_VN`), lấy tên báo cáo theo tên file (`TITLE`).
   - `stylize` dùng CFB để mở gói zip và chèn font/fill/border/xf vào styles.xml, gán `s` cho từng ô, thêm freeze pane.
   - Tên file khớp `RAW` (mẫu số dư đầu kỳ, DANH_MUC) được giữ dạng thô.
+- Lưu ý khi chèn XML: Excel kiểm tra nghiêm ngặt thứ tự các thẻ con của `worksheet` (sheetPr, dimension, sheetViews, sheetFormatPr, cols, sheetData, …, autoFilter, …). openpyxl và LibreOffice bỏ qua lỗi thứ tự, nên không phát hiện được. Không chèn thẻ mới nếu chưa chắc vị trí đúng.
 - Không dùng được xlsx-js-style (bị chặn cài code bên ngoài), nên phải tự chèn kiểu như trên.
 - **Thêm báo cáo Excel mới:**
   - Đặt tên file theo dạng `AccSoft_<Ten>_<từ>_<đến>.xlsx`. Ngày dạng `YYYY-MM` hoặc `YYYY-MM-DD` trong tên file được đưa lên dòng "Kỳ báo cáo"; hai ngày thành "từ – đến", một ngày thành "Tại".

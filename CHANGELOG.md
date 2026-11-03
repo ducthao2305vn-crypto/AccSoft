@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.20.1 – 03/11/2026
+**Sửa lỗi Excel báo "Repaired… XML error" khi mở file xuất**
+- Bản 4.19 chèn thẻ định dạng dòng (`sheetFormatPr`) sai vị trí trong sheet, nên Excel từ chối và xoá toàn bộ dữ liệu sheet. Đã bỏ thẻ này. Định dạng số, tiêu đề, màu, cố định dòng tiêu đề vẫn giữ nguyên.
+
 ## v4.20.0 – 03/11/2026
 **Giao diện: tách rõ thanh chuyên đề và thanh báo cáo**
 - Thanh trên **"Chuyên đề phân tích"** có nhãn nhỏ phía trên, kiểu tab gạch chân: tab đang mở có chữ cam, gạch chân cam, nền nhạt.

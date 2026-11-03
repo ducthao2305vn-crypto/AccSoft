@@ -102,7 +102,7 @@ function stylize(buf, wb) {
       let s; if (r === 1) s = S_T; else if (r === 2 || r === 3) s = S_S; else if (r === 5) s = S_H; else if (r > 5 && r <= m.last) s = m.tot.has(r) ? mk(numOf(s0), FB, LT, BD, '') : mk(numOf(s0), FN, 0, BD, numOf(s0) === 0 ? '<alignment vertical="top" wrapText="0"/>' : '');
       else return all; return `<c r="${col}${rs}"${a} s="${s}"${sc}>`; });
     x = x.replace(/<sheetView workbookViewId="0"\s*\/>/, '<sheetView workbookViewId="0" showGridLines="0"><pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A6" sqref="A6"/></sheetView>');
-    x = x.replace(/<sheetData>/, '<sheetFormatPr defaultRowHeight="15"/><sheetData>').replace(/(<row r="5")/, '$1 ht="32" customHeight="1"').replace(/(<row r="1")/, '$1 ht="24" customHeight="1"');
+    x = x.replace(/(<row r="5")/, '$1 ht="32" customHeight="1"').replace(/(<row r="1")/, '$1 ht="24" customHeight="1"');
     put(p, x);
   });
   st = st.replace(/<cellXfs count="\d+">[\s\S]*?<\/cellXfs>/, `<cellXfs count="${xfList.length + added.length}">${xfList.join('')}${added.join('')}</cellXfs>`);
