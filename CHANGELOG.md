@@ -1,5 +1,22 @@
 # Lịch sử phiên bản
 
+## v4.27.0 – 03/11/2026
+**KQKD theo mẫu: đủ phần doanh thu; mọi bảng chỉnh độ rộng / ẩn cột được**
+- **KQKD theo mẫu – doanh thu:**
+  - Bỏ mặc định "Ẩn dòng bằng 0": phần tóm tắt luôn hiện đủ cấu trúc mẫu, cả các dòng doanh thu. Tuỳ chọn mới "Ẩn dòng chi tiết bằng 0" chỉ ẩn dòng lá của phần chi tiết.
+  - Thêm **tự phân loại doanh thu** khi chưa ánh xạ tay, theo TK, tên TK và tên loại doanh thu:
+    - TK 515: chênh lệch tỷ giá chưa / đã thực hiện, lãi tiền gửi, cổ tức, lãi trả chậm, lãi vay cổ đông, chiết khấu, tài chính khác.
+    - TK 413: chênh lệch tỷ giá đã thực hiện.
+    - TK 711: khuyến mại, doanh thu khác.
+    - TK 521: điều chỉnh doanh thu.
+    - TK 511: thoại, SMS, data, VAS, thẻ cào, sim/kit, máy, trả sau, kết nối, roaming, quốc tế chiều về, IPLC, cố định, lắp đặt, CNTT, TMĐT, thiết bị, công ích, quảng cáo, xổ số; không khớp mẫu nào thì vào "Các loại doanh thu khác".
+  - Ánh xạ tay luôn được ưu tiên. Có ô tích bật / tắt tự phân loại. Cột "Ánh xạ" ghi "tự động · n loại DT"; rê chuột vào để xem danh sách.
+  - Dữ liệu test năm 2025: doanh thu vào mẫu đủ 370.259,76 ✓.
+- **Mọi bảng:**
+  - **Kéo mép phải tiêu đề cột** để đổi độ rộng.
+  - **Chuột phải tiêu đề**: "Ẩn cột này", "Hiện lại cột …", "Hiện tất cả cột & đặt lại độ rộng".
+  - Ứng dụng nhớ cài đặt theo từng loại bảng, tự áp lại khi mở lại. Bảng có cột ẩn hiện nhãn "⋯n ẩn".
+
 ## v4.26.0 – 03/11/2026
 **Mới: Báo cáo kết quả kinh doanh theo mẫu của đơn vị (MAU_BAO_CAO_KQKD)**
 - Thêm tab **Báo cáo tài chính → KQKD theo mẫu**, lập đúng cấu trúc file mẫu:

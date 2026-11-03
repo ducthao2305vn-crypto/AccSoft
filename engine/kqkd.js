@@ -33,6 +33,22 @@ function compile(expr) {
   return new Function('V', 'S', 'IE', 'return ' + ex);
 }
 
+// Phân loại doanh thu tự động (khi chưa ánh xạ tay) theo TK và tên loại doanh thu – số dòng theo mẫu MAU_BAO_CAO_KQKD
+const REV_RULES = [
+  [/^515/, [[/unreali|chưa thực hiện|chua thuc hien|revaluat|đánh giá lại/i, 146], [/exchange|tỷ giá|ty gia|cltg|forex|fx/i, 147], [/dividend|cổ tức|co tuc/i, 150], [/late|trả chậm|tra cham|penalt/i, 151], [/shareholder|cổ đông|co dong/i, 152], [/discount|chiết khấu|chiet khau/i, 148], [/interest|lãi|deposit|tiền gửi/i, 149], [/./, 153]]],
+  [/^413/, [[/./, 147]]],
+  [/^711/, [[/promot|khuyến mại|khuyen mai/i, 155], [/./, 156]]],
+  [/^52/, [[/./, 159]]],
+  [/^5/, [[/interconnect|kết nối|ket noi/i, 110], [/roaming/i, 127], [/oversea|international|quốc tế|quoc te|incoming/i, 126], [/iplc/i, 128],
+    [/sms/i, 100], [/voice|call|thoại|thoai/i, 99], [/\bvas\b|value.?added|giá trị gia tăng/i, 102], [/data|internet|3g|4g|5g|lte/i, 101],
+    [/scratch|thẻ cào giấy|the cao giay/i, 103], [/electric.*card|thẻ cào điện lực/i, 141], [/e.?card|electronic|e.?load|top.?up|thẻ cào điện tử|ezpay|anypay/i, 104],
+    [/sim|kit|activation|kích hoạt|kich hoat/i, 105], [/homephone|pstn/i, 106], [/handset|mobile phone|smartphone|điện thoại|device sale/i, 107], [/usb|dcom/i, 108],
+    [/postpaid|monthly|trả sau|tra sau|subscription/i, 109], [/ftth|adsl|fixed|leased|apl|broadband|cố định|co dinh/i, 119], [/install|lắp đặt|lap dat/i, 120],
+    [/\bict\b|\bit\b|solution|cntt|software|cloud/i, 124], [/e.?commerce|emoney|e-money|wallet|ví|thương mại điện tử/i, 135], [/equipment|thiết bị|thiet bi/i, 139],
+    [/public|uso|công ích|cong ich/i, 140], [/advertis|quảng cáo|quang cao|short.?code|đầu số/i, 142], [/lottery|xổ số|xo so/i, 143], [/./, 144]]],
+];
+function autoRev(acc, trev, accName) { const a = String(acc || ''), t = String(trev || '') + ' ' + a + ' ' + String(accName || ''); for (const [ra, rs] of REV_RULES) if (ra.test(a)) { for (const [rx, row] of rs) if (rx.test(t)) return row; } return null; }
+
 function make(db, all, get, run, okYm) {
   const tpl = () => { const s = get(`SELECT v FROM settings WHERE k='kqkd_tpl'`); if (s && s.v) return JSON.parse(s.v); return require('./kqkd_template.json'); };
   const params = () => { const s = get(`SELECT v FROM settings WHERE k='kqkd_params'`); return s && s.v ? JSON.parse(s.v) : {}; };
@@ -62,7 +78,8 @@ function make(db, all, get, run, okYm) {
     const byCost = new Map(), byRev = new Map(), byAcc = [];
     for (const [row, m] of M) { for (const c of m.cost) (byCost.get(c) || byCost.set(c, []).get(c)).push(row); for (const v of m.rev) (byRev.get(v) || byRev.set(v, []).get(v)).push(row); for (const a of m.acc) if (a && a.p) byAcc.push({ row, p: String(a.p), side: a.side === 'dr' ? 'dr' : 'cr' }); }
     const accW = byAcc.length ? ' OR ' + byAcc.map(a => `acc LIKE '${a.p.replace(/[^0-9A-Za-z]/g, '')}%'`).join(' OR ') : '';
-    const rows = all(`SELECT ym, side, acc, tcost, trev, sum(amount) a FROM agg WHERE ym>=? AND ym<=? AND (substr(acc,1,1) IN ('5','6','7','8')${accW}) AND acc NOT LIKE '911%' GROUP BY 1,2,3,4,5`, lo, hi);
+    const leafRows = new Set(L.filter(l => l.kind === 'leaf').map(l => l.row)), auto = new Map(), autoOn = (get(`SELECT v FROM settings WHERE k='kqkd_autorev'`) || { v: '1' }).v !== '0';
+    const rows = all(`SELECT ym, side, acc, max(acc_name) an, tcost, trev, sum(amount) a FROM agg WHERE ym>=? AND ym<=? AND (substr(acc,1,1) IN ('5','6','7','8')${accW}) AND acc NOT LIKE '911%' GROUP BY 1,2,3,5,6`, lo, hi);
     const val = cols.map(() => new Map()), un = new Map(), tot = cols.map(() => ({ rev: 0, exp: 0, mRev: 0, mExp: 0 }));
     const add = (i, row, v) => val[i].set(row, (val[i].get(row) || 0) + v);
     for (const r of rows) {
@@ -71,7 +88,10 @@ function make(db, all, get, run, okYm) {
       const sgnE = r.side === 'dr' ? 1 : -1, sgnR = -sgnE; let hit = false;
       if (isExp) { const L1 = byCost.get(tocCode(r.tcost)); if (L1) { hit = true; for (const i of ci) for (const row of L1) add(i, row, sgnE * r.a); } }
       if (isRev) { const L2 = byRev.get(r.trev); if (L2) { hit = true; for (const i of ci) for (const row of L2) add(i, row, sgnR * r.a); } }
+      const accHit = byAcc.some(m => String(r.acc).startsWith(m.p));
       for (const m of byAcc) if (String(r.acc).startsWith(m.p) && !(isExp && byCost.has(tocCode(r.tcost))) && !(isRev && byRev.has(r.trev))) { hit = true; for (const i of ci) add(i, m.row, (m.side === 'dr' ? sgnE : sgnR) * r.a); }
+      // doanh thu chưa ánh xạ tay → phân loại tự động theo TK + tên loại doanh thu
+      if (isRev && !hit && !accHit && autoOn) { const row = autoRev(r.acc, r.trev, r.an); if (row && leafRows.has(row)) { hit = true; for (const i of ci) add(i, row, sgnR * r.a); const s = auto.get(row) || auto.set(row, new Set()).get(row); s.add((r.trev || '(không có loại DT)') + ' · TK ' + String(r.acc).slice(0, 4)); } }
       if (isExp || isRev) for (const i of ci) { const t = tot[i]; if (isExp) { t.exp += sgnE * r.a; if (hit) t.mExp += sgnE * r.a; } else { t.rev += sgnR * r.a; if (hit) t.mRev += sgnR * r.a; } }
       if (!hit && (isExp || isRev)) { const k = isExp ? 'C|' + (r.tcost || '(trống)') : 'R|' + (r.trev || '(trống)') + '|' + String(r.acc).slice(0, 3); const o = un.get(k) || un.set(k, { kind: isExp ? 'cost' : 'rev', key: isExp ? (r.tcost || '') : (r.trev || ''), acc: String(r.acc).slice(0, 3), v: cols.map(() => 0) }).get(k); for (const i of ci) o.v[i] += isExp ? sgnE * r.a : sgnR * r.a; }
     }
@@ -83,14 +103,15 @@ function make(db, all, get, run, okYm) {
         else if (l.kind === 'calc' && fn.get(row) && !stack.has(row)) { stack.add(row); try { v = fn.get(row)(V, (a, b) => { let s = 0; for (let k = +a; k <= +b; k++) s += V(k); return s; }, (x, y) => (isFinite(x) ? x : y)); } catch { v = 0; } stack.delete(row); }
         if (!isFinite(v)) v = 0; memo.set(row, v); return v; };
       return Object.fromEntries(L.map(l => [l.row, V(l.row)])); });
-    return { cols, lines: L.map(l => ({ ...l, map: M.get(l.row) || null })), values: out, unmapped: [...un.values()].filter(u => u.v.some(x => Math.abs(x) > 0.004)).sort((a, b) => Math.abs(b.v[0]) - Math.abs(a.v[0])), totals: tot, params: P };
+    return { cols, autoOn, lines: L.map(l => ({ ...l, map: M.get(l.row) || null, auto: auto.has(l.row) ? [...auto.get(l.row)] : null })), values: out, unmapped: [...un.values()].filter(u => u.v.some(x => Math.abs(x) > 0.004)).sort((a, b) => Math.abs(b.v[0]) - Math.abs(a.v[0])), totals: tot, params: P };
   }
   // Danh sách khoản mục / loại doanh thu đang có trong dữ liệu (để chọn khi ánh xạ)
   function sources() {
     return { cost: all(`SELECT c.code, c.name, c.vn, c.grp FROM cost_cat c ORDER BY c.code`), costData: all(`SELECT tcost t, sum(amount) a FROM agg WHERE tcost IS NOT NULL GROUP BY 1`).map(r => ({ code: tocCode(r.t), t: r.t, a: r.a })),
       rev: all(`SELECT trev t, sum(CASE WHEN side='cr' THEN amount ELSE -amount END) a, count(*) n FROM agg WHERE trev IS NOT NULL AND substr(acc,1,1) IN ('5','7') GROUP BY 1 ORDER BY a DESC`) };
   }
-  return { tpl, compute, autoMap, setMap, clearMap, setParams, importTemplate, sources, maps: () => [...maps()].map(([row, m]) => ({ row, ...m })) };
+  const setAutoRev = on => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('kqkd_autorev', ?)`, on ? '1' : '0'); return { on: !!on }; };
+  return { setAutoRev, tpl, compute, autoMap, setMap, clearMap, setParams, importTemplate, sources, maps: () => [...maps()].map(([row, m]) => ({ row, ...m })) };
 }
 function ensure(db) { db.exec(`CREATE TABLE IF NOT EXISTS kq_map(row INTEGER PRIMARY KEY, cost TEXT, rev TEXT, acc TEXT, note TEXT)`); }
 module.exports = { make, ensure, parseTemplate, compile };

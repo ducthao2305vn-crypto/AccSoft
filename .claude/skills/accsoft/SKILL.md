@@ -150,6 +150,12 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Cột bảng & tự phân loại doanh thu (v4.27)
+- `COLP` (cuối `app.js`) xử lý kéo đổi độ rộng ở mép phải `thead th` (vùng 7px) và ẩn / hiện cột qua menu chuột phải.
+  - Cài đặt lưu trong `localStorage['accsoft.colPrefs']`, khoá = tên các cột lá, đọc từ `dataset.cn` (dùng textContent, không dùng innerText vì th đang ẩn sẽ ra chuỗi rỗng).
+  - `MutationObserver` tự áp cài đặt khi bảng mới xuất hiện.
+- `kqkd.REV_RULES` / `autoRev(acc, trev, accName)` phân loại doanh thu chưa ánh xạ. Bật/tắt bằng `settings.kqkd_autorev`. Kết quả `compute` có thêm `lines[].auto` và `autoOn`.
+
 ### KQKD theo mẫu (v4.26, `engine/kqkd.js`)
 - **Đọc mẫu:** `parseTemplate(XLSX, wb)` đọc sheet đầu: cột A là STT, B là tên tiếng Anh, C là tên tiếng Việt; công thức chuẩn lấy ở cột Q (quý 1).
   - Dòng lá: Q = SUM(E r : G r).
