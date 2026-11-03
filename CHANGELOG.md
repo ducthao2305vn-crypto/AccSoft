@@ -1,5 +1,19 @@
 # Lịch sử phiên bản
 
+## v4.29.0 – 03/11/2026
+**Mới: Chi phí theo xe (biển số) và Chi phí theo phòng ban, điều chỉnh tại bút toán gốc**
+- **Phân tích → Chi phí theo xe:** ma trận **biển số xe (License Plate) × nhóm chi phí × tháng**.
+  - Nhóm chi phí: Xăng dầu xe; Sửa chữa xe (phụ tùng, dịch vụ); Thay dầu, nước làm mát xe; Thuê xe; Khấu hao phương tiện.
+  - **Định mức / xe / tháng** cho từng nhóm, nhập và lưu trên trang. Ô **đỏ** là tháng vượt định mức, ô **cam** là tháng cao hơn 1,8 lần bình quân của chính xe đó.
+  - Cột **"So với đội xe"** = tổng kỳ của xe / trung vị các xe cùng nhóm; từ 1,5 lần trở lên được đánh dấu.
+  - Lọc "Chỉ xe vượt định mức / bất thường".
+- **Phân tích → Chi phí theo phòng ban:** mọi chi phí TK 6xx/8xx theo **phòng ban hạch toán × nhóm chi phí (Expense Group) × tháng**.
+  - Có cột **Phòng ban danh mục** theo ánh xạ; tên chưa ánh xạ được báo đỏ.
+  - Cột "So với các phòng"; lọc theo một nhóm chi phí.
+- **Nhấn đúp một ô** để xem bút toán gốc, rồi đổi **biển số xe / phòng ban** cho đúng. Chọn từ danh sách giá trị đang dùng (phòng ban kèm tên danh mục) hoặc nhập thủ công; có nút "Trả về giá trị gốc". Dữ liệu gốc không bị sửa; điều chỉnh xem ở Kiểm soát → Điều chỉnh dữ liệu, ở đó cũng có trường **Phòng ban** mới.
+- **Chi phí theo vị trí** dùng chung bộ máy mới, chức năng giữ nguyên.
+- Xuất Excel cho cả 3 báo cáo.
+
 ## v4.28.0 – 03/11/2026
 **Mới: Báo cáo quản trị chi phí theo vị trí**
 - Thêm trang **Phân tích → Chi phí theo vị trí**: ma trận **mã vị trí (Location) × nhóm chi phí × từng tháng**, chọn được kỳ từ tháng đến tháng.

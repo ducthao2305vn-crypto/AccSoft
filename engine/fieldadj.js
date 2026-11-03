@@ -1,7 +1,7 @@
 'use strict';
 // Điều chỉnh các trường quản trị của bút toán (không sửa dữ liệu gốc): Hợp đồng, Mã vị trí (Location), Biển số xe, Loại dòng tiền.
 // Hợp đồng / vị trí / biển số lưu ở bảng field_adj (theo id bút toán + chữ ký nội dung); dòng tiền dùng chung bảng cf_adj của B03.
-const FIELDS = { contract: { col: 'contract', name: 'Hợp đồng' }, location: { col: 'location', name: 'Mã vị trí (Location)' }, plate: { col: 'plate', name: 'Biển số xe' }, cf: { col: 'cashflow', name: 'Loại dòng tiền' } };
+const FIELDS = { contract: { col: 'contract', name: 'Hợp đồng' }, location: { col: 'location', name: 'Mã vị trí (Location)' }, plate: { col: 'plate', name: 'Biển số xe' }, dept: { col: 'department', name: 'Phòng ban' }, cf: { col: 'cashflow', name: 'Loại dòng tiền' } };
 const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+r.a || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
 
 function make(db, all, run, okYm, FIN) {
@@ -22,13 +22,13 @@ function make(db, all, run, okYm, FIN) {
     if (!w.length) w.push('1');
     const lim = Math.min(+o.limit || 5000, 20000);
     const rows = all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount a, e.partner_debit bp, e.partner_credit bpCr,
-        e.description ds, e.created_by u, e.contract, e.location, e.plate, e.cashflow cf FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.id LIMIT ${lim + 1}`, ...a);
+        e.description ds, e.created_by u, e.contract, e.location, e.plate, e.department dept, e.cashflow cf FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.id LIMIT ${lim + 1}`, ...a);
     const ids = rows.map(r => r.id), adj = new Map();
     for (let i = 0; i < ids.length; i += 500) { const c = ids.slice(i, i + 500); for (const x of all(`SELECT * FROM field_adj WHERE id IN (${c.map(() => '?').join(',')})`, ...c)) adj.set(x.id + '|' + x.field, x); }
     const cfa = new Map(); try { for (const x of all(`SELECT sig, code, note FROM cf_adj`)) cfa.set(x.sig, x); } catch { }
     const CFN = (FIN.cfRows ? null : null), out = rows.slice(0, lim).map(r => {
       const o2 = { ...r, sig: sigOf(r), cash: CASH(r.dr) !== CASH(r.cr) };
-      for (const k of ['contract', 'location', 'plate']) { const x = adj.get(r.id + '|' + k); o2[k + 'New'] = x ? x.value : null; o2[k + 'Note'] = x ? x.note : ''; }
+      for (const k of ['contract', 'location', 'plate', 'dept']) { const x = adj.get(r.id + '|' + k); o2[k + 'New'] = x ? x.value : null; o2[k + 'Note'] = x ? x.note : ''; }
       const c = cfa.get('c:' + o2.sig); o2.cfNew = c ? c.code : null; o2.cfNote = c ? c.note : '';
       return o2;
     });

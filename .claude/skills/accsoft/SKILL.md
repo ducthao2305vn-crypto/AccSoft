@@ -150,6 +150,16 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Chi phí theo vị trí / xe / phòng ban (v4.29, `engine/loccost.js` dùng chung)
+- `DIMS`: `location` (e.location, field_adj 'location'), `plate` (e.plate, 'plate'), `dept` (e.department, 'dept').
+- Nhóm chi phí:
+  - `GROUPS.location` / `GROUPS.plate` ghi đè được bằng `settings.loc_groups` / `settings.veh_groups`.
+  - `dept` nhóm theo `cost_cat.grp`, thêm nhóm '(khoản mục ngoài danh mục)'.
+- `matrix(d, from, to, keys)` trả về `gaps` (chỉ dim location), `high`, `over` (so với định mức `settings.veh_norm`, chỉ dim plate), `ratio` (tổng kỳ / trung vị cùng nhóm, cần ≥ 3 dòng) và `cat` (phòng ban danh mục).
+- IPC: `locMatrix(d, …)`, `locDetail(d, key, g, from, to)`, `locList(d)`, `locNorms` nằm trong READ; `locSetNorms` nằm trong WRITE.
+- `fieldadj.FIELDS` có thêm `dept` (cột department).
+- UI: `vDim(d)`, `dimDraw`, `dimDetail` dùng chung cho 3 trang `locc`, `vehc`, `deptc`.
+
 ### Chi phí theo vị trí (v4.28, `engine/loccost.js`)
 - `GROUPS`: danh sách nhóm và mã khoản mục, có thể ghi đè bằng `settings.loc_groups`.
 - Mã vị trí hiệu lực = `coalesce(field_adj(location).value, e.location)`, lấy qua LEFT JOIN, không dùng subquery tương quan (chậm hơn khoảng 20 lần).
