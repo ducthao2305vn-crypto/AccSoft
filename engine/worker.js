@@ -49,12 +49,13 @@ const SRC = {
   product: ['Product', str], uom: ['UOM', str], loc: ['Locator', str], locCr: ['Locator Credit', str],
   distFrom: ['Distribution From', isoDate], distTo: ['Distribution To', isoDate], currency: ['Currency', str], rate: ['Rate', num], rateVnd: ['RateToVND', num],
   grpCost: ['Group cost', str], services: ['Services', str], location: ['Location', str], project: ['Project', str], period: ['Period', str],
+  plate: [['License Plate', 'LicensePlate', 'TOC_LicensePlate', 'Biển số xe', 'Bien so xe', 'Vehicle', 'Vehicles', 'Plate No'], str],
 };
 function headerMap(header) {
   const idx = {};
   header.forEach((h, i) => { const k = String(h ?? '').trim(); if (k && !(k in idx)) idx[k] = i; });
   if (!('Account' in idx) || !('Accounted Amount' in idx)) return null;
-  return Object.fromEntries(Object.entries(SRC).map(([k, [h, fn]]) => [k, [idx[h], fn]]));
+  return Object.fromEntries(Object.entries(SRC).map(([k, [h, fn]]) => [k, [Array.isArray(h) ? idx[h.find(x => x in idx)] : idx[h], fn]]));
 }
 function normalize(vals, map) {
   const r = {};

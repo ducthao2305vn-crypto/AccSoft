@@ -283,7 +283,7 @@ function make(db) {
     const asD = new Date(asOf), map = new Map();
     const pres = AG_ACC.map(a => a[0]);
     // Cộng gộp sẵn bằng SQL theo ngày × hạn × TK × đối tượng × mã tham chiếu (chỉ cột cần cho dim) → ít dòng hơn nhiều để tính FIFO
-    const refCol = { contract: 'e.contract', adv: 'e.advance_request', tcost: 'e.type_of_cost' }[dim];
+    const refCol = { contract: "coalesce((SELECT f.value FROM field_adj f WHERE f.id=e.id AND f.field='contract'), e.contract)", adv: 'e.advance_request', tcost: 'e.type_of_cost' }[dim];
     const refAs = { contract: 'contract', adv: 'adv', tcost: 'tcost' }[dim];
     const q = (col, partner, nameAs, accAs, bpAs) => all(`SELECT e.account_date date, e.due_date due, e.acc_${col} ${accAs}, e.acc_${col}_name ${nameAs}, e.${partner} ${bpAs}${refCol ? `, ${refCol} ${refAs}` : ''}, sum(e.amount) amt
       FROM entries e WHERE ${INC} AND e.account_date<=? AND ${rng('e.acc_' + col, pres)} GROUP BY 1,2,3,4,5${refCol ? ',6' : ''}`, asOf);
@@ -391,7 +391,7 @@ function make(db) {
   function ledger(spec = {}) {
     const LIM = 3000, out = [];
     const SEL = `e.id rid, e.account_date date, e.document_no doc, e.line_no line, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName,
-      e.amount amt, e.partner_debit bp, e.partner_credit bpCr, e.contract, e.advance_request adv, e.type_of_cost tcost, e.product, e.locator loc, e.locator_credit locCr,
+      e.amount amt, e.partner_debit bp, e.partner_credit bpCr, coalesce((SELECT f.value FROM field_adj f WHERE f.id=e.id AND f.field='contract'), e.contract) contract, e.advance_request adv, e.type_of_cost tcost, e.product, e.locator loc, e.locator_credit locCr,
       e.description "desc", e.created_by user, (SELECT min(er.id) FROM errors er WHERE er.entry_id=e.id) eid`;
     if (spec.kind === 'ag' || spec.kind === 'inv') {
       const acc = String(spec.acc || '');
@@ -474,6 +474,7 @@ function make(db) {
   const RECV = require('./recv').make(all, okYm);
   const PC = require('./partners').make(db, all, get, okYm);
   const FIN = require('./fin').make(all, okYm, '1', (f, t) => plBy(`'x'`, f, t, true)[0] || plRange('9999-01', '9999-01'), (q, ...a) => db.prepare(q).run(...a));
+  const FA = require('./fieldadj').make(db, all, (q, ...a) => db.prepare(q).run(...a), okYm, FIN);
   // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
   // Dòng trích trước của một kỳ dịch vụ (làm mẫu lập trích kỳ mới) + đánh dấu khoản đã có trích ở kỳ đích
   function accrualSource(per, target, acc = '') {
@@ -502,7 +503,7 @@ function make(db) {
   }
   const stats = () => get(`SELECT (SELECT count(*) FROM entries) entries, (SELECT count(*) FROM errors) errors, (SELECT count(*) FROM months WHERE included=1) monthsOn, (SELECT count(*) FROM months) months`);
 
-  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, catList: PC.list, catUpsert: PC.upsert, catRemove: PC.remove, catImport: PC.importRows, catExport: PC.exportAll, catUnmatched: PC.unmatched, catStats: PC.kindStats, grpInternal: PC.internal, grpInternalRows: PC.internalRows, grpBalance: PC.internalBalance, grpYears: PC.internalYears, grpCompanies: PC.companies, finPartnerTB: PC.partnerTB, igAdjList: PC.adjList, igAdjSet: PC.adjSet, igAdjRemove: PC.adjRemove, igDocLines: PC.docLines, grpIntl: PC.intlPayments, recvAnalyze: RECV.analyze, recvDetail: RECV.detail, acc335List: () => all(`SELECT acc, max(name) name, sum(dr) dr, sum(cr) cr FROM fin_mv WHERE acc>='335' AND acc<'336' GROUP BY acc ORDER BY acc`), finTrial: FIN.trial, finBalance: FIN.balanceSheet, finIncome: FIN.income, finCash: FIN.cashFlow, cfRows: FIN.cfRows, cfAdjSet: FIN.cfAdjSet, cfAdjRemove: FIN.cfAdjRemove, cfAdjList: FIN.cfAdjList, finDrill: FIN.drill, finNotes: FIN.notes, finStatus: FIN.status, finEmpty: () => !get('SELECT 1 x FROM fin_close LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1'), getB09Info: () => JSON.parse(getSetting('b09Info') || 'null'), setB09Info: o => { setSetting('b09Info', JSON.stringify(o || {})); return o; }, deepReversal: D.reversal, reversalLines, accrualSource, accrualLinesByIds, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
+  return { meta, getThresholds, setThresholds, backup, deepRecurring: D.recurring, deepVariance: D.variance, deepAccruals: D.accruals, deepPrepaid: D.prepaid, deepBenford: D.benford, deepStaff: D.staff, deepVendors: D.vendors, deepFx: D.fx, catList: PC.list, catUpsert: PC.upsert, catRemove: PC.remove, catImport: PC.importRows, catExport: PC.exportAll, catUnmatched: PC.unmatched, catStats: PC.kindStats, grpInternal: PC.internal, grpInternalRows: PC.internalRows, grpBalance: PC.internalBalance, grpYears: PC.internalYears, grpCompanies: PC.companies, finPartnerTB: PC.partnerTB, igAdjList: PC.adjList, igAdjSet: PC.adjSet, igAdjRemove: PC.adjRemove, igDocLines: PC.docLines, grpIntl: PC.intlPayments, recvAnalyze: RECV.analyze, recvDetail: RECV.detail, acc335List: () => all(`SELECT acc, max(name) name, sum(dr) dr, sum(cr) cr FROM fin_mv WHERE acc>='335' AND acc<'336' GROUP BY acc ORDER BY acc`), finTrial: FIN.trial, finBalance: FIN.balanceSheet, finIncome: FIN.income, finCash: FIN.cashFlow, faSearch: FA.search, faValues: FA.values, faSet: FA.set, faRemove: FA.remove, faList: FA.list, faRebind: FA.rebind, cfRows: FIN.cfRows, cfAdjSet: FIN.cfAdjSet, cfAdjRemove: FIN.cfAdjRemove, cfAdjList: FIN.cfAdjList, finDrill: FIN.drill, finNotes: FIN.notes, finStatus: FIN.status, finEmpty: () => !get('SELECT 1 x FROM fin_close LIMIT 1') && !!get('SELECT 1 x FROM entries LIMIT 1'), getB09Info: () => JSON.parse(getSetting('b09Info') || 'null'), setB09Info: o => { setSetting('b09Info', JSON.stringify(o || {})); return o; }, deepReversal: D.reversal, reversalLines, accrualSource, accrualLinesByIds, aggEmpty, ledger, plRange, plTrend, analysisRange, analysisStatus, reviewPeriod, setReviewPeriod, inventory, analysis, analysisDrill, errors, errorGroups, errorFacets, errorDetail, setReviews, setStatusWhere, setStatusDoc, overview, pl, cost, aging,
     report, todo, employeeErrors, months, imports, setMonths, setAllMonths, getSetting, setSetting, logMail, mailLog, stats, rowFromDb };
 }
 module.exports = { make };

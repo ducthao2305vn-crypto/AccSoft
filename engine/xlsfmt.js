@@ -17,7 +17,7 @@ const SHEET_VN = {
   'Cach tinh phi': 'Cách tính phí', 'Theo nhom': 'Theo nhóm', 'CDPS theo doi tuong': 'CĐPS theo đối tượng',
 };
 // Tên báo cáo theo tên file
-const TITLE = [[/^AccSoft_CDPS_DoiTuong/, 'BẢNG CÂN ĐỐI PHÁT SINH THEO ĐỐI TƯỢNG'], [/^AccSoft_BCTC/, 'BÁO CÁO TÀI CHÍNH'], [/^AccSoft_BaoCaoKiemTra/, 'BÁO CÁO KIỂM TRA DỮ LIỆU HẠCH TOÁN'], [/^AccSoft_BaoCaoRuiRo/, 'BÁO CÁO RỦI RO HẠCH TOÁN'],
+const TITLE = [[/^AccSoft_CDPS_DoiTuong/, 'BẢNG CÂN ĐỐI PHÁT SINH THEO ĐỐI TƯỢNG'], [/^AccSoft_DieuChinhDuLieu/, 'ĐIỀU CHỈNH DỮ LIỆU QUẢN TRỊ'], [/^AccSoft_LichSuDieuChinh/, 'LỊCH SỬ ĐIỀU CHỈNH DỮ LIỆU'], [/^AccSoft_BCTC/, 'BÁO CÁO TÀI CHÍNH'], [/^AccSoft_BaoCaoKiemTra/, 'BÁO CÁO KIỂM TRA DỮ LIỆU HẠCH TOÁN'], [/^AccSoft_BaoCaoRuiRo/, 'BÁO CÁO RỦI RO HẠCH TOÁN'],
   [/^AccSoft_CanKhacPhuc/, 'DANH SÁCH LỖI CẦN KHẮC PHỤC'], [/^AccSoft_LoiNhapLieu/, 'DANH SÁCH LỖI NHẬP LIỆU'], [/^AccSoft_NoiBo_SoDu/, 'SỐ DƯ GIAO DỊCH NỘI BỘ'],
   [/^AccSoft_NoiBo_TheoNam/, 'TỔNG HỢP GIAO DỊCH NỘI BỘ THEO NĂM'], [/^AccSoft_NoiBo_ChiTiet/, 'CHI TIẾT GIAO DỊCH NỘI BỘ'], [/^AccSoft_NoiBo_TongHop/, 'TỔNG HỢP GIAO DỊCH NỘI BỘ'],
   [/^AccSoft_NoiBo_DieuChinh/, 'ĐIỀU CHỈNH ĐỐI TƯỢNG NỘI BỘ'], [/^AccSoft_NoiBo/, 'GIAO DỊCH NỘI BỘ'], [/^AccSoft_PhaiThu/, 'PHÂN TÍCH PHẢI THU THEO ĐỐI TƯỢNG'],

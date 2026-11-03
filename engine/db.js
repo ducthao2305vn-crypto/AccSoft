@@ -13,7 +13,7 @@ const COLS = [
   ['contract', 'contract', 'TEXT'], ['user', 'created_by', 'TEXT'], ['updUser', 'updated_by', 'TEXT'], ['cf', 'cashflow', 'TEXT'], ['bts', 'bts_site', 'TEXT'],
   ['product', 'product', 'TEXT'], ['uom', 'uom', 'TEXT'], ['loc', 'locator', 'TEXT'], ['locCr', 'locator_credit', 'TEXT'],
   ['distFrom', 'dist_from', 'TEXT'], ['distTo', 'dist_to', 'TEXT'], ['currency', 'currency', 'TEXT'], ['rate', 'rate', 'REAL'], ['rateVnd', 'rate_vnd', 'REAL'],
-  ['grpCost', 'group_cost', 'TEXT'], ['services', 'services', 'TEXT'], ['location', 'location', 'TEXT'], ['project', 'project', 'TEXT'], ['period', 'period', 'TEXT'],
+  ['grpCost', 'group_cost', 'TEXT'], ['services', 'services', 'TEXT'], ['location', 'location', 'TEXT'], ['project', 'project', 'TEXT'], ['period', 'period', 'TEXT'], ['plate', 'plate', 'TEXT'],
 ];
 const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, e.enriched AS _enriched, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
 
@@ -101,6 +101,7 @@ function open(file, { cleanup = false, light = false } = {}) {
     CREATE INDEX IF NOT EXISTS ix_err_entry ON errors(entry_id);
     CREATE TABLE IF NOT EXISTS partners_cat(code_name TEXT PRIMARY KEY, code TEXT, name TEXT, kind TEXT, nb_code TEXT, nb_name TEXT, note TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')));
     CREATE INDEX IF NOT EXISTS ix_pcat_code ON partners_cat(code);
+    CREATE TABLE IF NOT EXISTS field_adj(id INTEGER, field TEXT, value TEXT, orig TEXT, sig TEXT, doc TEXT, d TEXT, ym TEXT, note TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')), PRIMARY KEY(id, field));
     CREATE TABLE IF NOT EXISTS cf_adj(sig TEXT PRIMARY KEY, code TEXT, note TEXT, doc TEXT, d TEXT, ym TEXT, dr TEXT, cr TEXT, a REAL, cf TEXT, bp TEXT, bpCr TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')));
     CREATE INDEX IF NOT EXISTS ix_cfadj_ym ON cf_adj(ym);
     CREATE TABLE IF NOT EXISTS ig_adj(sig TEXT PRIMARY KEY, scope TEXT, action TEXT, to_key TEXT, doc TEXT, d TEXT, a REAL, ds TEXT, from_key TEXT, note TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')));

@@ -1,5 +1,16 @@
 # Lịch sử phiên bản
 
+## v4.22.0 – 03/11/2026
+**Mới: Điều chỉnh dữ liệu quản trị (Hợp đồng, Mã vị trí, Biển số xe, Loại dòng tiền)**
+- Thêm trang **Kiểm soát → Điều chỉnh dữ liệu**.
+  - Tìm bút toán theo tháng, chứng từ, TK, đối tượng, diễn giải, giá trị của trường. Lọc được dòng đang trống, bút toán thu/chi tiền, dòng đã điều chỉnh.
+  - Tích chọn dòng rồi đặt giá trị mới, có gợi ý các giá trị đang dùng và ô ghi chú. Bỏ điều chỉnh được từng trường.
+  - Bảng hiện giá trị gốc (gạch ngang) và giá trị mới. Có xuất Excel.
+- **Không sửa dữ liệu gốc:** giá trị mới lưu riêng ở bảng `field_adj`. Riêng dòng tiền dùng chung bảng `cf_adj`, nên sửa ở trang này thì B03 sau điều chỉnh cập nhật theo.
+- Tab **Lịch sử điều chỉnh**: xem, bỏ và xuất toàn bộ điều chỉnh.
+- Tuổi nợ "theo hợp đồng" dùng hợp đồng sau điều chỉnh.
+- Nạp dữ liệu đọc thêm cột **biển số xe** (License Plate / TOC_LicensePlate / Vehicle / Biển số xe…). Dữ liệu đã nạp trước đây chưa có cột này; cần nạp lại file (chọn "Thay thế") thì mới hiện biển số gốc.
+
 ## v4.21.0 – 03/11/2026
 **Bảng cân đối phát sinh theo đối tượng công nợ; số dư nội bộ theo dữ liệu gốc**
 - **Mới – Báo cáo tài chính → "CĐPS theo đối tượng":** lấy từ dữ liệu gốc, theo đúng phía (TK ghi Nợ ↔ đối tượng Nợ, TK ghi Có ↔ đối tượng Có).

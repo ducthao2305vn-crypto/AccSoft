@@ -20,7 +20,7 @@ const kpi=(cls,icon,lb,v,s)=>`<div class="kpi ${cls}"><div class="ic">${ic(icon)
 const ls={get:(k,d)=>{try{const v=localStorage.getItem('accsoft.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem('accsoft.'+k,JSON.stringify(v))}catch(e){}}};
 const SEVL={H:'Cao',M:'Trung bình',L:'Thấp'};
 let META={rules:[],status:{}},RULE={},PAGE='overview',charts={};
-const TITLES={overview:['Tổng quan','Bức tranh chung về dữ liệu hạch toán'],errors:['Lỗi nhập liệu','Phát hiện, theo dõi và xử lý bút toán sai'],inv:['Tuổi hàng tồn kho','Tồn kho theo mặt hàng, kho, đối tượng – FIFO theo ngày nhập'],aging:['Công nợ & tuổi nợ','Phải thu, phải trả, tạm ứng theo đối tượng'],
+const TITLES={fadj:['Điều chỉnh dữ liệu','Hợp đồng, mã vị trí, biển số xe, loại dòng tiền – phục vụ báo cáo quản trị và đối chiếu công nợ'],overview:['Tổng quan','Bức tranh chung về dữ liệu hạch toán'],errors:['Lỗi nhập liệu','Phát hiện, theo dõi và xử lý bút toán sai'],inv:['Tuổi hàng tồn kho','Tồn kho theo mặt hàng, kho, đối tượng – FIFO theo ngày nhập'],aging:['Công nợ & tuổi nợ','Phải thu, phải trả, tạm ứng theo đối tượng'],
   pl:['Kết quả kinh doanh','Doanh thu, chi phí, lợi nhuận theo năm và tháng'],cost:['Doanh thu & Chi phí','Phân tích theo tài khoản, khoản mục, bộ phận và kỳ'],cat:['Danh mục đối tượng','Nhân viên, đối tác Timor, đối tác quốc tế, nội bộ… – thêm, sửa, xoá, nạp từ Excel'],fin:['Báo cáo tài chính','Theo Thông tư 99/2025/TT-BTC – Bảng CĐSPS, B01, B02, B03, B09 lập tự động từ dữ liệu hạch toán'],deep:['Phân tích chuyên sâu','Chi phí định kỳ, biến động, 335/242, nhân viên, Benford, nhà cung cấp, tỷ giá'],report:['Báo cáo & Thông báo','Báo cáo kiểm tra và gửi yêu cầu khắc phục'],data:['Quản lý dữ liệu','Tháng dữ liệu, lần nạp file và bảo trì CSDL']};
 
 /* ---------- Biểu đồ: bảng màu TLM, cam chủ đạo ---------- */
@@ -1276,7 +1276,65 @@ $('#obTpl').onclick=()=>api.openingTemplate().catch(e=>alert(e.message));
 $('#obImp').onclick=async()=>{try{const r=await api.importOpening();if(r){alert(`Đã nạp số dư đầu kỳ: ${num(r.rows)} dòng`+(r.skipped?`, bỏ qua ${num(r.skipped)} dòng ví dụ`:''));await refreshSide();vData()}}catch(e){alert(e.message)}};
 $('#repPdf').onclick=async()=>{try{const f=await api.riskPdf();if(f)alert('Đã lưu báo cáo: '+f)}catch(e){alert(e.message)}};
 
-const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),inv:()=>vInv(true),pl:vPL,cost:()=>vCost(true),deep:vDeep,fin:vFin,cat:vCat,report:vReport,data:vData};
+
+/* ---------- Điều chỉnh trường quản trị: Hợp đồng, Mã vị trí, Biển số xe, Loại dòng tiền (không sửa dữ liệu gốc) ---------- */
+const FAF=Object.assign({from:'',to:'',doc:'',acc:'',bp:'',q:'',field:'contract',val:'',empty:false,cash:false,adjOnly:false,tab:'s'},ls.get('faPick',{}));
+const FAN={contract:'Hợp đồng',bts:'Mã vị trí (BTS Site)',plate:'Biển số xe',cf:'Loại dòng tiền'};
+const CFC={'01':'Thu bán hàng, cung cấp dịch vụ','02':'Chi trả người cung cấp','03':'Chi trả người lao động','04':'Lãi vay đã trả','05':'Thuế TNDN đã nộp','06':'Thu khác HĐKD','07':'Chi khác HĐKD','21':'Chi mua sắm TSCĐ, TS dài hạn','22':'Thu thanh lý TSCĐ','23':'Chi cho vay, mua công cụ nợ','24':'Thu hồi cho vay','25':'Chi góp vốn','26':'Thu hồi góp vốn','27':'Thu lãi, cổ tức','31':'Nhận vốn góp','32':'Trả lại vốn góp','33':'Thu đi vay','34':'Trả nợ gốc vay','35':'Trả nợ thuê tài chính','36':'Cổ tức đã trả','61':'Ảnh hưởng tỷ giá'};
+let FAR=null,FASEL=new Set();
+async function vFA(){
+  const yms=(await aq('months')).map(m=>m.ym).sort();if(!FAF.to)FAF.to=yms.at(-1)||'';if(!FAF.from)FAF.from=FAF.to;
+  const H=$('#faBody');
+  H.innerHTML=`<div class="card"><div class="subbar"><span class="crumb">Điều chỉnh dữ liệu quản trị</span><div class="subtabs" id="faTabs"><button data-fat="s" class="${FAF.tab==='s'?'on':''}">Tìm & điều chỉnh</button><button data-fat="h" class="${FAF.tab==='h'?'on':''}">Lịch sử điều chỉnh</button></div></div>
+    <div class="hint" style="margin-bottom:8px">Chỉnh <b>Hợp đồng, Mã vị trí, Biển số xe, Loại dòng tiền</b> cho báo cáo quản trị / đối chiếu công nợ. <b>Không sửa dữ liệu gốc</b> – giá trị mới được lưu riêng, có thể bỏ bất cứ lúc nào. Hợp đồng sau điều chỉnh dùng cho tuổi nợ theo hợp đồng; dòng tiền sau điều chỉnh dùng cho B03.</div>
+    ${FAF.tab==='s'?`<div class="filterrow">
+      <label>Từ tháng <input type="month" data-fa="from" value="${FAF.from}"></label><label>Đến tháng <input type="month" data-fa="to" value="${FAF.to}"></label>
+      <label>Chứng từ <input data-fa="doc" value="${esc(FAF.doc)}" style="width:150px"></label><label>TK <input data-fa="acc" value="${esc(FAF.acc)}" placeholder="vd 331, 1388" style="width:120px"></label>
+      <label>Đối tượng <input data-fa="bp" value="${esc(FAF.bp)}" style="width:170px"></label><label>Diễn giải <input data-fa="q" value="${esc(FAF.q)}" style="width:170px"></label>
+      <label>Lọc theo <select data-fa="field">${Object.entries(FAN).map(([k,v])=>`<option value="${k}" ${FAF.field===k?'selected':''}>${v}</option>`).join('')}</select></label><label>giá trị chứa <input data-fa="val" value="${esc(FAF.val)}" style="width:150px"></label>
+      <label><input type="checkbox" data-fa="empty" ${FAF.empty?'checked':''}>Chỉ dòng đang trống</label><label><input type="checkbox" data-fa="cash" ${FAF.cash?'checked':''}>Chỉ bút toán thu/chi tiền</label><label><input type="checkbox" data-fa="adjOnly" ${FAF.adjOnly?'checked':''}>Chỉ dòng đã điều chỉnh</label>
+      <button class="btn sm primary" id="faGo">Tìm</button></div>`:''}</div><div id="faRes"></div>`;
+  $('#faTabs').onclick=e=>{const b=e.target.closest('[data-fat]');if(b){FAF.tab=b.dataset.fat;ls.set('faPick',FAF);vFA()}};
+  H.querySelectorAll('[data-fa]').forEach(el=>el.addEventListener('change',()=>{FAF[el.dataset.fa]=el.type==='checkbox'?el.checked:el.value;ls.set('faPick',FAF)}));
+  if(FAF.tab==='h')return faHist();
+  $('#faGo').onclick=()=>{H.querySelectorAll('[data-fa]').forEach(el=>FAF[el.dataset.fa]=el.type==='checkbox'?el.checked:el.value);ls.set('faPick',FAF);FASEL.clear();faRun()};
+  H.querySelectorAll('input[data-fa]').forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')$('#faGo').click()}));
+  if(FAR)faDraw();else $('#faRes').innerHTML='<div class="card mut">Nhập điều kiện rồi bấm <b>Tìm</b>.</div>';
+}
+async function faRun(){$('#faRes').innerHTML='<div class="card"><span class="spin"></span> Đang tìm bút toán…</div>';FAR=await aq('faSearch',{...FAF,limit:5000});faDraw()}
+function faDraw(){const r=FAR,cv=(o,k)=>{const n=o[k+'New'],g=k==='bts'?o.bts:o[k];return n!=null?`<div class=mut style="text-decoration:line-through;font-size:11px">${esc(g||'(trống)')}</div><span class="badge b-H" title="${esc(o[k+'Note']||'')}">${esc(n||'(xoá trống)')}</span>`:esc(g||'')};
+  const cfv=o=>o.cfNew!=null?`<div class=mut style="text-decoration:line-through;font-size:11px">${esc(o.cf||'(trống)')}</div><span class="badge b-H" title="${esc(o.cfNote||'')}">${o.cfNew} – ${esc(CFC[o.cfNew]||'')}</span>`:o.cash?esc(o.cf||''):'<span class=mut>–</span>';
+  $('#faRes').innerHTML=`<div class="card"><div class="row" style="flex-wrap:wrap;gap:8px;align-items:center;background:#FFF6F2;padding:8px 10px;border-radius:8px">
+      <b>${r.total} bút toán${r.truncated?' (hiển thị 5.000 dòng đầu – thu hẹp điều kiện)':''}</b><div style="flex:1"></div><span id="faSelI" class="mut"></span>
+      <label>Trường <select id="faF">${Object.entries(FAN).map(([k,v])=>`<option value="${k}" ${FAF.field===k?'selected':''}>${v}</option>`).join('')}</select></label>
+      <span id="faValW"></span><input id="faNote" placeholder="Ghi chú lý do" style="width:170px">
+      <button class="btn sm primary" id="faApply" disabled>Áp dụng</button><button class="btn sm ghost" id="faUndo" disabled>Bỏ điều chỉnh trường này</button><button class="btn sm" id="faXls">${ic('download')}Xuất Excel</button></div>
+    <div class="tbl" style="max-height:calc(100vh - 420px);margin-top:8px"><table><thead><tr><th><input type="checkbox" id="faAll"></th><th>Ngày</th><th>Chứng từ</th><th>TK Nợ</th><th>TK Có</th><th>Đối tượng Nợ</th><th>Đối tượng Có</th><th class=n>Số tiền</th><th>Diễn giải</th><th>Hợp đồng</th><th>Mã vị trí</th><th>Biển số xe</th><th>Loại dòng tiền</th></tr></thead><tbody>
+    ${r.rows.slice(0,2000).map((o,i)=>`<tr class=dbl data-eid="${o.id}"><td><input type="checkbox" data-fi="${i}" ${FASEL.has(o.id)?'checked':''}></td><td class=nw>${vn(o.d)}</td><td class=nw>${esc(o.doc)}</td><td><div class="clamp s">${esc(o.drName||o.dr)}</div></td><td><div class="clamp s">${esc(o.crName||o.cr)}</div></td><td><div class="clamp s" title="${esc(o.bp||'')}">${esc(o.bp||'')}</div></td><td><div class="clamp s" title="${esc(o.bpCr||'')}">${esc(o.bpCr||'')}</div></td><td class=n>${fmt2(o.a)}</td><td><div class=clamp title="${esc(o.ds)}">${esc(o.ds)}</div></td><td style="font-size:12px"><div class="clamp s">${cv(o,'contract')}</div></td><td style="font-size:12px">${cv(o,'bts')}</td><td style="font-size:12px">${cv(o,'plate')}</td><td style="font-size:12px">${cfv(o)}</td></tr>`).join('')||'<tr><td colspan=13 class=mut style="text-align:center;padding:24px">Không có bút toán phù hợp</td></tr>'}
+    ${r.rows.length>2000?`<tr><td colspan=13 class=mut style="text-align:center">… còn ${num(r.rows.length-2000)} dòng – thu hẹp điều kiện</td></tr>`:''}</tbody></table></div></div>`;
+  const valW=async()=>{const f=$('#faF').value;if(f==='cf'){$('#faValW').innerHTML=`<select id="faV" style="max-width:300px"><option value="">Chọn dòng tiền…</option>${Object.entries(CFC).map(([k,v])=>`<option value="${k}">${k} – ${esc(v)}</option>`).join('')}</select>`;return}
+    $('#faValW').innerHTML=`<input id="faV" list="faVL" placeholder="Giá trị mới (để trống = xoá trống)" style="width:240px"><datalist id="faVL"></datalist>`;const v=await aq('faValues',f,'');$('#faVL').innerHTML=v.map(x=>`<option value="${esc(x.v)}">${num(x.n)} dòng</option>`).join('')};
+  valW();$('#faF').onchange=e=>{e.stopPropagation();valW()};
+  const upd=()=>{const n=FASEL.size;$('#faSelI').textContent=n?`Đã chọn ${num(n)} dòng`:'Chưa chọn dòng';$('#faApply').disabled=$('#faUndo').disabled=!n};upd();
+  const T=$('#faRes table');T.addEventListener('change',e=>{if(e.target.id==='faAll'){r.rows.slice(0,2000).forEach(o=>e.target.checked?FASEL.add(o.id):FASEL.delete(o.id));T.querySelectorAll('[data-fi]').forEach(c=>c.checked=e.target.checked);return upd()}
+    const i=e.target.dataset.fi;if(i==null)return;const o=r.rows[+i];e.target.checked?FASEL.add(o.id):FASEL.delete(o.id);upd()});
+  T.ondblclick=e=>{if(e.target.type==='checkbox')return;const tr=e.target.closest('tr[data-eid]');if(tr)showDetail(null,+tr.dataset.eid)};
+  const picked=()=>r.rows.filter(o=>FASEL.has(o.id));
+  $('#faApply').onclick=async()=>{const f=$('#faF').value,v=$('#faV').value,p=picked();if(f==='cf'&&!v)return alert('Chọn loại dòng tiền');
+    if(!confirm(`${FAN[f]}: đặt "${v||'(trống)'}" cho ${p.length} bút toán?`))return;try{const x=await aq('faSet',p,f,v,$('#faNote').value.trim());alert(`Đã điều chỉnh ${num(x.n)} dòng`);faRun()}catch(e){alert(e.message)}};
+  $('#faUndo').onclick=async()=>{const f=$('#faF').value,p=picked().filter(o=>f==='cf'?o.cfNew!=null:o[f+'New']!=null);if(!p.length)return alert('Các dòng đã chọn chưa điều chỉnh '+FAN[f]);if(!confirm(`Bỏ điều chỉnh ${FAN[f]} của ${p.length} dòng?`))return;await aq('faRemove',p.map(o=>({id:o.id,field:f,sig:o.sig})));faRun()};
+  $('#faXls').onclick=async()=>{try{const f=await api.xlsxSheets(`AccSoft_DieuChinhDuLieu_${FAF.from}_${FAF.to}.xlsx`,[['Chi tiet',r.rows.map(o=>({'Ngày':o.d,'Chứng từ':o.doc,'TK Nợ':o.drName||o.dr,'TK Có':o.crName||o.cr,'Đối tượng Nợ':o.bp,'Đối tượng Có':o.bpCr,'Số tiền':o.a,'Diễn giải':o.ds,
+    'Hợp đồng (gốc)':o.contract,'Hợp đồng (sau ĐC)':o.contractNew??o.contract,'Mã vị trí (gốc)':o.bts,'Mã vị trí (sau ĐC)':o.btsNew??o.bts,'Biển số xe (gốc)':o.plate,'Biển số xe (sau ĐC)':o.plateNew??o.plate,'Dòng tiền (gốc)':o.cash?o.cf:'','Dòng tiền (sau ĐC)':o.cfNew!=null?o.cfNew+' – '+(CFC[o.cfNew]||''):o.cash?o.cf:''}))]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
+}
+async function faHist(){const L=await aq('faList');
+  $('#faRes').innerHTML=`<div class="card"><div class="row" style="margin-bottom:8px"><b>${num(L.length)} điều chỉnh</b><div style="flex:1"></div><button class="btn sm ghost" id="faHDel" disabled>Bỏ điều chỉnh đã chọn</button><button class="btn sm" id="faHXls">${ic('download')}Xuất Excel</button></div>
+    ${tbl0(['<input type="checkbox" id="faHAll">','Trường','Giá trị gốc','Giá trị sau điều chỉnh','Chứng từ','Ngày','TK Nợ','TK Có','#Số tiền','Đối tượng','Ghi chú','Cập nhật'],L.map((x,i)=>`<tr><td><input type="checkbox" data-hi="${i}"></td><td>${FAN[x.field]||x.field}</td><td class=mut>${esc(x.orig||'')}</td><td><b>${esc(x.field==='cf'?x.value+' – '+(CFC[x.value]||''):x.value||'(trống)')}</b></td><td class=nw>${esc(x.doc||'')}</td><td class=nw>${vn(x.d)}</td><td>${esc(x.dr||'')}</td><td>${esc(x.cr||'')}</td><td class=n>${x.a!=null?fmt2(x.a):''}</td><td><div class="clamp s">${esc(x.bp||x.bpCr||'')}</div></td><td>${esc(x.note||'')}</td><td class=nw>${esc(x.updated_at||'')}</td></tr>`),'Chưa có điều chỉnh nào')}</div>`;
+  const B=$('#faRes'),chk=()=>{const n=B.querySelectorAll('[data-hi]:checked').length;$('#faHDel').disabled=!n};
+  B.onchange=e=>{if(e.target.id==='faHAll')B.querySelectorAll('[data-hi]').forEach(c=>c.checked=e.target.checked);chk()};
+  $('#faHDel').onclick=async()=>{const s=[...B.querySelectorAll('[data-hi]:checked')].map(c=>L[+c.dataset.hi]);if(!confirm(`Bỏ ${s.length} điều chỉnh?`))return;await aq('faRemove',s.map(x=>({id:x.id,field:x.field,sig:x.sig})));faHist()};
+  $('#faHXls').onclick=async()=>{try{const f=await api.xlsxSheets(`AccSoft_LichSuDieuChinh.xlsx`,[['Dieu chinh',L.map(x=>({'Trường':FAN[x.field]||x.field,'Giá trị gốc':x.orig,'Giá trị sau điều chỉnh':x.value,'Chứng từ':x.doc,'Ngày':x.d,'TK Nợ':x.dr,'TK Có':x.cr,'Số tiền':x.a,'Đối tượng Nợ':x.bp,'Đối tượng Có':x.bpCr,'Ghi chú':x.note,'Cập nhật':x.updated_at}))]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
+}
+const VIEWS={fadj:vFA,overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),inv:()=>vInv(true),pl:vPL,cost:()=>vCost(true),deep:vDeep,fin:vFin,cat:vCat,report:vReport,data:vData};
 (async()=>{
   META=await aq('meta');RULE=Object.fromEntries(META.rules.map(r=>[r.k,r]));
   const info=await api.info();$('#ver').textContent='v'+info.version;
