@@ -25,7 +25,7 @@ const accRange = acc => { const a = /^335\d*$/.test(String(acc || '')) ? String(
 function match(all, { tol = 1, tolPct = 0.02, acc: accSel = '' } = {}) {
   const [lo, hi] = accRange(accSel), in335 = a => String(a || '') >= lo && String(a || '') < hi;
   const acc = all(`SELECT id, document_no doc, account_date d, ym, acc_debit dr, acc_credit cr, amount a, partner_debit bp, partner_credit bpCr, type_of_cost t, description ds, created_by u
-    FROM entries WHERE id IN (SELECT id FROM entries WHERE acc_credit>=? AND acc_credit<? UNION SELECT id FROM entries WHERE acc_debit>=? AND acc_debit<?) AND amount<>0 AND NOT (acc_debit=acc_credit AND ifnull(partner_debit,'')=ifnull(partner_credit,'')) AND ifnull(source_table,'')<>'OPENING_BALANCE'`, lo, hi, lo, hi);
+    FROM entries WHERE id IN (SELECT id FROM entries WHERE acc_credit>=? AND acc_credit<? UNION SELECT id FROM entries WHERE acc_debit>=? AND acc_debit<?) AND amount<>0 AND NOT (substr(acc_debit,1,3)=substr(acc_credit,1,3) AND substr(acc_debit,1,3)='335' AND ifnull(partner_debit,'')=ifnull(partner_credit,'')) AND ifnull(source_table,'')<>'OPENING_BALANCE'`, lo, hi, lo, hi);
   const G = new Map(), byPT = new Map();
   const grp = (p, t, per) => { const k = p + '|' + t + '|' + per; let o = G.get(k);
     if (!o) { o = { k, p, t, per, accrued: 0, released: 0, actual: 0, accDocs: new Set(), accIds: [], relDocs: new Set(), actRows: [], parsed: false, users: new Set() }; G.set(k, o); (byPT.get(p + '|' + t) || byPT.set(p + '|' + t, []).get(p + '|' + t)).push(o); }

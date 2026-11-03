@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.24.1 – 03/11/2026
+**Bút toán tự triệt tiêu: xét cả TK chi tiết khác nhau trong cùng nhóm**
+- Xem theo **TK tổng hợp**: bút toán Nợ – Có thuộc cùng nhóm TK (vd 33111/33112, 15611/15614, 11212/11221) được coi là tự triệt tiêu nếu cùng đối tượng, và bị loại khỏi FIFO tuổi nợ / tuổi tồn kho. Xem theo **TK chi tiết**: vẫn tính, vì đây là chuyển thật giữa hai TK chi tiết.
+- Nhóm TK theo danh mục phân tích; các nhóm 4 số (1412, 1388, 3388) được tách riêng. Vd Nợ 1412 / Có 1411 là chuyển tạm ứng tiền sang tạm ứng vật tư, vẫn được giữ.
+- Tồn kho loại theo cách xem: theo mặt hàng → loại mọi bút toán cùng nhóm TK (mỗi dòng chỉ có một mặt hàng); theo kho → loại khi cùng kho; theo đối tượng → loại khi cùng đối tượng.
+- Phải thu 138812 và trích trước 335: loại bút toán Nợ – Có trong cùng TK đang phân tích, cùng đối tượng.
+- Đã kiểm tra: tổng số dư tồn kho và tuổi nợ ở mọi cách xem vẫn bằng sổ cái.
+
 ## v4.24.0 – 03/11/2026
 **Loại bút toán Nợ – Có cùng tài khoản, cùng đối tượng khỏi các phân tích**
 - Bút toán ghi Nợ và Có cùng một tài khoản cho cùng một đối tượng (vd chuyển giữa các tài khoản ngân hàng cùng mã 112) không làm thay đổi số dư. Nhưng nếu tính vào, chúng làm sai:

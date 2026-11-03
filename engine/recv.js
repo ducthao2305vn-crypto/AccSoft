@@ -24,8 +24,8 @@ function make(all, okYm) {
     const a = String(acc || '138812').replace(/[^0-9]/g, '') || '138812', hi = a.slice(0, -1) + String.fromCharCode(a.slice(-1).charCodeAt(0) + 1);
     const S = `id, document_no doc, line_no line, account_date d, due_date due, ym, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount amt, partner_debit bp, partner_credit bpCr,
       description ds, invoice inv, contract ct, created_by u, source_table tb`;
-    const rev = all(`SELECT ${S} FROM entries WHERE acc_debit>=? AND acc_debit<? AND account_date<=? AND amount<>0 AND NOT (acc_debit=acc_credit AND ifnull(partner_debit,'')=ifnull(partner_credit,''))`, a, hi, asOf).map(r => ({ ...r, p: r.bp || '(không đối tượng)', side: 'rev' }));
-    const pay = all(`SELECT ${S} FROM entries WHERE acc_credit>=? AND acc_credit<? AND account_date<=? AND amount<>0 AND NOT (acc_debit=acc_credit AND ifnull(partner_debit,'')=ifnull(partner_credit,''))`, a, hi, asOf).map(r => ({ ...r, p: r.bpCr || '(không đối tượng)', side: 'pay' }));
+    const rev = all(`SELECT ${S} FROM entries WHERE acc_debit>=? AND acc_debit<? AND account_date<=? AND amount<>0 AND NOT (acc_debit>=? AND acc_debit<? AND acc_credit>=? AND acc_credit<? AND ifnull(partner_debit,'')=ifnull(partner_credit,''))`, a, hi, asOf, a, hi, a, hi).map(r => ({ ...r, p: r.bp || '(không đối tượng)', side: 'rev' }));
+    const pay = all(`SELECT ${S} FROM entries WHERE acc_credit>=? AND acc_credit<? AND account_date<=? AND amount<>0 AND NOT (acc_debit>=? AND acc_debit<? AND acc_credit>=? AND acc_credit<? AND ifnull(partner_debit,'')=ifnull(partner_credit,''))`, a, hi, asOf, a, hi, a, hi).map(r => ({ ...r, p: r.bpCr || '(không đối tượng)', side: 'pay' }));
     return { a, rev, pay };
   }
 

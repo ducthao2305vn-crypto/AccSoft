@@ -279,6 +279,9 @@ function make(db) {
   // Đối tượng gắn theo phía hạch toán: TK bên Nợ ↔ Đối tượng Nợ (Business Partner), TK bên Có ↔ Đối tượng Có (Bpartner credit)
   const refOf = (dim, r) => dim === 'contract' ? (r.contract || '(không có hợp đồng)') : dim === 'adv' ? (r.adv || '(không có đề nghị tạm ứng)') : dim === 'tcost' ? (r.tcost || '(không có khoản mục)') : '';
   // dim: 'bp' = theo đối tượng; 'contract' = đối tượng × hợp đồng; 'adv' = đối tượng × đề nghị tạm ứng (Advance Request)
+  // Nhóm TK theo cấp phân tích: chi tiết = đúng mã; tổng hợp = tiền tố trong danh sách (dài trước) – dùng để loại bút toán Nợ – Có cùng nhóm, cùng đối tượng (tự triệt tiêu)
+  const grpSql = (col, defs, level) => level === 'detail' ? col : 'CASE ' + defs.map(d => d[0]).sort((a, b) => b.length - a.length).map(p => `WHEN ${col} LIKE '${p}%' THEN '${p}'`).join(' ') + ` ELSE substr(${col},1,3) END`;
+  const selfX = (defs, level, extra = '') => `NOT (${grpSql('e.acc_debit', defs, level)}=${grpSql('e.acc_credit', defs, level)} AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'')${extra})`;
   function aging(asOf, term = 30, level = 'l1', dim = 'bp') {
     const asD = new Date(asOf), map = new Map();
     const pres = AG_ACC.map(a => a[0]);
@@ -286,7 +289,7 @@ function make(db) {
     const refCol = { contract: "coalesce((SELECT f.value FROM field_adj f WHERE f.id=e.id AND f.field='contract'), e.contract)", adv: 'e.advance_request', tcost: 'e.type_of_cost' }[dim];
     const refAs = { contract: 'contract', adv: 'adv', tcost: 'tcost' }[dim];
     const q = (col, partner, nameAs, accAs, bpAs) => all(`SELECT e.account_date date, e.due_date due, e.acc_${col} ${accAs}, e.acc_${col}_name ${nameAs}, e.${partner} ${bpAs}${refCol ? `, ${refCol} ${refAs}` : ''}, sum(e.amount) amt
-      FROM entries e WHERE e.account_date<=? AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'')) AND ${rng('e.acc_' + col, pres)} GROUP BY 1,2,3,4,5${refCol ? ',6' : ''}`, asOf);
+      FROM entries e WHERE e.account_date<=? AND ${selfX(AG_ACC, level)} AND ${rng('e.acc_' + col, pres)} GROUP BY 1,2,3,4,5${refCol ? ',6' : ''}`, asOf);
     const pairs = q('debit', 'partner_debit', 'drName', 'dr', 'bp').map(r => [r, 'dr']).concat(q('credit', 'partner_credit', 'crName', 'cr', 'bpCr').map(r => [r, 'cr']))
       .sort((x, y) => (x[0].date < y[0].date ? -1 : x[0].date > y[0].date ? 1 : 0));
     for (const [r, side] of pairs) {
@@ -341,11 +344,15 @@ function make(db) {
     bp_product: () => '',
     product_loc: side => side === 'dr' ? 'loc' : 'locCr',
   };
+  // Bút toán Nợ – Có cùng nhóm TK tồn kho tự triệt tiêu theo cách xem: theo mặt hàng → luôn (một dòng chỉ có một mặt hàng); theo kho → khi cùng kho; theo đối tượng → khi cùng đối tượng
+  const invSelf = (by, level) => { const G = `${grpSql('e.acc_debit', INV_ACC, level)}=${grpSql('e.acc_credit', INV_ACC, level)}`;
+    const extra = by === 'product' ? '' : by === 'loc' || by === 'product_loc' ? ` AND ifnull(e.locator,'')=ifnull(e.locator_credit,'')` : ` AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'')`;
+    return `NOT (${G}${extra})`; };
   function inventory(asOf, by = 'product', level = 'l1') {
     const asD = new Date(asOf), map = new Map(), pres = INV_ACC.map(a => a[0]);
     const pairs = sidePairs(all, `e.account_date date, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount amt, e.quantity qty,
         e.product, e.uom, e.locator loc, e.locator_credit locCr, e.partner_debit bp, e.partner_credit bpCr
-     `, pres, `e.account_date<=? AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'') AND ifnull(e.locator,'')=ifnull(e.locator_credit,''))`, [asOf]);
+     `, pres, `e.account_date<=? AND ${invSelf(by, level)}`, [asOf]);
     const NONE = { product: '(không có mã hàng)', loc: '(không có kho)', bp: '(không có đối tượng)' };
     for (const [r, side] of pairs) {
       {
