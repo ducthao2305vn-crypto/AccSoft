@@ -326,14 +326,32 @@ $('#agFind').oninput=()=>vAging(false);
 ['#agBpSel','#agBpSort'].forEach(s=>$(s).onchange=()=>{AGV.bpPick='';vAging(false)});$('#agBpQ').oninput=()=>vAging(false);
 let AGBT=0;$('#tAgBp').onclick=e=>{const tr=e.target.closest('[data-agb]');if(!tr)return;const x=AGV.bp[+tr.dataset.agb];clearTimeout(AGBT);if(e.detail>1)return;AGBT=setTimeout(()=>{AGV.bpPick=AGV.bpPick===x.bp?'':x.bp;vAging(false)},280)};
 $('#tAgBp').ondblclick=e=>{clearTimeout(AGBT);const tr=e.target.closest('[data-agb]');if(!tr)return;agBpDetail(AGV.bp[+tr.dataset.agb])};
-function agBpDetail(x){CUR=-1;const L=x.items.slice().sort((a,b)=>a.grp.localeCompare(b.grp)*-1||a.acc.localeCompare(b.acc)),dim=$('#agDim').value,REFH={contract:'Hợp đồng',adv:'Đề nghị TU',tcost:'Khoản mục'}[dim];AGV.bpItems=L;
-  $('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">Tuổi nợ theo đối tượng · đến ${vn($('#asOf').value)}</div><h2 style="font-size:20px">${esc(x.bp)}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div>
-  <div class="pb"><div class="kpis">${kpi('blue','wallet','Phải thu',fmt2(x.thu))}${kpi('','coins','Phải trả',fmt2(x.tra))}${kpi(x.thu-x.tra<0?'red':'green','wallet','Ròng (thu − trả)',fmt2(x.thu-x.tra))}${kpi('red','alert','Quá hạn > 90 ngày',fmt2(x.b[4]+x.b[5]+x.b[6]),'tuổi tối đa '+x.maxAge+' ngày')}</div>
-  <div class="card"><div class="card-h"><h3>Theo tài khoản</h3><span class="dblhint">🖱 nhấn đúp một dòng để xem sổ chi tiết bút toán</span></div>${tbl0(['Nhóm','TK','Tên tài khoản',...(REFH?[REFH]:[]),'#PS Nợ','#PS Có','#Số dư',...BUCKETS.map(b=>'#'+b),'#Tuổi tối đa','PS đầu','PS cuối'],L.map((o,i)=>`<tr class=dbl data-agi="${i}"><td><span class="badge ${o.grp==='thu'?'b-L':'s-doing'}">${GRPN[o.grp]}</span></td><td class=nw><b>${esc(o.acc)}</b></td><td>${esc(o.accName)}</td>${REFH?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class="n ${o.bal<0?'neg':''}"><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${o.maxAge||''}</td><td class=nw>${vn(o.first)}</td><td class=nw>${vn(o.last)}</td></tr>`))}</div></div>`;
-  $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
-  $('#dPane').querySelector('tbody').ondblclick=e=>{const tr=e.target.closest('[data-agi]');if(!tr)return;const o=AGV.bpItems[+tr.dataset.agi];
-    openLedger(o.bp+(o.ref?' · '+refShort(o.ref):''),`TK ${o.acc} – ${o.accName} · đến ${vn($('#asOf').value)}`,{kind:'ag',acc:o.acc,bp:o.bp,dim,ref:o.ref,asOf:$('#asOf').value},AGNAT(o.acc))};
+async function agBpDetail(x,tab='acc'){CUR=-1;const asOf=$('#asOf').value,term=+$('#term').value||0,level=$('#agLevel').value,dim0=$('#agDim').value;
+  const head=`<div class="ph"><div><div class="mut" style="font-size:12px">Tuổi nợ theo đối tượng · đến ${vn(asOf)}</div><h2 style="font-size:20px">${esc(x.bp)}</h2></div><div style="flex:1"></div><div class="subtabs" id="abTab"><button data-abt="acc" class="${tab==='acc'?'on':''}">Theo tài khoản</button><button data-abt="ct" class="${tab==='ct'?'on':''}">Theo hợp đồng</button></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div>`;
+  $('#dPane').innerHTML=head+`<div class="pb"><div class="card"><span class="spin"></span> Đang tính…</div></div>`;$('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
+  const bind=()=>{$('#dClose').onclick=closeDetail;$('#abTab').onclick=e=>{const b=e.target.closest('[data-abt]');if(b)agBpDetail(x,b.dataset.abt)}};bind();
+  // Dữ liệu tuổi nợ của đối tượng (theo TK hoặc theo hợp đồng)
+  const data=tab==='ct'?(dim0==='contract'&&AGDATA?AGDATA:await aq('aging',asOf,term,level,'contract')):(AGDATA||await aq('aging',asOf,term,level,dim0));
+  const L=data.items.filter(o=>o.bp===x.bp).sort((a,b)=>a.grp.localeCompare(b.grp)*-1||a.acc.localeCompare(b.acc)||String(a.ref).localeCompare(String(b.ref)));AGV.bpItems=L;
+  const S=g=>L.filter(o=>o.grp===g).reduce((s,o)=>s+o.bal,0),thu=S('thu'),tra=S('tra'),b=Array(7).fill(0);L.forEach(o=>o.bal>0&&o.b.forEach((v,i)=>b[i]+=v));const maxAge=Math.max(0,...L.map(o=>o.maxAge||0));
+  // Đối chiếu với CĐPS theo đối tượng (dữ liệu gốc, đến cuối tháng của ngày báo cáo)
+  const accs=uniq(L.map(o=>o.acc)),ptb=accs.length?await aq('finPartnerTB','',asOf.slice(0,7),accs,[],'',x.bp):{rows:[]};
+  const pr=ptb.rows.filter(o=>o.p===x.bp),ptNet=g=>pr.filter(o=>accs.some(a=>o.acc.startsWith(a))&&(AG_GRP(o.acc)===g)).reduce((s,o)=>s+(g==='thu'?o.cb:-o.cb),0);
+  const pThu=ptNet('thu'),pTra=ptNet('tra'),eom=asOf===new Date(Date.UTC(+asOf.slice(0,4),+asOf.slice(5,7),0)).toISOString().slice(0,10),ok=Math.abs(pThu-thu)<0.01&&Math.abs(pTra-tra)<0.01;
+  const REF=tab==='ct'?'Hợp đồng':{contract:'Hợp đồng',adv:'Đề nghị TU',tcost:'Khoản mục'}[dim0];
+  $('#dPane').innerHTML=head+`<div class="pb"><div class="kpis">${kpi('blue','wallet','Phải thu (ròng)',fmt2(thu))}${kpi('','coins','Phải trả (ròng)',fmt2(tra))}${kpi(thu-tra<0?'red':'green','wallet','Bù trừ thu − trả',fmt2(thu-tra))}${kpi('red','alert','Quá hạn > 90 ngày',fmt2(b[4]+b[5]+b[6]),'tuổi tối đa '+maxAge+' ngày')}</div>
+    <div class="card" style="background:${ok?'#ECFDF3':'#FFFAEB'}"><b>${ok?'✓ Khớp':'⚠ Chênh lệch'} với Bảng cân đối phát sinh theo đối tượng</b> (dữ liệu gốc, TK ${esc(accs.join(', '))}, đến ${eom?vn(asOf):'cuối tháng '+ymLbl(asOf.slice(0,7))}): phải thu ${fmt2(pThu)} · phải trả ${fmt2(pTra)}${ok?'':` · lệch thu ${fmt2(thu-pThu)}, trả ${fmt2(tra-pTra)}${eom?'':' – ngày báo cáo không phải cuối tháng nên CĐPS (theo tháng) gồm cả phát sinh sau ngày này'}`}</div>
+    <div class="card"><div class="card-h"><h3>${tab==='ct'?'Theo hợp đồng':'Theo tài khoản'}</h3><span class="dblhint">🖱 nhấn đúp để xem bút toán${tab==='ct'?' & đổi hợp đồng':''}</span><div class="sp"></div><input id="abQ" placeholder="Tìm ${tab==='ct'?'hợp đồng':'tài khoản'}…" style="width:220px"></div><div id="abT"></div></div></div>`;
+  bind();
+  const draw=()=>{const q=$('#abQ').value.trim().toLowerCase(),V=L.map((o,i)=>({...o,i})).filter(o=>!q||[o.acc,o.accName,o.ref].some(v=>String(v||'').toLowerCase().includes(q)));
+    const tot=Array(7).fill(0);V.forEach(o=>o.b.forEach((v,i)=>tot[i]+=v));
+    $('#abT').innerHTML=tbl0(['Nhóm','TK','Tên tài khoản',...(REF?[REF]:[]),'#PS Nợ','#PS Có','#Số dư',...BUCKETS.map(b=>'#'+b),'#Tuổi tối đa','PS đầu','PS cuối'],V.map(o=>`<tr class=dbl data-agi="${o.i}"><td><span class="badge ${o.grp==='thu'?'b-L':'s-doing'}">${GRPN[o.grp]}</span></td><td class=nw><b>${esc(o.acc)}</b></td><td>${esc(o.accName)}</td>${REF?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class="n ${o.bal<0?'neg':''}"><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${o.maxAge||''}</td><td class=nw>${vn(o.first)}</td><td class=nw>${vn(o.last)}</td></tr>`)
+      .concat([`<tr style="font-weight:700;background:#FFF6F2"><td colspan=${REF?4:3}>Cộng (${num(V.length)} dòng)</td><td class=n>${fmt2(V.reduce((s,o)=>s+o.dr,0))}</td><td class=n>${fmt2(V.reduce((s,o)=>s+o.cr,0))}</td><td class=n>${fmt2(V.reduce((s,o)=>s+o.bal,0))}</td>${tot.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td></td><td></td><td></td></tr>`]),'Không có số dư')};
+  $('#abQ').oninput=draw;draw();
+  $('#abT').ondblclick=e=>{const tr=e.target.closest('[data-agi]');if(!tr)return;const o=AGV.bpItems[+tr.dataset.agi],dim=tab==='ct'?'contract':dim0;
+    openLedger(o.bp+(o.ref?' · '+refShort(o.ref):''),`TK ${o.acc} – ${o.accName} · đến ${vn(asOf)}`,{kind:'ag',acc:o.acc,bp:o.bp,dim,ref:o.ref,asOf},AGNAT(o.acc),()=>{})};
 }
+const AG_GRP=a=>/^(331|335|336|334|3388)/.test(a)?'tra':'thu';
 $('#tAgSum').onclick=e=>{const tr=e.target.closest('[data-acc]');if(tr){$('#agAcc').value=tr.dataset.acc;vAging(false);$('#tAging').scrollIntoView({behavior:'smooth'})}};
 $('#expAg').onclick=()=>api.exportAging($('#asOf').value,+$('#term').value||0,$('#agLevel').value,$('#agGrp').value,$('#agAcc').value,$('#agDim').value);
 
@@ -533,21 +551,44 @@ async function drill(x){
 
 /* ---------- Chi tiết bút toán khi nhấn đúp ---------- */
 // nat: 1 = số dư tự nhiên bên Nợ (phải thu, tồn kho, chi phí); -1 = bên Có (phải trả, doanh thu)
-async function openLedger(title,sub,spec,nat=1){
+async function openLedger(title,sub,spec,nat=1,after){
   CUR=-1;$('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">${esc(sub)}</div><h2 style="font-size:20px">${esc(title)}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div><div class="pb"><div class="row"><span class="spin"></span> Đang tải bút toán…</div></div>`;
   $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
   const d=await aq('ledger',spec);let run=d.before*nat;
-  const bal=(d.debit-d.credit)*nat,rows=d.rows.map(r=>{run+=(r.debit-r.credit)*nat;return {...r,run}});
-  const REF=spec.dim==='contract'?['contract','Hợp đồng']:spec.dim==='adv'?['adv','Đề nghị TU']:spec.dim==='tcost'||spec.kind==='pl'?['tcost','Khoản mục']:spec.kind==='inv'?['product','Mặt hàng']:null;
+  const bal=(d.debit-d.credit)*nat,rows=d.rows.map((r,i)=>{run+=(r.debit-r.credit)*nat;return {...r,run,i}});
+  const REF=spec.dim==='contract'||spec.kind==='ag'?['contract','Hợp đồng']:spec.dim==='adv'?['adv','Đề nghị TU']:spec.dim==='tcost'||spec.kind==='pl'?['tcost','Khoản mục']:spec.kind==='inv'?['product','Mặt hàng']:null;
+  const canC=spec.kind==='ag',F={q:'',ctr:'',ym:'',ref:'',side:'',min:'',max:'',err:''},sel=new Set();
+  const ctrOf=r=>String(r.side==='dr'?r.cr:r.dr).slice(0,3);
   $('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">${esc(sub)}</div><h2 style="font-size:20px">${esc(title)}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div>
    <div class="pb"><div class="kpis">${kpi('','file','Số bút toán',num(d.total),d.truncated?`hiển thị ${num(d.rows.length)} dòng gần nhất`:'')}${kpi('blue','coins','Phát sinh Nợ',fmt2(d.debit))}${kpi('','coins','Phát sinh Có',fmt2(d.credit))}${kpi(bal<0?'red':'green','wallet','Số dư / Lũy kế',fmt2(bal),nat>0?'dư Nợ (+)':'dư Có (+)')}</div>
-   <div class="card"><div class="card-h"><h3>Bút toán chi tiết</h3><span class="hint">nhấn đúp dòng có nhãn lỗi để mở phần xử lý lỗi</span></div><div class="tbl" style="max-height:calc(100vh - 330px)"><table><thead><tr><th></th><th>Ngày</th><th>Chứng từ</th><th>TK Nợ</th><th>TK Có</th><th>Đối tượng</th>${REF?`<th>${REF[1]}</th>`:''}<th class=n>PS Nợ</th><th class=n>PS Có</th><th class=n>Lũy kế</th><th>Diễn giải</th><th>Người nhập</th></tr></thead><tbody>
-   ${rows.map(r=>`<tr class="${r.eid?'dbl':''}" data-eid="${r.eid||''}"><td>${r.eid?'<span class="badge b-M">Có lỗi</span>':''}</td><td class=nw>${vn(r.date)}</td><td class=nw>${esc(r.doc)}</td><td>${esc(r.drName)}</td><td>${esc(r.crName)}</td>
-     <td><div class="clamp s" title="${esc(r.side==='dr'?r.bp:r.bpCr)}">${esc(r.side==='dr'?r.bp:r.bpCr)}</div></td>${REF?`<td><div class="clamp s" title="${esc(r[REF[0]])}">${esc(refShort(r[REF[0]]))}</div></td>`:''}
-     <td class=n>${r.debit?fmt2(r.debit):''}</td><td class=n>${r.credit?fmt2(r.credit):''}</td><td class="n ${r.run<0?'neg':''}"><b>${fmt2(r.run)}</b></td><td><div class=clamp title="${esc(r.desc)}">${esc(r.desc)}</div></td><td class=nw>${esc(short(r.user))}</td></tr>`).join('')}
-   </tbody></table></div></div></div>`;
+   <div class="card"><div class="card-h"><h3>Bút toán chi tiết</h3><span class="hint">nhấn tiêu đề cột để sắp xếp · nhấn đúp dòng có nhãn lỗi để mở phần xử lý lỗi · chuột phải để sao chép</span></div>
+   ${fltBar('lF',F,[{t:'q',k:'q',p:'Tìm chứng từ, diễn giải, đối tượng, người nhập…'},{k:'side',p:'Nợ & Có',o:[['dr','Phát sinh Nợ'],['cr','Phát sinh Có']]},{k:'ctr',p:'Mọi TK đối ứng',o:uniq(rows.map(ctrOf))},{k:'ym',p:'Mọi tháng',o:uniq(rows.map(r=>String(r.date).slice(0,7))).map(m=>[m,ymLbl(m)])},
+     ...(REF?[{k:'ref',p:'Mọi '+REF[1].toLowerCase(),o:uniq(rows.map(r=>r[REF[0]]||'(trống)')).slice(0,2000).map(v=>[v,refShort(v)])}]:[]),{k:'err',p:'Tất cả dòng',o:[['1','Chỉ dòng có lỗi']]},{t:'n',k:'min',p:'Số tiền từ'},{t:'n',k:'max',p:'đến'}])}
+   ${canC?`<div class="row" style="flex-wrap:wrap;gap:8px;align-items:center;background:#FFF6F2;padding:8px 10px;border-radius:8px;margin-top:8px"><b id="lSum"></b><div style="flex:1"></div><span id="lSel" class="mut">Chưa chọn dòng</span>
+     <input id="lHd" list="lHdL" placeholder="Hợp đồng mới (trống = xoá)" style="width:240px"><datalist id="lHdL">${uniq(rows.map(r=>r.contract)).slice(0,500).map(v=>`<option value="${esc(v)}">`).join('')}</datalist><input id="lNote" placeholder="Ghi chú" style="width:150px">
+     <button class="btn sm primary" id="lHdGo" disabled>Đổi hợp đồng</button></div>`:'<div id="lSum" style="margin:8px 0;font-weight:600"></div>'}
+   <div id="lT" style="margin-top:8px"></div></div></div>`;
   $('#dClose').onclick=closeDetail;
-  $('#dPane').querySelector('tbody').ondblclick=e=>{const tr=e.target.closest('tr[data-eid]');if(tr&&tr.dataset.eid)showDetail(null,+tr.dataset.eid)};
+  let cur=[];
+  const draw=()=>{const q=F.q.trim().toLowerCase();cur=rows.filter(r=>(!F.side||r.side===F.side)&&(!F.ctr||ctrOf(r)===F.ctr)&&(!F.ym||String(r.date).startsWith(F.ym))&&(!F.ref||(r[REF[0]]||'(trống)')===F.ref)&&(!F.err||r.eid)&&inRange(r.debit||r.credit,F.min,F.max)
+      &&(!q||[r.doc,r.desc,r.bp,r.bpCr,r.user,r.drName,r.crName,REF?r[REF[0]]:''].some(v=>String(v||'').toLowerCase().includes(q))));
+    const dr=cur.reduce((s,r)=>s+r.debit,0),cr=cur.reduce((s,r)=>s+r.credit,0);
+    $('#lSum').textContent=`${num(cur.length)} / ${num(rows.length)} dòng · PS Nợ ${fmt2(dr)} · PS Có ${fmt2(cr)} · chênh lệch ${fmt2((dr-cr)*nat)}`;
+    const show=cur.slice(0,3000);
+    $('#lT').innerHTML=`<div class="tbl" style="max-height:calc(100vh - 400px)"><table><thead><tr>${canC?'<th><input type="checkbox" id="lAll"></th>':''}<th></th><th>Ngày</th><th>Chứng từ</th><th>TK Nợ</th><th>TK Có</th><th>Đối tượng</th>${REF?`<th>${REF[1]}</th>`:''}<th class=n>PS Nợ</th><th class=n>PS Có</th><th class=n>Lũy kế</th><th>Diễn giải</th><th>Người nhập</th></tr></thead><tbody>
+     ${show.map(r=>`<tr class="${r.eid?'dbl':''}" data-eid="${r.eid||''}">${canC?`<td><input type="checkbox" data-li="${r.i}" ${sel.has(r.i)?'checked':''}></td>`:''}<td>${r.eid?'<span class="badge b-M">Có lỗi</span>':''}</td><td class=nw>${vn(r.date)}</td><td class=nw>${esc(r.doc)}</td><td>${esc(r.drName)}</td><td>${esc(r.crName)}</td>
+       <td><div class="clamp s" title="${esc(r.side==='dr'?r.bp:r.bpCr)}">${esc(r.side==='dr'?r.bp:r.bpCr)}</div></td>${REF?`<td><div class="clamp s" title="${esc(r[REF[0]])}">${esc(refShort(r[REF[0]]))}</div></td>`:''}
+       <td class=n>${r.debit?fmt2(r.debit):''}</td><td class=n>${r.credit?fmt2(r.credit):''}</td><td class="n ${r.run<0?'neg':''}"><b>${fmt2(r.run)}</b></td><td><div class=clamp title="${esc(r.desc)}">${esc(r.desc)}</div></td><td class=nw>${esc(short(r.user))}</td></tr>`).join('')||`<tr><td colspan=13 class=mut style="text-align:center;padding:20px">Không có bút toán phù hợp</td></tr>`}
+     ${cur.length>3000?`<tr><td colspan=13 class=mut style="text-align:center">… còn ${num(cur.length-3000)} dòng – lọc thêm</td></tr>`:''}</tbody></table></div>`;
+    if(canC){$('#lAll').checked=show.length>0&&show.every(r=>sel.has(r.i));$('#lAll').onchange=e=>{show.forEach(r=>e.target.checked?sel.add(r.i):sel.delete(r.i));draw()}}upd()};
+  const upd=()=>{if(!canC)return;$('#lSel').textContent=sel.size?`Đã chọn ${num(sel.size)} dòng`:'Chưa chọn dòng';$('#lHdGo').disabled=!sel.size};
+  bindFlt($('#lF'),F,draw);draw();
+  $('#lT').onchange=e=>{const i=e.target.dataset.li;if(i==null)return;e.target.checked?sel.add(+i):sel.delete(+i);upd()};
+  $('#lT').ondblclick=e=>{if(e.target.type==='checkbox')return;const tr=e.target.closest('tr[data-eid]');if(tr&&tr.dataset.eid)showDetail(null,+tr.dataset.eid)};
+  if(canC){['#lHd','#lNote'].forEach(s=>$(s).addEventListener('change',e=>e.stopPropagation()));
+    $('#lHdGo').onclick=async()=>{const v=$('#lHd').value.trim(),p=rows.filter(r=>sel.has(r.i)).map(r=>({id:r.rid,doc:r.doc,d:r.date,dr:r.dr,cr:r.cr,a:r.amt,bp:r.bp,bpCr:r.bpCr,contract:r.contract}));
+      if(!confirm(`Đổi hợp đồng của ${p.length} bút toán thành "${v||'(trống)'}"?\nDữ liệu gốc không bị sửa – xem / bỏ ở Kiểm soát → Điều chỉnh dữ liệu.`))return;
+      try{await aq('faSet',p,'contract',v,$('#lNote').value.trim());AGDATA=null;await openLedger(title,sub,spec,nat,after);after&&after()}catch(e){alert(e.message)}};}
 }
 const AGNAT=acc=>/^(331|335|336|334|3388)/.test(acc)?-1:1;
 $('#tAging').ondblclick=e=>{const tr=e.target.closest('tr[data-ag]');if(!tr)return;const o=AGV.det[+tr.dataset.ag],dim=$('#agDim').value;

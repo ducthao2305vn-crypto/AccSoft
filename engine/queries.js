@@ -286,7 +286,7 @@ function make(db) {
     const refCol = { contract: "coalesce((SELECT f.value FROM field_adj f WHERE f.id=e.id AND f.field='contract'), e.contract)", adv: 'e.advance_request', tcost: 'e.type_of_cost' }[dim];
     const refAs = { contract: 'contract', adv: 'adv', tcost: 'tcost' }[dim];
     const q = (col, partner, nameAs, accAs, bpAs) => all(`SELECT e.account_date date, e.due_date due, e.acc_${col} ${accAs}, e.acc_${col}_name ${nameAs}, e.${partner} ${bpAs}${refCol ? `, ${refCol} ${refAs}` : ''}, sum(e.amount) amt
-      FROM entries e WHERE ${INC} AND e.account_date<=? AND ${rng('e.acc_' + col, pres)} GROUP BY 1,2,3,4,5${refCol ? ',6' : ''}`, asOf);
+      FROM entries e WHERE e.account_date<=? AND ${rng('e.acc_' + col, pres)} GROUP BY 1,2,3,4,5${refCol ? ',6' : ''}`, asOf);
     const pairs = q('debit', 'partner_debit', 'drName', 'dr', 'bp').map(r => [r, 'dr']).concat(q('credit', 'partner_credit', 'crName', 'cr', 'bpCr').map(r => [r, 'cr']))
       .sort((x, y) => (x[0].date < y[0].date ? -1 : x[0].date > y[0].date ? 1 : 0));
     for (const [r, side] of pairs) {
@@ -345,7 +345,7 @@ function make(db) {
     const asD = new Date(asOf), map = new Map(), pres = INV_ACC.map(a => a[0]);
     const pairs = sidePairs(all, `e.account_date date, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount amt, e.quantity qty,
         e.product, e.uom, e.locator loc, e.locator_credit locCr, e.partner_debit bp, e.partner_credit bpCr
-     `, pres, `${INC} AND e.account_date<=?`, [asOf]);
+     `, pres, `e.account_date<=?`, [asOf]);
     const NONE = { product: '(không có mã hàng)', loc: '(không có kho)', bp: '(không có đối tượng)' };
     for (const [r, side] of pairs) {
       {
@@ -395,7 +395,7 @@ function make(db) {
       e.description "desc", e.created_by user, (SELECT min(er.id) FROM errors er WHERE er.entry_id=e.id) eid`;
     if (spec.kind === 'ag' || spec.kind === 'inv') {
       const acc = String(spec.acc || '');
-      const pairs = sidePairs(all, SEL, [acc], `${INC}${spec.asOf ? ' AND e.account_date<=?' : ''}${RNG(spec.from, spec.to)}`, spec.asOf ? [spec.asOf] : []);
+      const pairs = sidePairs(all, SEL, [acc], `1${spec.asOf ? ' AND e.account_date<=?' : ''}${RNG(spec.from, spec.to)}`, spec.asOf ? [spec.asOf] : []);
       const NONE = { bp: '(không có đối tượng)', product: '(không có mã hàng)', loc: '(không có kho)' };
       for (const [r, side] of pairs) {
         if (!String(r[side] || '').startsWith(acc)) continue;

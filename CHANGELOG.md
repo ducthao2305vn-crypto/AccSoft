@@ -1,5 +1,17 @@
 # Lịch sử phiên bản
 
+## v4.23.0 – 03/11/2026
+**Tuổi nợ theo hợp đồng của từng đối tượng, khớp CĐPS; đổi hợp đồng ngay trong sổ chi tiết; mọi cửa sổ mở toàn màn hình**
+- **Cửa sổ đối tượng (nhấn đúp ở "Tuổi nợ theo từng đối tượng"):**
+  - Thêm tab **Theo tài khoản / Theo hợp đồng**. Tab hợp đồng liệt kê toàn bộ hợp đồng của đối tượng, có các nhóm tuổi nợ, dòng cộng và ô tìm.
+  - Có dòng **đối chiếu tự động với CĐPS theo đối tượng** (dữ liệu gốc): ✓ khớp, hoặc ⚠ kèm số chênh lệch.
+- **Số dư tuổi nợ và tuổi hàng tồn kho** tính trên toàn bộ dữ liệu đến ngày báo cáo, không còn phụ thuộc vào các tháng chọn "đưa vào phân tích", nên luôn bằng số dư sổ cái / CĐPS.
+- **Sổ chi tiết bút toán (mọi nơi mở bằng nhấn đúp):**
+  - Bộ lọc: tìm kiếm, Nợ/Có, TK đối ứng, tháng, hợp đồng / khoản mục / mặt hàng, chỉ dòng có lỗi, khoảng số tiền.
+  - Sắp xếp bằng cách nhấn tiêu đề cột.
+  - Riêng sổ công nợ: tích chọn bút toán rồi bấm **Đổi hợp đồng** ngay tại đây. Dữ liệu gốc không bị sửa; điều chỉnh lưu ở Kiểm soát → Điều chỉnh dữ liệu.
+- **Mọi cửa sổ chi tiết** mở toàn màn hình, không còn chiếm một góc nhỏ.
+
 ## v4.22.1 – 03/11/2026
 **Điều chỉnh dữ liệu: mã vị trí lấy từ cột Location**
 - Mã vị trí đọc và điều chỉnh theo cột **Location** của ERP, không còn dùng BTS Site.

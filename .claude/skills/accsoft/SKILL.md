@@ -150,6 +150,15 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Tuổi nợ theo hợp đồng & sổ chi tiết (v4.23)
+- `aging`, `inventory`, và `ledger` (kind `ag`/`inv`) không còn lọc INC: số dư phải bằng CĐPS. INC chỉ còn dùng cho rà soát lỗi và P&L.
+- `agBpDetail(x, tab = 'acc' | 'ct')`: tab `ct` gọi `aging(dim = 'contract')`. Đối chiếu bằng `finPartnerTB('', asOf ym, accs, [], '', bp)`; nhóm TK lấy qua `AG_GRP` (thu/tra).
+- `openLedger(title, sub, spec, nat, after)`:
+  - Bộ lọc dựng bằng `fltBar`/`bindFlt`.
+  - Với `kind === 'ag'`: có checkbox chọn dòng và nút đổi hợp đồng, gọi `faSet(items {id: rid, …}, 'contract', v)`.
+  - Cột Hợp đồng trong SEL đã là giá trị sau điều chỉnh (`coalesce` với field_adj).
+- CSS: `#drawer .pane{width:100%}` cho mọi cửa sổ chi tiết.
+
 ### Điều chỉnh dữ liệu quản trị (v4.22, `engine/fieldadj.js`)
 - Bảng `field_adj(id, field, value, orig, sig, doc, d, ym, note, PK(id, field))`, với field là `contract | location | plate` (Mã vị trí = cột ERP **Location**, Biển số xe = **License Plate**). Riêng `cf` ghi vào `cf_adj` qua `FIN.cfAdjSet` (sig dạng `'c:'+…`).
 - Hàm: `search` (tối đa 5000 dòng, trả kèm `xxxNew`), `values`, `set`, `remove`, `list`, `rebind` (gắn lại theo `sig` sau khi nạp lại dữ liệu).
