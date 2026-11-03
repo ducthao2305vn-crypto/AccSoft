@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.24.3 – 03/11/2026
+**Đổi hợp đồng: chọn từ danh sách hợp đồng của đối tượng**
+- Trong sổ chi tiết công nợ, ô "Đổi hợp đồng" là **danh sách mọi hợp đồng của đối tượng** đó: lấy trên mọi tài khoản, cả phía Nợ và Có, gồm cả hợp đồng đã điều chỉnh. Mỗi hợp đồng ghi số dòng và ngày phát sinh gần nhất, sắp theo hợp đồng mới nhất. Có mục "(Xoá trống hợp đồng)".
+- Tích **"Nhập thủ công"** khi cần nhập hợp đồng mới chưa có trong danh sách.
+- Mục đích: tránh gõ sai tên hợp đồng (vd "46/2026/VTL/VMC/…" và "46/2026/VTL-VMC/…" là 2 hợp đồng khác nhau) làm phân tích sai.
+
 ## v4.24.2 – 03/11/2026
 **Tuổi nợ theo hợp đồng: phần tổng hợp phải bằng đúng số dư đối tượng**
 - **Lỗi cũ:** khi "Phân tích theo" là Đối tượng × Hợp đồng / Đề nghị TU / Khoản mục, FIFO được tính riêng cho từng hợp đồng. Các hợp đồng dư theo chiều bị cộng thành "Tổng phải trả", còn các hợp đồng dư ngược tách riêng. Ví dụ VTG TK 33121: tổng 26,1 triệu, dư ngược −25,6 triệu, trong khi số dư thật chỉ 454.084,06.

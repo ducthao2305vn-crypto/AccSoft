@@ -150,6 +150,10 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Chọn hợp đồng (v4.24.3)
+- `fieldadj.contractsOf(bp)` (IPC `faContracts`, nằm trong READ) trả về các hợp đồng trong entries và field_adj của đối tượng, ở cả hai phía Nợ/Có.
+- Trong openLedger: `#lHdS` là ô chọn hợp đồng, giá trị `__EMPTY__` nghĩa là xoá trống; `#lHdM` là ô tích nhập thủ công, bật nó thì hiện ô nhập `#lHd`.
+
 ### Tuổi nợ cấp đối tượng (v4.24.2)
 - `vAging` luôn tải thêm `AGBP = aging(dim = 'bp')` khi dim khác 'bp'. KPI, bảng theo TK, biểu đồ và `#tAgBp` dùng `AGBP` (biến `sel`/`pos`/`abn`). Bảng `#tAging` và `#tAbn` dùng dữ liệu theo dim (biến `selD`/`posD`/`abnD`).
 - Quy tắc: tổng hợp theo đối tượng phải bằng số dư sổ cái. FIFO theo hợp đồng chỉ dùng để rà soát hợp đồng ghi lệch.

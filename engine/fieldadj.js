@@ -65,6 +65,14 @@ function make(db, all, run, okYm, FIN) {
       const e = all(`SELECT id FROM entries WHERE document_no=? AND account_date=? AND acc_debit=? AND acc_credit=? AND round(amount*100)=? AND ifnull(partner_debit,'')=? AND ifnull(partner_credit,'')=? LIMIT 1`, doc, d, dr, cr, +cents, bp, bpCr)[0];
       if (e) { try { run(`UPDATE field_adj SET id=? WHERE rowid=?`, e.id, x.r); n++; } catch { } } }
     return { n }; }
-  return { search, values, set, remove, list, rebind, FIELDS };
+  // Mọi hợp đồng của một đối tượng (cả hai phía Nợ / Có, gồm hợp đồng đã điều chỉnh) – để chọn khi đổi hợp đồng, tránh gõ sai
+  function contractsOf(bp) {
+    if (!bp) return [];
+    const m = new Map(), add = (v, n, a, last) => { if (!v) return; const o = m.get(v) || m.set(v, { v, n: 0, a: 0, last: '' }).get(v); o.n += n; o.a += a || 0; if (last > o.last) o.last = last; };
+    for (const r of all(`SELECT contract v, count(*) n, sum(amount) a, max(account_date) l FROM entries WHERE (partner_debit=? OR partner_credit=?) AND contract IS NOT NULL AND contract<>'' GROUP BY 1`, bp, bp)) add(r.v, r.n, r.a, r.l);
+    for (const r of all(`SELECT f.value v, count(*) n, max(f.d) l FROM field_adj f JOIN entries e ON e.id=f.id WHERE f.field='contract' AND (e.partner_debit=? OR e.partner_credit=?) GROUP BY 1`, bp, bp)) add(r.v, r.n, 0, r.l);
+    return [...m.values()].sort((a, b) => b.last.localeCompare(a.last) || b.n - a.n);
+  }
+  return { search, values, set, remove, list, rebind, contractsOf, FIELDS };
 }
 module.exports = { make, FIELDS };

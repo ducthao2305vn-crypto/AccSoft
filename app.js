@@ -571,7 +571,8 @@ async function openLedger(title,sub,spec,nat=1,after){
    ${fltBar('lF',F,[{t:'q',k:'q',p:'Tìm chứng từ, diễn giải, đối tượng, người nhập…'},{k:'side',p:'Nợ & Có',o:[['dr','Phát sinh Nợ'],['cr','Phát sinh Có']]},{k:'ctr',p:'Mọi TK đối ứng',o:uniq(rows.map(ctrOf))},{k:'ym',p:'Mọi tháng',o:uniq(rows.map(r=>String(r.date).slice(0,7))).map(m=>[m,ymLbl(m)])},
      ...(REF?[{k:'ref',p:'Mọi '+REF[1].toLowerCase(),o:uniq(rows.map(r=>r[REF[0]]||'(trống)')).slice(0,2000).map(v=>[v,refShort(v)])}]:[]),{k:'err',p:'Tất cả dòng',o:[['1','Chỉ dòng có lỗi']]},{t:'n',k:'min',p:'Số tiền từ'},{t:'n',k:'max',p:'đến'}])}
    ${canC?`<div class="row" style="flex-wrap:wrap;gap:8px;align-items:center;background:#FFF6F2;padding:8px 10px;border-radius:8px;margin-top:8px"><b id="lSum"></b><div style="flex:1"></div><span id="lSel" class="mut">Chưa chọn dòng</span>
-     <input id="lHd" list="lHdL" placeholder="Hợp đồng mới (trống = xoá)" style="width:240px"><datalist id="lHdL">${uniq(rows.map(r=>r.contract)).slice(0,500).map(v=>`<option value="${esc(v)}">`).join('')}</datalist><input id="lNote" placeholder="Ghi chú" style="width:150px">
+     <select id="lHdS" style="max-width:420px"><option value="">Đang tải hợp đồng của đối tượng…</option></select><input id="lHd" class="hide" placeholder="Nhập hợp đồng mới" style="width:240px">
+     <label style="display:flex;gap:4px;align-items:center;font-size:13px"><input type="checkbox" id="lHdM">Nhập thủ công</label><input id="lNote" placeholder="Ghi chú" style="width:150px">
      <button class="btn sm primary" id="lHdGo" disabled>Đổi hợp đồng</button></div>`:'<div id="lSum" style="margin:8px 0;font-weight:600"></div>'}
    <div id="lT" style="margin-top:8px"></div></div></div>`;
   $('#dClose').onclick=closeDetail;
@@ -591,8 +592,11 @@ async function openLedger(title,sub,spec,nat=1,after){
   bindFlt($('#lF'),F,draw);draw();
   $('#lT').onchange=e=>{const i=e.target.dataset.li;if(i==null)return;e.target.checked?sel.add(+i):sel.delete(+i);upd()};
   $('#lT').ondblclick=e=>{if(e.target.type==='checkbox')return;const tr=e.target.closest('tr[data-eid]');if(tr&&tr.dataset.eid)showDetail(null,+tr.dataset.eid)};
-  if(canC){['#lHd','#lNote'].forEach(s=>$(s).addEventListener('change',e=>e.stopPropagation()));
-    $('#lHdGo').onclick=async()=>{const v=$('#lHd').value.trim(),p=rows.filter(r=>sel.has(r.i)).map(r=>({id:r.rid,doc:r.doc,d:r.date,dr:r.dr,cr:r.cr,a:r.amt,bp:r.bp,bpCr:r.bpCr,contract:r.contract}));
+  if(canC){['#lHd','#lNote','#lHdS','#lHdM'].forEach(s=>$(s).addEventListener('change',e=>e.stopPropagation()));
+    // Danh sách hợp đồng của đối tượng (mọi TK, cả hợp đồng đã điều chỉnh) – chọn thay vì gõ để tránh sai tên
+    aq('faContracts',spec.bp||'').then(L=>{const s=$('#lHdS');if(!s)return;s.innerHTML=`<option value="">— Chọn hợp đồng của đối tượng (${num(L.length)}) —</option><option value="__EMPTY__">(Xoá trống hợp đồng)</option>`+L.map(o=>`<option value="${esc(o.v)}">${esc(refShort(o.v))} · ${num(o.n)} dòng${o.last?' · '+vn(o.last):''}</option>`).join('')}).catch(()=>{});
+    $('#lHdM').onchange=e=>{e.stopPropagation();$('#lHd').classList.toggle('hide',!e.target.checked);$('#lHdS').classList.toggle('hide',e.target.checked);if(e.target.checked)$('#lHd').focus()};
+    $('#lHdGo').onclick=async()=>{const man=$('#lHdM').checked,sv=$('#lHdS').value;if(!man&&!sv)return alert('Chọn hợp đồng trong danh sách, hoặc tích "Nhập thủ công"');const v=man?$('#lHd').value.trim():sv==='__EMPTY__'?'':sv;if(man&&!v&&!confirm('Hợp đồng nhập thủ công đang trống – xoá trống hợp đồng?'))return;const p=rows.filter(r=>sel.has(r.i)).map(r=>({id:r.rid,doc:r.doc,d:r.date,dr:r.dr,cr:r.cr,a:r.amt,bp:r.bp,bpCr:r.bpCr,contract:r.contract}));
       if(!confirm(`Đổi hợp đồng của ${p.length} bút toán thành "${v||'(trống)'}"?\nDữ liệu gốc không bị sửa – xem / bỏ ở Kiểm soát → Điều chỉnh dữ liệu.`))return;
       try{await aq('faSet',p,'contract',v,$('#lNote').value.trim());AGDATA=null;await openLedger(title,sub,spec,nat,after);after&&after()}catch(e){alert(e.message)}};}
 }
