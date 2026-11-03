@@ -150,6 +150,11 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Bổ sung cột cho dữ liệu cũ (v4.29.1)
+- `worker.enrichFile` (nút "Bổ sung thông tin" ở Quản lý dữ liệu) cập nhật bằng `coalesce` các cột product/uom/locator/dist/rate/group_cost/services/location/project/period/plate.
+- `SRC` khai báo dạng mảng tên cột thì so khớp không phân biệt hoa thường và lấy cột đầu tiên có giá trị (`normalize`).
+- Khi thêm cột mới vào COLS/SRC, nhớ thêm cột đó vào `enrichFile` để dữ liệu đã nạp được bổ sung mà không cần nạp lại.
+
 ### Chi phí theo vị trí / xe / phòng ban (v4.29, `engine/loccost.js` dùng chung)
 - `DIMS`: `location` (e.location, field_adj 'location'), `plate` (e.plate, 'plate'), `dept` (e.department, 'dept').
 - Nhóm chi phí:

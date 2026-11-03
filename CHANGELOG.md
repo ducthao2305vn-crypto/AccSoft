@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.29.1 – 03/11/2026
+**Mã vị trí / biển số xe cho dữ liệu đã nạp – không cần nạp lại từ đầu**
+- Nguyên nhân trống mã vị trí: dữ liệu được nạp trước khi ứng dụng đọc cột **Location**. File ERP vẫn có Location (vd DI0147).
+- Biển số xe: nhận đúng cột **"License plate"** (không phân biệt hoa thường) và cả cột viết sai **"Lisence plate"**; lấy cột đầu tiên có dữ liệu.
+- Chức năng **Quản lý dữ liệu → Bổ sung thông tin cho dữ liệu đã nạp** nay điền thêm **mã vị trí** và **biển số xe**, ngoài mã hàng, kho, kỳ phân bổ, tỷ giá. Chọn lại các file đã nạp; ứng dụng chỉ điền vào cột đang trống, không xoá hay thay dữ liệu, giữ nguyên các điều chỉnh đã làm.
+
 ## v4.29.0 – 03/11/2026
 **Mới: Chi phí theo xe (biển số) và Chi phí theo phòng ban, điều chỉnh tại bút toán gốc**
 - **Phân tích → Chi phí theo xe:** ma trận **biển số xe (License Plate) × nhóm chi phí × tháng**.
