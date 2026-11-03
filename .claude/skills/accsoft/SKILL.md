@@ -150,6 +150,12 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Sắp xếp theo tiêu đề cột (v4.17)
+- Cuối `app.js` có một IIFE bắt sự kiện click trên `thead th`. `colOf` tính vị trí cột khi tiêu đề có rowspan/colspan; `num_` chuyển ô thành số hoặc ngày để so sánh.
+- Dòng ghim cuối bảng: dòng colspan, hoặc dòng có style `font-weight:700` / `brand-25`.
+- Không sắp xếp khi bảng có dòng ghim nằm giữa, khi tiêu đề đầu là "Chỉ tiêu", hoặc khi bảng có `data-nosort`.
+- Quy tắc `MANUAL_CASH`: chứng từ `^VTLMN` có TK `11[123]` ở bên Nợ hoặc Có. Từ bản này `RULES_VERSION = 13`.
+
 ### Sao chép chuột phải (v4.16)
 - Cuối `app.js` có một IIFE bắt sự kiện `contextmenu` trên mọi `td/th` và mở menu `#ctxMenu`.
 - `hgrid` gộp tiêu đề nhiều tầng (rowspan/colspan). `clean` chuẩn hoá số trước khi sao chép.

@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.17.0 – 03/11/2026
+**Sắp xếp theo tiêu đề cột; lỗi mới: bút toán tay VTLMN có phát sinh tiền**
+- **Sắp xếp:** nhấn tiêu đề cột của bất kỳ bảng nào để sắp xếp.
+  - Lần 1 tăng dần ▲, lần 2 giảm dần ▼, lần 3 trả về thứ tự gốc.
+  - Tự nhận biết số, ngày (dd/mm/yyyy, mm/yyyy) và chữ tiếng Việt. Ô trống luôn nằm cuối; dòng Tổng cộng / Cộng giữ nguyên ở cuối bảng.
+  - Báo cáo có cấu trúc (B01, B02, B03, các bảng có dòng nhóm ở giữa) không bị sắp xếp, để giữ đúng mẫu biểu.
+- **Quy tắc mới MANUAL_CASH (mức Cao):** chứng từ **VTLMN** (bút toán tay) ghi Nợ/Có TK tiền 111, 112, 113 thường là nhân viên điều chỉnh sai; thu/chi tiền phải đi qua phiếu thu, phiếu chi hoặc ngân hàng. Có hướng khắc phục và căn cứ kiểm toán (VSA 240). Phiên bản bộ quy tắc tăng lên 13, nên ứng dụng sẽ tự rà soát lại dữ liệu cũ.
+
 ## v4.16.0 – 03/11/2026
 **Chuột phải để sao chép trên mọi bảng**
 - Nhấn chuột phải vào bất kỳ ô nào của bất kỳ bảng nào (bút toán, báo cáo tài chính, công nợ, tồn kho, nội bộ…) để chọn một trong các mục:

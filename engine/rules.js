@@ -87,6 +87,8 @@ const RULES=[
   f:r=>isRev(r.cr)&&r.amt>0&&!r.inv&&'Thiếu Invoice'},
  {k:'MANUAL_JE_LARGE',s:'M',n:'Bút toán thủ công giá trị lớn',d:'Bút toán ghi sổ thủ công (GL Journal) ≥ 10.000 vào doanh thu, chi phí hoặc tiền – đối tượng kiểm toán viên chọn mẫu khi kiểm tra bút toán (journal entry testing).',
   f:r=>/GL_Journal|Journal/i.test(r.table||'')&&Math.abs(r.amt)>=CFG.manualJe&&(isRev(r.dr)||isRev(r.cr)||isExp(r.dr)||isExp(r.cr)||isCash(r.dr)||isCash(r.cr))&&`${fmt2(r.amt)} · Nợ ${r.dr} / Có ${r.cr}`},
+ {k:'MANUAL_CASH',s:'H',n:'Bút toán tay (VTLMN) có phát sinh tiền',d:'Chứng từ VTLMN là bút toán tay; thu/chi tiền phải đi qua phân hệ thu chi (phiếu thu, phiếu chi, ngân hàng). Bút toán tay ghi Nợ/Có TK tiền 111, 112, 113 thường là nhân viên điều chỉnh sai.',
+  f:r=>/^VTLMN/i.test(r.doc||'')&&(/^11[123]/.test(r.dr||'')||/^11[123]/.test(r.cr||''))&&`${r.doc} · Nợ ${r.drName||r.dr} / Có ${r.crName||r.cr} · ${fmt2(r.amt)}`},
  {k:'INV_NO_PRODUCT',s:'M',n:'Hàng tồn kho thiếu mã hàng',d:'Dòng ghi TK hàng tồn kho (151–158, trừ 154) nhưng không có mã hàng (Product) – không theo dõi được tồn kho và tuổi hàng theo mặt hàng.',
   f:r=>(r._schema>=2||r._enriched)&&(isInv(r.dr)||isInv(r.cr))&&!r.product&&`TK ${isInv(r.dr)?r.dr:r.cr} không có Product`},
 ];
@@ -104,6 +106,7 @@ const FIX={
  REV_NO_INVOICE:'Bổ sung số hoá đơn; nếu là doanh thu ước tính (accrual) thì ghi rõ trong diễn giải và đảo khi có hoá đơn.',
  INV_NO_PRODUCT:'Bổ sung mã hàng (Product) cho dòng nhập/xuất kho; chi phí mua hàng (thuế, vận chuyển) cần phân bổ vào đúng mã hàng.',
  INV_NEGATIVE:'Kiểm tra thứ tự nhập – xuất: xuất trước khi nhập, xuất nhầm mã hàng/kho, hoặc thiếu phiếu nhập. Điều chỉnh để tồn kho không âm.',
+ MANUAL_CASH:'Kiểm tra lý do ghi bút toán tay vào TK tiền: nếu là thu/chi thực tế thì huỷ bút toán tay và lập lại qua phiếu thu/chi/ngân hàng; nếu điều chỉnh, đối chiếu số dư tiền với sổ phụ ngân hàng / biên bản kiểm quỹ và lưu phê duyệt.',
  MANUAL_JE_LARGE:'Lưu hồ sơ đầy đủ: lý do điều chỉnh, chứng từ gốc, người lập và người phê duyệt; bút toán thủ công lớn nên có phê duyệt của kế toán trưởng.',
  DOC_MULTI_MONTH:'Một chứng từ chỉ nên thuộc một kỳ; tách chứng từ hoặc sửa ngày hạch toán các dòng cho thống nhất.',
  SPLIT_PAYMENT:'Kiểm tra có chia nhỏ khoản chi để né hạn mức phê duyệt không; gộp hồ sơ và xin phê duyệt đúng cấp.',
@@ -171,11 +174,12 @@ const AUDIT_WHY={
  INV_NEGATIVE:'Tồn kho âm cho thấy sai sót ghi nhận nhập – xuất, ảnh hưởng giá vốn và giá trị hàng tồn kho.',
  WEEKEND:'Bút toán ghi vào ngày nghỉ là tiêu chí chọn mẫu khi kiểm tra bút toán ghi sổ.',
  EDITED_BY_OTHER:'Sửa bút toán bởi người khác người lập – kiểm tra kiểm soát phân quyền và phê duyệt.',
+ MANUAL_CASH:'Bút toán thủ công vào tài khoản tiền là rủi ro gian lận/sai sót cao (VSA 240) – kiểm toán đối chiếu với sổ phụ ngân hàng và biên bản kiểm quỹ.',
  MANUAL_JE_LARGE:'VSA 240 yêu cầu kiểm toán viên kiểm tra bút toán ghi sổ thủ công, đặc biệt giá trị lớn vào doanh thu/chi phí/tiền.',
  DESC_MATH:'Diễn giải tính sai cho thấy số tiền có thể sai so với hợp đồng – sai sót dễ bị phát hiện khi đối chiếu hồ sơ.',
 };
 const GROUP=Object.fromEntries(ALL_RULES.map(r=>[r.k,AUDIT_WHY[r.k]?'audit':'staff']));
 const GROUPS={staff:'Sai sót nhân viên',audit:'Sai sót dễ bị kiểm toán'};
 const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||'',g:GROUP[k],why:AUDIT_WHY[k]||''})),status:ST,groups:GROUPS});
-const RULES_VERSION=12; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
+const RULES_VERSION=13; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
 module.exports={CFG,CFG_DEFAULT,setConfig,GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};

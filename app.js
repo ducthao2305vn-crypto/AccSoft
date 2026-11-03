@@ -1280,3 +1280,27 @@ const VIEWS={overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),inv:
   document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.classList.add('hide')});
   addEventListener('blur',()=>menu.classList.add('hide'));document.addEventListener('scroll',()=>menu.classList.add('hide'),true);
 })();
+
+/* ---------- Nhấn tiêu đề cột để sắp xếp (mọi bảng) – nhấn lần nữa để đảo chiều, lần ba trả về thứ tự gốc ---------- */
+(()=>{
+  const num_=t=>{t=String(t??'').replace(/\s+/g,' ').trim();if(!t)return null;if(/^\d{2}\/\d{2}\/\d{4}$/.test(t)){const [d,m,y]=t.split('/');return +(y+m+d)}
+    if(/^\d{2}\/\d{4}$/.test(t)){const [m,y]=t.split('/');return +(y+m)}const s=t.replace(/[%\s]/g,'');if(!/^\(?[-−]?[\d.,]+\)?$/.test(s)||!/\d/.test(s))return null;const neg=/^\(.*\)$/.test(s)||/^[-−]/.test(s);const v=+s.replace(/[(),−-]/g,'');return isNaN(v)?null:neg?-v:v};
+  // dòng cộng / tổng / nhóm: giữ nguyên ở cuối bảng
+  const pinned=tr=>(tr.cells.length===1&&tr.cells[0].colSpan>1)||/font-weight:\s*700|brand-25/.test(tr.getAttribute('style')||'');
+  const colOf=(tb,th)=>{const h=tb.tHead,G=[];let pos=-1;[...h.rows].forEach((r,ri)=>{G[ri]??=[];let ci=0;for(const c of r.cells){while(G[ri][ci]!==undefined)ci++;if(c===th)pos=(c.colSpan||1)>1?-1:ci;for(let dr=0;dr<(c.rowSpan||1);dr++)for(let dc=0;dc<(c.colSpan||1);dc++)(G[ri+dr]??=[])[ci+dc]=1;ci+=c.colSpan||1}});return pos};
+  const cellAt=(tr,i)=>{let k=0;for(const c of tr.cells){if(k===i||(k<i&&i<k+(c.colSpan||1)))return c;k+=c.colSpan||1}return null};
+  document.addEventListener('click',e=>{const th=e.target.closest('thead th');if(!th||e.target.closest('input,select,button'))return;const tb=th.closest('table');if(!tb||tb.dataset.nosort!=null||!tb.tBodies[0])return;
+    const i=colOf(tb,th);if(i<0)return;const body=tb.tBodies[0],rows=[...body.rows];if(rows.length<2)return;
+    // bảng có cấu trúc (dòng cộng / nhóm nằm giữa bảng, vd báo cáo tài chính) → không sắp xếp
+    const pin=rows.map(pinned),firstPin=pin.indexOf(true);if(firstPin>=0&&pin.slice(firstPin).some(p=>!p))return;
+    if(/^Chỉ tiêu/.test((tb.tHead.rows[0].cells[0]?.innerText||'').trim()))return;
+    rows.forEach((r,k)=>{if(r.dataset.o==null)r.dataset.o=k});
+    const st=tb.dataset.sc==String(i)?(tb.dataset.sd==='asc'?'desc':tb.dataset.sd==='desc'?'':'asc'):'asc';tb.dataset.sc=st?i:'';tb.dataset.sd=st;
+    tb.tHead.querySelectorAll('th[data-sorted]').forEach(x=>x.removeAttribute('data-sorted'));if(st)th.dataset.sorted=st;
+    const data=rows.filter((r,k)=>!pin[k]),tail=rows.filter((r,k)=>pin[k]);
+    const val=r=>{const c=cellAt(r,i);const t=c?(c.querySelector('input[type=checkbox]')?(c.querySelector('input').checked?'1':'0'):c.innerText):'';return [num_(t),t.trim().toLowerCase()]};
+    const key=new Map(data.map(r=>[r,val(r)])),isNum=[...key.values()].filter(v=>v[1]).every(v=>v[0]!=null);
+    data.sort((a,b)=>{if(!st)return a.dataset.o-b.dataset.o;const [na,ta]=key.get(a),[nb,tb_]=key.get(b);let d;
+      if(isNum){if(na==null&&nb!=null)return 1;if(nb==null&&na!=null)return -1;d=(na??0)-(nb??0)}else{if(!ta&&tb_)return 1;if(ta&&!tb_)return -1;d=ta.localeCompare(tb_,'vi',{numeric:true})}return st==='asc'?d:-d});
+    const f=document.createDocumentFragment();data.concat(tail).forEach(r=>f.appendChild(r));body.appendChild(f)});
+})();
