@@ -14,7 +14,7 @@ const L1 = { '111': 'Tiền mặt', '112': 'Tiền gửi ngân hàng', '113': 'T
   '622': 'Chi phí nhân công trực tiếp', '623': 'Chi phí sử dụng máy thi công', '627': 'Chi phí sản xuất chung', '631': 'Giá thành sản xuất', '632': 'Giá vốn hàng bán', '635': 'Chi phí tài chính',
   '641': 'Chi phí bán hàng', '642': 'Chi phí quản lý doanh nghiệp', '711': 'Thu nhập khác', '811': 'Chi phí khác', '821': 'Chi phí thuế TNDN', '911': 'Xác định kết quả kinh doanh', OB: 'Số dư đầu kỳ (đối ứng nhập từ file mẫu)' };
 
-function make(all, okYm, INC, plRange) {
+function make(all, okYm, INC, plRange, run) {
   const nameOf = (a, n) => { const k = a.slice(0, 3); return a.length <= 3 || a === 'OB' ? (L1[a] || n || a) : (n ? String(n).replace(/^[^_]*_/, '') : L1[k] || a); };
 
   // Đọc từ sổ số dư tổng hợp (fin_close / fin_mv / fin_pmv – xem db.rebuildFin): số đầu kỳ của mọi tháng có sẵn, không cộng lại lịch sử.
@@ -127,75 +127,117 @@ function make(all, okYm, INC, plRange) {
   const OUT = [['21', /^21[1-7]|^241/], ['23', /^128/], ['25', /^22[128]/], ['32', /^411|^419/], ['34', /^341|^343/], ['36', /^421|^3388.*DIV/i], ['03', /^334/], ['04', /^635|^3351/], ['05', /^3334|^821/],
     ['02', /^331|^15[1-8]|^611|^62[1-7]|^632|^64[12]|^133|^242|^335/], ['61', /^413/], ['07', /./]];
   const cls = (a, T) => T.find(([, rx]) => rx.test(a))[0];
-  function cashFlows(from, to) {
-    const f = okYm(from) || '0000-00', t = okYm(to) || '9999-12';
-    const q = (cashSide, other) => all(`SELECT ym, acc_${other} a, max(acc_${other}_name) n, sum(amount) v FROM entries WHERE ym>=? AND ym<=? AND acc_${cashSide}>='111' AND acc_${cashSide}<'114' GROUP BY 1,2`, f, t)
-      .filter(r => !CASH(r.a));
-    const by = {}, det = [];
-    for (const r of q('debit', 'credit')) { const c = cls(r.a, IN); by[c] = (by[c] || 0) + r.v; det.push({ code: c, dir: 'Thu', a: r.a, n: r.n, v: r.v }); }
-    for (const r of q('credit', 'debit')) { const c = cls(r.a, OUT); by[c] = (by[c] || 0) - r.v; det.push({ code: c, dir: 'Chi', a: r.a, n: r.n, v: -r.v }); }
-    return { by, det };
+  // Mã dòng tiền nhân viên chọn trên ERP (cột Cashflow, vd "0102_Cash paid to suppliers") → mã chỉ tiêu B03: 01xx → 0x, 02xx → 2x, 03xx → 3x; 04 = chuyển tiền nội bộ
+  const VALID = new Set(['01', '02', '03', '04', '05', '06', '07', '21', '22', '23', '24', '25', '26', '27', '31', '32', '33', '34', '35', '36', '61']);
+  const ERP = cf => { const m = /^0([1-4])(\d{2})/.exec(String(cf || '')); if (!m) return null; if (m[1] === '4') return 'TR'; const n = String(+m[2]); const c = m[1] === '1' ? '0' + n : m[1] + n; return VALID.has(c) ? c : null; };
+  const autoCode = (dr, cr) => CASH(dr) ? cls(cr, IN) : cls(dr, OUT);
+  const baseCode = (dr, cr, cf) => { const e = ERP(cf); return e && e !== 'TR' ? e : autoCode(dr, cr); };
+  const CFN = { '01': 'Tiền thu từ bán hàng, cung cấp dịch vụ và doanh thu khác', '02': 'Tiền chi trả cho người cung cấp hàng hóa và dịch vụ', '03': 'Tiền chi trả cho người lao động', '04': 'Tiền lãi vay đã trả',
+    '05': 'Thuế TNDN đã nộp', '06': 'Tiền thu khác từ hoạt động kinh doanh', '07': 'Tiền chi khác cho hoạt động kinh doanh', '21': 'Tiền chi mua sắm, xây dựng TSCĐ và tài sản dài hạn khác',
+    '22': 'Tiền thu thanh lý, nhượng bán TSCĐ và tài sản dài hạn khác', '23': 'Tiền chi cho vay, mua công cụ nợ của đơn vị khác', '24': 'Tiền thu hồi cho vay, bán lại công cụ nợ', '25': 'Tiền chi đầu tư góp vốn vào đơn vị khác',
+    '26': 'Tiền thu hồi đầu tư góp vốn vào đơn vị khác', '27': 'Tiền thu lãi cho vay, cổ tức và lợi nhuận được chia', '31': 'Tiền thu từ phát hành cổ phiếu, nhận vốn góp', '32': 'Tiền trả lại vốn góp, mua lại cổ phiếu',
+    '33': 'Tiền thu từ đi vay', '34': 'Tiền trả nợ gốc vay', '35': 'Tiền trả nợ gốc thuê tài chính', '36': 'Cổ tức, lợi nhuận đã trả cho chủ sở hữu', '61': 'Ảnh hưởng của thay đổi tỷ giá' };
+  const sigOf = r => 'c:' + [r.doc, r.d, r.dr, r.cr, Math.round((+r.a || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
+  const CASHW = `((acc_debit>='111' AND acc_debit<'114') OR (acc_credit>='111' AND acc_credit<'114'))`;
+  const rngP = (from, to) => [okYm(from) || '0000-00', okYm(to) || '9999-12'];
+  const adjRows = (from, to) => { try { return all(`SELECT * FROM cf_adj WHERE ym>=? AND ym<=?`, ...rngP(from, to)); } catch { return []; } };
+  // Nhóm bút toán tiền theo (TK Nợ, TK Có, mã dòng tiền); adjusted = áp dụng điều chỉnh của người dùng
+  function cfGroups(from, to, adjusted) {
+    const out = [];
+    for (const r of all(`SELECT acc_debit d, acc_credit c, cashflow cf, sum(amount) v FROM entries WHERE ym>=? AND ym<=? AND ${CASHW} GROUP BY 1,2,3`, ...rngP(from, to))) {
+      if (CASH(r.d) && CASH(r.c)) continue; out.push({ d: r.d, c: r.c, code: baseCode(r.d, r.c, r.cf), v: r.v }); }
+    if (adjusted) for (const a of adjRows(from, to)) { if (CASH(a.dr) && CASH(a.cr)) continue; const b = baseCode(a.dr, a.cr, a.cf); if (b === a.code) continue;
+      out.push({ d: a.dr, c: a.cr, code: b, v: -a.a }, { d: a.dr, c: a.cr, code: a.code, v: a.a }); }
+    return out;
   }
-  function cashFlow(from, to) {
-    const { by, det } = cashFlows(from, to), g = c => by[c] || 0, tb = trial(from, to, 1), B = new Map(tb.rows.map(r => [r.a, r]));
+  // Danh sách bút toán thu/chi tiền (để xem, rà soát và điều chỉnh dòng tiền)
+  function cfRows(from, to, code = '', which = 'after', limit = 30000) {
+    const adj = new Map(adjRows(from, to).map(a => [a.sig, a])), out = [];
+    for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, cashflow cf, type_of_cost t, department dep
+        FROM entries WHERE ym>=? AND ym<=? AND ${CASHW} AND amount<>0 ORDER BY account_date, id`, ...rngP(from, to))) {
+      if (CASH(r.dr) && CASH(r.cr)) continue; const inflow = CASH(r.dr), sig = sigOf(r), before = baseCode(r.dr, r.cr, r.cf), auto = autoCode(r.dr, r.cr), ad = adj.get(sig), after = ad ? ad.code : before;
+      if (code && (which === 'before' ? before : after) !== code) continue;
+      out.push({ ...r, sig, dir: inflow ? 'Thu' : 'Chi', v: inflow ? r.a : -r.a, cash: inflow ? r.dr : r.cr, other: inflow ? r.cr : r.dr, otherName: inflow ? r.crName : r.drName, bpo: inflow ? r.bpCr : r.bp,
+        erp: ERP(r.cf), before, auto, after, adj: !!ad, adjNote: ad ? ad.note : '', diff: before !== auto, noCf: !r.cf || ERP(r.cf) === 'TR' });
+    }
+    return { total: out.length, rows: out.slice(0, limit), codes: CFN };
+  }
+  function cfAdjSet(items, code, note = '') {
+    if (!VALID.has(code)) throw new Error('Mã dòng tiền không hợp lệ'); let n = 0;
+    const seen = new Set();
+    for (const x of [].concat(items || [])) { if (!x.doc) continue; const sig = x.sig || sigOf(x); if (seen.has(sig)) continue; seen.add(sig);
+      // các dòng giống hệt nhau (cùng chứng từ, ngày, TK, số tiền, đối tượng) được điều chỉnh cùng nhau
+      const cnt = (all(`SELECT count(*) n FROM entries WHERE document_no=? AND account_date=? AND acc_debit=? AND acc_credit=? AND round(amount*100)=? AND ifnull(partner_debit,'')=? AND ifnull(partner_credit,'')=?`, x.doc, x.d, x.dr, x.cr, Math.round(+x.a * 100), x.bp || '', x.bpCr || '')[0] || {}).n || 1;
+      x.a = +x.a * cnt;
+      run(`INSERT OR REPLACE INTO cf_adj(sig, code, note, doc, d, ym, dr, cr, a, cf, bp, bpCr, updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`, sig, code, note, x.doc, x.d, String(x.d || '').slice(0, 7), x.dr, x.cr, +x.a, x.cf || null, x.bp || null, x.bpCr || null); n++; }
+    return { n };
+  }
+  const cfAdjRemove = sigs => { let n = 0; for (const s of [].concat(sigs || [])) n += run(`DELETE FROM cf_adj WHERE sig=?`, s).changes; return { n }; };
+  const cfAdjList = () => { try { return all(`SELECT * FROM cf_adj ORDER BY updated_at DESC`).map(a => ({ ...a, before: baseCode(a.dr, a.cr, a.cf) })); } catch { return []; } };
+
+  // Lập B03 (trực tiếp + gián tiếp) từ một tập nhóm bút toán tiền
+  function cfBuild(from, to, groups) {
+    const by = {}, detM = new Map();
+    for (const g of groups) { const inflow = CASH(g.d), v = inflow ? g.v : -g.v, other = inflow ? g.c : g.d; by[g.code] = (by[g.code] || 0) + v;
+      const k = g.code + '|' + (inflow ? 'Thu' : 'Chi') + '|' + String(other).slice(0, 3); const o = detM.get(k) || detM.set(k, { code: g.code, dir: inflow ? 'Thu' : 'Chi', a: String(other).slice(0, 3), n: L1[String(other).slice(0, 3)] || other, v: 0 }).get(k); o.v += v; }
+    const g = c => by[c] || 0, tb = trial(from, to, 1), B = new Map(tb.rows.map(r => [r.a, r]));
     const ob = accs => accs.reduce((s, a) => s + (B.get(a) ? B.get(a).obDr - B.get(a).obCr : 0), 0), cb = accs => accs.reduce((s, a) => s + (B.get(a) ? B.get(a).bal : 0), 0);
-    const mv = accs => cb(accs) - ob(accs); // tăng (+) / giảm (−) số dư Nợ
     const cash0 = ob(['111', '112', '113']), cash1 = cb(['111', '112', '113']);
     const s = (...cs) => cs.reduce((x, c) => x + g(c), 0);
     const op = s('01', '02', '03', '04', '05', '06', '07'), inv = s('21', '22', '23', '24', '25', '26', '27'), fin = s('31', '32', '33', '34', '35', '36');
-    const sec = (code, name, v, bold) => ({ code, name, v, bold: !!bold });
-    const tail = [sec('50', 'Lưu chuyển tiền thuần trong kỳ (50 = 20 + 30 + 40)', op + inv + fin, 1), sec('60', 'Tiền và tương đương tiền đầu kỳ', cash0, 1),
-      sec('61', 'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ', g('61')), sec('70', 'Tiền và tương đương tiền cuối kỳ (70 = 50 + 60 + 61)', op + inv + fin + cash0 + g('61'), 1)];
-    const invFin = [sec('', 'II. Lưu chuyển tiền từ hoạt động đầu tư', null, 1),
-      sec('21', '1. Tiền chi để mua sắm, xây dựng TSCĐ và các tài sản dài hạn khác', g('21')), sec('22', '2. Tiền thu từ thanh lý, nhượng bán TSCĐ và các tài sản dài hạn khác', g('22')),
-      sec('23', '3. Tiền chi cho vay, mua các công cụ nợ của đơn vị khác', g('23')), sec('24', '4. Tiền thu hồi cho vay, bán lại các công cụ nợ của đơn vị khác', g('24')),
-      sec('25', '5. Tiền chi đầu tư góp vốn vào đơn vị khác', g('25')), sec('26', '6. Tiền thu hồi đầu tư góp vốn vào đơn vị khác', g('26')), sec('27', '7. Tiền thu lãi cho vay, cổ tức và lợi nhuận được chia', g('27')),
-      sec('30', 'Lưu chuyển tiền thuần từ hoạt động đầu tư', inv, 1),
-      sec('', 'III. Lưu chuyển tiền từ hoạt động tài chính', null, 1),
-      sec('31', '1. Tiền thu từ phát hành cổ phiếu, nhận vốn góp của chủ sở hữu', g('31')), sec('32', '2. Tiền trả lại vốn góp cho các chủ sở hữu, mua lại cổ phiếu', g('32')),
-      sec('33', '3. Tiền thu từ đi vay', g('33')), sec('34', '4. Tiền trả nợ gốc vay', g('34')), sec('35', '5. Tiền trả nợ gốc thuê tài chính', g('35')), sec('36', '6. Cổ tức, lợi nhuận đã trả cho chủ sở hữu', g('36')),
-      sec('40', 'Lưu chuyển tiền thuần từ hoạt động tài chính', fin, 1)];
-    const direct = [sec('', 'I. Lưu chuyển tiền từ hoạt động kinh doanh', null, 1),
-      sec('01', '1. Tiền thu từ bán hàng, cung cấp dịch vụ và doanh thu khác', g('01')), sec('02', '2. Tiền chi trả cho người cung cấp hàng hóa và dịch vụ', g('02')),
-      sec('03', '3. Tiền chi trả cho người lao động', g('03')), sec('04', '4. Tiền lãi vay đã trả', g('04')), sec('05', '5. Thuế thu nhập doanh nghiệp đã nộp', g('05')),
-      sec('06', '6. Tiền thu khác từ hoạt động kinh doanh', g('06')), sec('07', '7. Tiền chi khác cho hoạt động kinh doanh', g('07')),
+    const sec = (code, name, v, bold, accs) => ({ code, name, v, bold: !!bold, accs });
+    const tail = [sec('50', 'Lưu chuyển tiền thuần trong kỳ (50 = 20 + 30 + 40)', op + inv + fin, 1), sec('60', 'Tiền và tương đương tiền đầu kỳ', cash0, 1, ['111', '112', '113']),
+      sec('61', 'Ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ', g('61')), sec('70', 'Tiền và tương đương tiền cuối kỳ (70 = 50 + 60 + 61)', op + inv + fin + cash0 + g('61'), 1, ['111', '112', '113'])];
+    const L = (c, i) => sec(c, `${i}. ${CFN[c]}`, g(c));
+    const invFin = [sec('', 'II. Lưu chuyển tiền từ hoạt động đầu tư', null, 1), ...['21', '22', '23', '24', '25', '26', '27'].map((c, i) => L(c, i + 1)), sec('30', 'Lưu chuyển tiền thuần từ hoạt động đầu tư', inv, 1),
+      sec('', 'III. Lưu chuyển tiền từ hoạt động tài chính', null, 1), ...['31', '32', '33', '34', '35', '36'].map((c, i) => L(c, i + 1)), sec('40', 'Lưu chuyển tiền thuần từ hoạt động tài chính', fin, 1)];
+    const direct = [sec('', 'I. Lưu chuyển tiền từ hoạt động kinh doanh', null, 1), ...['01', '02', '03', '04', '05', '06', '07'].map((c, i) => L(c, i + 1)),
       sec('20', 'Lưu chuyển tiền thuần từ hoạt động kinh doanh', op, 1), ...invFin, ...tail];
-    // Gián tiếp (chính xác theo bút toán kép): tiền thuần HĐKD = −Σ biến động (Nợ − Có) của các TK không phải tiền, sau khi loại các bút toán tiền đã xếp vào đầu tư / tài chính.
-    //   full[k]  = biến động trong kỳ của TK k (mọi bút toán, trừ chuyển tiền giữa các TK tiền)
-    //   nop[k]   = phần biến động do bút toán tiền thuộc hoạt động đầu tư / tài chính / tỷ giá (mã 21–36, 61)
+    // Gián tiếp (bút toán kép): tiền thuần HĐKD = −Σ biến động (Nợ − Có) của TK không phải tiền, loại phần thu/chi tiền đã xếp vào đầu tư / tài chính (theo mã dòng tiền)
     const NOP = c => /^(2[1-7]|3[1-6]|61)$/.test(c);
     const key = (a, o) => { a = String(a || ''); if (a.startsWith('421') && String(o || '').startsWith('911')) return 'PL'; if (a.startsWith('3334')) return '3334'; if (a.startsWith('2147')) return '214';
       return /^[5-9]/.test(a) && !a.startsWith('821') ? 'PL' : a.slice(0, 3); };
     const full = {}, nop = {}, add = (o, k, v) => { o[k] = (o[k] || 0) + v; };
-    const plAcc = {};
-    for (const r of all(`SELECT acc_debit d, acc_credit c, max(acc_debit_name) dn, max(acc_credit_name) cn, sum(amount) v FROM entries WHERE ym>=? AND ym<=? GROUP BY 1,2`, okYm(from) || '0000-00', okYm(to) || '9999-12')) {
-      const cd = CASH(r.d), cc = CASH(r.c); if (cd && cc) continue;
-      if (cd) { const k = key(r.c, r.d); add(full, k, -r.v); if (NOP(cls(r.c, IN))) add(nop, k, -r.v); continue; }
-      if (cc) { const k = key(r.d, r.c); add(full, k, r.v); if (NOP(cls(r.d, OUT))) add(nop, k, r.v); continue; }
-      add(full, key(r.d, r.c), r.v); add(full, key(r.c, r.d), -r.v);
-    }
+    for (const x of groups) { if (CASH(x.d)) { const k = key(x.c, x.d); add(full, k, -x.v); if (NOP(x.code)) add(nop, k, -x.v); } else { const k = key(x.d, x.c); add(full, k, x.v); if (NOP(x.code)) add(nop, k, x.v); } }
+    for (const r of all(`SELECT acc_debit d, acc_credit c, sum(amount) v FROM entries WHERE ym>=? AND ym<=? AND NOT ${CASHW} GROUP BY 1,2`, ...rngP(from, to))) { add(full, key(r.d, r.c), r.v); add(full, key(r.c, r.d), -r.v); }
     const op_ = k => -((full[k] || 0) - (nop[k] || 0)), used = new Set();
-    const take = (...ks) => { let v = 0; for (const k of Object.keys(full)) if (!used.has(k) && ks.some(p => k === p || (p.length < k.length && k.startsWith(p)))) { v += op_(k); used.add(k); } return v; };
+    const T = (...ks) => { let v = 0; for (const k of Object.keys(full)) if (!used.has(k) && ks.some(p => k === p || (p.length < k.length && k.startsWith(p)))) { v += op_(k); used.add(k); } return v; };
     const pbt = -(full.PL || 0), l05 = nop.PL || 0; used.add('PL');
-    const l02 = take('214'), l03 = take('229', '352'), l04 = take('413'), l15 = take('821', '3334');
-    const l09 = take('131', '133', '136', '138', '141', '244', '1412'), l10 = take('151', '152', '153', '154', '155', '156', '157', '158'), l12 = take('242'), l13 = take('121');
-    const l11 = take('331', '333', '334', '335', '336', '337', '338', '344', '347', '353', '356');
+    const A02 = ['214'], A03 = ['229', '352'], A04 = ['413'], A15 = ['821', '3334'], A09 = ['131', '133', '136', '138', '141', '244'], A10 = ['151', '152', '153', '154', '155', '156', '157', '158'], A12 = ['242'], A13 = ['121'],
+      A11 = ['331', '333', '334', '335', '336', '337', '338', '344', '347', '353', '356'];
+    const l02 = T(...A02), l03 = T(...A03), l04 = T(...A04), l15 = T(...A15), l09 = T(...A09), l10 = T(...A10), l12 = T(...A12), l13 = T(...A13), l11 = T(...A11);
     const other = Object.keys(full).filter(k => !used.has(k)).map(k => ({ a: k, n: L1[k] || k, v: op_(k) })).filter(x => Math.abs(x.v) > 0.004).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
     const l07 = other.reduce((x, o) => x + o.v, 0), l08 = pbt + l02 + l03 + l04 + l05 + l07, opI = l08 + l09 + l10 + l11 + l12 + l13 + l15;
-    const indirect = [sec('', 'I. Lưu chuyển tiền từ hoạt động kinh doanh', null, 1), sec('01', '1. Lợi nhuận trước thuế', pbt), sec('', '2. Điều chỉnh cho các khoản', null),
-      sec('02', '- Khấu hao TSCĐ và BĐSĐT (TK 214)', l02), sec('03', '- Các khoản dự phòng (TK 229, 352)', l03),
-      sec('04', '- Lãi, lỗ chênh lệch tỷ giá do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ (TK 413)', l04),
-      sec('05', '- Lãi, lỗ từ hoạt động đầu tư (thu lãi, cổ tức, thanh lý TSCĐ đã xếp vào mục II)', l05), sec('06', '- Chi phí lãi vay', 0),
-      sec('07', '- Các khoản điều chỉnh khác (biến động phi tiền tệ TK khác – xem bảng đối chiếu)', l07),
+    const indirect = [sec('', 'I. Lưu chuyển tiền từ hoạt động kinh doanh', null, 1), sec('01', '1. Lợi nhuận trước thuế', pbt, 0, ['5', '6', '7', '8']), sec('', '2. Điều chỉnh cho các khoản', null),
+      sec('02', '- Khấu hao TSCĐ và BĐSĐT (TK 214)', l02, 0, A02), sec('03', '- Các khoản dự phòng (TK 229, 352)', l03, 0, A03),
+      sec('04', '- Lãi, lỗ chênh lệch tỷ giá do đánh giá lại các khoản mục tiền tệ có gốc ngoại tệ (TK 413)', l04, 0, A04),
+      sec('05', '- Lãi, lỗ từ hoạt động đầu tư (thu lãi, cổ tức, thanh lý TSCĐ đã xếp vào mục II)', l05, 0, ['515', '711', '811']), sec('06', '- Chi phí lãi vay', 0),
+      sec('07', '- Các khoản điều chỉnh khác (biến động phi tiền tệ TK khác – xem bảng đối chiếu)', l07, 0, other.map(o => o.a)),
       sec('08', '3. Lợi nhuận từ HĐKD trước thay đổi vốn lưu động', l08, 1),
-      sec('09', '- Tăng, giảm các khoản phải thu (131, 133, 136, 138, 141, 244)', l09), sec('10', '- Tăng, giảm hàng tồn kho (151–158)', l10),
-      sec('11', '- Tăng, giảm các khoản phải trả (331, 333, 334, 335, 336, 338… không kể thuế TNDN)', l11), sec('12', '- Tăng, giảm chi phí trả trước (242)', l12),
-      sec('13', '- Tăng, giảm chứng khoán kinh doanh (121)', l13), sec('14', '- Tiền lãi vay đã trả', 0), sec('15', '- Thuế thu nhập doanh nghiệp đã nộp (821, 3334)', l15),
+      sec('09', '- Tăng, giảm các khoản phải thu (131, 133, 136, 138, 141, 244)', l09, 0, A09), sec('10', '- Tăng, giảm hàng tồn kho (151–158)', l10, 0, A10),
+      sec('11', '- Tăng, giảm các khoản phải trả (331, 333, 334, 335, 336, 338… không kể thuế TNDN)', l11, 0, A11), sec('12', '- Tăng, giảm chi phí trả trước (242)', l12, 0, A12),
+      sec('13', '- Tăng, giảm chứng khoán kinh doanh (121)', l13, 0, A13), sec('14', '- Tiền lãi vay đã trả', 0), sec('15', '- Thuế thu nhập doanh nghiệp đã nộp (821, 3334)', l15, 0, A15),
       sec('16', '- Tiền thu khác từ hoạt động kinh doanh', 0), sec('17', '- Tiền chi khác cho hoạt động kinh doanh', 0),
       sec('20', 'Lưu chuyển tiền thuần từ hoạt động kinh doanh', opI, 1), ...invFin, ...tail];
-    const indCheck = opI - op, pbtB02 = (plRange(from, to) || {}).pbt || 0;
-    const agg = new Map(); for (const d of det) { const k = d.code + '|' + d.dir + '|' + d.a.slice(0, 3); const o = agg.get(k) || agg.set(k, { code: d.code, dir: d.dir, a: d.a.slice(0, 3), n: L1[d.a.slice(0, 3)] || d.n, v: 0 }).get(k); o.v += d.v; }
-    return { from: tb.from, to: tb.to, direct, indirect, indCheck, indOther: other, pbtB02, check: op + inv + fin + cash0 + g('61') - cash1, cash0, cash1, detail: [...agg.values()].sort((a, b) => a.code.localeCompare(b.code) || Math.abs(b.v) - Math.abs(a.v)), hasOpening: tb.hasOpening };
+    return { direct, indirect, indCheck: opI - op, indOther: other, check: op + inv + fin + cash0 + g('61') - cash1, cash0, cash1,
+      detail: [...detM.values()].filter(d => Math.abs(d.v) > 0.004).sort((a, b) => a.code.localeCompare(b.code) || Math.abs(b.v) - Math.abs(a.v)), hasOpening: tb.hasOpening, from: tb.from, to: tb.to };
+  }
+  function cashFlow(from, to) {
+    const A = cfBuild(from, to, cfGroups(from, to, true)), Bf = cfBuild(from, to, cfGroups(from, to, false)), adj = adjRows(from, to).filter(a => a.code !== baseCode(a.dr, a.cr, a.cf));
+    const noCf = (all(`SELECT count(*) n, sum(amount) v FROM entries WHERE ym>=? AND ym<=? AND ${CASHW} AND (cashflow IS NULL OR cashflow='' OR cashflow LIKE '04%') AND NOT (acc_debit>='111' AND acc_debit<'114' AND acc_credit>='111' AND acc_credit<'114')`, ...rngP(from, to))[0] || {});
+    const pbtB02 = (plRange(from, to) || {}).pbt || 0;
+    return { ...A, directBefore: Bf.direct, indirectBefore: Bf.indirect, detailBefore: Bf.detail, adjN: adj.length, adjV: adj.reduce((s, a) => s + Math.abs(a.a), 0), noCf, pbtB02, codes: CFN };
+  }
+  /* Truy nguồn số liệu: TK chi tiết (đầu kỳ, phát sinh, cuối kỳ) và các bút toán trong kỳ của nhóm TK (tiền tố) */
+  function drill(spec = {}) {
+    const pres = [].concat(spec.accs || []).map(String).filter(Boolean), [f, t] = rngP(spec.from, spec.to); if (!pres.length) return { accounts: [], rows: [], total: 0 };
+    const M = a => pres.some(p => String(a || '').startsWith(p)), tb = trial(spec.from, spec.to, 0);
+    const accounts = tb.rows.filter(r => M(r.a)).map(r => ({ a: r.a, n: r.n, ob: r.obDr - r.obCr, dr: r.dr, cr: r.cr, cb: r.bal }));
+    const like = c => '(' + pres.map(p => `${c} LIKE '${p.replace(/'/g, '')}%'`).join(' OR ') + ')';
+    const rows = all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t, department dep, cashflow cf
+      FROM entries WHERE ym>=? AND ym<=? AND (${like('acc_debit')} OR ${like('acc_credit')})${spec.pl ? ` AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%'` : ''} ORDER BY account_date, id LIMIT 50001`, f, t)
+      .map(r => { const md = M(r.dr), mc = M(r.cr); return { ...r, side: md && mc ? 'Nợ & Có' : md ? 'Nợ' : 'Có', v: (md ? r.a : 0) - (mc ? r.a : 0), acc: md ? r.dr : r.cr, accName: md ? r.drName : r.crName, ctr: md ? r.cr : r.dr, ctrName: md ? r.crName : r.drName, bpS: md ? r.bp : r.bpCr }; });
+    return { accounts, rows: rows.slice(0, 50000), total: rows.length, truncated: rows.length > 50000 };
   }
   /* B09-DN: Thuyết minh báo cáo tài chính – phần số liệu chi tiết lập tự động; phần chính sách là văn bản người dùng sửa */
   function partnerTop(pres, at, n = 10, credit = false, raw) {
@@ -245,6 +287,6 @@ function make(all, okYm, INC, plRange) {
         N('VI.8', 'Chi phí thuế thu nhập doanh nghiệp hiện hành', { type: 'kv', rows: [['Lợi nhuận kế toán trước thuế', pl.pbt], ['Chi phí thuế TNDN (821)', pl.tax], ['Lợi nhuận sau thuế', pl.pat]] }),
       ] };
   }
-  return { trial, balanceSheet, income, cashFlow, notes, status };
+  return { trial, balanceSheet, income, cashFlow, notes, status, cfRows, cfAdjSet, cfAdjRemove, cfAdjList, drill };
 }
 module.exports = { make, L1 };

@@ -1,5 +1,21 @@
 # Lịch sử phiên bản
 
+## v4.15.0 – 03/11/2026
+**Báo cáo tài chính: truy nguồn số liệu, điều chỉnh dòng tiền, B03 trước / sau điều chỉnh**
+- **Truy nguồn:** nhấn đúp một tài khoản (CĐSPS) hoặc một chỉ tiêu (B01, B02, B03 gián tiếp) để mở cửa sổ toàn màn hình gồm:
+  - Các TK cấu thành, kèm dư đầu kỳ, phát sinh Nợ/Có, dư cuối kỳ.
+  - Bút toán gốc trong kỳ, có bộ lọc: tìm kiếm, TK, TK đối ứng, Nợ/Có, tháng, đối tượng, khoản mục, người nhập, khoảng số tiền; kèm tổng Nợ, tổng Có, chênh lệch.
+- **Điều chỉnh dòng tiền:** nhấn đúp một chỉ tiêu B03 (hoặc bấm "Rà soát & điều chỉnh dòng tiền") để xem từng bút toán thu/chi tiền.
+  - Mỗi dòng có: dòng tiền nhân viên chọn trên ERP, gợi ý theo TK đối ứng, mã sau điều chỉnh.
+  - Lọc được: NV chọn khác gợi ý, chưa chọn dòng tiền, đã/chưa điều chỉnh.
+  - Tích chọn dòng rồi chuyển sang mã đúng, đặt theo gợi ý TK, hoặc bỏ điều chỉnh; kèm ghi chú.
+- **B03 trực tiếp:** có 3 cột Trước điều chỉnh (theo dòng tiền nhân viên chọn; chưa chọn thì phân loại theo TK đối ứng), Sau điều chỉnh và Chênh lệch.
+- **B03 gián tiếp sau điều chỉnh:**
+  - Mục II, III (vd mã 21 mua sắm TSCĐ) lấy đúng số của báo cáo trực tiếp sau điều chỉnh.
+  - Các khoản phải trả, phải thu và mã 07 tự cân đối lại theo bút toán kép, nên mã 20 luôn khớp trực tiếp.
+  - Cũng có cột trước / sau điều chỉnh.
+- File Excel ghi cả số trước điều chỉnh và sau điều chỉnh của B03.
+
 ## v4.14.1 – 03/11/2026
 **Số dư nội bộ: bỏ tài khoản thuế**
 - Số dư nội bộ tại ngày không còn tính TK thuế 133 (thuế GTGT được khấu trừ) và 333 (thuế và các khoản phải nộp Nhà nước). Thuế không phải công nợ nội bộ; hệ thống chỉ gắn thuế theo đối tượng của bút toán gốc.

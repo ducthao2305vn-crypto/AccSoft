@@ -81,7 +81,8 @@ function finBook(tb, bs, pl, o, cf, nt, txt) {
   const info = [{ 'Đơn vị': o.org || '', 'Kỳ báo cáo': `${tb.from || 'đầu dữ liệu'} → ${tb.to || 'cuối dữ liệu'}`, 'Kỳ so sánh (B02)': pl.cmpFrom ? `${pl.cmpFrom} → ${pl.cmpTo}` : '', 'Có số dư đầu kỳ': tb.hasOpening ? 'Có (luỹ kế các tháng trước kỳ)' : 'Không – số đầu kỳ = 0',
     'Chênh lệch TS − NV': bs.diff, 'Ghi chú': 'Lập tự động từ dữ liệu hạch toán đã nạp (AccSoft); B01/B02/B03 theo Thông tư 99/2025/TT-BTC (rút gọn) – cần kế toán trưởng rà soát trước khi sử dụng.' }];
   const C = L => L.map(l => ({ 'Chỉ tiêu': l.name, 'Mã số': l.code, 'Kỳ này': l.v }));
-  return book([['CDSPS', T], ['B01-DN', B], ['B02-DN', P], ['B03-DN truc tiep', cf ? C(cf.direct) : []], ['B03-DN gian tiep', cf ? C(cf.indirect) : []], ['B03 gian tiep - ma 07', cf && cf.indOther ? cf.indOther.map(o => ({ 'TK': o.a, 'Tên tài khoản': o.n, 'Điều chỉnh': o.v })) : []],
+  const CC = (L, L0) => L.map((l, i) => { const b = L0 && L0[i] ? L0[i].v : null; return { 'Chỉ tiêu': l.name, 'Mã số': l.code, 'Trước điều chỉnh': b, 'Sau điều chỉnh': l.v, 'Chênh lệch': l.v != null && b != null ? l.v - b : null }; });
+  return book([['CDSPS', T], ['B01-DN', B], ['B02-DN', P], ['B03-DN truc tiep', cf ? CC(cf.direct, cf.directBefore) : []], ['B03-DN gian tiep', cf ? CC(cf.indirect, cf.indirectBefore) : []], ['B03 gian tiep - ma 07', cf && cf.indOther ? cf.indOther.map(o => ({ 'TK': o.a, 'Tên tài khoản': o.n, 'Điều chỉnh': o.v })) : []],
     ['B09-DN', nt ? b09Rows(nt, txt || {}) : []], ['B03 phan loai', cf ? cf.detail.map(d => ({ 'Mã số': d.code, 'Thu/Chi': d.dir, 'TK đối ứng': d.a, 'Tên TK': d.n, 'Số tiền': d.v })) : []], ['Thong tin', info]]);
 }
 function recvBook(r) {

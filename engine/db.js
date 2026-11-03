@@ -101,6 +101,8 @@ function open(file, { cleanup = false, light = false } = {}) {
     CREATE INDEX IF NOT EXISTS ix_err_entry ON errors(entry_id);
     CREATE TABLE IF NOT EXISTS partners_cat(code_name TEXT PRIMARY KEY, code TEXT, name TEXT, kind TEXT, nb_code TEXT, nb_name TEXT, note TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')));
     CREATE INDEX IF NOT EXISTS ix_pcat_code ON partners_cat(code);
+    CREATE TABLE IF NOT EXISTS cf_adj(sig TEXT PRIMARY KEY, code TEXT, note TEXT, doc TEXT, d TEXT, ym TEXT, dr TEXT, cr TEXT, a REAL, cf TEXT, bp TEXT, bpCr TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')));
+    CREATE INDEX IF NOT EXISTS ix_cfadj_ym ON cf_adj(ym);
     CREATE TABLE IF NOT EXISTS ig_adj(sig TEXT PRIMARY KEY, scope TEXT, action TEXT, to_key TEXT, doc TEXT, d TEXT, a REAL, ds TEXT, from_key TEXT, note TEXT, updated_at TEXT DEFAULT (datetime('now','localtime')));
     CREATE TABLE IF NOT EXISTS ent_sum(ym TEXT, u TEXT, n INTEGER, nx INTEGER, docs INTEGER, dmin TEXT, dmax TEXT, PRIMARY KEY(ym, u)) WITHOUT ROWID;
     CREATE TABLE IF NOT EXISTS err_sum(ym TEXT, rule TEXT, sev TEXT, st TEXT, u TEXT, dept TEXT, n INTEGER, PRIMARY KEY(ym, rule, sev, st, u, dept)) WITHOUT ROWID;
