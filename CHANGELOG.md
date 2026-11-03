@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.31.0 – 03/11/2026
+- **Tìm nhanh trong danh sách chọn dài** (mã vị trí, biển số, hợp đồng, phòng ban, đối tượng…): mọi danh sách từ 25 mục trở lên có thêm ô 🔍 bên cạnh. Gõ vài ký tự (không phân biệt hoa thường / dấu) → danh sách chỉ còn mục chứa ký tự đó và tự chọn mục đầu tiên; **Enter** để chốt, **Esc** để xoá tìm.
+
 ## v4.30.1 – 03/11/2026
 - Sửa: cửa sổ chi tiết vị trí / xe / phòng ban – nút **Đổi …** bị mờ khi chưa tích dòng. Nay nếu không tích dòng nào thì áp dụng cho **toàn bộ dòng đang lọc** (có hỏi xác nhận số dòng).
 

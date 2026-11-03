@@ -1659,3 +1659,19 @@ const COLP=(()=>{
     showAll:tb=>{const k=keyOf(tb),o=load();delete o[k];save(o);tb.dataset.colk='';for(const c of tb.querySelectorAll('th,td')){c.style.display='';c.style.width=c.style.minWidth=c.style.maxWidth='';c.querySelectorAll('.clamp').forEach(x=>{x.style.maxWidth=x.style.minWidth=''})}tb.querySelectorAll('.colhid').forEach(x=>x.remove())},
     hidden:tb=>((load()[keyOf(tb)]||{}).h||[]),unhide:(tb,name)=>{upd(tb,P=>{P.h=(P.h||[]).filter(x=>x!==name)});const i=grid(tb).cols.indexOf(name);if(i>=0)setH(tb,i,false)}};
 })();
+
+// Tìm nhanh trong danh sách chọn dài (mã vị trí, biển số, hợp đồng, phòng ban…): gõ vài ký tự → chỉ còn các mục chứa ký tự đó; Enter để chọn
+(function(){const MIN=25,norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
+  const add=sel=>{if(sel.dataset.srch||sel.multiple||sel.options.length<MIN||!sel.parentNode)return;sel.dataset.srch=1;
+    const inp=document.createElement('input');inp.type='search';inp.placeholder='🔍 Gõ để tìm… (Enter chọn)';inp.className='selsrch';inp.style.cssText='width:150px;margin-right:4px';
+    if(sel.classList.contains('hide'))inp.classList.add('hide');new MutationObserver(()=>inp.classList.toggle('hide',sel.classList.contains('hide'))).observe(sel,{attributes:true,attributeFilter:['class']});
+    sel.parentNode.insertBefore(inp,sel);
+    const filt=()=>{const q=norm(inp.value.trim());let first=null,n=0;for(const o of sel.options){const keep=!o.value||!q||norm(o.textContent+' '+o.value).includes(q);o.hidden=!keep;if(keep&&o.value&&o.value!=='__EMPTY__'){n++;if(!first)first=o}}
+      inp.title=q?n+' mục khớp':'';if(q&&first)sel.value=first.value;else if(!q&&sel.dataset.v0!=null)sel.value=sel.dataset.v0;return first};
+    sel.dataset.v0=sel.value;
+    inp.addEventListener('input',e=>{e.stopPropagation();filt()});inp.addEventListener('change',e=>e.stopPropagation());
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const f=filt();if(f){sel.value=f.value;sel.dataset.v0=f.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}}else if(e.key==='Escape'){inp.value='';filt()}});
+    sel.addEventListener('change',()=>{sel.dataset.v0=sel.value})};
+  const scan=r=>{if(r.querySelectorAll)r.querySelectorAll('select:not([data-srch])').forEach(add)};
+  new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.tagName==='SELECT')add(n);else scan(n)}}).observe(document.documentElement,{childList:true,subtree:true});
+  document.addEventListener('DOMContentLoaded',()=>scan(document));})();

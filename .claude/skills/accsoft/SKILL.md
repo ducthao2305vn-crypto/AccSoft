@@ -454,3 +454,6 @@ await p.evaluate(()=>window.api.q('stats'));
 2. Commit, rồi `git push -u origin <nhánh làm việc>`. Workflow `.github/workflows/build-desktop.yml` tự tạo tag và Release `vX.Y.Z` (Setup .exe, Portable .exe, .dmg, .AppImage) từ phiên bản trong package.json, sau khoảng 2–3 phút.
 3. Kiểm tra bằng GitHub MCP: `actions_list` (list_workflow_runs) và `get_latest_release`.
 4. Không tạo PR nếu người dùng không yêu cầu.
+
+### Tìm nhanh trong select (v4.31)
+- Cuối `app.js`: MutationObserver tự chèn `input.selsrch` trước mọi `<select>` ≥ 25 option (không multiple). Gõ → ẩn option không khớp (bỏ dấu), đặt value = mục khớp đầu (không bắn change); Enter → bắn `change`. Không cần sửa từng màn hình.
