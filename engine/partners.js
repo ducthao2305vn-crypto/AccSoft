@@ -148,7 +148,7 @@ function make(db, all, get, okYm) {
       const mv = ad && ad.action === 'move' && ci.get(ad.to_key);
       for (const [acc, accName, p0, sgn] of [[r.dr, r.drName, r.bp, 1], [r.cr, r.crName, r.bpCr, -1]]) {
         let p = p0, c = map.get(p); if (mv && DEBT(acc)) [p, c] = mv; if (!c || !kinds.includes(c.kind) || !/^[1-4]/.test(acc || '')) continue;
-        if (excl && A(acc, '335', '1317')) continue; const k = coKey(c, p); if (company && k !== company) continue;
+        if (excl && A(acc, '335', '1317')) continue; if (A(acc, '133', '333')) continue; /* thuế (GTGT, nhà thầu…) không phải công nợ nội bộ – hệ thống chỉ gắn theo đối tượng của bút toán gốc */ const k = coKey(c, p); if (company && k !== company) continue;
         const key = k + '|' + acc, o = m.get(key) || m.set(key, { key: k, company: coName(c, p), acc, accName: accName || acc, bal: 0, dr: 0, cr: 0, last: null, est: A(acc, '335', '1317') }).get(key);
         o.bal += sgn * r.a; sgn > 0 ? o.dr += r.a : o.cr += r.a; if (!o.last || r.d > o.last) o.last = r.d; } }
     const lines = [...m.values()].filter(o => Math.abs(o.bal) > 0.005).map(o => ({ ...o, ...accGroup(o.acc, o.bal) })).sort((a, b) => a.company.localeCompare(b.company) || a.acc.localeCompare(b.acc));

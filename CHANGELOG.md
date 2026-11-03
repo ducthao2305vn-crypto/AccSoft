@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.14.1 – 03/11/2026
+**Số dư nội bộ: bỏ tài khoản thuế**
+- Số dư nội bộ tại ngày không còn tính TK thuế 133 (thuế GTGT được khấu trừ) và 333 (thuế và các khoản phải nộp Nhà nước). Thuế không phải công nợ nội bộ; hệ thống chỉ gắn thuế theo đối tượng của bút toán gốc.
+
 ## v4.14.0 – 03/11/2026
 **B03-DN theo phương pháp gián tiếp: lập chính xác theo bút toán kép**
 - Phương pháp gián tiếp được lập lại từ biến động Nợ − Có trong kỳ của từng TK không phải tiền, loại phần thu/chi tiền đã xếp vào hoạt động đầu tư/tài chính.

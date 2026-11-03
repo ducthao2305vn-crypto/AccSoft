@@ -173,6 +173,7 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - CSS `section` không giới hạn chiều rộng (trước đây `max-width: 1500px`).
 
 ### Số dư nội bộ theo nhóm (v4.11)
+- Từ v4.14.1, `internalBalance` bỏ qua TK thuế 133 và 333.
 - `accGroup(acc, bal)` trả về `{grp: thu|tra|von, grpName, a3, a3Name (ACC3), rev, revName}`.
 - `internalBalance` trả thêm `groups[]` (nhóm → accs (TK cấp 3) → sub (TK chi tiết)). Mỗi phần tử trong `companies[]` có thêm `thu, tra, von, est, rev`.
 
