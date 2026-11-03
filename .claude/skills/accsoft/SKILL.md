@@ -150,6 +150,16 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Danh mục phòng ban & khoản mục chi phí (v4.25, `engine/catalogs.js`)
+- Bảng dữ liệu:
+  - `dept_cat(code, name, descr, note)`: danh mục phòng ban.
+  - `dept_map(src PK, code)`: ánh xạ nhiều tên phòng ban gốc → một phòng ban danh mục.
+  - `cost_cat(code, name, descr, level, active, has_loc, has_prod, grp, vn, kd1, note)`: khoản mục chi phí.
+- `ensure(db)` được gọi trong `db.open`: tạo bảng, nạp dữ liệu từ `seed_catalogs.json` nếu bảng còn trống, và tự ánh xạ theo tên trùng lần đầu.
+- IPC: `dmDeptList`, `dmDeptSources`, `dmCostList`, `dmCostUnmatched`, `dmExport` nằm trong READ; các hàm `dm*` còn lại nằm trong WRITE. `dm:import` tự tìm dòng tiêu đề có cột "Code".
+- Tra cứu khi lập báo cáo: `deptOf()` (src → {code, name}), `costOf()` (code → khoản mục), `tocCode(type_of_cost)`.
+- UI: trang `dmc` → `vDM`, `dmDept`, `dmMap`, `dmCost`. Tên file xuất `DANH_MUC_*` khớp `RAW` nên giữ dạng thô để nạp lại được.
+
 ### Chọn hợp đồng (v4.24.3)
 - `fieldadj.contractsOf(bp)` (IPC `faContracts`, nằm trong READ) trả về các hợp đồng trong entries và field_adj của đối tượng, ở cả hai phía Nợ/Có.
 - Trong openLedger: `#lHdS` là ô chọn hợp đồng, giá trị `__EMPTY__` nghĩa là xoá trống; `#lHdM` là ô tích nhập thủ công, bật nó thì hiện ô nhập `#lHd`.

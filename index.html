@@ -227,6 +227,7 @@ section.loading{opacity:.55;transition:opacity .2s;pointer-events:none}
     <div class="sec">Kiểm soát</div>
     <button data-p="report"><svg class="icon"><use href="#i-mail"/></svg>Báo cáo & Thông báo</button>
     <button data-p="cat"><svg class="icon"><use href="#i-users"/></svg>Danh mục đối tượng</button>
+    <button data-p="dmc"><svg class="icon"><use href="#i-file"/></svg>Danh mục phòng ban & chi phí</button>
     <button data-p="fadj"><svg class="icon"><use href="#i-file"/></svg>Điều chỉnh dữ liệu</button>
     <button data-p="data"><svg class="icon"><use href="#i-db"/></svg>Quản lý dữ liệu</button>
   </nav>
@@ -432,6 +433,7 @@ Bộ phận Kế toán – Kiểm soát nội bộ</textarea></label>
     </div>
   </section>
 
+  <section id="dmc" class="hide"><div id="dmBody" style="display:flex;flex-direction:column;gap:20px"></div></section>
   <section id="fadj" class="hide"><div id="faBody" style="display:flex;flex-direction:column;gap:20px"></div></section>
   <section id="cat" class="hide">
     <div class="card"><div class="card-h"><div><h3>Danh mục đối tượng</h3><div class="hint">Phân nhóm khách hàng / nhà cung cấp / nhân viên / nội bộ / quốc tế để phân tích giao dịch nội bộ và thanh toán quốc tế. Khớp với đối tượng trong dữ liệu theo "Mã_Tên" (Code_Name), nếu không có thì theo Mã.</div></div><div class="sp" style="flex:1"></div>

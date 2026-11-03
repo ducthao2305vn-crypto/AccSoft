@@ -1,5 +1,14 @@
 # Lịch sử phiên bản
 
+## v4.25.0 – 03/11/2026
+**Mới: Danh mục phòng ban & khoản mục chi phí**
+- Thêm trang **Kiểm soát → Danh mục phòng ban & chi phí**, gồm 3 tab:
+  - **Phòng ban:** nạp sẵn 24 phòng ban từ DANH_MUC_PHONG_BAN.xls. Thêm, sửa (cả mã), xoá; nạp file (thêm / cập nhật, hoặc thay toàn bộ); xuất Excel. Mỗi phòng ban hiện các tên phòng ban dữ liệu gốc đã gắn và số dòng hạch toán.
+  - **Ánh xạ phòng ban dữ liệu gốc:** liệt kê mọi tên phòng ban trong dữ liệu hạch toán (số dòng, từ ngày – đến ngày) để chọn phòng ban danh mục. **Một phòng ban danh mục gắn được nhiều tên gốc.** Có các cách gắn: từng dòng (lưu ngay), nhiều dòng cùng lúc, hoặc "Tự ánh xạ theo tên trùng". Dòng chưa gắn được tô vàng.
+  - **Khoản mục chi phí:** nạp sẵn 358 khoản mục từ DANH_MUC_TYPE_OF_COST.xls, đủ các cột Code, Name, Description, Summary Level, Active, Has Location, Has Product, Expense Group, Tiếng Việt, Khoản mục KD1. Tìm, lọc theo nhóm chi phí, thêm / sửa / xoá, nạp / xuất Excel, xem số dòng đang hạch toán. Có danh sách khoản mục **đang hạch toán nhưng chưa có trong danh mục**, kèm nút "Thêm vào danh mục".
+- Khớp khoản mục với dữ liệu theo mã trước dấu "_" (vd "E17.1.1.1.4_Dep…" → E17.1.1.1.4).
+- Lần đầu mở, ứng dụng tự ánh xạ phòng ban theo tên trùng: 23/24 tên được gắn. "VTL_NOC Dept." chưa có trong danh mục, cần gắn tay.
+
 ## v4.24.3 – 03/11/2026
 **Đổi hợp đồng: chọn từ danh sách hợp đồng của đối tượng**
 - Trong sổ chi tiết công nợ, ô "Đổi hợp đồng" là **danh sách mọi hợp đồng của đối tượng** đó: lấy trên mọi tài khoản, cả phía Nợ và Có, gồm cả hợp đồng đã điều chỉnh. Mỗi hợp đồng ghi số dòng và ngày phát sinh gần nhất, sắp theo hợp đồng mới nhất. Có mục "(Xoá trống hợp đồng)".
