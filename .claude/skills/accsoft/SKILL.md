@@ -150,6 +150,15 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Điều chỉnh đối tượng nội bộ (v4.9)
+- Lưu trong bảng `ig_adj(sig PK, scope row|doc, action out|move, to_key, doc, d, a, ds, from_key, note)`.
+- Khoá của dòng: `sig = 'r:'+doc|d|dr|cr|round(a*100)|bp|bpCr`. Khoá này không phụ thuộc id, nên vẫn khớp khi nạp lại dữ liệu. Khoá cả chứng từ: `'d:'+doc`.
+- `picker(map, kinds, adjMap())` áp dụng điều chỉnh trước. `rowsOfKinds` nạp thêm các chứng từ đã gán lại (`move`), kể cả khi đối tượng gốc không thuộc nhóm nội bộ.
+- `internalBalance` bỏ dòng `out`; với `move`, gán công ty mới cho vế TK công nợ.
+- `suspect()` đánh dấu khi diễn giải nhắc tới nb_code / nb_name của công ty khác.
+- IPC: `igAdjList` và `igDocLines` nằm trong READ; `igAdjSet` và `igAdjRemove` nằm trong WRITE.
+- UI: `igGrid(host, rows, cos, onChange, opt)` gồm lọc, chọn dòng và hành động; `igDrawer` dùng `#drawer.full`. Chế độ `IG.m='adj'`.
+
 ### Báo cáo nội bộ (v4.8)
 - `partners.js` cung cấp các hàm sau:
   - `EST`: nhận diện bút toán ước tính 335/1317, dùng cho tham số `excl`.

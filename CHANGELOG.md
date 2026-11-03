@@ -1,5 +1,14 @@
 # Lịch sử phiên bản
 
+## v4.9.0 – 03/11/2026
+**Giao dịch nội bộ: điều chỉnh đối tượng chọn sai, xem chi tiết toàn màn hình**
+- Cửa sổ chi tiết mở toàn màn hình, có nút Thu nhỏ / Toàn màn hình.
+- Lọc trong cửa sổ chi tiết: tìm chứng từ, diễn giải, đối tượng, người nhập; lọc theo nghiệp vụ, công ty, tài khoản, khoảng số tiền; chỉ dòng ước tính, nghi ngờ hoặc đã gán lại; sắp xếp.
+- Tích chọn dòng để **Loại khỏi nội bộ** (từng dòng hoặc cả chứng từ) hoặc **Gán lại** sang công ty nội bộ đúng; kèm ghi chú lý do.
+- Chế độ mới **Điều chỉnh đối tượng**: xem và bỏ các điều chỉnh đã lưu, xuất Excel; tìm chứng từ để đưa giao dịch bị chọn nhầm đối tượng bên ngoài vào nội bộ.
+- Mọi điều chỉnh áp dụng cho tất cả báo cáo nội bộ: tổng hợp kỳ, số dư tại ngày, chi tiết, theo năm.
+- Cảnh báo "Nghi ngờ sai đối tượng" khi diễn giải nhắc tới mã hoặc tên một công ty nội bộ khác với công ty đang gắn.
+
 ## v4.8.0 – 03/11/2026
 **Báo cáo giao dịch nội bộ (4 chế độ)**
 - Tổng hợp kỳ: chọn từ tháng – đến tháng, lọc theo công ty nội bộ, có ô tích **Không tính TK ước tính (335, 1317)**.

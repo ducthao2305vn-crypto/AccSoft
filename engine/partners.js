@@ -62,6 +62,10 @@ function make(db, all, get, okYm) {
     for (let i = 0; i < ps.length; i += 400) { const c = ps.slice(i, i + 400), ph = c.map(() => '?').join(',');
       for (const side of ['debit', 'credit']) for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t
           FROM entries WHERE partner_${side} IN (${ph})${R} AND amount<>0`, ...c)) out.set(r.id, r); }
+    try { const docs = [...new Set(all(`SELECT doc FROM ig_adj WHERE action='move'`).map(x => x.doc).filter(Boolean))];
+      for (let i = 0; i < docs.length; i += 400) { const c = docs.slice(i, i + 400);
+        for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t
+          FROM entries WHERE document_no IN (${c.map(() => '?').join(',')})${R} AND amount<>0`, ...c)) if (!out.has(r.id)) out.set(r.id, r); } } catch { }
     return { rows: [...out.values()], map };
   }
   const A = (a, ...p) => p.some(x => String(a || '').startsWith(x));
@@ -82,7 +86,16 @@ function make(db, all, get, okYm) {
   const EST = r => A(r.dr, '335', '1317') || A(r.cr, '335', '1317');
   // Đối tượng nội bộ của bút toán: nếu cả hai phía đều là đối tượng nội bộ thì lấy phía TK công nợ (13x, 14x, 33x, 34x, 35x), không thì phía Có
   const DEBT = a => A(a, '13', '14', '33', '34', '35');
-  function picker(map, kinds) {
+  // Điều chỉnh của người dùng: loại bút toán / chứng từ khỏi nội bộ, hoặc gán lại sang công ty nội bộ khác (khi nhân viên chọn sai đối tượng)
+  const sigRow = r => 'r:' + [r.doc, r.d, r.dr, r.cr, Math.round(r.a * 100), r.bp || '', r.bpCr || ''].join('|'), sigDoc = r => 'd:' + r.doc;
+  const adjMap = () => { try { return new Map(all(`SELECT * FROM ig_adj`).map(x => [x.sig, x])); } catch { return new Map(); } };
+  const adjOf = (adj, r) => adj.get(sigRow(r)) || adj.get(sigDoc(r));
+  function coIndex(map, kinds) { const m = new Map(); for (const [p, c] of map) if (kinds.includes(c.kind)) { const k = coKey(c, p); if (!m.has(k)) m.set(k, [p, c]); } return m; }
+  function picker(map, kinds, adj) {
+    const base = picker0(map, kinds); if (!adj || !adj.size) return base; const ci = coIndex(map, kinds);
+    return r => { const a = adjOf(adj, r); if (a) { if (a.action === 'out') return [null, null]; if (a.action === 'move' && ci.has(a.to_key)) return ci.get(a.to_key); } return base(r); };
+  }
+  function picker0(map, kinds) {
     return r => { const c = map.get(r.bpCr), d = map.get(r.bp), okC = c && kinds.includes(c.kind), okD = d && kinds.includes(d.kind);
       if (okC && okD) return DEBT(r.dr) && !DEBT(r.cr) ? [r.bp, d] : [r.bpCr, c];
       return okC ? [r.bpCr, c] : okD ? [r.bp, d] : [null, null]; };
@@ -95,7 +108,7 @@ function make(db, all, get, okYm) {
     return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
   function internal(from, to, withTT = false, excl = false, company = '') {
-    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows: rows0, map } = rowsOfKinds(kinds, from, to), pick = picker(map, kinds);
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows: rows0, map } = rowsOfKinds(kinds, from, to), pick = picker(map, kinds, adjMap());
     const rows = rows0.filter(r => (!excl || !EST(r)) && (!company || (() => { const [p, c] = pick(r); return c && coKey(c, p) === company; })()));
     const months = [...new Set(rows.map(r => r.ym))].sort(), co = new Map(), pt = new Map(), mm = new Map();
     for (const r of rows) {
@@ -110,20 +123,22 @@ function make(db, all, get, okYm) {
       companies: [...co.values()].map(o => ({ ...o, partners: o.partners.size })).sort((a, b) => b.n - a.n), partners: [...pt.values()].sort((a, b) => b.n - a.n) };
   }
   function internalRows(from, to, withTT, key, cat, limit = 20000, excl = false) { // chi tiết bút toán nội bộ (lọc theo công ty / loại nghiệp vụ)
-    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, from, to), pick = picker(map, kinds);
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, from, to), adj = adjMap(), pick = picker(map, kinds, adj), sus = suspect(map, kinds);
     const out = [];
     for (const r of rows) { const [p, c] = pick(r); if (!c || (excl && EST(r))) continue; const k = coKey(c, p);
-      if ((key && k !== key) || (cat && category(r) !== cat)) continue; out.push({ ...r, cat: category(r), company: coName(c, p), coKey: k, ip: p, est: EST(r) }); }
+      if ((key && k !== key) || (cat && category(r) !== cat)) continue; const a = adjOf(adj, r);
+      out.push({ ...r, cat: category(r), company: coName(c, p), coKey: k, ip: p, est: EST(r), sig: sigRow(r), adj: a ? (a.action === 'move' ? 'Gán lại → ' + a.to_key : '') : '', sus: sus(r, k) }); }
     out.sort((a, b) => a.d.localeCompare(b.d) || a.doc.localeCompare(b.doc));
     return { total: out.length, rows: out.slice(0, limit) };
   }
   // (1) Số dư nội bộ tại ngày: cộng dồn phát sinh của TK bảng cân đối (loại 1–4) theo đúng phía đối tượng (TK Nợ ↔ đối tượng Nợ, TK Có ↔ đối tượng Có)
   function internalBalance(asOf, withTT = false, excl = false, company = '') {
-    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, '', String(asOf || '').slice(0, 7));
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, '', String(asOf || '').slice(0, 7)), adj = adjMap(), ci = coIndex(map, kinds);
     const m = new Map();
-    for (const r of rows) { if (asOf && r.d > asOf) continue;
-      for (const [acc, accName, p, sgn] of [[r.dr, r.drName, r.bp, 1], [r.cr, r.crName, r.bpCr, -1]]) {
-        const c = map.get(p); if (!c || !kinds.includes(c.kind) || !/^[1-4]/.test(acc || '')) continue;
+    for (const r of rows) { if (asOf && r.d > asOf) continue; const ad = adjOf(adj, r); if (ad && ad.action === 'out') continue;
+      const mv = ad && ad.action === 'move' && ci.get(ad.to_key);
+      for (const [acc, accName, p0, sgn] of [[r.dr, r.drName, r.bp, 1], [r.cr, r.crName, r.bpCr, -1]]) {
+        let p = p0, c = map.get(p); if (mv && DEBT(acc)) [p, c] = mv; if (!c || !kinds.includes(c.kind) || !/^[1-4]/.test(acc || '')) continue;
         if (excl && A(acc, '335', '1317')) continue; const k = coKey(c, p); if (company && k !== company) continue;
         const key = k + '|' + acc, o = m.get(key) || m.set(key, { key: k, company: coName(c, p), acc, accName: accName || acc, bal: 0, dr: 0, cr: 0, last: null, est: A(acc, '335', '1317') }).get(key);
         o.bal += sgn * r.a; sgn > 0 ? o.dr += r.a : o.cr += r.a; if (!o.last || r.d > o.last) o.last = r.d; } }
@@ -135,7 +150,7 @@ function make(db, all, get, okYm) {
   const YCOL = [['buy627', 'Mua – ghi chi phí 627'], ['buy641', 'Mua – ghi chi phí 641'], ['buy642', 'Mua – ghi chi phí 642'], ['buyExpO', 'Mua – chi phí khác (6xx/8xx)'], ['buyGoods', 'Mua hàng hoá, vật tư (15x)'], ['buyAsset', 'Mua tài sản, XDCB, trả trước (211/213/241/242)'], ['buyTot', 'Tổng mua'], ['sales', 'Bán – doanh thu (511/512/515/711)'], ['salesAdj', 'Giảm trừ / điều chỉnh doanh thu'], ['salesNet', 'Bán thuần']];
   function internalYears(years, withTT = false, excl = false, company = '') {
     years = [...new Set([].concat(years || []).map(String).filter(y => /^\d{4}$/.test(y)))].sort(); if (!years.length) return { years, cols: YCOL, rows: [] };
-    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, years[0] + '-01', years.at(-1) + '-12'), pick = picker(map, kinds);
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { rows, map } = rowsOfKinds(kinds, years[0] + '-01', years.at(-1) + '-12'), pick = picker(map, kinds, adjMap());
     const m = new Map(), z = () => Object.fromEntries(YCOL.map(([k]) => [k, 0]));
     for (const r of rows) { const y = r.ym.slice(0, 4); if (!years.includes(y) || (excl && EST(r))) continue; const [p, c] = pick(r); if (!c) continue; const k = coKey(c, p); if (company && k !== company) continue;
       const o = m.get(k) || m.set(k, { key: k, company: coName(c, p), kind: c.kind, y: Object.fromEntries(years.map(x => [x, z()])) }).get(k), t = o.y[y];
@@ -148,6 +163,30 @@ function make(db, all, get, okYm) {
     const list = [...m.values()].sort((a, b) => Math.abs(b.y[years.at(-1)].buyTot) + Math.abs(b.y[years.at(-1)].salesNet) - Math.abs(a.y[years.at(-1)].buyTot) - Math.abs(a.y[years.at(-1)].salesNet));
     const tot = Object.fromEntries(years.map(y => [y, Object.fromEntries(YCOL.map(([k]) => [k, list.reduce((s, o) => s + o.y[y][k], 0)]))]));
     return { years, cols: YCOL, rows: list, tot, excl, company };
+  }
+
+  // Nghi ngờ chọn sai đối tượng: diễn giải nhắc tới mã / tên công ty nội bộ khác với công ty đang gắn
+  function suspect(map, kinds) {
+    const toks = []; for (const [p, c] of coIndex(map, kinds)) { for (const t of [c.nb_code, c.nb_name].filter(x => x && String(x).trim().length >= 3)) toks.push([p, new RegExp('(^|[^a-z0-9])' + String(t).trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-z0-9])')]); }
+    return (r, k) => { const d = String(r.ds || '').toLowerCase(); if (!d) return ''; let hitOwn = false; const other = [];
+      for (const [key, re] of toks) if (re.test(d)) key === k ? hitOwn = true : other.includes(key) || other.push(key);
+      return !hitOwn && other.length ? 'Diễn giải nhắc tới ' + other.slice(0, 2).join(', ') : ''; };
+  }
+  // Quản lý điều chỉnh
+  function adjList() { try { return all(`SELECT * FROM ig_adj ORDER BY updated_at DESC`); } catch { return []; } }
+  function adjSet(items, action, toKey = '', note = '') {
+    if (!['out', 'move'].includes(action)) throw new Error('Hành động không hợp lệ'); if (action === 'move' && !toKey) throw new Error('Chọn công ty nội bộ cần gán');
+    db.exec('BEGIN'); try { let n = 0;
+      for (const x of [].concat(items || [])) { const doc = x.doc; if (!doc) continue; const scope = x.scope === 'doc' ? 'doc' : 'row', sig = scope === 'doc' ? 'd:' + doc : (x.sig || sigRow(x));
+        run(`INSERT OR REPLACE INTO ig_adj(sig, scope, action, to_key, doc, d, a, ds, from_key, note, updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`, sig, scope, action, action === 'move' ? toKey : '', doc, x.d || '', scope === 'doc' ? null : +x.a || 0, String(x.ds || '').slice(0, 300), x.coKey || x.from_key || '', note || ''); n++; }
+      db.exec('COMMIT'); return { n }; } catch (e) { db.exec('ROLLBACK'); throw e; }
+  }
+  function adjRemove(sigs) { let n = 0; for (const s of [].concat(sigs || [])) n += run(`DELETE FROM ig_adj WHERE sig=?`, s).changes; return { n }; }
+  // Các dòng của một chứng từ (để gán thêm vào nội bộ khi nhân viên chọn nhầm đối tượng ngoài)
+  function docLines(doc, withTT = false) {
+    const kinds = withTT ? ['NB', 'TT'] : ['NB'], { map } = kindMap(), adj = adjMap(), pick = picker(map, kinds, adj);
+    return all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u FROM entries WHERE document_no=? ORDER BY line_no, id LIMIT 2000`, String(doc || '').trim())
+      .map(r => { const [p, c] = pick(r), a = adjOf(adj, r); return { ...r, cat: category(r), company: c ? coName(c, p) : '', coKey: c ? coKey(c, p) : '', sig: sigRow(r), adj: a ? (a.action === 'out' ? 'Đã loại' : 'Gán lại → ' + a.to_key) : '' }; });
   }
 
   // Thanh toán cho đối tác quốc tế: bút toán Có TK tiền (111/112/113), đối tượng Nợ thuộc nhóm quốc tế
@@ -180,6 +219,6 @@ function make(db, all, get, okYm) {
     for (const p of parts) { const k = map.get(p)?.kind || '(chưa phân loại)'; c[k] = (c[k] || 0) + 1; }
     return { partners: parts.length, matched: map.size, byKind: c, catalog: get('SELECT count(*) n FROM partners_cat').n };
   }
-  return { list, upsert, remove, importRows, exportAll, unmatched, internal, internalRows, internalBalance, internalYears, companies, intlPayments, kindStats, KINDS };
+  return { list, upsert, remove, importRows, exportAll, unmatched, internal, internalRows, internalBalance, internalYears, companies, adjList, adjSet, adjRemove, docLines, intlPayments, kindStats, KINDS };
 }
 module.exports = { make, KINDS };

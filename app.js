@@ -256,7 +256,7 @@ async function showDetail(i,eid){
 async function step(d){let j=CUR+d;
   if(j<0&&OFF>0){OFF-=LIM;await loadErrTable();j=VIEW.length-1}else if(j>=VIEW.length&&OFF+LIM<TOTAL){OFF+=LIM;await loadErrTable();j=0}
   if(j>=0&&j<VIEW.length)showDetail(j)}
-function closeDetail(){$('#drawer').classList.add('hide');CUR=-1}
+function closeDetail(){$('#drawer').classList.add('hide');$('#drawer').classList.remove('full');CUR=-1}
 $('#drawer').onclick=e=>{if(e.target.id==='drawer')closeDetail()};
 document.addEventListener('keydown',e=>{if($('#drawer').classList.contains('hide')||/TEXTAREA|INPUT|SELECT/.test(e.target.tagName))return;
   if(e.key==='Escape')closeDetail();if(CUR>=0&&(e.key==='ArrowDown'||e.key==='ArrowRight'))step(1);if(CUR>=0&&(e.key==='ArrowUp'||e.key==='ArrowLeft'))step(-1)});
@@ -870,9 +870,61 @@ async function grpEmpty(title,kinds){const st=await aq('catStats'),inData=kinds.
 
 /* ---------- Giao dịch nội bộ: tổng hợp kỳ · số dư · chi tiết · theo năm ---------- */
 const IG=Object.assign({m:'sum',co:'',tt:false,ex:false,years:[]},ls.get('igPick',{}));
+/* ---- Lưới bút toán nội bộ: lọc / tìm kiếm / loại khỏi nội bộ / gán lại công ty ---- */
+const IGF0={q:'',cat:'',co:'',acc:'',min:'',max:'',fl:'',sort:'d'},IGF={...IGF0};
+function igGrid(host,rows,cos,onChange,opt={}){const Q=x=>host.querySelector(x);if(!opt.keep)Object.assign(IGF,IGF0);
+  const sel=new Set(),cats=[...new Set(rows.map(x=>x.cat))].sort(),cmp=[...new Set(rows.map(x=>x.company))].sort();
+  const accs=[...new Set(rows.flatMap(x=>[x.drName||x.dr,x.crName||x.cr]))].filter(Boolean).sort();
+  host.innerHTML=`<div class="card" style="gap:10px"><div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+    <input id="gQ" placeholder="Tìm chứng từ, diễn giải, đối tượng, người nhập…" style="flex:1;min-width:240px" value="${esc(IGF.q)}">
+    <select id="gCat"><option value="">Mọi nghiệp vụ</option>${cats.map(c=>`<option ${IGF.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <select id="gCo"><option value="">Mọi công ty</option>${cmp.map(c=>`<option ${IGF.co===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <input id="gAcc" list="gAccL" placeholder="Tài khoản (vd 627, 13888)" style="width:170px" value="${esc(IGF.acc)}"><datalist id="gAccL">${accs.slice(0,500).map(a=>`<option value="${esc(a)}">`).join('')}</datalist>
+    <input id="gMin" type="number" placeholder="Số tiền từ" style="width:110px" value="${esc(IGF.min)}"><input id="gMax" type="number" placeholder="đến" style="width:110px" value="${esc(IGF.max)}">
+    <select id="gFl"><option value="">Tất cả dòng</option><option value="sus" ${IGF.fl==='sus'?'selected':''}>⚠ Nghi ngờ sai đối tượng</option><option value="est" ${IGF.fl==='est'?'selected':''}>Chỉ TK ước tính</option><option value="noest" ${IGF.fl==='noest'?'selected':''}>Không gồm ước tính</option><option value="adj" ${IGF.fl==='adj'?'selected':''}>Đã gán lại</option></select>
+    <select id="gSort"><option value="d">Sắp theo ngày</option><option value="a" ${IGF.sort==='a'?'selected':''}>Số tiền giảm dần</option><option value="doc" ${IGF.sort==='doc'?'selected':''}>Theo chứng từ</option></select>
+    <button class="btn sm ghost" id="gClr">Xoá lọc</button></div>
+    <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center;background:#FFF6F2;padding:8px 10px;border-radius:8px">
+    <b id="gInfo"></b><div style="flex:1"></div><span id="gSel" class="mut">Chưa chọn dòng</span>
+    <input id="gNote" placeholder="Ghi chú lý do (tuỳ chọn)" style="width:200px">
+    <button class="btn sm" id="gOut" disabled title="Bút toán không thuộc giao dịch nội bộ (nhân viên chọn nhầm đối tượng nội bộ)">Loại khỏi nội bộ</button>
+    <button class="btn sm" id="gOutDoc" disabled title="Loại toàn bộ các dòng cùng chứng từ">Loại cả chứng từ</button>
+    <select id="gTo" style="max-width:220px"><option value="">Gán lại sang công ty…</option>${cos.map(c=>`<option value="${esc(c.key)}">${esc(c.name)}</option>`).join('')}</select>
+    <button class="btn sm primary" id="gMove" disabled>Gán lại</button></div><div id="gT"></div></div>`;
+  let cur=[];
+  const N=v=>v===''||v==null?null:+v;
+  const apply=()=>{const q=IGF.q.trim().toLowerCase(),mn=N(IGF.min),mx=N(IGF.max),ac=IGF.acc.trim().toLowerCase();
+    cur=rows.filter(x=>(!IGF.cat||x.cat===IGF.cat)&&(!IGF.co||x.company===IGF.co)&&(mn==null||x.a>=mn)&&(mx==null||x.a<=mx)
+      &&(!ac||[x.dr,x.cr,x.drName,x.crName].some(v=>String(v||'').toLowerCase().includes(ac)))
+      &&(!IGF.fl||(IGF.fl==='sus'?x.sus:IGF.fl==='est'?x.est:IGF.fl==='noest'?!x.est:x.adj))
+      &&(!q||[x.doc,x.ds,x.bp,x.bpCr,x.u,x.company,x.drName,x.crName].some(v=>String(v||'').toLowerCase().includes(q))));
+    cur.sort(IGF.sort==='a'?(a,b)=>b.a-a.a:IGF.sort==='doc'?(a,b)=>String(a.doc).localeCompare(b.doc)||a.d.localeCompare(b.d):(a,b)=>a.d.localeCompare(b.d)||String(a.doc).localeCompare(b.doc));
+    Q('#gInfo').textContent=`${num(cur.length)} / ${num(rows.length)} dòng · tổng ${fmt2(cur.reduce((s,x)=>s+x.a,0))} · ${num(cur.filter(x=>x.sus).length)} dòng nghi ngờ`;
+    const show=cur.slice(0,1000);
+    Q('#gT').innerHTML=`<div class="tbl" style="max-height:${opt.h||'calc(100vh - 260px)'}"><table><thead><tr><th><input type="checkbox" id="gAll"></th><th>Ngày</th><th>Chứng từ</th><th>Công ty nội bộ</th><th>Nghiệp vụ</th><th>TK Nợ</th><th>TK Có</th><th>Đối tượng Nợ</th><th>Đối tượng Có</th><th class=n>Số tiền</th><th>Diễn giải</th><th>Người nhập</th></tr></thead><tbody>${show.map((x,i)=>`<tr${x.sus?' style="background:#FFFAEB"':''}><td><input type="checkbox" data-gi="${i}" ${sel.has(x.sig)?'checked':''}></td><td class=nw>${vn(x.d)}</td><td class=nw>${esc(x.doc)}</td><td>${esc(x.company)}${x.adj?` <span class="badge b-H">${esc(x.adj)}</span>`:''}</td><td style="font-size:12px">${esc(x.cat)}${x.est?' <span class="badge b-M">ước tính</span>':''}${x.sus?`<div class="badge b-H" title="${esc(x.sus)}">⚠ ${esc(x.sus)}</div>`:''}</td><td><div class="clamp s">${esc(x.drName||x.dr)}</div></td><td><div class="clamp s">${esc(x.crName||x.cr)}</div></td><td><div class="clamp s" title="${esc(x.bp||'')}">${esc(x.bp||'')}</div></td><td><div class="clamp s" title="${esc(x.bpCr||'')}">${esc(x.bpCr||'')}</div></td><td class=n>${fmt2(x.a)}</td><td><div class=clamp title="${esc(x.ds)}">${esc(x.ds)}</div></td><td class=nw>${esc(short(x.u))}</td></tr>`).join('')||'<tr><td colspan=12 class=mut style="text-align:center;padding:24px">Không có dòng phù hợp</td></tr>'}${cur.length>1000?`<tr><td colspan=12 class=mut style="text-align:center;padding:12px">… còn ${num(cur.length-1000)} dòng – thu hẹp bộ lọc</td></tr>`:''}</tbody></table></div>`;
+    Q('#gAll').onchange=e=>{show.forEach(x=>e.target.checked?sel.add(x.sig):sel.delete(x.sig));apply()};upd()};
+  const upd=()=>{const n=sel.size;Q('#gSel').textContent=n?`Đã chọn ${num(n)} dòng · ${fmt2(rows.filter(x=>sel.has(x.sig)).reduce((s,x)=>s+x.a,0))}`:'Chưa chọn dòng';['#gOut','#gOutDoc','#gMove'].forEach(s=>Q(s).disabled=!n)};
+  const bind=(id,k,ev='input')=>{Q(id).addEventListener(ev,e=>{e.stopPropagation();IGF[k]=e.target.value;apply()})};
+  [['#gQ','q'],['#gAcc','acc'],['#gMin','min'],['#gMax','max']].forEach(([i,k])=>bind(i,k));[['#gCat','cat'],['#gCo','co'],['#gFl','fl'],['#gSort','sort']].forEach(([i,k])=>bind(i,k,'change'));
+  ['#gNote','#gTo'].forEach(i=>Q(i).addEventListener('change',e=>e.stopPropagation()));
+  Q('#gClr').onclick=()=>igGrid(host,rows,cos,onChange,{...opt,keep:false});
+  host.onchange=e=>{const i=e.target.dataset.gi;if(i==null)return;e.stopPropagation();const x=cur[+i];e.target.checked?sel.add(x.sig):sel.delete(x.sig);upd()};
+  const act=async(action,scope)=>{const picked=rows.filter(x=>sel.has(x.sig)),to=Q('#gTo').value;if(action==='move'&&!to)return alert('Chọn công ty nội bộ cần gán');
+    const items=scope==='doc'?[...new Map(picked.map(x=>[x.doc,{doc:x.doc,d:x.d,ds:x.ds,coKey:x.coKey,scope:'doc'}])).values()]:picked;
+    if(!confirm(`${action==='out'?'Loại khỏi giao dịch nội bộ':'Gán lại sang '+to}: ${scope==='doc'?items.length+' chứng từ':items.length+' dòng'}?\nCó thể bỏ điều chỉnh ở chế độ "Điều chỉnh đối tượng".`))return;
+    try{const r=await aq('igAdjSet',items,action,to,Q('#gNote').value.trim());onChange&&onChange()}catch(e){alert(e.message)}};
+  Q('#gOut').onclick=()=>act('out','row');Q('#gOutDoc').onclick=()=>act('out','doc');Q('#gMove').onclick=()=>act('move','row');
+  apply();
+}
+function igDrawer(title,sub,rows,cos,onChange){CUR=-1;const D=$('#drawer');if(ls.get('igFull',true))D.classList.add('full');
+  $('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">${esc(sub||'')}</div><h2 style="font-size:20px">${esc(title)}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dFull">${D.classList.contains('full')?'Thu nhỏ':'Toàn màn hình'}</button><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div><div class="pb" id="dGrid"></div>`;
+  D.classList.remove('hide');$('#dClose').onclick=closeDetail;
+  $('#dFull').onclick=()=>{D.classList.toggle('full');ls.set('igFull',D.classList.contains('full'));$('#dFull').textContent=D.classList.contains('full')?'Thu nhỏ':'Toàn màn hình'};
+  igGrid($('#dGrid'),rows,cos,()=>{closeDetail();onChange&&onChange()});
+}
 async function vInternal(B,yms){
   const card=(t,h,body)=>`<div class="card"><div class="card-h"><div><h3>${t}</h3>${h?`<div class="hint">${h}</div>`:''}</div></div>${body}</div>`;
-  const MODES={sum:'Tổng hợp kỳ',bal:'Số dư nội bộ tại ngày',det:'Chi tiết giao dịch',year:'Tổng hợp theo năm (mua / bán)'};
+  const MODES={sum:'Tổng hợp kỳ',bal:'Số dư nội bộ tại ngày',det:'Chi tiết giao dịch',year:'Tổng hợp theo năm (mua / bán)',adj:'Điều chỉnh đối tượng'};
   const yrs=[...new Set(yms.map(m=>m.slice(0,4)))].sort().reverse();if(!IG.years.length)IG.years=yrs.slice(0,2);
   const cos=await aq('grpCompanies',IG.tt);if(IG.co&&!cos.some(c=>c.key===IG.co))IG.co='';
   const opt=v=>yms.slice().reverse().map(m=>`<option value="${m}" ${m===v?'selected':''}>${ymLbl(m)}</option>`).join('');
@@ -892,7 +944,7 @@ async function vInternal(B,yms){
     if(k==='from'||k==='end'||k==='asOf')DPS[k]=t.value;else if(k==='ex'||k==='tt')IG[k]=t.checked;else if(k==='co')IG.co=t.value;save()};
   const EXN=IG.ex?' · không tính 335/1317':'',CO=IG.co?' · '+(cos.find(c=>c.key===IG.co)?.name||IG.co):'';
   const xls=(name,sheets)=>{$('#igXls').onclick=async()=>{try{const f=await api.xlsxSheets(name,sheets());if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}}};
-  const drill=(title,rows)=>{CUR=-1;$('#dPane').innerHTML=`<div class="ph"><div><h2 style="font-size:20px">${esc(title)}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div><div class="pb"><div class="card">${tbl(['Ngày','Chứng từ','Công ty','Nghiệp vụ','TK Nợ','TK Có','#Số tiền','Diễn giải','Người nhập'],rows.map(x=>`<tr><td class=nw>${vn(x.d)}</td><td class=nw>${esc(x.doc)}</td><td>${esc(x.company)}</td><td style="font-size:12px">${esc(x.cat)}${x.est?' <span class="badge b-M">ước tính</span>':''}</td><td>${esc(x.drName)}</td><td>${esc(x.crName)}</td><td class=n>${fmt2(x.a)}</td><td><div class=clamp title="${esc(x.ds)}">${esc(x.ds)}</div></td><td class=nw>${esc(short(x.u))}</td></tr>`),'Không có')}</div></div>`;$('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail};
+  const drill=(title,rows)=>igDrawer(title,'Giao dịch nội bộ'+EXN+CO,rows,cos,save);
   if(IG.m==='sum'){const r=await aq('grpInternal',DPS.from,DPS.end,IG.tt,IG.ex,IG.co),T=r.tot,C=r.cats;
     if(!r.n){B.innerHTML=await grpEmpty('Giao dịch nội bộ',IG.tt?['NB','TT']:['NB']);return}
     const CC={'Doanh thu':'green','Chi phí':'red','Mua hàng hoá, vật tư, tài sản':'blue','Thu tiền':'green','Trả tiền':''};
@@ -912,9 +964,18 @@ async function vInternal(B,yms){
       drill(`${tr.dataset.igb}${a?' · TK '+a:''} · đến ${vn(DPS.asOf)}`,d.rows.filter(x=>x.d<=DPS.asOf&&(!a||x.dr===a||x.cr===a)))};
     xls(`AccSoft_NoiBo_SoDu_${DPS.asOf}${IG.ex?'_khongUocTinh':''}.xlsx`,()=>[['So du theo cong ty',r.companies.map(o=>({'Công ty':o.company,'Mã':o.key,'Dư Nợ':o.dr,'Dư Có':o.cr,'Số dư ròng':o.net}))],['Chi tiet tai khoan',r.lines.map(o=>({'Công ty':o.company,'Tài khoản':o.accName,'Ước tính':o.est?'x':'','Luỹ kế PS Nợ':o.dr,'Luỹ kế PS Có':o.cr,'Dư Nợ':o.bal>0?o.bal:0,'Dư Có':o.bal<0?-o.bal:0,'PS gần nhất':o.last}))],['Thong tin',[{'Tại ngày':DPS.asOf,'Không tính TK ước tính':IG.ex?'Có':'Không','Công ty':IG.co||'Tất cả'}]]]);}
   if(IG.m==='det'){const r=await aq('grpInternalRows',DPS.from,DPS.end,IG.tt,IG.co,'',20000,IG.ex);
-    B.innerHTML=card(`Chi tiết giao dịch nội bộ ${ymLbl(DPS.from)} – ${ymLbl(DPS.end)}`,`${num(r.total)} bút toán${EXN}${CO}${r.total>r.rows.length?' · hiển thị '+num(r.rows.length)+' dòng đầu (xuất Excel để xem đủ)':''}`,
-      tbl(['Ngày','Chứng từ','Công ty nội bộ','Nghiệp vụ','TK Nợ','TK Có','Đối tượng Nợ','Đối tượng Có','#Số tiền','Diễn giải','Người nhập'],r.rows.map(x=>`<tr><td class=nw>${vn(x.d)}</td><td class=nw>${esc(x.doc)}</td><td>${esc(x.company)}</td><td style="font-size:12px">${esc(x.cat)}${x.est?' <span class="badge b-M">ước tính</span>':''}</td><td>${esc(x.drName)}</td><td>${esc(x.crName)}</td><td><div class="clamp s">${esc(x.bp||'')}</div></td><td><div class="clamp s">${esc(x.bpCr||'')}</div></td><td class=n>${fmt2(x.a)}</td><td><div class=clamp title="${esc(x.ds)}">${esc(x.ds)}</div></td><td class=nw>${esc(short(x.u))}</td></tr>`),'Không có giao dịch nội bộ trong kỳ'));
+    B.innerHTML=card(`Chi tiết giao dịch nội bộ ${ymLbl(DPS.from)} – ${ymLbl(DPS.end)}`,`${num(r.total)} bút toán${EXN}${CO}${r.total>r.rows.length?' · tải '+num(r.rows.length)+' dòng đầu (xuất Excel để xem đủ)':''}. Tích chọn dòng nhân viên chọn sai đối tượng để loại khỏi nội bộ hoặc gán lại công ty.`,'<div id="igGrid"></div>');igGrid($('#igGrid'),r.rows,cos,save,{h:'calc(100vh - 420px)',keep:true});
     xls(`AccSoft_NoiBo_ChiTiet_${DPS.from}_${DPS.end}${IG.ex?'_khongUocTinh':''}.xlsx`,()=>[['Chi tiet',r.rows.map(x=>({'Ngày':x.d,'Chứng từ':x.doc,'Công ty nội bộ':x.company,'Nghiệp vụ':x.cat,'Ước tính':x.est?'x':'','TK Nợ':x.drName,'TK Có':x.crName,'Đối tượng Nợ':x.bp,'Đối tượng Có':x.bpCr,'Số tiền':x.a,'Diễn giải':x.ds,'Người nhập':x.u}))]]);}
+  if(IG.m==='adj'){const L=await aq('igAdjList');
+    B.innerHTML=card('Thêm vào nội bộ theo chứng từ','Khi nhân viên chọn nhầm đối tượng bên ngoài cho giao dịch thực chất là nội bộ: nhập số chứng từ, chọn dòng rồi bấm "Gán lại" sang công ty nội bộ đúng.',`<div class="row" style="gap:8px"><input id="adDoc" placeholder="Số chứng từ, vd VTLMN26100059" style="width:320px"><button class="btn sm" id="adFind">Tìm</button></div><div id="adGrid" style="margin-top:10px"></div>`)+
+      card(`Các điều chỉnh đã lưu (${num(L.length)})`,'Điều chỉnh áp dụng cho mọi báo cáo nội bộ (tổng hợp, số dư, chi tiết, theo năm). Bỏ điều chỉnh để trả về đối tượng gốc.',
+        `<div class="row" style="margin-bottom:8px"><div style="flex:1"></div><button class="btn sm" id="adDel" disabled>Bỏ điều chỉnh đã chọn</button></div>`+tbl0(['<input type="checkbox" id="adAll">','Phạm vi','Hành động','Chứng từ','Ngày','#Số tiền','Công ty gốc','Diễn giải','Ghi chú','Cập nhật'],L.map(x=>`<tr><td><input type="checkbox" data-ads="${esc(x.sig)}"></td><td>${x.scope==='doc'?'Cả chứng từ':'Một dòng'}</td><td>${x.action==='out'?'<span class="badge b-H">Loại khỏi nội bộ</span>':'<span class="badge b-M">Gán lại → '+esc(x.to_key)+'</span>'}</td><td class=nw>${esc(x.doc)}</td><td class=nw>${vn(x.d)}</td><td class=n>${x.a!=null?fmt2(x.a):''}</td><td>${esc(x.from_key||'')}</td><td><div class=clamp title="${esc(x.ds)}">${esc(x.ds||'')}</div></td><td>${esc(x.note||'')}</td><td class=nw>${esc(x.updated_at||'')}</td></tr>`),'Chưa có điều chỉnh nào'));
+    const chk=()=>{const n=B.querySelectorAll('[data-ads]:checked').length;$('#adDel').disabled=!n;$('#adDel').textContent=n?`Bỏ ${n} điều chỉnh`:'Bỏ điều chỉnh đã chọn'};
+    B.onchange=e=>{if(e.target.id==='adAll')B.querySelectorAll('[data-ads]').forEach(c=>c.checked=e.target.checked);if(e.target.id==='adAll'||e.target.dataset.ads)chk()};
+    $('#adDel').onclick=async()=>{const s=[...B.querySelectorAll('[data-ads]:checked')].map(c=>c.dataset.ads);if(!confirm(`Bỏ ${s.length} điều chỉnh?`))return;await aq('igAdjRemove',s);save()};
+    const find=async()=>{const d=$('#adDoc').value.trim();if(!d)return;const rows=await aq('igDocLines',d,IG.tt);if(!rows.length){$('#adGrid').innerHTML='<div class=mut>Không tìm thấy chứng từ</div>';return}igGrid($('#adGrid'),rows,cos,save,{h:'420px'})};
+    $('#adFind').onclick=find;$('#adDoc').onkeydown=e=>{if(e.key==='Enter')find()};
+    xls(`AccSoft_NoiBo_DieuChinh.xlsx`,()=>[['Dieu chinh',L.map(x=>({'Phạm vi':x.scope==='doc'?'Cả chứng từ':'Một dòng','Hành động':x.action==='out'?'Loại khỏi nội bộ':'Gán lại → '+x.to_key,'Chứng từ':x.doc,'Ngày':x.d,'Số tiền':x.a,'Công ty gốc':x.from_key,'Diễn giải':x.ds,'Ghi chú':x.note,'Cập nhật':x.updated_at}))]]);}
   if(IG.m==='year'){const r=await aq('grpYears',IG.years,IG.tt,IG.ex,IG.co),Y=r.years;
     if(!Y.length){B.innerHTML=card('Tổng hợp theo năm','Chọn ít nhất một năm.','');return}
     const cols=r.cols.filter(([k])=>!['salesAdj'].includes(k)||Y.some(y=>r.tot[y].salesAdj));
