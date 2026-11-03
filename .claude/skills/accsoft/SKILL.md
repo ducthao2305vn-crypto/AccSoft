@@ -150,6 +150,10 @@ Người dùng có 1,1–1,5 triệu dòng (2015 → nay, còn tăng) và hàng 
 - **Chưa có:** tách ngắn hạn/dài hạn theo kỳ hạn; lãi vay đã trả (mã 04) đang suy từ 635/3351; ảnh hưởng tỷ giá (mã 61) theo 413 (RateToVND trong dữ liệu đều bằng 0).
 
 ## Danh mục đối tượng & phân tích theo nhóm (v4.7, `engine/partners.js`)
+### Phòng ban = Department Sub (v4.29.2)
+- Báo cáo chi phí theo phòng ban (`DIMS.dept`) và trường điều chỉnh `dept` dùng cột **department_sub** (phòng ban ngân sách), không dùng `department` (phòng ban hạch toán).
+- `deptSources` liệt kê tên ở cả hai cột để ánh xạ.
+
 ### Bổ sung cột cho dữ liệu cũ (v4.29.1)
 - `worker.enrichFile` (nút "Bổ sung thông tin" ở Quản lý dữ liệu) cập nhật bằng `coalesce` các cột product/uom/locator/dist/rate/group_cost/services/location/project/period/plate.
 - `SRC` khai báo dạng mảng tên cột thì so khớp không phân biệt hoa thường và lấy cột đầu tiên có giá trị (`normalize`).

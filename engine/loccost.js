@@ -2,12 +2,12 @@
 // Báo cáo quản trị chi phí theo một chiều phân tích × nhóm chi phí × tháng:
 //   location = mã vị trí (Location): thuê trạm / văn phòng / nhà nghỉ, điện trạm, xăng dầu máy phát…
 //   plate    = biển số xe (License Plate): xăng dầu, sửa chữa, dầu – nước làm mát, thuê xe, khấu hao… (có định mức / tháng / xe)
-//   dept     = phòng ban (Department, ánh xạ sang danh mục phòng ban): mọi chi phí, nhóm theo Expense Group của danh mục khoản mục
+//   dept     = phòng ban ngân sách (Department Sub, ánh xạ sang danh mục phòng ban): mọi chi phí, nhóm theo Expense Group của danh mục khoản mục
 // Giá trị chiều hiệu lực = giá trị đã điều chỉnh (field_adj) nếu có, không thì cột gốc. Chi phí = Nợ − Có TK 6xx/8xx (trừ 911).
 const DIMS = {
   location: { col: 'e.location', f: 'location', none: '(không có vị trí)' },
   plate: { col: 'e.plate', f: 'plate', none: '(không có biển số)' },
-  dept: { col: 'e.department', f: 'dept', none: '(không có phòng ban)' },
+  dept: { col: 'e.department_sub', f: 'dept', none: '(không có Department Sub)' }, // phòng ban ngân sách = Department Sub
 };
 const GROUPS = {
   location: [
@@ -79,7 +79,7 @@ function make(db, all, get, okYm) {
     if (isDept) { if (g && g !== '(khoản mục ngoài danh mục)') { W = ` AND ${CODE} IN (${codes.map(() => '?').join(',')})`; A = codes; } else if (g) { W = known.length ? ` AND (e.type_of_cost IS NULL OR ${CODE} NOT IN (${known.map(() => '?').join(',')}))` : ''; A = known; } }
     else { if (!codes.length) return []; W = ` AND ${CODE} IN (${codes.map(() => '?').join(',')})`; A = codes; }
     return all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount a, e.partner_debit bp, e.partner_credit bpCr,
-        e.description ds, e.created_by u, e.type_of_cost t, e.location, e.plate, e.department dept, ${VAL(d)} val, f.value newVal
+        e.description ds, e.created_by u, e.type_of_cost t, e.location, e.plate, e.department_sub dept, e.department deptAcc, ${VAL(d)} val, f.value newVal
       FROM entries e ${FJ(d)} WHERE e.ym>=? AND e.ym<=?${W} AND (${EXP('debit')} OR ${EXP('credit')}) AND ${VAL(d)}=? ORDER BY e.account_date, e.id LIMIT 20000`, okYm(from), okYm(to), ...A, key || '')
       .map(r => ({ ...r, orig: d === 'location' ? r.location : d === 'plate' ? r.plate : r.dept, v: (/^[68]/.test(r.dr) && !/^911/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) && !/^911/.test(r.cr) ? r.a : 0) }));
   }

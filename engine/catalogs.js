@@ -11,7 +11,7 @@ function make(db, all, get, run) {
   const tx = f => { db.exec('BEGIN'); try { const r = f(); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } };
   /* ---- Phòng ban ---- */
   function deptList() {
-    const maps = all(`SELECT m.src, m.code, (SELECT count(*) FROM entries e WHERE e.department=m.src) n FROM dept_map m`);
+    const maps = all(`SELECT m.src, m.code, (SELECT count(*) FROM entries e WHERE e.department_sub=m.src) n FROM dept_map m`);
     const by = new Map(); for (const m of maps) (by.get(m.code) || by.set(m.code, []).get(m.code)).push({ src: m.src, n: m.n });
     return all(`SELECT * FROM dept_cat ORDER BY code`).map(d => ({ ...d, maps: by.get(d.code) || [], n: (by.get(d.code) || []).reduce((s, x) => s + x.n, 0) }));
   }
@@ -23,7 +23,8 @@ function make(db, all, get, run) {
   const deptRemove = codes => tx(() => { let n = 0; for (const c of [].concat(codes || [])) { run(`DELETE FROM dept_map WHERE code=?`, c); n += run(`DELETE FROM dept_cat WHERE code=?`, c).changes; } return { n }; });
   // Tên phòng ban trong dữ liệu gốc + phòng ban danh mục đang ánh xạ
   function deptSources() {
-    return all(`SELECT e.department src, count(*) n, min(e.account_date) f, max(e.account_date) l, m.code FROM entries e LEFT JOIN dept_map m ON m.src=e.department WHERE e.department IS NOT NULL AND e.department<>'' GROUP BY 1 ORDER BY n DESC`);
+    // tên phòng ban ở cả Department Sub (phòng ban ngân sách – dùng cho báo cáo chi phí theo phòng ban) và Department
+    return all(`SELECT x.src, sum(x.n) n, min(x.f) f, max(x.l) l, m.code, max(x.sub) sub FROM (SELECT department_sub src, count(*) n, min(account_date) f, max(account_date) l, 1 sub FROM entries WHERE department_sub IS NOT NULL AND department_sub<>'' GROUP BY 1 UNION ALL SELECT department, count(*), min(account_date), max(account_date), 0 FROM entries WHERE department IS NOT NULL AND department<>'' GROUP BY 1) x LEFT JOIN dept_map m ON m.src=x.src GROUP BY x.src ORDER BY n DESC`);
   }
   function deptMapSet(srcs, code) { return tx(() => { let n = 0; for (const s of [].concat(srcs || [])) { if (!s) continue; if (!code) run(`DELETE FROM dept_map WHERE src=?`, s); else run(`INSERT OR REPLACE INTO dept_map(src, code) VALUES(?,?)`, s, code); n++; } return { n }; }); }
   // Tự ánh xạ theo tên / mã / mô tả trùng (không phân biệt hoa thường); chỉ điền các tên chưa ánh xạ
@@ -87,7 +88,7 @@ function ensure(db) {
     if (!db.prepare('SELECT 1 FROM dept_map LIMIT 1').get()) {
       const idx = new Map(); for (const d of db.prepare('SELECT * FROM dept_cat').all()) for (const k of [d.name, d.code, d.descr]) if (norm(k)) idx.set(key(k), d.code);
       const st = db.prepare('INSERT OR IGNORE INTO dept_map(src, code) VALUES(?,?)');
-      for (const r of db.prepare(`SELECT DISTINCT department s FROM entries WHERE department IS NOT NULL AND department<>''`).all()) { const c = idx.get(key(r.s)); if (c) st.run(r.s, c); }
+      for (const r of db.prepare(`SELECT DISTINCT department_sub s FROM entries WHERE department_sub IS NOT NULL AND department_sub<>'' UNION SELECT DISTINCT department FROM entries WHERE department IS NOT NULL AND department<>''`).all()) { const c = idx.get(key(r.s)); if (c) st.run(r.s, c); }
     }
   } catch (e) { /* seed không bắt buộc */ }
 }

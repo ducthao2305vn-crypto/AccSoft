@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.29.2 – 03/11/2026
+**Chi phí theo phòng ban dùng cột Department Sub (phòng ban ngân sách)**
+- Báo cáo **Chi phí theo phòng ban** đọc cột **Department Sub**, không dùng Department nữa. Trường "Phòng ban" ở Điều chỉnh dữ liệu cũng ghi vào Department Sub.
+- Cửa sổ bút toán có thêm cột **Department (hạch toán)** để đối chiếu. Dòng nào Department khác Department Sub được tô đỏ.
+- Ánh xạ phòng ban: liệt kê tên ở cả Department Sub và Department. Department Sub có nhiều tên kiểu cũ (VTL_Tech center …, VTL_Business center …, VTL_VAS & Content Dept. …) cần gắn vào phòng ban danh mục.
+
 ## v4.29.1 – 03/11/2026
 **Mã vị trí / biển số xe cho dữ liệu đã nạp – không cần nạp lại từ đầu**
 - Nguyên nhân trống mã vị trí: dữ liệu được nạp trước khi ứng dụng đọc cột **Location**. File ERP vẫn có Location (vd DI0147).
