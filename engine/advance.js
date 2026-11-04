@@ -1,20 +1,21 @@
 'use strict';
-// Công nợ tạm ứng (TK 141 – 1411 / 1412…) theo nhân viên: số dư đầu kỳ, phát sinh tạm ứng / hoàn ứng, số dư cuối kỳ,
+// Công nợ tạm ứng tiền (TK 141, không gồm 1412 tạm ứng vật tư) theo nhân viên: số dư đầu kỳ, phát sinh tạm ứng / hoàn ứng, số dư cuối kỳ,
 // các khoản tạm ứng còn treo (FIFO) và tuổi nợ; gộp theo nhân viên qua bảng ghép đối tượng công nợ staff_bp.
 // Đối chiếu: trạng thái từng nhân viên tại một ngày (đã gửi / đã xác nhận / có chênh lệch) lưu ở adv_recon.
 
 function make(db, all, get, run, okYm) {
   db.exec(`CREATE TABLE IF NOT EXISTS adv_recon(key TEXT, as_of TEXT, status TEXT, amount REAL, confirmed REAL, note TEXT, sent_to TEXT, updated_at TEXT, PRIMARY KEY(key, as_of))`);
   const day = d => String(d || '').slice(0, 10), days = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
-  const pfx = acc => { const a = String(acc || '141').replace(/[^0-9]/g, '') || '141'; return a; };
+  // Tạm ứng vật tư (1412) KHÔNG thuộc báo cáo này – đã theo dõi ở Tuổi hàng tồn kho (vật tư hàng hoá)
+  const pfx = acc => { let a = String(acc || '141').replace(/[^0-9]/g, '') || '141'; if (a.startsWith('1412')) a = '141'; return a; };
 
   // Mọi phát sinh của TK tạm ứng đến ngày asOf, theo đối tượng (bên Nợ: tạm ứng; bên Có: hoàn ứng / quyết toán)
   function lines(acc, asOf, bps) {
     const A = pfx(acc) + '%', t = day(asOf) || '9999-12-31', B = bps && bps.length ? bps : null, W = B ? ` AND p IN (${B.map(() => '?').join(',')})` : '';
     return all(`SELECT * FROM (
-        SELECT e.id, e.account_date d, e.ym, e.document_no doc, e.acc_debit acc, e.acc_credit oacc, e.partner_debit p, e.amount dr, 0 cr, e.description ds, e.advance_request ar, e.created_by u FROM entries e WHERE e.acc_debit LIKE ? AND e.account_date<=?
+        SELECT e.id, e.account_date d, e.ym, e.document_no doc, e.acc_debit acc, e.acc_credit oacc, e.partner_debit p, e.amount dr, 0 cr, e.description ds, e.advance_request ar, e.created_by u FROM entries e WHERE e.acc_debit LIKE ? AND e.acc_debit NOT LIKE '1412%' AND e.account_date<=?
         UNION ALL
-        SELECT e.id, e.account_date, e.ym, e.document_no, e.acc_credit, e.acc_debit, e.partner_credit, 0, e.amount, e.description, e.advance_request, e.created_by FROM entries e WHERE e.acc_credit LIKE ? AND e.account_date<=?)
+        SELECT e.id, e.account_date, e.ym, e.document_no, e.acc_credit, e.acc_debit, e.partner_credit, 0, e.amount, e.description, e.advance_request, e.created_by FROM entries e WHERE e.acc_credit LIKE ? AND e.acc_credit NOT LIKE '1412%' AND e.account_date<=?)
       WHERE 1${W} ORDER BY d, id`, A, t, A, t, ...(B || []));
   }
   const staffMap = () => { const m = new Map(); try { for (const r of all(`SELECT b.bp, s.code, s.name, s.dept, s.unit, s.position, s.email1, s.email2, s.status FROM staff_bp b JOIN staff s ON s.code=b.code`)) m.set(r.bp, r); } catch { } return m; };

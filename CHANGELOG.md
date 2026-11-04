@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.45.1 – 04/11/2026
+- Công nợ tạm ứng: **không còn tính TK 1412 (tạm ứng vật tư)** – khoản này đã theo dõi ở *Tuổi hàng tồn kho* (vật tư hàng hoá). Báo cáo, đối chiếu, biên bản, email chỉ gồm tạm ứng tiền (141 trừ 1412); tổng khớp số dư TK 1411 trên sổ.
+
 ## v4.45.0 – 04/11/2026
 - Công nợ tạm ứng: **Backup money** (tạm ứng duy trì, mặc định 12 tháng).
   - Nhấn đúp nhân viên → mục **💼 Backup money** liệt kê các khoản tạm ứng **số tiền chẵn** (tích "Hiện mọi khoản tạm ứng" để xem tất cả); tích chọn khoản là backup money rồi **Lưu**.
