@@ -466,3 +466,8 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Lớp giao diện v4.32
 - Cuối `<style>` trong `index.html` có khối "v4.32 – lớp hoàn thiện": style chung cho mọi input/select/textarea, bảng (zebra, hover), KPI, animation trang/drawer. Không cần thêm class cho ô nhập mới. Không dùng font/ảnh từ mạng (app chạy offline).
+
+### UI v4.33
+- `confirm()` đã thay bằng `await ask(msg)` (Promise, hộp thoại trong app) – hàm gọi phải là async. `alert()` bị ghi đè thành `uiModal` (không chặn). Viết mới: dùng `await ask(...)`, không dùng `confirm`.
+- Theme: `html[data-theme=dark]` (CSS cuối `<style>`), `body.mini` (menu thu gọn), `body.focusm` (ẩn aside + topbar); trạng thái lưu `ls ui_dark / ui_mini / ui_focus`.
+- Nút ẩn: tự gắn cho `.kpis`, `.hero`, `.card > .hint` dài (class `.hidetg`, lưu `ls uiHide`). Màu nền viết inline (#FFF6F2, #FEE4E2…) được ánh xạ sang tối bằng selector `[style*=...]`.

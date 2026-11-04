@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.33.0 – 04/11/2026
+- **Chế độ tối**: nút 🌙 / ☀️ trên thanh trên cùng (ghi nhớ).
+- **Thu gọn menu**: nút ‹ cạnh logo → menu chỉ còn biểu tượng (rê chuột xem tên), bảng rộng thêm ~190px.
+- **Chế độ tập trung** (nút ⛶ hoặc Ctrl+Shift+F): ẩn menu và thanh trên, chỉ còn nội dung; nút "Thoát chế độ tập trung" ở góc dưới phải.
+- **Nút ẩn / hiện** cho khối phụ: thẻ số liệu (KPI), banner trang Tổng quan, đoạn mô tả dài – ghi nhớ theo từng trang.
+- **Hộp thoại mới** trong ứng dụng thay cho hộp thoại của Windows (xác nhận / thông báo): Enter = Đồng ý, Esc = Huỷ; không còn mất con trỏ gõ sau hộp thoại.
+
 ## v4.32.0 – 04/11/2026
 **Làm mới giao diện (gọn, dễ đọc, dễ thao tác) – không đổi chức năng**
 - Ô nhập / ô chọn thống nhất: bo góc, cao đều, viền rõ khi rê chuột, vòng sáng cam khi đang gõ; ô chọn có mũi tên mảnh; ô 🔍 có biểu tượng kính lúp.

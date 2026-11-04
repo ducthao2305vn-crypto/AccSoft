@@ -1,7 +1,7 @@
 "use strict";
 // Sau hộp thoại alert / confirm / prompt (Windows) trả lại focus bàn phím cho cửa sổ, tránh phải chuyển ứng dụng mới gõ được
 (()=>{const fix=()=>{const el=document.activeElement;try{window.api&&api.refocus&&api.refocus().then(()=>{if(el&&el!==document.body&&el.isConnected)el.focus()})}catch{}};
-  for(const k of ['alert','confirm','prompt']){const o=window[k];if(typeof o!=='function')continue;window[k]=function(...a){const r=o.apply(window,a);setTimeout(fix,0);return r}}
+  for(const k of ['prompt']){const o=window[k];if(typeof o!=='function')continue;window[k]=function(...a){const r=o.apply(window,a);setTimeout(fix,0);return r}}
 })();
 // Chờ người dùng ngừng gõ rồi mới lọc / vẽ lại (tránh đơ khi bảng lớn)
 const deb=(fn,ms=250)=>{let t=0;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),ms)}};
@@ -107,7 +107,7 @@ async function refreshPending(){
 async function runAnalyze(all=false){
   const st=await aq('analysisStatus');
   const label=all?'TOÀN BỘ dữ liệu (mọi tháng)':`kỳ rà soát: ${rvLabel(st.review)} (${st.months} tháng)`;
-  if(!confirm(`Phân tích ${label}?\n\nKết quả lỗi cũ của các tháng này được tính lại; trạng thái và ghi chú xử lý vẫn được giữ.`))return;
+  if(!await ask(`Phân tích ${label}?\n\nKết quả lỗi cũ của các tháng này được tính lại; trạng thái và ghi chú xử lý vẫn được giữ.`))return;
   try{const r=await api.task(all?'recheck':'analyze',all?{}:st.review);alert(`Đã phân tích ${num(r.rows)} dòng · ${r.months} tháng · ${Math.round(r.secs)} giây.`)}catch(e){alert(e.message)}
   await refreshSide();go(PAGE);
 }
@@ -221,7 +221,7 @@ $('#tErr').onclick=e=>{const th=e.target.closest('th[data-s]');if(th){SORT=SORT.
   const tr=e.target.closest('tr.click');if(!tr)return;if(tr.dataset.eid)showDetail(null,+tr.dataset.eid);else showDetail(+tr.dataset.i)};
 $('#expErr').onclick=()=>api.exportErrors(readFil(),SORT);
 $('#bulkSt').onchange=async e=>{const st=e.target.value;e.target.value='';if(!st)return;
-  if(!confirm(`Đặt trạng thái "${META.status[st]}" cho ${num(TOTAL)} cảnh báo đang lọc?`))return;
+  if(!await ask(`Đặt trạng thái "${META.status[st]}" cho ${num(TOTAL)} cảnh báo đang lọc?`))return;
   await aq('setStatusWhere',readFil(),st);vErrors(true);refreshSide()};
 
 const FIELDS=[['doc','Chứng từ'],['line','Line No'],['date','Ngày hạch toán'],['due','Hạn thanh toán'],['drName','TK Nợ'],['crName','TK Có'],['amt','Số tiền'],['qty','Số lượng'],['price','Đơn giá'],
@@ -602,8 +602,8 @@ async function openLedger(title,sub,spec,nat=1,after){
     // Danh sách hợp đồng của đối tượng (mọi TK, cả hợp đồng đã điều chỉnh) – chọn thay vì gõ để tránh sai tên
     aq('faContracts',spec.bp||'').then(L=>{const s=$('#lHdS');if(!s)return;s.innerHTML=`<option value="">— Chọn hợp đồng của đối tượng (${num(L.length)}) —</option><option value="__EMPTY__">(Xoá trống hợp đồng)</option>`+L.map(o=>`<option value="${esc(o.v)}">${esc(refShort(o.v))} · ${num(o.n)} dòng${o.last?' · '+vn(o.last):''}</option>`).join('')}).catch(()=>{});
     $('#lHdM').onchange=e=>{e.stopPropagation();$('#lHd').classList.toggle('hide',!e.target.checked);$('#lHdS').classList.toggle('hide',e.target.checked);if(e.target.checked)$('#lHd').focus()};
-    $('#lHdGo').onclick=async()=>{const man=$('#lHdM').checked,sv=$('#lHdS').value;if(!man&&!sv)return alert('Chọn hợp đồng trong danh sách, hoặc tích "Nhập thủ công"');const v=man?$('#lHd').value.trim():sv==='__EMPTY__'?'':sv;if(man&&!v&&!confirm('Hợp đồng nhập thủ công đang trống – xoá trống hợp đồng?'))return;const p=rows.filter(r=>sel.has(r.i)).map(r=>({id:r.rid,doc:r.doc,d:r.date,dr:r.dr,cr:r.cr,a:r.amt,bp:r.bp,bpCr:r.bpCr,contract:r.contract}));
-      if(!confirm(`Đổi hợp đồng của ${p.length} bút toán thành "${v||'(trống)'}"?\nDữ liệu gốc không bị sửa – xem / bỏ ở Kiểm soát → Điều chỉnh dữ liệu.`))return;
+    $('#lHdGo').onclick=async()=>{const man=$('#lHdM').checked,sv=$('#lHdS').value;if(!man&&!sv)return alert('Chọn hợp đồng trong danh sách, hoặc tích "Nhập thủ công"');const v=man?$('#lHd').value.trim():sv==='__EMPTY__'?'':sv;if(man&&!v&&!await ask('Hợp đồng nhập thủ công đang trống – xoá trống hợp đồng?'))return;const p=rows.filter(r=>sel.has(r.i)).map(r=>({id:r.rid,doc:r.doc,d:r.date,dr:r.dr,cr:r.cr,a:r.amt,bp:r.bp,bpCr:r.bpCr,contract:r.contract}));
+      if(!await ask(`Đổi hợp đồng của ${p.length} bút toán thành "${v||'(trống)'}"?\nDữ liệu gốc không bị sửa – xem / bỏ ở Kiểm soát → Điều chỉnh dữ liệu.`))return;
       try{await aq('faSet',p,'contract',v,$('#lNote').value.trim());AGDATA=null;await openLedger(title,sub,spec,nat,after);after&&after()}catch(e){alert(e.message)}};}
 }
 const AGNAT=acc=>/^(331|335|336|334|3388)/.test(acc)?-1:1;
@@ -662,7 +662,7 @@ async function sendMails(test){
   let list=$$('.empChk:checked').map(c=>({user:c.dataset.u,to:mailOf(c.dataset.u)}));if(!list.length)return alert('Chưa chọn nhân viên nào.');
   if(test){const me=prompt('Gửi thử email của nhân viên đầu tiên đến địa chỉ:',$('#s_from').value);if(!me)return;list=[{...list[0],to:me}]}
   const bad=list.filter(x=>!/@/.test(x.to));if(bad.length)return alert('Thiếu email: '+bad.map(x=>short(x.user)).join(', '));
-  if(!test&&!confirm(`Gửi email cho ${list.length} nhân viên?\n`+list.map(x=>`• ${short(x.user)} <${x.to}>`).join('\n')))return;
+  if(!test&&!await ask(`Gửi email cho ${list.length} nhân viên?\n`+list.map(x=>`• ${short(x.user)} <${x.to}>`).join('\n')))return;
   $('#mailState').textContent='Đang gửi…';
   try{const res=await api.sendMails(list,mailOpts(test));const ok=res.filter(r=>r.ok).length;
     $('#mailState').innerHTML=`<span class="${ok===res.length?'pos':'neg'}">Đã gửi ${ok}/${res.length}</span>`+(ok<res.length?' – '+esc(res.filter(r=>!r.ok).map(r=>r.to+': '+r.error).join('; ')):'');}
@@ -696,13 +696,13 @@ async function vData(){
 }
 const runT=async(t,a,msg)=>{try{await api.task(t,a);if(msg)alert(msg)}catch(e){alert(e.message)}await refreshSide();go(PAGE)};
 $('#months').onchange=async e=>{const m=e.target.dataset.m;if(!m)return;await aq('setMonths',[m],e.target.checked);await refreshSide();vData()};
-$('#months').onclick=e=>{const m=e.target.dataset.delm;if(m&&confirm(`Xoá hẳn toàn bộ dữ liệu tháng ${m}?`))runT('deleteMonth',{ym:m})};
-$('#tImports').onclick=e=>{const id=e.target.closest('[data-deli]')?.dataset.deli;if(id&&confirm('Xoá toàn bộ dữ liệu của lần nạp này?'))runT('deleteImport',{id:+id})};
+$('#months').onclick=async e=>{const m=e.target.dataset.delm;if(m&&await ask(`Xoá hẳn toàn bộ dữ liệu tháng ${m}?`))runT('deleteMonth',{ym:m})};
+$('#tImports').onclick=async e=>{const id=e.target.closest('[data-deli]')?.dataset.deli;if(id&&await ask('Xoá toàn bộ dữ liệu của lần nạp này?'))runT('deleteImport',{id:+id})};
 $('#mAll').onclick=async()=>{await aq('setAllMonths',true);await refreshSide();vData()};$('#mNone').onclick=async()=>{await aq('setAllMonths',false);await refreshSide();vData()};
 $('#btnEnrich').onclick=async()=>{try{const log=await api.pickAndEnrich();if(log){alert('Kết quả bổ sung thông tin hàng tồn kho:\n\n'+log.join('\n'));await refreshSide();go(PAGE)}}catch(e){alert(e.message)}};
 $('#openDb').onclick=()=>api.openDbFolder();$('#btnLogs').onclick=()=>api.openLogs();
 $('#btnRecheck').onclick=()=>runAnalyze(true);
-$('#btnClear').onclick=()=>{if(confirm('Xoá TOÀN BỘ dữ liệu hạch toán và cảnh báo? (giữ lại trạng thái/ghi chú và cấu hình mail)'))runT('clear',{})};
+$('#btnClear').onclick=async ()=>{if(await ask('Xoá TOÀN BỘ dữ liệu hạch toán và cảnh báo? (giữ lại trạng thái/ghi chú và cấu hình mail)'))runT('clear',{})};
 
 /* ---------- Phân tích chuyên sâu ---------- */
 let DP=ls.get('deepTab','reversal');let RCT='';const RCF=Object.assign({q:'',p:'',risk:'',flag:false,type:'',bal:''},ls.get('rcFilter',{}));const RVSEL=new Set();let RVG=[];let RVST='Chưa huỷ trích',RVM=ls.get('rvMode','detail');const DPS=ls.get('deepPick',{});
@@ -925,9 +925,9 @@ async function cfDrawer(code,label,onChange){CUR=-1;const D=$('#drawer');D.class
   ['#cTo','#cNote'].forEach(s=>$(s).addEventListener('change',e=>e.stopPropagation()));
   const picked=()=>r.rows.filter(x=>sel.has(x.sig));
   const done=()=>{CFCHG=true;cfDrawer(code,label,onChange)};
-  $('#cApply').onclick=async()=>{const to=$('#cTo').value;if(!to)return alert('Chọn dòng tiền đúng');const p=picked();if(!confirm(`Chuyển ${p.length} dòng sang ${cn(to)}?`))return;try{await aq('cfAdjSet',p,to,$('#cNote').value.trim());done()}catch(e){alert(e.message)}};
-  $('#cAuto').onclick=async()=>{const p=picked(),g={};p.forEach(x=>(g[x.auto]??=[]).push(x));if(!confirm(`Đặt ${p.length} dòng theo gợi ý TK đối ứng?`))return;try{for(const [c,L] of Object.entries(g))await aq('cfAdjSet',L,c,$('#cNote').value.trim()||'Theo gợi ý TK đối ứng');done()}catch(e){alert(e.message)}};
-  $('#cUndo').onclick=async()=>{const p=picked().filter(x=>x.adj);if(!p.length)return alert('Các dòng đã chọn chưa được điều chỉnh');if(!confirm(`Bỏ điều chỉnh ${p.length} dòng?`))return;await aq('cfAdjRemove',p.map(x=>x.sig));done()};
+  $('#cApply').onclick=async()=>{const to=$('#cTo').value;if(!to)return alert('Chọn dòng tiền đúng');const p=picked();if(!await ask(`Chuyển ${p.length} dòng sang ${cn(to)}?`))return;try{await aq('cfAdjSet',p,to,$('#cNote').value.trim());done()}catch(e){alert(e.message)}};
+  $('#cAuto').onclick=async()=>{const p=picked(),g={};p.forEach(x=>(g[x.auto]??=[]).push(x));if(!await ask(`Đặt ${p.length} dòng theo gợi ý TK đối ứng?`))return;try{for(const [c,L] of Object.entries(g))await aq('cfAdjSet',L,c,$('#cNote').value.trim()||'Theo gợi ý TK đối ứng');done()}catch(e){alert(e.message)}};
+  $('#cUndo').onclick=async()=>{const p=picked().filter(x=>x.adj);if(!p.length)return alert('Các dòng đã chọn chưa được điều chỉnh');if(!await ask(`Bỏ điều chỉnh ${p.length} dòng?`))return;await aq('cfAdjRemove',p.map(x=>x.sig));done()};
 }
 let CFCHG=false;
 /* Ánh xạ dòng lá của mẫu KQKD ↔ khoản mục chi phí / loại doanh thu / tiền tố TK */
@@ -1040,7 +1040,7 @@ async function vFin(){
       const spec=m.cost.length?{accs:['6','8'],tc:m.cost}:m.rev.length?{accs:['5','7'],tr:m.rev}:{accs:m.acc.map(x=>x.p)};finDrawer(l.vn||l.en,'KQKD theo mẫu · dòng '+l.row+' · kỳ '+per,{...spec,from:FP.from,to:FP.to,pl:true})};
     $('#kqMap').onclick=()=>kqMapDrawer(r);$('#kqAuto').onchange=async e=>{e.stopPropagation();await aq('kqSetAutoRev',e.target.checked);vFin()};
     $('#kqPar').onclick=async()=>{const ps=r.lines.filter(l=>l.kind==='param');const nv={};for(const l of ps){const v=prompt(`${l.vn} (dòng ${l.row}) – nhập số (vd 0.1 = 10%):`,r.params[l.row]??l.param);if(v===null)return;nv[l.row]=+v||0}await aq('kqSetParams',nv);vFin()};
-    $('#kqTpl').onclick=async()=>{if(!confirm('Nạp file mẫu khác thay mẫu hiện tại? Ánh xạ theo số dòng sẽ được giữ.'))return;try{const x=await api.kqTemplate();if(x){alert(`Đã nạp mẫu ${x.file} (${num(x.n)} dòng)`);vFin()}}catch(e){alert(e.message)}};
+    $('#kqTpl').onclick=async()=>{if(!await ask('Nạp file mẫu khác thay mẫu hiện tại? Ánh xạ theo số dòng sẽ được giữ.'))return;try{const x=await api.kqTemplate();if(x){alert(`Đã nạp mẫu ${x.file} (${num(x.n)} dòng)`);vFin()}}catch(e){alert(e.message)}};
     $('#kqXls').onclick=async()=>{const rows=r.lines.filter(l=>l.kind!=='label'&&(FP.kqSec==='both'||l.sec===FP.kqSec)).map(l=>Object.assign({'STT':l.stt,'Khoản mục (Tiếng Anh)':l.en,'Khoản mục (Tiếng Việt)':l.vn,'Kỳ này':V('cur')[l.row]},cmp[0]?{'Cùng kỳ':V('prev')[l.row],'Chênh lệch':pct(l)?null:V('cur')[l.row]-V('prev')[l.row]}:{},...months.map(m=>({[ymLbl(m)]:V('m'+m)[l.row]}))));
       try{const f=await api.xlsxSheets(`AccSoft_KQKD_Mau_${FP.from}_${FP.to}.xlsx`,[['KQKD theo mau',rows],...(r.unmapped.length?[['Chua anh xa',r.unmapped.map(u=>({'Loại':u.kind==='cost'?'Chi phí':'Doanh thu','Khoản mục / loại doanh thu':u.key,'TK':u.acc,'Kỳ này':u.v[0]}))]]:[])]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};}
   if(FT==='bs'){const r=await aq('finBalance',FP.from,FP.to),ok=Math.abs(r.diff)<0.01;
@@ -1150,7 +1150,7 @@ function igGrid(host,rows,cos,onChange,opt={}){const Q=x=>host.querySelector(x);
   host.onchange=e=>{const i=e.target.dataset.gi;if(i==null)return;e.stopPropagation();const x=cur[+i];e.target.checked?sel.add(x.sig):sel.delete(x.sig);upd()};
   const act=async(action,scope)=>{const picked=rows.filter(x=>sel.has(x.sig)),to=Q('#gTo').value;if(action==='move'&&!to)return alert('Chọn công ty nội bộ cần gán');
     const items=scope==='doc'?[...new Map(picked.map(x=>[x.doc,{doc:x.doc,d:x.d,ds:x.ds,coKey:x.coKey,scope:'doc'}])).values()]:picked;
-    if(!confirm(`${action==='out'?'Loại khỏi giao dịch nội bộ':'Gán lại sang '+to}: ${scope==='doc'?items.length+' chứng từ':items.length+' dòng'}?\nCó thể bỏ điều chỉnh ở chế độ "Điều chỉnh đối tượng".`))return;
+    if(!await ask(`${action==='out'?'Loại khỏi giao dịch nội bộ':'Gán lại sang '+to}: ${scope==='doc'?items.length+' chứng từ':items.length+' dòng'}?\nCó thể bỏ điều chỉnh ở chế độ "Điều chỉnh đối tượng".`))return;
     try{const r=await aq('igAdjSet',items,action,to,Q('#gNote').value.trim());onChange&&onChange()}catch(e){alert(e.message)}};
   Q('#gOut').onclick=()=>act('out','row');Q('#gOutDoc').onclick=()=>act('out','doc');Q('#gMove').onclick=()=>act('move','row');
   apply();
@@ -1229,7 +1229,7 @@ async function vInternal(B,yms){
         `<div class="row" style="margin-bottom:8px"><div style="flex:1"></div><button class="btn sm" id="adDel" disabled>Bỏ điều chỉnh đã chọn</button></div>`+tbl0(['<input type="checkbox" id="adAll">','Phạm vi','Hành động','Chứng từ','Ngày','#Số tiền','Công ty gốc','Diễn giải','Ghi chú','Cập nhật'],L.map(x=>`<tr><td><input type="checkbox" data-ads="${esc(x.sig)}"></td><td>${x.scope==='doc'?'Cả chứng từ':'Một dòng'}</td><td>${x.action==='out'?'<span class="badge b-H">Loại khỏi nội bộ</span>':'<span class="badge b-M">Gán lại → '+esc(x.to_key)+'</span>'}</td><td class=nw>${esc(x.doc)}</td><td class=nw>${vn(x.d)}</td><td class=n>${x.a!=null?fmt2(x.a):''}</td><td>${esc(x.from_key||'')}</td><td><div class=clamp title="${esc(x.ds)}">${esc(x.ds||'')}</div></td><td>${esc(x.note||'')}</td><td class=nw>${esc(x.updated_at||'')}</td></tr>`),'Chưa có điều chỉnh nào'));
     const chk=()=>{const n=B.querySelectorAll('[data-ads]:checked').length;$('#adDel').disabled=!n;$('#adDel').textContent=n?`Bỏ ${n} điều chỉnh`:'Bỏ điều chỉnh đã chọn'};
     B.onchange=e=>{if(e.target.id==='adAll')B.querySelectorAll('[data-ads]').forEach(c=>c.checked=e.target.checked);if(e.target.id==='adAll'||e.target.dataset.ads)chk()};
-    $('#adDel').onclick=async()=>{const s=[...B.querySelectorAll('[data-ads]:checked')].map(c=>c.dataset.ads);if(!confirm(`Bỏ ${s.length} điều chỉnh?`))return;await aq('igAdjRemove',s);save()};
+    $('#adDel').onclick=async()=>{const s=[...B.querySelectorAll('[data-ads]:checked')].map(c=>c.dataset.ads);if(!await ask(`Bỏ ${s.length} điều chỉnh?`))return;await aq('igAdjRemove',s);save()};
     const find=async()=>{const d=$('#adDoc').value.trim();if(!d)return;const rows=await aq('igDocLines',d,IG.tt);if(!rows.length){$('#adGrid').innerHTML='<div class=mut>Không tìm thấy chứng từ</div>';return}igGrid($('#adGrid'),rows,cos,save,{h:'420px'})};
     $('#adFind').onclick=find;$('#adDoc').onkeydown=e=>{if(e.key==='Enter')find()};
     xls(`AccSoft_NoiBo_DieuChinh.xlsx`,()=>[['Dieu chinh',L.map(x=>({'Phạm vi':x.scope==='doc'?'Cả chứng từ':'Một dòng','Hành động':x.action==='out'?'Loại khỏi nội bộ':'Gán lại → '+x.to_key,'Chứng từ':x.doc,'Ngày':x.d,'Số tiền':x.a,'Công ty gốc':x.from_key,'Diễn giải':x.ds,'Ghi chú':x.note,'Cập nhật':x.updated_at}))]]);}
@@ -1282,12 +1282,12 @@ $('#catKind').onchange=e=>{CATF.kind=e.target.value;CATF.off=0;ls.set('catFilter
 $('#pgCat').onclick=e=>{const b=e.target.closest('[data-cpg]');if(b){CATF.off=Math.max(0,CATF.off+ +b.dataset.cpg*200);vCat()}};
 $('#tCat').onclick=async e=>{const ed=e.target.closest('[data-ced]'),dl=e.target.closest('[data-cdel]');
   if(ed)catForm(VCATROWS.find(x=>x.code_name===ed.dataset.ced)||{code_name:ed.dataset.ced},false);
-  if(dl&&confirm('Xoá đối tượng khỏi danh mục?\n'+dl.dataset.cdel)){await aq('catRemove',[dl.dataset.cdel]);CATSEL.delete(dl.dataset.cdel);vCat()}};
+  if(dl&&await ask('Xoá đối tượng khỏi danh mục?\n'+dl.dataset.cdel)){await aq('catRemove',[dl.dataset.cdel]);CATSEL.delete(dl.dataset.cdel);vCat()}};
 $('#tCat').onchange=e=>{const c=e.target.dataset.cks;if(c!=null){e.target.checked?CATSEL.add(c):CATSEL.delete(c)}else if(e.target.id==='catAll'){$$('[data-cks]').forEach(x=>{x.checked=e.target.checked;e.target.checked?CATSEL.add(x.dataset.cks):CATSEL.delete(x.dataset.cks)})}
   $('#catDel').disabled=!CATSEL.size;$('#catDel').textContent=CATSEL.size?`Xoá ${CATSEL.size} dòng đã chọn`:'Xoá các dòng đã chọn'};
-$('#catDel').onclick=async()=>{if(!CATSEL.size||!confirm(`Xoá ${CATSEL.size} đối tượng khỏi danh mục?`))return;await aq('catRemove',[...CATSEL]);CATSEL.clear();vCat()};
+$('#catDel').onclick=async()=>{if(!CATSEL.size||!await ask(`Xoá ${CATSEL.size} đối tượng khỏi danh mục?`))return;await aq('catRemove',[...CATSEL]);CATSEL.clear();vCat()};
 $('#tCatMiss').onclick=e=>{const b=e.target.closest('[data-cnew]');if(b){const cn=b.dataset.cnew,seg=cn.split('_');catForm({code_name:cn,code:seg.slice(0,-1).join('_'),name:seg.at(-1)},true)}};
-const catImp=async mode=>{if(mode==='replace'&&!confirm('Xoá toàn bộ danh mục hiện tại và nạp lại từ file?'))return;try{const r=await api.catImport(mode);if(r){alert(`Đã nạp ${num(r.n)} dòng từ ${r.file}. Danh mục hiện có ${num(r.total)} đối tượng.`);vCat()}}catch(e){alert(e.message)}};
+const catImp=async mode=>{if(mode==='replace'&&!await ask('Xoá toàn bộ danh mục hiện tại và nạp lại từ file?'))return;try{const r=await api.catImport(mode);if(r){alert(`Đã nạp ${num(r.n)} dòng từ ${r.file}. Danh mục hiện có ${num(r.total)} đối tượng.`);vCat()}}catch(e){alert(e.message)}};
 $('#catImpM').onclick=()=>catImp('merge');$('#catImpR').onclick=()=>catImp('replace');
 $('#catXls').onclick=async()=>{const rows=await aq('catExport');try{const f=await api.xlsxSheets(`DANH_MUC_DOI_TUONG_${new Date().toISOString().slice(0,10)}.xlsx`,[['Danh muc',rows.map((x,i)=>({NO:i+1,Code_Name:x.code_name,Code:x.code,Name:x.name,'Kind Of Customer':x.kind,Code_NB:x.nb_code,Name_NB:x.nb_name,'Ghi chú':x.note}))],['Nhom',Object.entries(CATK).map(([k,v])=>({'Kind Of Customer':k,'Ý nghĩa':v}))]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
 
@@ -1433,8 +1433,8 @@ function faDraw(){const r=FAR,cv=(o,k)=>{const n=o[k+'New'],g=o[k];return n!=nul
   T.ondblclick=e=>{if(e.target.type==='checkbox')return;const tr=e.target.closest('tr[data-eid]');if(tr)showDetail(null,+tr.dataset.eid)};
   const picked=()=>r.rows.filter(o=>FASEL.has(o.id));
   $('#faApply').onclick=async()=>{const f=$('#faF').value,v=$('#faV').value,p=picked();if(f==='cf'&&!v)return alert('Chọn loại dòng tiền');if(f!=='cf'&&!$('#faV').dataset.ok)return alert('Chọn giá trị mới (gõ vào ô 🔍 để tìm), chọn (Xoá trống), hoặc tích "Nhập thủ công"');
-    if(!confirm(`${FAN[f]}: đặt "${v||'(trống)'}" cho ${p.length} bút toán?`))return;try{const x=await aq('faSet',p,f,v,$('#faNote').value.trim());alert(`Đã điều chỉnh ${num(x.n)} dòng`);faRun()}catch(e){alert(e.message)}};
-  $('#faUndo').onclick=async()=>{const f=$('#faF').value,p=picked().filter(o=>f==='cf'?o.cfNew!=null:o[f+'New']!=null);if(!p.length)return alert('Các dòng đã chọn chưa điều chỉnh '+FAN[f]);if(!confirm(`Bỏ điều chỉnh ${FAN[f]} của ${p.length} dòng?`))return;await aq('faRemove',p.map(o=>({id:o.id,field:f,sig:o.sig})));faRun()};
+    if(!await ask(`${FAN[f]}: đặt "${v||'(trống)'}" cho ${p.length} bút toán?`))return;try{const x=await aq('faSet',p,f,v,$('#faNote').value.trim());alert(`Đã điều chỉnh ${num(x.n)} dòng`);faRun()}catch(e){alert(e.message)}};
+  $('#faUndo').onclick=async()=>{const f=$('#faF').value,p=picked().filter(o=>f==='cf'?o.cfNew!=null:o[f+'New']!=null);if(!p.length)return alert('Các dòng đã chọn chưa điều chỉnh '+FAN[f]);if(!await ask(`Bỏ điều chỉnh ${FAN[f]} của ${p.length} dòng?`))return;await aq('faRemove',p.map(o=>({id:o.id,field:f,sig:o.sig})));faRun()};
   $('#faXls').onclick=async()=>{try{const f=await api.xlsxSheets(`AccSoft_DieuChinhDuLieu_${FAF.from}_${FAF.to}.xlsx`,[['Chi tiet',r.rows.map(o=>({'Ngày':o.d,'Chứng từ':o.doc,'TK Nợ':o.drName||o.dr,'TK Có':o.crName||o.cr,'Đối tượng Nợ':o.bp,'Đối tượng Có':o.bpCr,'Số tiền':o.a,'Diễn giải':o.ds,
     'Hợp đồng (gốc)':o.contract,'Hợp đồng (sau ĐC)':o.contractNew??o.contract,'Mã vị trí (gốc)':o.location,'Mã vị trí (sau ĐC)':o.locationNew??o.location,'Biển số xe (gốc)':o.plate,'Biển số xe (sau ĐC)':o.plateNew??o.plate,'Dòng tiền (gốc)':o.cash?o.cf:'','Dòng tiền (sau ĐC)':o.cfNew!=null?o.cfNew+' – '+(CFC[o.cfNew]||''):o.cash?o.cf:''}))]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
 }
@@ -1443,7 +1443,7 @@ async function faHist(){const L=await aq('faList');
     ${tbl0(['<input type="checkbox" id="faHAll">','Trường','Giá trị gốc','Giá trị sau điều chỉnh','Chứng từ','Ngày','TK Nợ','TK Có','#Số tiền','Đối tượng','Ghi chú','Cập nhật'],L.map((x,i)=>`<tr><td><input type="checkbox" data-hi="${i}"></td><td>${FAN[x.field]||x.field}</td><td class=mut>${esc(x.orig||'')}</td><td><b>${esc(x.field==='cf'?x.value+' – '+(CFC[x.value]||''):x.value||'(trống)')}</b></td><td class=nw>${esc(x.doc||'')}</td><td class=nw>${vn(x.d)}</td><td>${esc(x.dr||'')}</td><td>${esc(x.cr||'')}</td><td class=n>${x.a!=null?fmt2(x.a):''}</td><td><div class="clamp s">${esc(x.bp||x.bpCr||'')}</div></td><td>${esc(x.note||'')}</td><td class=nw>${esc(x.updated_at||'')}</td></tr>`),'Chưa có điều chỉnh nào')}</div>`;
   const B=$('#faRes'),chk=()=>{const n=B.querySelectorAll('[data-hi]:checked').length;$('#faHDel').disabled=!n};
   B.onchange=e=>{if(e.target.id==='faHAll')B.querySelectorAll('[data-hi]').forEach(c=>c.checked=e.target.checked);chk()};
-  $('#faHDel').onclick=async()=>{const s=[...B.querySelectorAll('[data-hi]:checked')].map(c=>L[+c.dataset.hi]);if(!confirm(`Bỏ ${s.length} điều chỉnh?`))return;await aq('faRemove',s.map(x=>({id:x.id,field:x.field,sig:x.sig})));faHist()};
+  $('#faHDel').onclick=async()=>{const s=[...B.querySelectorAll('[data-hi]:checked')].map(c=>L[+c.dataset.hi]);if(!await ask(`Bỏ ${s.length} điều chỉnh?`))return;await aq('faRemove',s.map(x=>({id:x.id,field:x.field,sig:x.sig})));faHist()};
   $('#faHXls').onclick=async()=>{try{const f=await api.xlsxSheets(`AccSoft_LichSuDieuChinh.xlsx`,[['Dieu chinh',L.map(x=>({'Trường':FAN[x.field]||x.field,'Giá trị gốc':x.orig,'Giá trị sau điều chỉnh':x.value,'Chứng từ':x.doc,'Ngày':x.d,'TK Nợ':x.dr,'TK Có':x.cr,'Số tiền':x.a,'Đối tượng Nợ':x.bp,'Đối tượng Có':x.bpCr,'Ghi chú':x.note,'Cập nhật':x.updated_at}))]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
 }
 
@@ -1456,7 +1456,7 @@ async function vDM(){
   $('#dmTabs').onclick=e=>{const b=e.target.closest('[data-dmt]');if(b){DMF.tab=b.dataset.dmt;vDM()}};
   const kind=DMF.tab==='cost'?'cost':'dept';
   if($('#dmImp'))$('#dmImp').onclick=async()=>{try{const r=await api.dmImport(kind,'merge');if(r){alert(`Đã nạp ${num(r.n)} dòng từ ${r.file} · danh mục có ${num(r.total)} mục`);vDM()}}catch(e){alert(e.message)}};
-  if($('#dmImpR'))$('#dmImpR').onclick=async()=>{if(!confirm('Xoá toàn bộ danh mục hiện tại rồi nạp lại từ file?'))return;try{const r=await api.dmImport(kind,'replace');if(r){alert(`Đã nạp ${num(r.n)} dòng`);vDM()}}catch(e){alert(e.message)}};
+  if($('#dmImpR'))$('#dmImpR').onclick=async()=>{if(!await ask('Xoá toàn bộ danh mục hiện tại rồi nạp lại từ file?'))return;try{const r=await api.dmImport(kind,'replace');if(r){alert(`Đã nạp ${num(r.n)} dòng`);vDM()}}catch(e){alert(e.message)}};
   $('#dmXls').onclick=async()=>{const rows=DMF.tab==='map'?(await aq('dmDeptSources')).map(s=>({'Phòng ban dữ liệu gốc':s.src,'Phòng ban danh mục':s.code||'','Số dòng':s.n,'Từ ngày':s.f,'Đến ngày':s.l})):await aq('dmExport',kind);
     try{const f=await api.xlsxSheets(`DANH_MUC_${DMF.tab==='cost'?'KHOAN_MUC_CHI_PHI':DMF.tab==='map'?'ANH_XA_PHONG_BAN':'PHONG_BAN'}_${new Date().toISOString().slice(0,10)}.xlsx`,[['Danh muc',rows]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
   if(DMF.tab==='dept')await dmDept();else if(DMF.tab==='map')await dmMap();else return dmCost();dmRowSearch();
@@ -1479,7 +1479,7 @@ async function dmDept(){const L=await aq('dmDeptList');
     $('#dfSave').onclick=async()=>{try{await aq('dmDeptUpsert',Object.fromEntries(['code','name','descr','note'].map(k=>[k,$('#df_'+k).value])),isNew?null:x.code);closeDetail();vDM()}catch(e){alert(e.message)}}};
   if(DMF.tab!=='dept'||!$('#dmAdd'))return;$('#dmAdd').onclick=()=>form({},true);
   $('#dmIn').onclick=async e=>{const ed=e.target.closest('[data-dme]'),dl=e.target.closest('[data-dmd]');if(ed)form(L.find(d=>d.code===ed.dataset.dme),false);
-    if(dl&&confirm(`Xoá phòng ban ${dl.dataset.dmd} (và các ánh xạ của nó)?`)){await aq('dmDeptRemove',[dl.dataset.dmd]);vDM()}};
+    if(dl&&await ask(`Xoá phòng ban ${dl.dataset.dmd} (và các ánh xạ của nó)?`)){await aq('dmDeptRemove',[dl.dataset.dmd]);vDM()}};
 }
 async function dmMap(){const [S,D]=await Promise.all([aq('dmDeptSources'),aq('dmDeptList')]),un=S.filter(s=>!s.code);
   const opt=c=>`<option value="">— chưa gắn —</option>`+D.map(d=>`<option value="${esc(d.code)}" ${d.code===c?'selected':''}>${esc(d.code)} – ${esc(d.name||'')}</option>`).join('');
@@ -1489,7 +1489,7 @@ async function dmMap(){const [S,D]=await Promise.all([aq('dmDeptSources'),aq('dm
   if(DMF.tab!=='map'||!$('#dmAuto'))return;const B=$('#dmIn'),chk=()=>{const n=B.querySelectorAll('[data-dms]:checked').length;$('#dmSel').textContent=n?`Đã chọn ${n} dòng`:'Chưa chọn dòng';$('#dmSet').disabled=!n};
   B.onchange=async e=>{if(e.target.id==='dmAll'){B.querySelectorAll('[data-dms]').forEach(c=>c.checked=e.target.checked&&c.closest('tr').style.display!=='none');return chk()}if(e.target.dataset.dms!=null)return chk();
     const i=e.target.dataset.dmm;if(i==null)return;await aq('dmDeptMapSet',[S[+i].src],e.target.value);e.target.closest('tr').style.background=e.target.value?'':'#FFFAEB'};
-  $('#dmSet').onclick=async()=>{const to=$('#dmTo').value;if(!to&&!confirm('Bỏ gắn các dòng đã chọn?'))return;await aq('dmDeptMapSet',[...B.querySelectorAll('[data-dms]:checked')].map(c=>S[+c.dataset.dms].src),to);vDM()};
+  $('#dmSet').onclick=async()=>{const to=$('#dmTo').value;if(!to&&!await ask('Bỏ gắn các dòng đã chọn?'))return;await aq('dmDeptMapSet',[...B.querySelectorAll('[data-dms]:checked')].map(c=>S[+c.dataset.dms].src),to);vDM()};
   $('#dmAuto').onclick=async()=>{const r=await aq('dmDeptAutoMap');alert(`Đã tự gắn ${num(r.n)} tên phòng ban`);vDM()};
 }
 async function dmCost(){const r=await aq('dmCostList',DMF.q,DMF.grp,0,1000),U0=await aq('dmCostUnmatched'),nq=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d'),uq=nq(DMF.q.trim()),U=uq?U0.filter(u=>nq(u.code+' '+u.name).includes(uq)):U0;
@@ -1506,7 +1506,7 @@ async function dmCost(){const r=await aq('dmCostList',DMF.q,DMF.grp,0,1000),U0=a
   let T=0;$('#dmQ').oninput=e=>{clearTimeout(T);T=setTimeout(()=>{DMF.q=e.target.value;ls.set('dmPick',DMF);DMF._qf=document.activeElement===e.target;dmCost()},300)};$('#dmG').onchange=e=>{DMF.grp=e.target.value;dmCost()};
   $('#dmIn').onclick=async e=>{const ed=e.target.closest('[data-cme]'),dl=e.target.closest('[data-cmd]'),nw=e.target.closest('[data-cmn]');
     if(ed)form(r.rows.find(x=>x.code===ed.dataset.cme),false);if(nw)form({code:nw.dataset.cmn,name:nw.dataset.cmnn,active:'Yes',level:'No'},true);
-    if(dl&&confirm(`Xoá khoản mục ${dl.dataset.cmd}?`)){await aq('dmCostRemove',[dl.dataset.cmd]);dmCost()}};
+    if(dl&&await ask(`Xoá khoản mục ${dl.dataset.cmd}?`)){await aq('dmCostRemove',[dl.dataset.cmd]);dmCost()}};
 }
 
 /* ---------- Báo cáo quản trị chi phí theo chiều: vị trí / biển số xe / phòng ban × nhóm chi phí × tháng (điều chỉnh giá trị chiều tại bút toán gốc) ---------- */
@@ -1579,8 +1579,8 @@ async function dimDetail(d,o,from,to){const U=DIMU[d];CUR=-1;const Dw=$('#drawer
   const picked=()=>tgt().map(x=>({id:x.id,doc:x.doc,d:x.d,dr:x.dr,cr:x.cr,a:x.a,bp:x.bp,bpCr:x.bpCr,[U.field]:x.orig}));
   const again=()=>{chg=true;dimDetail(d,o,from,to).then(()=>{const b=$('#dClose');if(b)b.onclick=()=>{closeDetail();vDim(d)}})};
   $('#dmApply').onclick=async()=>{const man=$('#dmMan').checked,sv=$('#dmTo').value,v=man?$('#dmNew').value.trim():sv==='__EMPTY__'?'':sv;if(!man&&!sv)return alert(`Chọn ${U.what} đúng, hoặc tích "Nhập thủ công"`);
-    const p=picked();if(!confirm(`Đổi ${U.what} của ${p.length} bút toán thành "${v||'(trống)'}"?\nDữ liệu gốc không bị sửa – xem / bỏ ở Kiểm soát → Điều chỉnh dữ liệu.`))return;try{await aq('faSet',p,U.field,v,$('#dmNote').value.trim());again()}catch(e){alert(e.message)}};
-  $('#dmUndo').onclick=async()=>{const p=tgt().filter(x=>x.newVal!=null);if(!p.length)return alert('Các dòng này chưa được điều chỉnh');if(!confirm(`Trả về giá trị gốc cho ${p.length} bút toán?`))return;await aq('faRemove',p.map(x=>({id:x.id,field:U.field})));again()};
+    const p=picked();if(!await ask(`Đổi ${U.what} của ${p.length} bút toán thành "${v||'(trống)'}"?\nDữ liệu gốc không bị sửa – xem / bỏ ở Kiểm soát → Điều chỉnh dữ liệu.`))return;try{await aq('faSet',p,U.field,v,$('#dmNote').value.trim());again()}catch(e){alert(e.message)}};
+  $('#dmUndo').onclick=async()=>{const p=tgt().filter(x=>x.newVal!=null);if(!p.length)return alert('Các dòng này chưa được điều chỉnh');if(!await ask(`Trả về giá trị gốc cho ${p.length} bút toán?`))return;await aq('faRemove',p.map(x=>({id:x.id,field:U.field})));again()};
 }
 const vLoc=()=>vDim('location'),vVeh=()=>vDim('plate'),vDpt=()=>vDim('dept');
 const VIEWS={vehc:vVeh,deptc:vDpt,locc:vLoc,dmc:vDM,fadj:vFA,overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),inv:()=>vInv(true),pl:vPL,cost:()=>vCost(true),deep:vDeep,fin:vFin,cat:vCat,report:vReport,data:vData};
@@ -1696,3 +1696,44 @@ const COLP=(()=>{
   const scan=r=>{if(r.querySelectorAll)r.querySelectorAll('select:not([data-srch])').forEach(add)};
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.tagName==='SELECT')add(n);else if(n.tagName==='OPTION'||n.tagName==='OPTGROUP'){const sl=n.closest('select');if(sl)add(sl)}else scan(n)}}).observe(document.documentElement,{childList:true,subtree:true});
   document.addEventListener('DOMContentLoaded',()=>scan(document));})();
+
+/* ===== v4.33: hộp thoại trong ứng dụng, chế độ tối, thu gọn menu, nút ẩn / hiện ===== */
+// Hộp thoại riêng thay alert / confirm của Windows (đẹp hơn, không làm mất con trỏ gõ)
+function uiModal(msg,{ok='Đồng ý',cancel=null,kind='info'}={}){return new Promise(res=>{const prev=document.activeElement;
+  const w=document.createElement('div');w.className='mdl-wrap';const ico=kind==='warn'?'⚠️':kind==='err'?'⛔':'ℹ️';
+  w.innerHTML=`<div class="mdl ${kind}" role="dialog" aria-modal="true"><div class="mdl-ic">${ico}</div><div class="mdl-msg"></div><div class="mdl-act">${cancel?`<button class="btn" data-r="0">${cancel}</button>`:''}<button class="btn primary" data-r="1">${ok}</button></div></div>`;
+  w.querySelector('.mdl-msg').textContent=String(msg??'');document.body.appendChild(w);
+  const done=v=>{document.removeEventListener('keydown',key,true);w.classList.add('out');setTimeout(()=>w.remove(),150);try{if(prev&&prev.isConnected&&prev!==document.body)prev.focus()}catch{}res(v)};
+  const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();done(!cancel)}else if(e.key==='Enter'){e.preventDefault();e.stopPropagation();done(true)}};
+  document.addEventListener('keydown',key,true);w.onclick=e=>{const b=e.target.closest('[data-r]');if(b)done(b.dataset.r==='1');else if(e.target===w&&cancel)done(false)};
+  setTimeout(()=>w.querySelector('.btn.primary').focus(),30)})}
+async function ask(msg){return uiModal(msg,{ok:'Đồng ý',cancel:'Huỷ',kind:'warn'})}
+window.alert=msg=>{const s=String(msg??'');uiModal(s,{kind:/lỗi|error|không|chưa/i.test(s)&&!/^Đã/.test(s)?'err':'info'})};
+
+// Chế độ sáng / tối + thu gọn menu + chế độ tập trung (ẩn menu và thanh trên) – ghi nhớ
+(function(){const S=k=>ls.get('ui_'+k,false),put=(k,v)=>ls.set('ui_'+k,v),R=document.documentElement;
+  const apply=()=>{R.dataset.theme=S('dark')?'dark':'light';document.body.classList.toggle('mini',!!S('mini'));document.body.classList.toggle('focusm',!!S('focus'));
+    const t=$('#uiDark');if(t)t.title=S('dark')?'Chuyển sang giao diện sáng':'Chuyển sang giao diện tối';if(t)t.innerHTML=S('dark')?'☀️':'🌙';
+    if(window.Chart){try{Chart.defaults.color=S('dark')?'#C9CDD4':'#535862';Chart.defaults.borderColor=S('dark')?'rgba(255,255,255,.08)':'rgba(0,0,0,.06)'}catch{}}};
+  const init=()=>{const tb=document.querySelector('.topbar .sp');if(tb&&!$('#uiDark')){const g=document.createElement('div');g.className='uitools';
+      g.innerHTML=`<button class="btn ghost sm" id="uiFocus" title="Chế độ tập trung: ẩn menu và thanh trên để xem bảng rộng hơn (phím F11 của ứng dụng: Ctrl+Shift+F)">⛶</button><button class="btn ghost sm" id="uiDark"></button>`;tb.after(g)}
+    const br=document.querySelector('aside .brand');if(br&&!$('#uiMini')){const b=document.createElement('button');b.id='uiMini';b.className='uimini';b.title='Thu gọn / mở rộng menu';b.innerHTML='‹';br.appendChild(b)}
+    document.querySelectorAll('nav button[data-p]').forEach(b=>{if(!b.title)b.title=b.textContent.trim()});
+    if(!$('#uiExit')){const x=document.createElement('button');x.id='uiExit';x.className='btn sm';x.textContent='⤢ Thoát chế độ tập trung';document.body.appendChild(x)}
+    $('#uiDark').onclick=()=>{put('dark',!S('dark'));apply()};$('#uiMini').onclick=()=>{put('mini',!S('mini'));apply()};
+    $('#uiFocus').onclick=$('#uiExit').onclick=()=>{put('focus',!S('focus'));apply()};
+    document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.shiftKey&&(e.key==='F'||e.key==='f')){e.preventDefault();put('focus',!S('focus'));apply()}});
+    apply()};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();})();
+
+// Nút ẩn / hiện cho các khối phụ (thẻ số liệu, banner, mô tả, thanh lọc trong cửa sổ chi tiết) – ghi nhớ theo trang
+(function(){const key=el=>{const sec=el.closest('section,#drawer');return 'hide_'+(sec?sec.id:'x')+'_'+el.dataset.hk};
+  const H=ls.get('uiHide',{}),save=()=>ls.set('uiHide',H);
+  const mk=(el,label)=>{if(el.dataset.hk)return;const sib=[...el.parentNode.children].filter(x=>x.className===el.className);el.dataset.hk=label+sib.indexOf(el);
+    const b=document.createElement('button');b.className='hidetg';b.type='button';const k=key(el);
+    const set=h=>{el.classList.toggle('uihid',h);b.innerHTML=h?`▸ Hiện ${label}`:`▾ Ẩn ${label}`;b.classList.toggle('on',h)};
+    b.onclick=()=>{H[k]=!H[k];save();set(H[k])};el.parentNode.insertBefore(b,el);set(!!H[k])};
+  const scan=r=>{if(!r.querySelectorAll)return;
+    r.querySelectorAll('.kpis').forEach(el=>mk(el,'thẻ số liệu'));r.querySelectorAll('.hero').forEach(el=>mk(el,'banner'));
+    r.querySelectorAll('.subbar + .hint, .card > .hint').forEach(el=>{if(el.textContent.length>80)mk(el,'mô tả')})};
+  let T=0;new MutationObserver(()=>{clearTimeout(T);T=setTimeout(()=>scan(document.body),80)}).observe(document.body,{childList:true,subtree:true});scan(document.body)})();
