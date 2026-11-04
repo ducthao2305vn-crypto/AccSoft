@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.31.2 – 04/11/2026
+- **Điều chỉnh dữ liệu**: ô giá trị mới (hợp đồng, mã vị trí, biển số, phòng ban) đổi thành danh sách chọn có ô 🔍 tìm nhanh, kèm **(Xoá trống)** và tuỳ chọn **Nhập thủ công** cho giá trị chưa có.
+
 ## v4.31.1 – 04/11/2026
 - Ô **chọn hợp đồng** (sổ chi tiết công nợ / tuổi nợ theo hợp đồng) luôn có ô 🔍 tìm nhanh, kể cả khi danh sách ít mục.
 - Sửa: danh sách nạp sau (bất đồng bộ) trước đây không hiện ô tìm – nay tự gắn khi danh sách được điền.
