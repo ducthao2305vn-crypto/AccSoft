@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.31.4 – 04/11/2026
+- **Danh mục khoản mục chi phí**: ô 🔍 tìm nhanh – gõ liên tục không bị mất con trỏ (trước đây mỗi lần lọc lại phải bấm lại vào ô); tìm thêm theo **nhóm chi phí** ngoài mã, tên, mô tả, tiếng Việt, KD1.
+
 ## v4.31.3 – 04/11/2026
 - **Danh mục phòng ban** (tab Phòng ban và tab Ánh xạ): thêm ô 🔍 tìm nhanh dòng – gõ vài ký tự (mã, tên, tên phòng ban trong dữ liệu gốc, phòng ban đã gắn; không phân biệt hoa thường / dấu) → chỉ hiện dòng khớp. Tích "chọn tất cả" ở tab Ánh xạ chỉ chọn các dòng đang hiện. Ô chọn phòng ban danh mục vẫn có ô tìm riêng.
 

@@ -35,7 +35,7 @@ function make(db, all, get, run) {
   /* ---- Khoản mục chi phí ---- */
   function costList(q = '', grp = '', offset = 0, limit = 500) {
     const w = ['1'], a = []; if (grp) { w.push(grp === '(trống)' ? "ifnull(grp,'')=''" : 'grp=?'); if (grp !== '(trống)') a.push(grp); }
-    if (q) { w.push('(code LIKE ? OR name LIKE ? OR descr LIKE ? OR vn LIKE ? OR kd1 LIKE ?)'); a.push(...Array(5).fill('%' + q + '%')); }
+    if (q) { w.push('(code LIKE ? OR name LIKE ? OR descr LIKE ? OR vn LIKE ? OR kd1 LIKE ? OR grp LIKE ?)'); a.push(...Array(6).fill('%' + q + '%')); }
     const W = 'WHERE ' + w.join(' AND '), used = new Map(all(`SELECT type_of_cost t, count(*) n FROM entries WHERE type_of_cost IS NOT NULL GROUP BY 1`).map(r => [tocCode(r.t), r.n]));
     return { total: get(`SELECT count(*) n FROM cost_cat ${W}`, ...a).n, groups: all(`SELECT ifnull(grp,'') g, count(*) n FROM cost_cat GROUP BY 1 ORDER BY 1`),
       rows: all(`SELECT * FROM cost_cat ${W} ORDER BY code LIMIT ? OFFSET ?`, ...a, limit, offset).map(r => ({ ...r, used: used.get(r.code) || 0 })) };
