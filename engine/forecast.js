@@ -130,6 +130,49 @@ function make(FIN, monthsFn) {
     return { models: MODELS, model, h, years: hist.map(x => x.y), hist: hist.map(x => ({ y: x.y, months: x.months, partial: x.partial, P: x.P, B: x.B })), fc: fcP, incLines: lines, bsLines: bsL.filter(l => l.lvl <= 1),
       compare: { rev: sumMape('rev'), cogs: sumMape('cogs'), sell: sumMape('sell'), admin: sumMape('admin') }, ratio, mape: Object.fromEntries(BASE.map(k => [k, detail[k].mape])), bsMape: Object.fromEntries(Object.entries(bsDet).map(([c, r]) => [c, r.mape])) };
   }
-  return { compute, history, MODELS };
+  // ---- Dự báo theo tháng cho năm dự báo đầu tiên ----
+  let MC = null;
+  function monthHist(force) {
+    const yms = monthsFn().map(m => m.ym).sort(), key = yms.length + '|' + yms.at(-1);
+    if (!force && MC && MC.key === key && Date.now() - MC.t < 15 * 60e3) return MC.v;
+    const v = yms.map(ym => { const P = {}; for (const l of FIN.income(ym, ym).lines) P[l.k] = l.cur || 0; return { ym, P }; });
+    MC = { key, t: Date.now(), v }; return v;
+  }
+  // Holt-Winters cộng tính (mùa vụ 12 tháng) – tham số chọn theo sai số nhỏ nhất
+  function hw(y, h) {
+    const n = y.length, L = 12; if (n < 2 * L) return null; let best = null;
+    for (const al of [0.2, 0.4, 0.6]) for (const be of [0.05, 0.2]) for (const ga of [0.1, 0.3, 0.5]) {
+      let l = y.slice(0, L).reduce((s, v) => s + v, 0) / L, t = (y.slice(L, 2 * L).reduce((s, v) => s + v, 0) / L - l) / L;
+      const S = y.slice(0, L).map(v => v - l); let sse = 0;
+      for (let i = L; i < n; i++) { const si = S[i % L], f = l + t + si; sse += (y[i] - f) ** 2; const l2 = al * (y[i] - si) + (1 - al) * (l + t); t = be * (l2 - l) + (1 - be) * t; S[i % L] = ga * (y[i] - l2) + (1 - ga) * si; l = l2; }
+      if (!best || sse < best.sse) best = { sse, l, t, S: S.slice() };
+    }
+    return Array.from({ length: h }, (_, k) => best.l + best.t * (k + 1) + best.S[(n + k) % L]);
+  }
+  // o.mmethod: 'season' = dự báo năm × tỷ trọng mùa vụ từng tháng (khớp tổng năm); 'hw' = Holt-Winters trên chuỗi tháng; 'avg' = bình quân 2 phương pháp
+  function monthly(o = {}) {
+    const R = compute(o); if (!R.fc.length) return { months: [], rows: {}, hist: [] };
+    const Y = R.fc[0].y, MH = monthHist(!!o.refresh), method = ['season', 'hw', 'avg'].includes(o.mmethod) ? o.mmethod : 'season';
+    const full = new Set(); { const c = {}; for (const x of MH) c[x.ym.slice(0, 4)] = (c[x.ym.slice(0, 4)] || 0) + 1; for (const y in c) if (c[y] === 12) full.add(y); }
+    const BASE = ['rev', 'ded', 'cogs', 'finInc', 'finExp', 'sell', 'admin', 'othInc', 'othExp'], out = {}, share = {};
+    for (const k of BASE) {
+      // tỷ trọng mùa vụ: bình quân tỷ trọng từng tháng trong các năm đủ 12 tháng (3 năm gần nhất); thiếu năm đủ → chia đều
+      const ys = [...full].sort().slice(-3), sh = Array(12).fill(0); let used = 0;
+      for (const y of ys) { const vs = MH.filter(x => x.ym.startsWith(y)).map(x => x.P[k] || 0), tot = vs.reduce((s, v) => s + v, 0); if (Math.abs(tot) < 1e-6) continue; vs.forEach((v, i) => sh[i] += v / tot); used++; }
+      const S = used ? sh.map(v => v / used) : Array(12).fill(1 / 12); share[k] = S;
+      const annual = R.fc[0].P[k] || 0, a1 = S.map(v => annual * v);
+      // Holt-Winters: chuỗi tháng đến hết dữ liệu, dự báo tới hết năm Y
+      const ser = MH.map(x => x.P[k] || 0), lastYm = MH.at(-1).ym, gap = (Y - +lastYm.slice(0, 4)) * 12 - +lastYm.slice(5, 7);
+      const hwf = hw(ser, gap + 12), a2 = hwf ? hwf.slice(gap, gap + 12) : null;
+      out[k] = method === 'hw' && a2 ? a2 : method === 'avg' && a2 ? a1.map((v, i) => (v + a2[i]) / 2) : a1;
+    }
+    const er = (() => { const t = R.fc[0].P; return t.pbt > 0 ? t.tax / t.pbt : 0; })();
+    const months = Array.from({ length: 12 }, (_, i) => `${Y}-${String(i + 1).padStart(2, '0')}`);
+    const rows = months.map((ym, i) => { const P = {}; for (const k of BASE) P[k] = out[k][i];
+      P.net = P.rev - P.ded; P.gp = P.net - P.cogs; P.op = P.gp + P.finInc - P.finExp - P.sell - P.admin; P.other = P.othInc - P.othExp; P.pbt = P.op + P.other; P.tax = P.pbt * er; P.pat = P.pbt - P.tax; return { ym, P }; });
+    const hist = MH.slice(-24);
+    return { year: Y, method, months, rows, hist, share, annual: R.fc[0].P, hasHW: MH.length >= 24, fullYears: [...full].sort() };
+  }
+  return { compute, history, monthly, MODELS };
 }
 module.exports = { make, forecastSeries, MODELS };

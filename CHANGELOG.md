@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.35.0 – 04/11/2026
+- Dự báo tài chính: tab mới **Theo tháng năm …** – dự báo B02 cho 12 tháng của năm dự báo đầu tiên, 3 cách chia:
+  - **Dự báo năm × tỷ trọng mùa vụ** (mặc định): tỷ trọng từng tháng lấy bình quân 3 năm đủ 12 tháng gần nhất → tổng 12 tháng khớp đúng dự báo năm.
+  - **Holt-Winters** trên chuỗi tháng (xu hướng + mùa vụ 12 tháng, cần ≥ 24 tháng dữ liệu).
+  - **Bình quân 2 cách**.
+- Dòng tổng (lợi nhuận gộp, HĐKD, trước / sau thuế) tính lại theo công thức B02 từng tháng; biểu đồ 24 tháng thực tế + 12 tháng dự báo; bảng tỷ trọng mùa vụ; xuất Excel theo tháng.
+
 ## v4.34.0 – 04/11/2026
 **Mô-đun mới: Dự báo tài chính** (menu Phân tích → Dự báo tài chính)
 - Lịch sử lấy từ chính B02 / B01 của phần mềm theo từng năm (gồm điều chỉnh); năm dở dang quy đổi cả năm (có thể bỏ).
