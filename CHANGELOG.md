@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.37.0 – 04/11/2026
+- Dự báo tài chính: tab mới **Giao dịch nội bộ** – dự báo giao dịch với từng đơn vị nội bộ cho các năm tới (cùng số năm, mô hình, "dùng dữ liệu từ năm" như trang dự báo).
+  - Chỉ tiêu giống báo cáo nội bộ theo năm: mua ghi 627 / 641 / 642 / chi phí khác, mua hàng hoá vật tư, mua tài sản – XDCB – trả trước, tổng mua, bán (doanh thu), giảm trừ, bán thuần; mỗi chỉ tiêu × mỗi công ty dự báo riêng, tổng tính lại.
+  - Lọc theo công ty, Nhóm 1 (mẹ & con) / Nhóm 2 (cùng tập đoàn), tách nhóm có dòng cộng; tuỳ chọn bỏ trích trước 335 / 1317, gồm bên liên quan.
+  - Kịch bản % điều chỉnh mua / bán nội bộ; biểu đồ mua – bán nội bộ thực tế và dự báo; bảng tổng hợp theo chỉ tiêu; xuất Excel (dự báo từng công ty × chỉ tiêu × năm, chi tiết, tổng hợp).
+  - Năm dở dang quy đổi cả năm theo số tháng có dữ liệu.
+
 ## v4.36.0 – 04/11/2026
 - Dự báo theo tháng: thêm **Cân đối kế toán** và **Lưu chuyển tiền tệ** theo tháng (tab con trong "Theo tháng năm …").
   - B01: đi từ số dư thực tế tháng gần nhất tới số dư dự báo cuối năm, gồm cả các tháng còn lại của năm nay (đánh dấu "ước"); vốn chủ cộng dồn LNST từng tháng; Tiền là khoản cân đối → Tổng tài sản = Tổng nguồn vốn từng tháng.

@@ -78,7 +78,7 @@ function forecastSeries(y, h, model) {
   return { pick, f: res[pick].f, mape: res[pick].mape, models: res };
 }
 
-function make(FIN, monthsFn) {
+function make(FIN, monthsFn, PC) {
   let HC = null;
   // Lịch sử theo năm: B02 cả năm (năm dở dang quy đổi 12 tháng) + B01 số dư cuối năm
   function history(force) {
@@ -194,6 +194,30 @@ function make(FIN, monthsFn) {
     return { year: Y, method, months, rows, hist, share, annual: R.fc[0].P, hasHW: MH.length >= 24, fullYears: [...full].sort(),
       bsLines: bsL.filter(l => l.lvl <= 1), bsM, cfM, lastYm, startB, cfGroups: { opA, liab, invA } };
   }
-  return { compute, history, monthly, MODELS };
+  // ---- Dự báo giao dịch nội bộ theo công ty (dựa trên PC.internalYears: mua theo nhóm TK chi phí / hàng / tài sản, bán theo doanh thu) ----
+  const ICOL = ['buy627', 'buy641', 'buy642', 'buyExpO', 'buyGoods', 'buyAsset', 'sales', 'salesAdj'];
+  function internal(o = {}) {
+    if (!PC || !PC.internalYears) return { years: [], rows: [] };
+    const yms = monthsFn().map(m => m.ym).sort(), cnt = {}; for (const m of yms) cnt[m.slice(0, 4)] = (cnt[m.slice(0, 4)] || 0) + 1;
+    let years = Object.keys(cnt).sort(); if (o.fromYear) years = years.filter(y => +y >= +o.fromYear); if (o.skipPartial) years = years.filter(y => cnt[y] === 12);
+    if (years.length < 2) years = Object.keys(cnt).sort().slice(-2);
+    const r = PC.internalYears(years, !!o.tt, !!o.ex, o.company || ''), h = Math.max(1, Math.min(10, +o.h || 3)), model = MODELS[o.model] ? o.model : 'ens';
+    const k = y => cnt[y] < 12 ? 12 / cnt[y] : 1, fy = Array.from({ length: h }, (_, i) => +years.at(-1) + 1 + i), adj = o.adj || {};
+    const tw = (arr, pct) => pct ? arr.map((v, i) => v * Math.pow(1 + pct / 100, i + 1)) : arr, mapes = [];
+    const rows = r.rows.map(c => {
+      const hist = Object.fromEntries(years.map(y => { const t = {}; for (const col of ICOL) t[col] = (c.y[y][col] || 0) * k(y); return [y, t]; }));
+      const fc = fy.map(() => ({})), mp = {};
+      for (const col of ICOL) { const ser = years.map(y => hist[y][col]); if (ser.every(v => Math.abs(v) < 0.005)) { fc.forEach(x => x[col] = 0); continue; }
+        const f = forecastSeries(ser, h, model); mp[col] = f.mape; if (f.mape != null) mapes.push(f.mape);
+        tw(f.f, col === 'sales' || col === 'salesAdj' ? adj.sales : adj.buy).forEach((v, i) => fc[i][col] = (o.noNeg && v < 0 && ser.at(-1) >= 0) ? 0 : v); }
+      const tot = t => { t.buyTot = t.buy627 + t.buy641 + t.buy642 + t.buyExpO + t.buyGoods + t.buyAsset; t.salesNet = t.sales - t.salesAdj; return t; };
+      Object.values(hist).forEach(tot); fc.forEach(tot);
+      return { key: c.key, company: c.company, kind: c.kind, hist, fc, mape: mp };
+    }).filter(x => years.some(y => Math.abs(x.hist[y].buyTot) + Math.abs(x.hist[y].salesNet) > 0.005));
+    const sum = (get) => { const t = {}; for (const col of [...ICOL, 'buyTot', 'salesNet']) t[col] = rows.reduce((s, x) => s + (get(x)[col] || 0), 0); return t; };
+    return { years: years.map(Number), partial: Object.fromEntries(years.map(y => [y, cnt[y] < 12 ? cnt[y] : 0])), fy, cols: r.cols, rows, model, models: MODELS,
+      totHist: Object.fromEntries(years.map(y => [y, sum(x => x.hist[y])])), totFc: fy.map((_, i) => sum(x => x.fc[i])), mape: mapes.length ? mapes.reduce((a, b) => a + b, 0) / mapes.length : null };
+  }
+  return { compute, history, monthly, internal, MODELS };
 }
 module.exports = { make, forecastSeries, MODELS };
