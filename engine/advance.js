@@ -26,15 +26,15 @@ function make(db, all, get, run, okYm) {
   // hoàn ứng trừ vào các khoản tạm ứng thường trước, chỉ phần dư mới trừ vào backup; backup quá hạn khi vượt số tháng backup.
   db.exec(`CREATE TABLE IF NOT EXISTS adv_backup(id INTEGER PRIMARY KEY, key TEXT, note TEXT, updated_at TEXT)`);
   const backupIds = () => { const m = new Set(); for (const r of all(`SELECT id FROM adv_backup`)) m.add(r.id); return m; };
+  // Tổng nợ = backup money + các nhóm tuổi nợ. Số dư (tạm ứng − hoàn ứng) dành trước cho các khoản backup đã đánh dấu (khoản mới nhất trước),
+  // phần còn lại là các khoản tạm ứng thường còn treo theo FIFO (= những khoản thường gần nhất cộng đủ phần còn lại).
   function fifo(L, asOf, BK = new Set()) {
-    const open = [], bk = []; let neg = 0;
-    const take = (Q, a) => { while (a > 0.004 && Q.length) { const o = Q[0], u = Math.min(o.left, a); o.left -= u; a -= u; if (o.left <= 0.004) Q.shift(); } return a; };
-    for (const x of L) {
-      if (x.dr) { let a = x.dr; if (neg > 0) { const u = Math.min(neg, a); neg -= u; a -= u; } const isB = BK.has(x.id); if (a > 0.004) (isB ? bk : open).push({ id: x.id, d: x.d, doc: x.doc, ar: x.ar, ds: x.ds, p: x.p, acc: x.acc, amt: x.dr, left: a, backup: isB }); }
-      if (x.cr) { let a = take(open, x.cr); a = take(bk, a); if (a > 0.004) neg += a; }
-    }
-    for (const o of open) o.age = days(o.d, asOf); for (const o of bk) o.age = days(o.d, asOf);
-    return { open, bk, neg };
+    const bal = L.reduce((a, x) => a + x.dr - x.cr, 0), fill = (rows, amt) => { const out = []; let r = amt;
+      for (const x of rows.slice().reverse()) { if (r <= 0.004) break; const u = Math.min(x.dr, r); r -= u; out.push({ id: x.id, d: x.d, doc: x.doc, ar: x.ar, ds: x.ds, p: x.p, acc: x.acc, amt: x.dr, left: u, backup: BK.has(x.id), age: days(x.d, asOf) }); }
+      return { out: out.reverse(), rest: r }; };
+    const D = L.filter(x => x.dr > 0), bkD = D.filter(x => BK.has(x.id)), nD = D.filter(x => !BK.has(x.id));
+    const b1 = fill(bkD, Math.max(0, bal)), n1 = fill(nD, b1.rest);
+    return { open: n1.out, bk: b1.out, neg: bal < 0 ? -bal : 0, unalloc: n1.rest };
   }
 
   // Báo cáo theo nhân viên. o = { asOf, from (YYYY-MM-DD), acc ('141' | '1411' | '1412'), q, dept, only: 'open' | 'over' , overDays }

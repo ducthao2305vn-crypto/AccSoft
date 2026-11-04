@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.45.2 – 04/11/2026
+- Sửa công nợ tạm ứng có **backup money**: trước đây chọn backup xong tuổi nợ vẫn giữ nguyên số tiền đó (backup + tuổi nợ > số dư). Nay luôn **Tổng nợ = Backup money + các nhóm tuổi nợ**: số dư dành trước cho khoản backup đã đánh dấu, phần còn lại mới phân tuổi cho các khoản tạm ứng thường gần nhất còn treo (backup không còn bị tính quá hạn 30 ngày).
+
 ## v4.45.1 – 04/11/2026
 - Công nợ tạm ứng: **không còn tính TK 1412 (tạm ứng vật tư)** – khoản này đã theo dõi ở *Tuổi hàng tồn kho* (vật tư hàng hoá). Báo cáo, đối chiếu, biên bản, email chỉ gồm tạm ứng tiền (141 trừ 1412); tổng khớp số dư TK 1411 trên sổ.
 
