@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v4.39.0 – 04/11/2026
+- Dự báo tài chính: **Kế hoạch đầu tư** – nhập từng khoản đầu tư (năm, nội dung, vốn, số năm khấu hao, % vay, lãi suất, chi phí vận hành %/năm, doanh thu tăng thêm/năm – để 0 nếu không tăng doanh thu):
+  - KQKD: khấu hao đều + chi phí vận hành vào giá vốn, lãi vay vào chi phí tài chính, doanh thu tăng thêm (nếu có); có dòng "↳ trong đó …" để thấy riêng ảnh hưởng.
+  - CĐKT: TSCĐ = lũy kế đầu tư − khấu hao; dư nợ vay vào nợ phải trả (trả đều); phần tự có trả bằng tiền.
+- Sửa logic làm lợi nhuận / tài sản tăng ảo:
+  - **Chi phí không tự giảm khi doanh thu tăng** (mặc định bật): mô hình xu hướng không còn kéo chi phí bán hàng, quản lý, giá vốn giảm dần trong khi doanh thu tăng.
+  - TSCĐ hiện có giữ giá trị cuối kỳ (không ngoại suy tăng mãi); tài sản tăng chỉ khi có kế hoạch đầu tư.
+  - **Chia lợi nhuận % LNST** (nộp về công ty mẹ) – trước đây toàn bộ LNST tích luỹ vào tiền làm tổng tài sản phình to.
+  - Thêm dòng biên lợi nhuận gộp và biên LNST / doanh thu thuần; cảnh báo khi chỉ dùng < 4 năm dữ liệu.
+
 ## v4.38.1 – 04/11/2026
 - Sửa **dự báo Cân đối kế toán ra số âm** (đầu tư tài chính, XDCB dở dang… bị ngoại suy xu hướng xuống dưới 0). Phương pháp mới (mặc định, theo cách lập kế hoạch):
   - Vốn lưu động – phải thu, tồn kho, TS ngắn hạn khác, nợ phải trả = **tỷ lệ % trên doanh thu thuần** bình quân 3 năm gần nhất × doanh thu dự báo.
