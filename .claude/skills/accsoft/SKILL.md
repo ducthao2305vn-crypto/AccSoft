@@ -471,3 +471,6 @@ await p.evaluate(()=>window.api.q('stats'));
 - `confirm()` đã thay bằng `await ask(msg)` (Promise, hộp thoại trong app) – hàm gọi phải là async. `alert()` bị ghi đè thành `uiModal` (không chặn). Viết mới: dùng `await ask(...)`, không dùng `confirm`.
 - Theme: `html[data-theme=dark]` (CSS cuối `<style>`), `body.mini` (menu thu gọn), `body.focusm` (ẩn aside + topbar); trạng thái lưu `ls ui_dark / ui_mini / ui_focus`.
 - Nút ẩn: tự gắn cho `.kpis`, `.hero`, `.card > .hint` dài (class `.hidetg`, lưu `ls uiHide`). Màu nền viết inline (#FFF6F2, #FEE4E2…) được ánh xạ sang tối bằng selector `[style*=...]`.
+
+### Dự báo tài chính (v4.34, `engine/forecast.js`)
+- `history()` gọi `FIN.income`/`FIN.balanceSheet` từng năm (cache 15 phút, `refresh` để đọc lại); năm < 12 tháng nhân 12/n. `forecastSeries(y,h,model)` – 7 mô hình + `ens` (trọng số 1/MAPE rolling-origin). `compute(o)` → `{hist, fc:[{y,P,B}], compare, mape, bsMape}`; P dùng khoá dòng B02 (`rev, net, cogs, gp, op, pbt, tax, pat…`), B dùng mã B01. IPC `fcCompute` (READ). UI `vFC`/`fcDraw` (trang `fcst`).

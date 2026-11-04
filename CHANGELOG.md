@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.34.0 – 04/11/2026
+**Mô-đun mới: Dự báo tài chính** (menu Phân tích → Dự báo tài chính)
+- Lịch sử lấy từ chính B02 / B01 của phần mềm theo từng năm (gồm điều chỉnh); năm dở dang quy đổi cả năm (có thể bỏ).
+- 7 mô hình: hồi quy tuyến tính, Holt (san bằng mũ kép), CAGR, tăng trưởng bình quân 3 năm, hồi quy mũ, bình quân trượt 3 năm, naive + drift; **Tự động** = bình quân gia quyền theo độ chính xác kiểm định lại (backtest 3 năm gần nhất, MAPE).
+- B02: dự báo từng dòng gốc (doanh thu, giảm trừ, giá vốn, DT/CP tài chính, bán hàng, quản lý, khác), dòng tổng tính lại đúng công thức; thuế TNDN theo thuế suất thực tế bình quân. Tuỳ chọn chi phí theo % doanh thu.
+- B01: khoản mục cấp I dự báo theo mô hình; vốn chủ = năm trước + LNST dự báo; Tiền là khoản cân đối (Tổng tài sản = Tổng nguồn vốn).
+- Kịch bản Thận trọng / Cơ sở / Lạc quan hoặc tự nhập % điều chỉnh doanh thu, chi phí; 1–10 năm; biểu đồ thực tế + dự báo + các mô hình; bảng so sánh mô hình; xuất Excel 3 sheet.
+
 ## v4.33.2 – 04/11/2026
 - Sửa: cùng một mã vị trí / biển số / phòng ban hiện thành **2 dòng** (vd "211026_Guest House Suai Cov_Ain Branch") – do dữ liệu gốc có khoảng trắng thừa / ký tự trắng ẩn (dấu cách đầu-cuối, NBSP, tab, xuống dòng, 2 dấu cách). Nay mọi mã được chuẩn hoá khoảng trắng trước khi gộp, nên mã giống nhau gộp về một dòng; danh sách chọn cũng không còn mã trùng.
 

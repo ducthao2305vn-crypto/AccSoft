@@ -1,0 +1,135 @@
+'use strict';
+// Dự báo báo cáo tài chính (B02 kết quả kinh doanh, B01 cân đối kế toán) cho các năm tương lai.
+// Lịch sử lấy từ chính FIN.income / FIN.balanceSheet theo từng năm (năm dở dang được quy đổi cả năm theo số tháng có dữ liệu).
+// Nhiều mô hình chuỗi thời gian; "Tự động (tổng hợp)" = bình quân gia quyền theo sai số kiểm định lại (backtest) của từng mô hình.
+
+const MODELS = {
+  ens: 'Tự động – tổng hợp các mô hình (trọng số theo độ chính xác)',
+  linear: 'Hồi quy tuyến tính (xu hướng)',
+  holt: 'Holt – san bằng mũ kép (xu hướng thích nghi)',
+  cagr: 'Tăng trưởng kép bình quân (CAGR)',
+  growth3: 'Tăng trưởng bình quân 3 năm gần nhất',
+  loglin: 'Hồi quy mũ (log-tuyến tính)',
+  ma3: 'Bình quân trượt 3 năm',
+  drift: 'Ngẫu nhiên có xu hướng (Naive + drift)',
+};
+const FIT = ['linear', 'holt', 'cagr', 'growth3', 'loglin', 'ma3', 'drift'];
+const clampG = g => Math.max(-0.6, Math.min(0.8, g));
+
+// ---- các mô hình: nhận chuỗi y (năm), trả về h giá trị dự báo hoặc null nếu không áp dụng được ----
+function linear(y, h) {
+  const n = y.length; if (n < 2) return null;
+  const mx = (n - 1) / 2, my = y.reduce((s, v) => s + v, 0) / n;
+  let sxy = 0, sxx = 0; y.forEach((v, i) => { sxy += (i - mx) * (v - my); sxx += (i - mx) ** 2; });
+  const b = sxx ? sxy / sxx : 0, a = my - b * mx;
+  return Array.from({ length: h }, (_, k) => a + b * (n + k));
+}
+function holt(y, h) {
+  const n = y.length; if (n < 3) return null;
+  let best = null;
+  for (const al of [0.2, 0.4, 0.6, 0.8]) for (const be of [0.1, 0.3, 0.5]) {
+    let l = y[0], t = y[1] - y[0], sse = 0;
+    for (let i = 1; i < n; i++) { const f = l + t; sse += (y[i] - f) ** 2; const l2 = al * y[i] + (1 - al) * (l + t); t = be * (l2 - l) + (1 - be) * t; l = l2; }
+    if (!best || sse < best.sse) best = { sse, l, t };
+  }
+  return Array.from({ length: h }, (_, k) => best.l + best.t * (k + 1));
+}
+function cagr(y, h) {
+  const n = y.length; if (n < 3) return null;
+  const a = y[0], b = y[n - 1]; if (!(a > 0 && b > 0)) return null;
+  const g = clampG(Math.pow(b / a, 1 / (n - 1)) - 1);
+  return Array.from({ length: h }, (_, k) => b * Math.pow(1 + g, k + 1));
+}
+function growth3(y, h) {
+  const n = y.length; if (n < 3) return null;
+  const gs = []; for (let i = Math.max(1, n - 3); i < n; i++) if (Math.abs(y[i - 1]) > 1e-9) gs.push((y[i] - y[i - 1]) / Math.abs(y[i - 1]));
+  if (!gs.length) return null; const g = clampG(gs.reduce((s, v) => s + v, 0) / gs.length), b = y[n - 1];
+  return Array.from({ length: h }, (_, k) => b * Math.pow(1 + g, k + 1));
+}
+function loglin(y, h) {
+  if (y.length < 3 || y.some(v => !(v > 0))) return null;
+  const f = linear(y.map(Math.log), h); return f && f.map(Math.exp);
+}
+function ma3(y, h) { if (y.length < 2) return null; const w = y.slice(-3), m = w.reduce((s, v) => s + v, 0) / w.length; return Array(h).fill(m); }
+function drift(y, h) { const n = y.length; if (n < 2) return null; const d = (y[n - 1] - y[0]) / (n - 1); return Array.from({ length: h }, (_, k) => y[n - 1] + d * (k + 1)); }
+const FN = { linear, holt, cagr, growth3, loglin, ma3, drift };
+
+// Kiểm định lại: dùng dữ liệu đến năm t dự báo năm t+1 (rolling origin) trên tối đa 3 năm cuối → sai số % bình quân (MAPE, có chặn)
+function backtest(y, m) {
+  const n = y.length, errs = [];
+  for (let cut = Math.max(3, n - 3); cut < n; cut++) {
+    const f = FN[m](y.slice(0, cut), 1); if (!f) continue;
+    const act = y[cut], den = Math.max(Math.abs(act), Math.abs(y[cut - 1]) * 0.1, 1e-6);
+    errs.push(Math.min(2, Math.abs(f[0] - act) / den));
+  }
+  return errs.length ? errs.reduce((s, v) => s + v, 0) / errs.length : null;
+}
+function forecastSeries(y, h, model) {
+  const res = {};
+  for (const m of FIT) { const f = FN[m](y, h); if (f && f.every(Number.isFinite)) res[m] = { f, mape: backtest(y, m) }; }
+  const ok = Object.entries(res).filter(([, r]) => r.mape != null);
+  let ens = null;
+  if (ok.length) { const w = ok.map(([, r]) => 1 / Math.max(r.mape, 0.01)), W = w.reduce((s, v) => s + v, 0);
+    ens = { f: Array.from({ length: h }, (_, k) => ok.reduce((s, [, r], i) => s + r.f[k] * w[i], 0) / W), mape: ok.reduce((s, [, r], i) => s + r.mape * w[i], 0) / W,
+      weights: Object.fromEntries(ok.map(([m], i) => [m, w[i] / W])) }; }
+  else if (Object.keys(res).length) { const ks = Object.keys(res); ens = { f: Array.from({ length: h }, (_, k) => ks.reduce((s, m) => s + res[m].f[k], 0) / ks.length), mape: null, weights: {} }; }
+  res.ens = ens || { f: Array(h).fill(y.length ? y[y.length - 1] : 0), mape: null, weights: {} };
+  const pick = res[model] ? model : 'ens';
+  return { pick, f: res[pick].f, mape: res[pick].mape, models: res };
+}
+
+function make(FIN, monthsFn) {
+  let HC = null;
+  // Lịch sử theo năm: B02 cả năm (năm dở dang quy đổi 12 tháng) + B01 số dư cuối năm
+  function history(force) {
+    const yms = monthsFn().map(m => m.ym).sort();
+    const key = yms.length + '|' + yms[0] + '|' + yms.at(-1);
+    if (!force && HC && HC.key === key && Date.now() - HC.t < 15 * 60e3) return HC.v;
+    const years = [...new Set(yms.map(m => m.slice(0, 4)))].sort(), out = [];
+    for (const y of years) {
+      const ms = yms.filter(m => m.startsWith(y)), from = ms[0], to = ms.at(-1), nm = ms.length;
+      const inc = FIN.income(from, to), bs = FIN.balanceSheet(from, to);
+      const k = nm < 12 ? 12 / nm : 1, P = {}; for (const l of inc.lines) P[l.k] = (l.cur || 0) * k;
+      const B = {}; for (const l of bs.lines) B[l.code] = l.cb || 0;
+      out.push({ y: +y, months: nm, partial: nm < 12, annualized: k !== 1, P, B, bsLines: bs.lines.map(l => ({ code: l.code, name: l.name, lvl: l.lvl })), incLines: inc.lines.map(l => ({ code: l.code, k: l.k, name: l.name, bold: l.bold })) });
+    }
+    HC = { key, t: Date.now(), v: out }; return out;
+  }
+
+  // o: { h: số năm dự báo, model, fromYear: bỏ các năm trước năm này, skipPartial: không dùng năm dở dang, adj: { k: % điều chỉnh tăng trưởng doanh thu / chi phí } }
+  function compute(o = {}) {
+    const H = history(!!o.refresh); if (!H.length) return { years: [], hist: [], fc: [], models: MODELS };
+    const h = Math.max(1, Math.min(10, +o.h || 3)), model = MODELS[o.model] ? o.model : 'ens';
+    let hist = H.filter(x => !o.fromYear || x.y >= +o.fromYear); if (o.skipPartial) hist = hist.filter(x => !x.partial);
+    if (hist.length < 2) hist = H.slice(-2);
+    const last = hist.at(-1), fy = Array.from({ length: h }, (_, i) => last.y + 1 + i), adj = o.adj || {};
+    const lines = H.at(-1).incLines, bsL = H.at(-1).bsLines;
+    const ser = k => hist.map(x => x.P[k] || 0), tweak = (arr, pct) => pct ? arr.map((v, i) => v * Math.pow(1 + pct / 100, i + 1)) : arr;
+    // 1) Doanh thu thuần & các dòng gốc dự báo trực tiếp; 2) dòng tổng tính lại theo công thức B02 cho khớp
+    const BASE = ['rev', 'ded', 'cogs', 'finInc', 'finExp', 'sell', 'admin', 'othInc', 'othExp'], detail = {}, F = {};
+    for (const k of BASE) { const r = forecastSeries(ser(k), h, model); detail[k] = r; F[k] = tweak(r.f, k === 'rev' ? adj.rev : ['cogs', 'sell', 'admin'].includes(k) ? adj.cost : 0); }
+    // Mô hình "tỷ lệ % doanh thu" cho giá vốn / chi phí: tham khảo, hiển thị song song
+    const revH = ser('rev'), pctOf = k => { const w = hist.slice(-3), s = w.reduce((a, x) => a + (x.P.rev || 0), 0); return s ? w.reduce((a, x) => a + (x.P[k] || 0), 0) / s : null; };
+    const ratio = {}; for (const k of ['cogs', 'sell', 'admin']) { const p = pctOf(k); ratio[k] = p == null ? null : F.rev.map(v => v * p); }
+    if (o.costByRatio) for (const k of ['cogs', 'sell', 'admin']) if (ratio[k]) F[k] = tweak(ratio[k], adj.cost);
+    const T = i => { const g = x => F[x][i]; const net = g('rev') - g('ded'), gp = net - g('cogs'), op = gp + g('finInc') - g('finExp') - g('sell') - g('admin'), other = g('othInc') - g('othExp'), pbt = op + other;
+      const er = (() => { const w = hist.slice(-3).filter(x => (x.P.pbt || 0) > 0); const s = w.reduce((a, x) => a + x.P.pbt, 0); return s ? Math.max(0, Math.min(0.5, w.reduce((a, x) => a + (x.P.tax || 0), 0) / s)) : 0.2; })();
+      const tax = pbt > 0 ? pbt * er : 0; return { net, gp, op, other, pbt, tax, pat: pbt - tax, er }; };
+    const fcP = fy.map((y, i) => { const t = T(i); const P = {}; for (const k of BASE) P[k] = F[k][i]; Object.assign(P, t); return { y, P }; });
+    // B01: từng khoản mục cấp I dự báo bằng cùng mô hình; vốn chủ = năm trước + LNST dự báo; Tiền = khoản cân đối
+    const L1 = bsL.filter(l => l.lvl === 1).map(l => l.code), sec = {}; let cur = null;
+    for (const l of bsL) { if (l.lvl === 0 && /^[ABCD]$/.test(l.code)) cur = l.code; if (l.lvl === 1) sec[l.code] = cur; }
+    const bsDet = {}, BF = fy.map(() => ({}));
+    for (const c of L1) { if (c === '110' || sec[c] === 'D') continue; const r = forecastSeries(hist.map(x => x.B[c] || 0), h, model); bsDet[c] = r; r.f.forEach((v, i) => BF[i][c] = v); }
+    let eq = last.B['D'] || 0;
+    fcP.forEach((x, i) => { const B = BF[i]; eq += x.P.pat; for (const c of L1) if (sec[c] === 'D') B[c] = 0; const eqc = L1.find(c => sec[c] === 'D'); if (eqc) B[eqc] = eq;
+      B.C = L1.filter(c => sec[c] === 'C').reduce((s, c) => s + (B[c] || 0), 0); B.D = eq; B['440'] = B.C + B.D;
+      const nonCash = L1.filter(c => (sec[c] === 'A' || sec[c] === 'B') && c !== '110').reduce((s, c) => s + (B[c] || 0), 0);
+      B['110'] = B['440'] - nonCash; B.A = L1.filter(c => sec[c] === 'A').reduce((s, c) => s + (B[c] || 0), 0); B.B = L1.filter(c => sec[c] === 'B').reduce((s, c) => s + (B[c] || 0), 0); B['270'] = B.A + B.B; x.B = B; });
+    const sumMape = k => (detail[k] && detail[k].models) ? Object.fromEntries(Object.entries(detail[k].models).map(([m, r]) => [m, { mape: r.mape, f: r.f, w: r.weights }])) : {};
+    return { models: MODELS, model, h, years: hist.map(x => x.y), hist: hist.map(x => ({ y: x.y, months: x.months, partial: x.partial, P: x.P, B: x.B })), fc: fcP, incLines: lines, bsLines: bsL.filter(l => l.lvl <= 1),
+      compare: { rev: sumMape('rev'), cogs: sumMape('cogs'), sell: sumMape('sell'), admin: sumMape('admin') }, ratio, mape: Object.fromEntries(BASE.map(k => [k, detail[k].mape])), bsMape: Object.fromEntries(Object.entries(bsDet).map(([c, r]) => [c, r.mape])) };
+  }
+  return { compute, history, MODELS };
+}
+module.exports = { make, forecastSeries, MODELS };
