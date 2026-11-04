@@ -59,7 +59,8 @@ function make(db, all, get, okYm) {
     let rows = [...m.values()].map(o => {
       const nz = Object.keys(o.v).filter(k => Math.abs(o.v[k]) > 0.004).sort(), first = nz[0] || null;
       const inP = months.filter(x => Math.abs(o.v[x] || 0) > 0.004), tot = months.reduce((s, x) => s + (o.v[x] || 0), 0), avg = inP.length ? tot / inP.length : 0;
-      const gaps = d === 'location' && first && nz.length >= 2 ? months.filter(x => x >= first && Math.abs(o.v[x] || 0) <= 0.004) : [];
+      // tháng thiếu: chỉ xét mã vị trí có thật và có chi phí trong kỳ xem (mã đã chuyển hết chi phí sang mã khác / dòng "không có vị trí" không bị báo thiếu)
+      const gaps = d === 'location' && o.k && inP.length >= 1 && first && nz.length >= 2 ? months.filter(x => x >= first && Math.abs(o.v[x] || 0) <= 0.004) : [];
       const high = months.filter(x => avg > 0 && (o.v[x] || 0) > 1.8 * avg && inP.length >= 3), lim = +N[o.g] || 0, over = lim ? months.filter(x => (o.v[x] || 0) > lim) : [];
       const dm = dmap && dmap.get(o.k);
       return { k: o.k, label: o.k || D(d).none, cat: dm ? dm.code + ' – ' + (dm.name || '') : '', g: o.g, gn: gn[o.g] || o.g, v: Object.fromEntries(months.map(x => [x, o.v[x] || 0])), tot, avg, n: o.n, gaps, high, over, lim };

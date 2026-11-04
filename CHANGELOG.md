@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.31.8 – 04/11/2026
+- Sửa **Chi phí theo vị trí**: sau khi chuyển chi phí sang mã vị trí mới, dòng mã cũ / dòng "(không có vị trí)" còn hiện với tổng 0 và cả kỳ bị báo **thiếu** (do chỉ còn chi phí của 12 tháng trước kỳ). Nay chỉ báo tháng thiếu cho mã vị trí có thật **và có chi phí trong kỳ đang xem**; dòng không còn chi phí trong kỳ bị ẩn.
+- Chi phí theo xe / phòng ban: không có cảnh báo tháng thiếu nên không bị lỗi này (đã kiểm tra).
+
 ## v4.31.7 – 04/11/2026
 - Sửa: sau hộp thoại xác nhận / thông báo (vd "Đổi mã vị trí của N bút toán?"), không bấm vào ô gõ được – phải chuyển sang ứng dụng khác rồi quay lại mới hiện con trỏ (lỗi Electron trên Windows). Nay cửa sổ tự lấy lại focus bàn phím ngay sau mỗi hộp thoại.
 
