@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.31.3 – 04/11/2026
+- **Danh mục phòng ban** (tab Phòng ban và tab Ánh xạ): thêm ô 🔍 tìm nhanh dòng – gõ vài ký tự (mã, tên, tên phòng ban trong dữ liệu gốc, phòng ban đã gắn; không phân biệt hoa thường / dấu) → chỉ hiện dòng khớp. Tích "chọn tất cả" ở tab Ánh xạ chỉ chọn các dòng đang hiện. Ô chọn phòng ban danh mục vẫn có ô tìm riêng.
+
 ## v4.31.2 – 04/11/2026
 - **Điều chỉnh dữ liệu**: ô giá trị mới (hợp đồng, mã vị trí, biển số, phòng ban) đổi thành danh sách chọn có ô 🔍 tìm nhanh, kèm **(Xoá trống)** và tuỳ chọn **Nhập thủ công** cho giá trị chưa có.
 

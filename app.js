@@ -1453,7 +1453,17 @@ async function vDM(){
   if($('#dmImpR'))$('#dmImpR').onclick=async()=>{if(!confirm('Xoá toàn bộ danh mục hiện tại rồi nạp lại từ file?'))return;try{const r=await api.dmImport(kind,'replace');if(r){alert(`Đã nạp ${num(r.n)} dòng`);vDM()}}catch(e){alert(e.message)}};
   $('#dmXls').onclick=async()=>{const rows=DMF.tab==='map'?(await aq('dmDeptSources')).map(s=>({'Phòng ban dữ liệu gốc':s.src,'Phòng ban danh mục':s.code||'','Số dòng':s.n,'Từ ngày':s.f,'Đến ngày':s.l})):await aq('dmExport',kind);
     try{const f=await api.xlsxSheets(`DANH_MUC_${DMF.tab==='cost'?'KHOAN_MUC_CHI_PHI':DMF.tab==='map'?'ANH_XA_PHONG_BAN':'PHONG_BAN'}_${new Date().toISOString().slice(0,10)}.xlsx`,[['Danh muc',rows]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
-  if(DMF.tab==='dept')return dmDept();if(DMF.tab==='map')return dmMap();return dmCost();
+  if(DMF.tab==='dept')await dmDept();else if(DMF.tab==='map')await dmMap();else return dmCost();dmRowSearch();
+}
+// Ô tìm nhanh dòng cho tab Phòng ban / Ánh xạ: gõ vài ký tự → chỉ hiện dòng chứa ký tự đó (mã, tên, tên gốc, phòng ban đã gắn)
+function dmRowSearch(){const B=$('#dmIn');if(!B||B.querySelector('#dmRQ'))return;const tb=B.querySelector('tbody');if(!tb)return;
+  const nm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
+  const w=document.createElement('div');w.className='row';w.style.cssText='gap:8px;align-items:center;margin:6px 0';
+  w.innerHTML=`<input id="dmRQ" type="search" placeholder="🔍 Tìm phòng ban (mã, tên, tên trong dữ liệu gốc…)" style="width:360px" value="${esc(DMF.rq||'')}"><span id="dmRN" class="mut"></span>`;
+  const t=tb.closest('.tbl')||tb.closest('table');t.parentNode.insertBefore(w,t);
+  const go=()=>{const q=nm($('#dmRQ').value.trim());DMF.rq=$('#dmRQ').value;let n=0,all=0;for(const tr of tb.rows){all++;const txt=nm([...tr.cells].filter(c=>!c.querySelector('select')).map(c=>c.textContent).join(' ')+' '+[...tr.querySelectorAll('select')].map(x=>x.selectedOptions[0]?x.selectedOptions[0].textContent:'').join(' '));const k=!q||txt.includes(q);tr.style.display=k?'':'none';if(k)n++}
+    $('#dmRN').textContent=q?`${num(n)} / ${num(all)} dòng`:''};
+  $('#dmRQ').addEventListener('input',go);$('#dmRQ').addEventListener('change',e=>e.stopPropagation());go();
 }
 async function dmDept(){const L=await aq('dmDeptList');
   $('#dmIn').innerHTML=`<div class="hint" style="margin:8px 0">${num(L.length)} phòng ban · một phòng ban danh mục có thể gắn nhiều tên phòng ban trong dữ liệu gốc (xem / sửa ở tab "Ánh xạ").</div>`+tbl0(['Mã','Tên','Mô tả','Phòng ban dữ liệu gốc đã gắn','#Số dòng hạch toán','Ghi chú',''],L.map(d=>`<tr><td class=nw><b>${esc(d.code)}</b></td><td>${esc(d.name||'')}</td><td>${esc(d.descr||'')}</td><td style="font-size:12px">${d.maps.map(m=>`<span class="badge" title="${num(m.n)} dòng">${esc(m.src)}</span>`).join(' ')||'<span class=mut>chưa gắn</span>'}</td><td class=n>${num(d.n)}</td><td>${esc(d.note||'')}</td><td class=nw><button class="btn sm" data-dme="${esc(d.code)}">Sửa</button> <button class="btn sm ghost" data-dmd="${esc(d.code)}">${ic('x')}</button></td></tr>`),'Chưa có phòng ban');
@@ -1471,7 +1481,7 @@ async function dmMap(){const [S,D]=await Promise.all([aq('dmDeptSources'),aq('dm
     <div class="row" style="gap:8px;margin-bottom:8px;background:#FFF6F2;padding:8px 10px;border-radius:8px"><span id="dmSel" class="mut">Chưa chọn dòng</span><div style="flex:1"></div><select id="dmTo" style="max-width:360px">${opt('')}</select><button class="btn sm primary" id="dmSet" disabled>Gắn các dòng đã chọn</button></div>`+
     tbl0(['<input type="checkbox" id="dmAll">','Phòng ban trong dữ liệu gốc','#Số dòng','Từ ngày','Đến ngày','Phòng ban danh mục'],S.map((s,i)=>`<tr${s.code?'':' style="background:#FFFAEB"'}><td><input type="checkbox" data-dms="${i}"></td><td><b>${esc(s.src)}</b></td><td class=n>${num(s.n)}</td><td class=nw>${vn(s.f)}</td><td class=nw>${vn(s.l)}</td><td><select data-dmm="${i}" style="max-width:380px">${opt(s.code)}</select></td></tr>`),'Không có phòng ban trong dữ liệu');
   if(DMF.tab!=='map'||!$('#dmAuto'))return;const B=$('#dmIn'),chk=()=>{const n=B.querySelectorAll('[data-dms]:checked').length;$('#dmSel').textContent=n?`Đã chọn ${n} dòng`:'Chưa chọn dòng';$('#dmSet').disabled=!n};
-  B.onchange=async e=>{if(e.target.id==='dmAll'){B.querySelectorAll('[data-dms]').forEach(c=>c.checked=e.target.checked);return chk()}if(e.target.dataset.dms!=null)return chk();
+  B.onchange=async e=>{if(e.target.id==='dmAll'){B.querySelectorAll('[data-dms]').forEach(c=>c.checked=e.target.checked&&c.closest('tr').style.display!=='none');return chk()}if(e.target.dataset.dms!=null)return chk();
     const i=e.target.dataset.dmm;if(i==null)return;await aq('dmDeptMapSet',[S[+i].src],e.target.value);e.target.closest('tr').style.background=e.target.value?'':'#FFFAEB'};
   $('#dmSet').onclick=async()=>{const to=$('#dmTo').value;if(!to&&!confirm('Bỏ gắn các dòng đã chọn?'))return;await aq('dmDeptMapSet',[...B.querySelectorAll('[data-dms]:checked')].map(c=>S[+c.dataset.dms].src),to);vDM()};
   $('#dmAuto').onclick=async()=>{const r=await aq('dmDeptAutoMap');alert(`Đã tự gắn ${num(r.n)} tên phòng ban`);vDM()};
