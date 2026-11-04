@@ -121,7 +121,8 @@ function make(FIN, monthsFn) {
     for (const l of bsL) { if (l.lvl === 0 && /^[ABCD]$/.test(l.code)) cur = l.code; if (l.lvl === 1) sec[l.code] = cur; }
     const bsDet = {}, BF = fy.map(() => ({}));
     for (const c of L1) { if (c === '110' || sec[c] === 'D') continue; const r = forecastSeries(hist.map(x => x.B[c] || 0), h, model); bsDet[c] = r; r.f.forEach((v, i) => BF[i][c] = v); }
-    let eq = last.B['D'] || 0;
+    // số dư B01 thực tế là tại tháng cuối có dữ liệu → cộng LNST ước của các tháng còn lại của năm dở dang
+    const HL = H.at(-1); let eq = (HL.B['D'] || 0) + (HL.partial ? (HL.P.pat || 0) * (12 - HL.months) / 12 : 0);
     fcP.forEach((x, i) => { const B = BF[i]; eq += x.P.pat; for (const c of L1) if (sec[c] === 'D') B[c] = 0; const eqc = L1.find(c => sec[c] === 'D'); if (eqc) B[eqc] = eq;
       B.C = L1.filter(c => sec[c] === 'C').reduce((s, c) => s + (B[c] || 0), 0); B.D = eq; B['440'] = B.C + B.D;
       const nonCash = L1.filter(c => (sec[c] === 'A' || sec[c] === 'B') && c !== '110').reduce((s, c) => s + (B[c] || 0), 0);
@@ -171,7 +172,27 @@ function make(FIN, monthsFn) {
     const rows = months.map((ym, i) => { const P = {}; for (const k of BASE) P[k] = out[k][i];
       P.net = P.rev - P.ded; P.gp = P.net - P.cogs; P.op = P.gp + P.finInc - P.finExp - P.sell - P.admin; P.other = P.othInc - P.othExp; P.pbt = P.op + P.other; P.tax = P.pbt * er; P.pat = P.pbt - P.tax; return { ym, P }; });
     const hist = MH.slice(-24);
-    return { year: Y, method, months, rows, hist, share, annual: R.fc[0].P, hasHW: MH.length >= 24, fullYears: [...full].sort() };
+    // ---- B01 theo tháng: đi từ số dư thực tế gần nhất tới số dư dự báo cuối năm Y; vốn chủ cộng dồn LNST từng tháng; Tiền = khoản cân đối ----
+    const HA = history(), lastA = HA.at(-1), lastYm = MH.at(-1).ym, bsL = lastA.bsLines, sec = {}; let cs = null;
+    for (const l of bsL) { if (l.lvl === 0 && /^[ABCD]$/.test(l.code)) cs = l.code; if (l.lvl === 1) sec[l.code] = cs; }
+    const L1 = bsL.filter(l => l.lvl === 1).map(l => l.code), endB = R.fc[0].B, startB = lastA.B;
+    const path = []; { let [yy, mo] = lastYm.split('-').map(Number); while (true) { mo++; if (mo > 12) { mo = 1; yy++; } if (yy > Y) break; path.push(`${yy}-${String(mo).padStart(2, '0')}`); } }
+    const N = path.length, patOf = ym => { const r = rows.find(x => x.ym === ym); return r ? r.P.pat : (lastA.P.pat || 0) / 12; };
+    let eq = startB.D || 0; const eqc = L1.find(c => sec[c] === 'D');
+    const bsM = path.map((ym, i) => { const B = {}, w = (i + 1) / N;
+      for (const c of L1) { if (c === '110' || sec[c] === 'D') continue; B[c] = (startB[c] || 0) + ((endB[c] || 0) - (startB[c] || 0)) * w; }
+      eq += patOf(ym); if (eqc) B[eqc] = eq; B.D = eq;
+      B.C = L1.filter(c => sec[c] === 'C').reduce((s, c) => s + (B[c] || 0), 0); B['440'] = B.C + B.D;
+      const nonCash = L1.filter(c => (sec[c] === 'A' || sec[c] === 'B') && c !== '110').reduce((s, c) => s + (B[c] || 0), 0); B['110'] = B['440'] - nonCash;
+      B.A = L1.filter(c => sec[c] === 'A').reduce((s, c) => s + (B[c] || 0), 0); B.B = L1.filter(c => sec[c] === 'B').reduce((s, c) => s + (B[c] || 0), 0); B['270'] = B.A + B.B; return { ym, B, est: ym.slice(0, 4) < String(Y) }; });
+    // ---- Lưu chuyển tiền tệ theo tháng (gián tiếp, từ chênh lệch B01 dự báo) – ΔTiền = HĐKD + HĐĐT + HĐTC luôn khớp ----
+    const opA = L1.filter(c => sec[c] === 'A' && !['110', '120'].includes(c)), invA = L1.filter(c => c === '120' || sec[c] === 'B'), liab = L1.filter(c => sec[c] === 'C');
+    const cfM = bsM.map((x, i) => { const p = i ? bsM[i - 1].B : startB, d = c => (x.B[c] || 0) - (p[c] || 0), pat = patOf(x.ym);
+      const wc = -opA.reduce((s, c) => s + d(c), 0), lb = liab.reduce((s, c) => s + d(c), 0), cfo = pat + wc + lb, cfi = -invA.reduce((s, c) => s + d(c), 0), eqOther = d('D') - pat, cff = eqOther;
+      return { ym: x.ym, est: x.est, pat, wc, lb, cfo, cfi, cff, net: cfo + cfi + cff, open: p['110'] || 0, close: x.B['110'] || 0,
+        det: Object.fromEntries([...opA.map(c => [c, -d(c)]), ...liab.map(c => [c, d(c)]), ...invA.map(c => [c, -d(c)])]) }; });
+    return { year: Y, method, months, rows, hist, share, annual: R.fc[0].P, hasHW: MH.length >= 24, fullYears: [...full].sort(),
+      bsLines: bsL.filter(l => l.lvl <= 1), bsM, cfM, lastYm, startB, cfGroups: { opA, liab, invA } };
   }
   return { compute, history, monthly, MODELS };
 }

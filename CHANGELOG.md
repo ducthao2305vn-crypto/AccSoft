@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.36.0 – 04/11/2026
+- Dự báo theo tháng: thêm **Cân đối kế toán** và **Lưu chuyển tiền tệ** theo tháng (tab con trong "Theo tháng năm …").
+  - B01: đi từ số dư thực tế tháng gần nhất tới số dư dự báo cuối năm, gồm cả các tháng còn lại của năm nay (đánh dấu "ước"); vốn chủ cộng dồn LNST từng tháng; Tiền là khoản cân đối → Tổng tài sản = Tổng nguồn vốn từng tháng.
+  - LCTT (gián tiếp): LNST ± biến động phải thu, tồn kho, TS ngắn hạn khác, nợ phải trả (HĐKD); tài sản dài hạn, đầu tư (HĐĐT); vốn chủ ngoài LNST (HĐTC). Tiền đầu tháng + lưu chuyển thuần = Tiền cuối tháng.
+  - Xuất Excel theo tháng gồm 3 sheet KQKD / CĐKT / LCTT.
+- Dự báo năm: vốn chủ năm đầu nay cộng thêm LNST ước của các tháng còn lại năm dở dang (B01 năm và tháng khớp nhau).
+
 ## v4.35.0 – 04/11/2026
 - Dự báo tài chính: tab mới **Theo tháng năm …** – dự báo B02 cho 12 tháng của năm dự báo đầu tiên, 3 cách chia:
   - **Dự báo năm × tỷ trọng mùa vụ** (mặc định): tỷ trọng từng tháng lấy bình quân 3 năm đủ 12 tháng gần nhất → tổng 12 tháng khớp đúng dự báo năm.
