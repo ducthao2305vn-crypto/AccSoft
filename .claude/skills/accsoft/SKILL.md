@@ -463,3 +463,6 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Focus sau alert/confirm (v4.31.7)
 - Đầu `app.js` bọc `alert/confirm/prompt` → gọi `api.refocus()` (IPC `win:refocus` ở main.js: `blur(); focus(); webContents.focus()`), rồi focus lại phần tử cũ. Không dùng hộp thoại native khác mà bỏ qua wrapper này.
+
+### Lớp giao diện v4.32
+- Cuối `<style>` trong `index.html` có khối "v4.32 – lớp hoàn thiện": style chung cho mọi input/select/textarea, bảng (zebra, hover), KPI, animation trang/drawer. Không cần thêm class cho ô nhập mới. Không dùng font/ảnh từ mạng (app chạy offline).

@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.32.0 – 04/11/2026
+**Làm mới giao diện (gọn, dễ đọc, dễ thao tác) – không đổi chức năng**
+- Ô nhập / ô chọn thống nhất: bo góc, cao đều, viền rõ khi rê chuột, vòng sáng cam khi đang gõ; ô chọn có mũi tên mảnh; ô 🔍 có biểu tượng kính lúp.
+- Bảng: tiêu đề cột in hoa nhỏ, dòng xen kẽ màu nhạt, tô cam nhạt khi rê chuột, số căn đều.
+- Thẻ số liệu (KPI) bo tròn, nổi nhẹ khi rê chuột; nút có phản hồi khi bấm.
+- Hiệu ứng chuyển trang và mở cửa sổ chi tiết mượt (tự tắt nếu Windows bật "giảm hiệu ứng").
+- Thanh cuộn mảnh, menu bên mềm hơn. Toàn bộ dùng CSS / SVG nội bộ – không tải tài nguyên ngoài mạng, chạy offline.
+
 ## v4.31.8 – 04/11/2026
 - Sửa **Chi phí theo vị trí**: sau khi chuyển chi phí sang mã vị trí mới, dòng mã cũ / dòng "(không có vị trí)" còn hiện với tổng 0 và cả kỳ bị báo **thiếu** (do chỉ còn chi phí của 12 tháng trước kỳ). Nay chỉ báo tháng thiếu cho mã vị trí có thật **và có chi phí trong kỳ đang xem**; dòng không còn chi phí trong kỳ bị ẩn.
 - Chi phí theo xe / phòng ban: không có cảnh báo tháng thiếu nên không bị lỗi này (đã kiểm tra).
