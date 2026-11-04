@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.42.0 – 04/11/2026
+- Danh mục nhân viên: tab mới **Ghép đối tượng công nợ** – dò mọi đối tượng công nợ dạng mã nhân viên trong sổ (vd `VTL_HOEMP000305_Luong Van Thai`) và ghép với nhân viên trong danh mục.
+  - **Tự ghép theo họ tên** (không phân biệt hoa thường / dấu; trùng tên hoặc trùng đủ các từ, chỉ ghép khi duy nhất một người khớp); gợi ý từng dòng, bấm để nhận.
+  - Ghép / đổi / bỏ ghép thủ công từng dòng hoặc nhiều dòng; một nhân viên có thể có **nhiều mã đối tượng** (vd Ngo Van My có HOEMP000213 và HOEMP000353).
+  - Lọc chưa ghép / đã ghép, tìm kiếm; thẻ số liệu tỷ lệ đã ghép. Thông tin nhân viên hiện danh sách đối tượng công nợ đã ghép kèm số bút toán.
+
 ## v4.41.0 – 04/11/2026
 **Mô-đun mới: Danh mục nhân viên** (menu Kiểm soát → Danh mục nhân viên)
 - **Nạp file** danh sách CBCNV dạng "LIST NAME ALL STAFF OF COMPANY" (tiêu đề 2 dòng, tự nhận cột theo tên) – *thêm / cập nhật* theo mã nhân viên hoặc *thay toàn bộ*; nạp lại không mất User ERP / ghi chú / trạng thái đã sửa.

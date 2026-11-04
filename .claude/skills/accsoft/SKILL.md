@@ -484,3 +484,4 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Danh mục nhân viên (v4.41, `engine/staff.js`)
 - Bảng `staff(code PK, …FIELDS, updated_at)`. `importAoa(aoa, mode)` dò dòng tiêu đề chứa "Employee code", cột gộp "Phòng ban/Unit" = chức danh|phòng ban|đơn vị; chỉ dòng có mã chứa số + tên. `emailOf(u)`/`byUser(u)`: u dạng `USER_email` → khớp email, erp_user, code, phần trước @. IPC: READ staffList/staffEmailOf/staffByUser, WRITE staffUpsert/staffRemove/staffImport; `staff:import` (chọn file), `staff:mail` (list, subject, body – biến {name}…). UI `vStaff`, `stForm`, `stMail` (trang `staff`). Không commit dữ liệu nhân viên vào repo.
+- v4.42: bảng `staff_bp(bp PK, code, auto)`. `partners(o)` = đối tượng có `…EMP\d+` (+ đã ghép), tên = phần sau mã; `suggest` trùng tên chuẩn hoá hoặc trùng tập từ (duy nhất). `autoMatch`, `setMap(bps, code|'')`, `bpOfStaff`, `staffOfBp` (dùng cho báo cáo công nợ nhân viên sau này). UI `vStaffBp` (STF.tab='bp').
