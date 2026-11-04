@@ -238,8 +238,8 @@ async function saveXlsx(defName, wb) {
 }
 
 // Truy vấn đọc được phép gọi từ giao diện
-const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'acc335List', 'catList', 'catExport', 'catUnmatched', 'catStats', 'grpInternal', 'grpInternalRows', 'grpBalance', 'grpYears', 'grpCompanies', 'igAdjList', 'igDocLines', 'grpIntl', 'recvAnalyze', 'recvDetail', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'fcCompute', 'fcMonthly', 'fcInternal', 'locMatrix', 'locDetail', 'locList', 'locNorms', 'kqCompute', 'kqTpl', 'kqSources', 'kqMaps', 'dmDeptList', 'dmDeptSources', 'dmCostList', 'dmCostUnmatched', 'dmExport', 'faSearch', 'faContracts', 'faValues', 'faList', 'finPartnerTB', 'cfRows', 'cfAdjList', 'finDrill', 'finNotes', 'finStatus', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
-const WRITE = ['locSetNorms', 'kqSetAutoRev', 'kqAutoMap', 'kqSetMap', 'kqClearMap', 'kqSetParams', 'kqImportTpl', 'dmDeptUpsert', 'dmDeptRemove', 'dmDeptMapSet', 'dmDeptAutoMap', 'dmCostUpsert', 'dmCostRemove', 'dmImport', 'faSet', 'faRemove', 'faRebind', 'cfAdjSet', 'cfAdjRemove', 'igAdjSet', 'igAdjRemove', 'catUpsert', 'catRemove', 'catImport', 'setB09Info', 'setThresholds', 'setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
+const READ = ['meta', 'getThresholds', 'deepRecurring', 'deepVariance', 'deepAccruals', 'deepPrepaid', 'deepBenford', 'deepStaff', 'deepVendors', 'deepFx', 'acc335List', 'catList', 'catExport', 'catUnmatched', 'catStats', 'grpInternal', 'grpInternalRows', 'grpBalance', 'grpYears', 'grpCompanies', 'igAdjList', 'igDocLines', 'grpIntl', 'recvAnalyze', 'recvDetail', 'finTrial', 'finBalance', 'finIncome', 'finCash', 'staffList', 'staffEmailOf', 'staffByUser', 'fcCompute', 'fcMonthly', 'fcInternal', 'locMatrix', 'locDetail', 'locList', 'locNorms', 'kqCompute', 'kqTpl', 'kqSources', 'kqMaps', 'dmDeptList', 'dmDeptSources', 'dmCostList', 'dmCostUnmatched', 'dmExport', 'faSearch', 'faContracts', 'faValues', 'faList', 'finPartnerTB', 'cfRows', 'cfAdjList', 'finDrill', 'finNotes', 'finStatus', 'getB09Info', 'deepReversal', 'accrualSource', 'ledger', 'plRange', 'plTrend', 'analysisRange', 'analysisStatus', 'reviewPeriod', 'inventory', 'analysis', 'analysisDrill', 'errors', 'errorGroups', 'errorFacets', 'errorDetail', 'overview', 'pl', 'cost', 'aging', 'report', 'todo', 'months', 'imports', 'mailLog', 'stats'];
+const WRITE = ['staffUpsert', 'staffRemove', 'staffImport', 'locSetNorms', 'kqSetAutoRev', 'kqAutoMap', 'kqSetMap', 'kqClearMap', 'kqSetParams', 'kqImportTpl', 'dmDeptUpsert', 'dmDeptRemove', 'dmDeptMapSet', 'dmDeptAutoMap', 'dmCostUpsert', 'dmCostRemove', 'dmImport', 'faSet', 'faRemove', 'faRebind', 'cfAdjSet', 'cfAdjRemove', 'igAdjSet', 'igAdjRemove', 'catUpsert', 'catRemove', 'catImport', 'setB09Info', 'setThresholds', 'setReviewPeriod', 'setReviews', 'setStatusWhere', 'setStatusDoc', 'setMonths', 'setAllMonths'];
 
 // Thư mục chứa ứng dụng: bản Portable = nơi đặt file .exe; bản cài = thư mục cài; khi phát triển = thư mục mã nguồn
 function appDir() {
@@ -407,7 +407,19 @@ async function init() {
     }
     return res;
   });
-  handle('util:emailOf', (_e, u) => R.emailOf(u));
+  handle('util:emailOf', async (_e, u) => R.emailOf(u) || (await qa('staffEmailOf', u)) || '');
+  handle('staff:import', async (_e, mode) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file danh sách nhân viên (LIST NAME ALL STAFF)', filters: [{ name: 'Excel', extensions: ['xlsx', 'xls', 'csv'] }] });
+    if (canceled) return null;
+    const wb = R.XLSX.read(fs.readFileSync(filePaths[0]), { type: 'buffer', cellDates: true }), aoa = R.XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+    return { ...(await qa('staffImport', aoa, mode)), file: path.basename(filePaths[0]) };
+  });
+  // Gửi email tự soạn cho nhân viên: {name} {code} {position} {dept} trong tiêu đề / nội dung được thay theo từng người
+  handle('staff:mail', async (_e, list, subject, body) => {
+    const esc = t => String(t || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]), fill = (t, p) => String(t || '').replace(/\{(name|code|position|dept|unit)\}/g, (_, k) => p[k] || '');
+    const msgs = list.filter(p => p.to).map(p => ({ to: p.to, subject: fill(subject, p), html: `<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.6">${esc(fill(body, p)).replace(/\n/g, '<br>')}</div>`, employee: p.code || p.name, count: 0 }));
+    return mailer.sendAll(Q, msgs);
+  });
   handle('log:renderer', (_e, msg, stack) => log.error('Lỗi giao diện: ' + msg, stack));
   handle('log:open', () => shell.openPath(log.dir()));
   handle('log:file', () => log.file());

@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('api', {
   riskPdf: () => ipcRenderer.invoke('report:pdf'),
   kqTemplate: () => ipcRenderer.invoke('kq:template'),
   dmImport: (kind, mode) => ipcRenderer.invoke('dm:import', kind, mode),
+  staffImport: mode => ipcRenderer.invoke('staff:import', mode),
+  staffMail: (list, subject, body) => ipcRenderer.invoke('staff:mail', list, subject, body),
   catImport: mode => ipcRenderer.invoke('cat:import', mode),
   xlsxSheets: (name, sheets) => ipcRenderer.invoke('xlsx:sheets', name, sheets),
   recvXlsx: (acc, asOf, term) => ipcRenderer.invoke('report:recv', acc, asOf, term),

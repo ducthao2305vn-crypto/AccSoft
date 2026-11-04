@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.41.0 – 04/11/2026
+**Mô-đun mới: Danh mục nhân viên** (menu Kiểm soát → Danh mục nhân viên)
+- **Nạp file** danh sách CBCNV dạng "LIST NAME ALL STAFF OF COMPANY" (tiêu đề 2 dòng, tự nhận cột theo tên) – *thêm / cập nhật* theo mã nhân viên hoặc *thay toàn bộ*; nạp lại không mất User ERP / ghi chú / trạng thái đã sửa.
+- Thông tin lưu: mã, họ tên, chức danh, phòng ban, đơn vị, loại HĐ, cấp bậc, khối, lĩnh vực, trực tiếp / gián tiếp, quốc tịch, giới tính, ngày sinh, ngày vào làm, ngày hết HĐ / về nước, SĐT, email 1 / 2, **User ERP**, trạng thái, ghi chú. Không lưu CMT / hộ chiếu / NISS / hộ khẩu.
+- **Thêm / sửa / xoá** (nhấn đúp dòng để sửa; nên đặt trạng thái "Đã nghỉ" thay vì xoá để giữ lịch sử); tìm kiếm, lọc phòng ban, đơn vị, trạng thái, loại HĐ, quốc tịch; thẻ số liệu (chưa có email, HĐ hết hạn trong 60 ngày); xuất Excel.
+- **Gửi email** cho một hoặc nhiều nhân viên (qua SMTP đã cấu hình), nội dung tự soạn với biến {name} {code} {position} {dept} {unit}.
+- Gửi thư lỗi nhập liệu: người nhập ERP được tra email theo danh mục nhân viên (khớp email, User ERP, mã NV hoặc phần trước @) khi chứng từ không có sẵn email.
+
 ## v4.40.0 – 04/11/2026
 **Sửa dự báo dòng tiền: có đầu tư, khấu hao, vay**
 - Trước đây HĐĐT luôn = 0 và khấu hao không được cộng lại → dòng tiền sai. Nay theo đúng phương pháp gián tiếp:
