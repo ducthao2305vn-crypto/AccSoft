@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v4.40.0 – 04/11/2026
+**Sửa dự báo dòng tiền: có đầu tư, khấu hao, vay**
+- Trước đây HĐĐT luôn = 0 và khấu hao không được cộng lại → dòng tiền sai. Nay theo đúng phương pháp gián tiếp:
+  - **HĐKD** = LNST + **khấu hao TSCĐ** (chi phí không chi tiền) ± biến động phải thu, tồn kho, TS ngắn hạn khác, nợ phải trả (không gồm vay đầu tư).
+  - **HĐĐT** = **chi mua sắm TSCĐ** = đầu tư duy trì + kế hoạch đầu tư, ± đầu tư tài chính / XDCB / TS dài hạn khác.
+  - **HĐTC** = tiền vay / trả nợ vay đầu tư − chia lợi nhuận.
+- Khấu hao và đầu tư duy trì lấy **từ sổ**: bình quân 3 năm gần nhất của Có 214 và Nợ 211/213/241 (không tính kết chuyển giữa các TK tài sản); có ô **Đầu tư duy trì / năm** để tự nhập.
+- TSCĐ trên B01 = đầu kỳ + đầu tư (duy trì + kế hoạch) − khấu hao (hiện có + đầu tư mới).
+- Thêm tab **Lưu chuyển tiền tệ (B03)** theo năm; LCTT theo tháng cũng tính lại theo cách mới. Tiền đầu kỳ + lưu chuyển thuần = Tiền cuối kỳ.
+
 ## v4.39.1 – 04/11/2026
 - Sửa **dự báo giao dịch nội bộ ra số âm** (vd Telemor Fintech −504.238 … −8.533.619): giao dịch nội bộ không bao giờ âm (chặn tại 0) và không giảm quá 50% / năm so với năm trước.
 - Khi chỉ có < 4 năm dữ liệu (vd chọn "Dùng dữ liệu từ năm 2026" → chỉ 2025–2026), **không ngoại suy xu hướng** nữa: mọi dòng (KQKD, CĐKT, giao dịch nội bộ) giữ mức năm gần nhất và chỉ thay đổi theo % kịch bản, chi phí cố định, kế hoạch đầu tư; trang hiện cảnh báo. Trước đây hồi quy trên 2 điểm kéo số liệu đi rất xa.

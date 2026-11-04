@@ -171,8 +171,16 @@ function make(FIN, monthsFn, PC, FXS = {}) {
       else { const r = FS(hs, h, model); bsDet[c] = r; f = r.f; how = few ? 'hold' : 'model'; }
       if (nonNeg) f = f.map(v => Math.max(0, v)); bsHow[c] = how; f.forEach((v, i) => BF[i][c] = v); }
     // số dư B01 thực tế là tại tháng cuối có dữ liệu → cộng LNST ước của các tháng còn lại của năm dở dang
-    if (INV.length) { const c220 = L1.includes('220') ? '220' : L1.find(c => sec[c] === 'B'), cL = L1.find(c => sec[c] === 'C');
-      invY.forEach((t, i) => { if (c220) BF[i][c220] = (BF[i][c220] || 0) + t.capCum - t.accDep; if (cL) BF[i][cL] = (BF[i][cL] || 0) + t.loanBal; }); }
+    // TSCĐ hiện có: đầu tư duy trì & khấu hao lấy từ sổ (Nợ 211/213/241, Có 214) – bình quân 3 năm gần nhất (năm dở dang quy năm)
+    //  TSCĐ cuối năm = đầu năm + đầu tư (duy trì + kế hoạch) − khấu hao (hiện có + đầu tư mới). Khấu hao hiện có đã nằm sẵn trong giá vốn / chi phí dự báo.
+    const CD = FXS.capexDep ? FXS.capexDep() : [], cdY = y => CD.find(x => +x.y === y) || { capex: 0, dep: 0 }, cntY = {}; for (const m of monthsFn().map(m => m.ym)) cntY[m.slice(0, 4)] = (cntY[m.slice(0, 4)] || 0) + 1;
+    const cdH = hist.map(x => { const v = cdY(x.y), k = cntY[x.y] && cntY[x.y] < 12 ? 12 / cntY[x.y] : 1; return { y: x.y, capex: v.capex * k, dep: v.dep * k }; }), w3c = cdH.slice(-3);
+    const depE = w3c.length ? w3c.reduce((a, x) => a + x.dep, 0) / w3c.length : 0;
+    const maint = o.capexMaint != null && o.capexMaint !== '' && Number.isFinite(+o.capexMaint) ? +o.capexMaint : (o.capexMode === 'dep' ? depE : w3c.length ? w3c.reduce((a, x) => a + x.capex, 0) / w3c.length : 0);
+    const c220 = L1.includes('220') ? '220' : L1.find(c => sec[c] === 'B'), cL = L1.find(c => sec[c] === 'C');
+    const cap = fy.map((y, i) => { const t = INV.length ? invY[i] : { capex: 0, dep: 0, loanBal: 0 }; return { y, maint, capexNew: t.capex, capex: maint + t.capex, depE, depNew: t.dep, dep: depE + t.dep, loanBal: t.loanBal || 0 }; });
+    if (c220) { let nb = (lastB[c220] || 0); cap.forEach((t, i) => { nb = Math.max(0, nb + t.capex - t.dep); BF[i][c220] = nb; t.nbv = nb; }); bsHow[c220] = 'roll'; }
+    if (INV.length && cL) invY.forEach((t, i) => { BF[i][cL] = (BF[i][cL] || 0) + t.loanBal; });
     // Chia lợi nhuận / nộp về công ty mẹ: % LNST dương được trả ra → giảm vốn chủ và tiền
     const div = Math.min(100, Math.max(0, +o.divPct || 0)) / 100;
     const HL = H.at(-1); let eq = (HL.B['D'] || 0) + (HL.partial ? (HL.P.pat || 0) * (12 - HL.months) / 12 : 0);
@@ -180,8 +188,16 @@ function make(FIN, monthsFn, PC, FXS = {}) {
       B.C = L1.filter(c => sec[c] === 'C').reduce((s, c) => s + (B[c] || 0), 0); B.D = eq; B['440'] = B.C + B.D;
       const nonCash = L1.filter(c => (sec[c] === 'A' || sec[c] === 'B') && c !== '110').reduce((s, c) => s + (B[c] || 0), 0);
       B['110'] = B['440'] - nonCash; B.A = L1.filter(c => sec[c] === 'A').reduce((s, c) => s + (B[c] || 0), 0); B.B = L1.filter(c => sec[c] === 'B').reduce((s, c) => s + (B[c] || 0), 0); B['270'] = B.A + B.B; x.B = B; });
+    // B03 năm (gián tiếp) từ chênh lệch B01 dự báo + khấu hao, mua sắm TSCĐ, vay, chia lợi nhuận
+    const opAy = L1.filter(c => sec[c] === 'A' && !['110', '120'].includes(c)), liabY = L1.filter(c => sec[c] === 'C'), invOy = L1.filter(c => (c === '120' || sec[c] === 'B') && c !== c220);
+    const startY = { ...lastB }; const cfY = fcP.map((x, i) => { const p = i ? fcP[i - 1].B : startY, d = c => (x.B[c] || 0) - (p[c] || 0), t = cap[i], pat = x.P.pat + (i === 0 && HL.partial ? (HL.P.pat || 0) * (12 - HL.months) / 12 : 0);
+      const dLoan = t.loanBal - (i ? cap[i - 1].loanBal : 0), wc = -opAy.reduce((a, c) => a + d(c), 0), lb = liabY.reduce((a, c) => a + d(c), 0) - dLoan, dep = t.dep, capex = (c220 ? d(c220) : 0) + dep;
+      const cfo = pat + dep + wc + lb, cfi = -capex - invOy.reduce((a, c) => a + d(c), 0), div = x.P.div || 0, eqO = d('D') - pat, cff = dLoan + eqO;
+      return { y: x.y, pat, dep, wc, lb, cfo, capex, cfi, dLoan, div, cff, net: cfo + cfi + cff, open: p['110'] || 0, close: x.B['110'] || 0,
+        det: Object.fromEntries([...opAy.map(c => [c, -d(c)]), ...liabY.map(c => [c, c === liabY[0] ? d(c) - dLoan : d(c)]), ...invOy.map(c => [c, -d(c)])]) }; });
+    const cfGroupsY = { opA: opAy, liab: liabY, invA: invOy };
     const sumMape = k => (detail[k] && detail[k].models) ? Object.fromEntries(Object.entries(detail[k].models).map(([m, r]) => [m, { mape: r.mape, f: r.f, w: r.weights }])) : {};
-    return { few, inv: INV.length ? invY : null, costGuard, divPct: div * 100, fixed: FX, models: MODELS, model, h, years: hist.map(x => x.y), hist: hist.map(x => ({ y: x.y, months: x.months, partial: x.partial, P: x.P, B: x.B })), fc: fcP, incLines: lines, bsLines: bsL.filter(l => l.lvl <= 1),
+    return { cfY, cfGroupsY, cap, capHist: cdH, few, inv: INV.length ? invY : null, costGuard, divPct: div * 100, fixed: FX, models: MODELS, model, h, years: hist.map(x => x.y), hist: hist.map(x => ({ y: x.y, months: x.months, partial: x.partial, P: x.P, B: x.B })), fc: fcP, incLines: lines, bsLines: bsL.filter(l => l.lvl <= 1),
       compare: { rev: sumMape('rev'), cogs: sumMape('cogs'), sell: sumMape('sell'), admin: sumMape('admin') }, ratio, mape: Object.fromEntries(BASE.map(k => [k, detail[k].mape])), bsMape: Object.fromEntries(Object.entries(bsDet).map(([c, r]) => [c, r.mape])), bsHow, bsMode };
   }
   // ---- Dự báo theo tháng cho năm dự báo đầu tiên ----
@@ -245,12 +261,18 @@ function make(FIN, monthsFn, PC, FXS = {}) {
       B.A = L1.filter(c => sec[c] === 'A').reduce((s, c) => s + (B[c] || 0), 0); B.B = L1.filter(c => sec[c] === 'B').reduce((s, c) => s + (B[c] || 0), 0); B['270'] = B.A + B.B; return { ym, B, est: ym.slice(0, 4) < String(Y) }; });
     // ---- Lưu chuyển tiền tệ theo tháng (gián tiếp, từ chênh lệch B01 dự báo) – ΔTiền = HĐKD + HĐĐT + HĐTC luôn khớp ----
     const opA = L1.filter(c => sec[c] === 'A' && !['110', '120'].includes(c)), invA = L1.filter(c => c === '120' || sec[c] === 'B'), liab = L1.filter(c => sec[c] === 'C');
-    const cfM = bsM.map((x, i) => { const p = i ? bsM[i - 1].B : startB, d = c => (x.B[c] || 0) - (p[c] || 0), pat = patOf(x.ym);
-      const wc = -opA.reduce((s, c) => s + d(c), 0), lb = liab.reduce((s, c) => s + d(c), 0), cfo = pat + wc + lb, cfi = -invA.reduce((s, c) => s + d(c), 0), eqOther = d('D') - pat, cff = eqOther;
-      return { ym: x.ym, est: x.est, pat, wc, lb, cfo, cfi, cff, net: cfo + cfi + cff, open: p['110'] || 0, close: x.B['110'] || 0,
-        det: Object.fromEntries([...opA.map(c => [c, -d(c)]), ...liab.map(c => [c, d(c)]), ...invA.map(c => [c, -d(c)])]) }; });
+    // Khấu hao (cộng lại vào HĐKD vì không chi tiền), mua sắm TSCĐ (HĐĐT) và vay đầu tư (HĐTC) theo tháng
+    const c220 = L1.includes('220') ? '220' : null, capOf = ym => { const y = +ym.slice(0, 4), t = (R.cap || []).find(c => c.y === y); return t || { dep: (R.cap && R.cap[0] ? R.cap[0].depE : 0), maint: R.cap && R.cap[0] ? R.cap[0].maint : 0, loanBal: 0 }; };
+    const loanAt = ym => { const y = +ym.slice(0, 4), t = (R.cap || []).find(c => c.y === y); if (!t) return 0; const prevT = (R.cap || []).find(c => c.y === y - 1); const p0 = prevT ? prevT.loanBal : 0; return p0 + (t.loanBal - p0) * (+ym.slice(5, 7) / 12); };
+    const invO = invA.filter(c => c !== c220);
+    const cfM = bsM.map((x, i) => { const p = i ? bsM[i - 1].B : startB, d = c => (x.B[c] || 0) - (p[c] || 0), pat = patOf(x.ym), dep = capOf(x.ym).dep / 12;
+      const dLoan = loanAt(x.ym) - (i ? loanAt(bsM[i - 1].ym) : 0), capex = (c220 ? d(c220) : 0) + dep;
+      const wc = -opA.reduce((s, c) => s + d(c), 0), lb = liab.reduce((s, c) => s + d(c), 0) - dLoan, cfo = pat + dep + wc + lb;
+      const cfi = -capex - invO.reduce((s, c) => s + d(c), 0), div = -(d('D') - pat), cff = dLoan - div;
+      return { ym: x.ym, est: x.est, pat, dep, wc, lb, cfo, capex, cfi, dLoan, div, cff, net: cfo + cfi + cff, open: p['110'] || 0, close: x.B['110'] || 0,
+        det: Object.fromEntries([...opA.map(c => [c, -d(c)]), ...liab.map(c => [c, c === liab[0] ? d(c) - dLoan : d(c)]), ...invO.map(c => [c, -d(c)])]) }; });
     return { year: Y, method, months, rows, hist, share, annual: R.fc[0].P, hasHW: MH.length >= 24, fullYears: [...full].sort(),
-      bsLines: bsL.filter(l => l.lvl <= 1), bsM, cfM, lastYm, startB, cfGroups: { opA, liab, invA } };
+      bsLines: bsL.filter(l => l.lvl <= 1), bsM, cfM, lastYm, startB, cfGroups: { opA, liab, invA: invO } };
   }
   // ---- Dự báo giao dịch nội bộ theo công ty (dựa trên PC.internalYears: mua theo nhóm TK chi phí / hàng / tài sản, bán theo doanh thu) ----
   const ICOL = ['buy627', 'buy641', 'buy642', 'buyExpO', 'buyGoods', 'buyAsset', 'sales', 'salesAdj'];

@@ -492,7 +492,12 @@ function make(db) {
       const o = out.get(r.ym) || out.set(r.ym, { ym: r.ym, cogs: 0, sell: 0, admin: 0 }).get(r.ym); o[r.k] += sg * r.a; }
     return [...out.values()].sort((a, b) => a.ym.localeCompare(b.ym)); };
   const fixedGroups = () => [...LC.groups('location').map(g => ({ ...g, d: 'location' })), ...LC.groups('plate').map(g => ({ ...g, d: 'plate' }))];
-  const FC = require('./forecast').make(FIN, () => months(), PC, { fixedCosts, fixedGroups });
+  // Đầu tư TSCĐ (Nợ 211/213/241, không phải kết chuyển nội bộ giữa các TK tài sản) và khấu hao (Có 214) theo năm – cho dự báo dòng tiền
+  const capexDep = () => { const m = new Map(), g = y => m.get(y) || m.set(y, { y, capex: 0, dep: 0 }).get(y);
+    for (const r of all(`SELECT substr(ym,1,4) y, sum(amount) a FROM entries WHERE (acc_debit LIKE '211%' OR acc_debit LIKE '213%' OR acc_debit LIKE '241%') AND NOT (acc_credit LIKE '211%' OR acc_credit LIKE '213%' OR acc_credit LIKE '241%' OR acc_credit LIKE '214%') GROUP BY 1`)) g(r.y).capex += r.a;
+    for (const r of all(`SELECT substr(ym,1,4) y, sum(amount) a FROM entries WHERE acc_credit LIKE '214%' AND NOT (acc_debit LIKE '211%' OR acc_debit LIKE '213%' OR acc_debit LIKE '214%') GROUP BY 1`)) g(r.y).dep += r.a;
+    return [...m.values()].sort((a, b) => a.y.localeCompare(b.y)); };
+  const FC = require('./forecast').make(FIN, () => months(), PC, { fixedCosts, fixedGroups, capexDep });
   const FA = require('./fieldadj').make(db, all, (q, ...a) => db.prepare(q).run(...a), okYm, FIN);
   // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
   // Dòng trích trước của một kỳ dịch vụ (làm mẫu lập trích kỳ mới) + đánh dấu khoản đã có trích ở kỳ đích
