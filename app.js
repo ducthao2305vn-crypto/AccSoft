@@ -1536,8 +1536,8 @@ function dimDraw(d){const U=DIMU[d],F=DIMF[d],r=DIMR[d],H=$('#'+U.page),q=F.q.tr
   body=(body||`<tr><td colspan=${nc} class=mut style="text-align:center;padding:20px">Không có dữ liệu</td></tr>`)+(R.length>3000?`<tr><td colspan=${nc} class=mut style="text-align:center">… còn ${num(R.length-3000)} dòng – lọc thêm</td></tr>`:'')+(R.length?sumRow(R,'TỔNG CỘNG','data-dtot="1"'):'');
   H.innerHTML=`<div class="card"><div class="subbar"><span class="crumb">${U.title}</span><span class="hint">${U.hint}</span></div>
     <div class="filterrow"><label>Từ tháng <input type="month" id="dF_${d}" value="${F.from}"></label><label>Đến tháng <input type="month" id="dT_${d}" value="${F.to}"></label>
-      <label>Khoản mục / nhóm chi phí <select id="dmG_${d}" style="max-width:320px"><option value="">Tất cả (${r.groups.length})</option>${r.groups.map(g=>`<option value="${esc(g.k)}" ${F.g.length===1&&F.g[0]===g.k?'selected':''}>${esc(g.n)}</option>`).join('')}</select></label>
-      <label>${What} <select id="dK_${d}" style="max-width:280px"><option value="">Tất cả (${num(keysAll.length)})</option>${keysAll.map(k=>`<option value="${esc(k)}" ${F.key===k?'selected':''}>${esc(k)}</option>`).join('')}</select></label>
+      <label>Khoản mục / nhóm chi phí <select id="dmG_${d}" class="srch" data-auto="1" style="max-width:320px"><option value="">Tất cả (${r.groups.length})</option>${r.groups.map(g=>`<option value="${esc(g.k)}" ${F.g.length===1&&F.g[0]===g.k?'selected':''}>${esc(g.n)}</option>`).join('')}</select></label>
+      <label>${What} <select id="dK_${d}" class="srch" data-auto="1" style="max-width:280px"><option value="">Tất cả (${num(keysAll.length)})</option>${keysAll.map(k=>`<option value="${esc(k)}" ${F.key===k?'selected':''}>${esc(k)}</option>`).join('')}</select></label>
       <input id="dQ_${d}" placeholder="Tìm…" value="${esc(F.q)}" style="width:160px"><label><input type="checkbox" id="dO_${d}" ${F.only?'checked':''}>${isL?'Chỉ dòng có tháng thiếu':isV?'Chỉ xe vượt định mức / bất thường':'Chỉ dòng bất thường'}</label>
       <button class="btn sm primary" id="dGo_${d}">Xem</button><button class="btn sm" id="dX_${d}">${ic('download')}Xuất Excel</button></div>
     ${isV?`<div class="filterrow" style="margin-top:6px"><b style="font-size:13px">Định mức / xe / tháng:</b>${r.groups.map(g=>`<label style="font-size:12px">${esc(g.n)} <input type="number" data-vn="${esc(g.k)}" value="${r.norms[g.k]||''}" placeholder="không" style="width:90px"></label>`).join('')}<button class="btn sm" id="vnSave">Lưu định mức</button></div>`:''}</div>
@@ -1684,13 +1684,15 @@ const COLP=(()=>{
 // Tìm nhanh trong danh sách chọn dài (mã vị trí, biển số, hợp đồng, phòng ban…): gõ vài ký tự → chỉ còn các mục chứa ký tự đó; Enter để chọn
 (function(){const MIN=25,norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
   const add=sel=>{if(sel.dataset.srch||sel.multiple||(sel.options.length<MIN&&!sel.classList.contains('srch'))||!sel.parentNode)return;sel.dataset.srch=1;
-    const inp=document.createElement('input');inp.type='search';inp.placeholder='🔍 Gõ để tìm… (Enter chọn)';inp.className='selsrch';inp.style.cssText='width:150px;margin-right:4px';
+    const inp=document.createElement('input');inp.type='search';inp.placeholder=sel.dataset.auto?'🔍 Gõ để lọc…':'🔍 Gõ để tìm… (Enter chọn)';inp.className='selsrch';inp.style.cssText='width:150px;margin-right:4px';
     if(sel.classList.contains('hide'))inp.classList.add('hide');new MutationObserver(()=>inp.classList.toggle('hide',sel.classList.contains('hide'))).observe(sel,{attributes:true,attributeFilter:['class']});
     sel.parentNode.insertBefore(inp,sel);
     const filt=()=>{const q=norm(inp.value.trim());let first=null,n=0;for(const o of sel.options){const keep=!o.value||!q||norm(o.textContent+' '+o.value).includes(q);o.hidden=!keep;if(keep&&o.value&&o.value!=='__EMPTY__'){n++;if(!first)first=o}}
       inp.title=q?n+' mục khớp':'';if(q&&first)sel.value=first.value;else if(!q&&sel.dataset.v0!=null)sel.value=sel.dataset.v0;return first};
     sel.dataset.v0=sel.value;
-    let ST=0;inp.addEventListener('input',e=>{e.stopPropagation();clearTimeout(ST);ST=setTimeout(filt,120)});inp.addEventListener('change',e=>e.stopPropagation());
+    let ST=0,AT=0;inp.addEventListener('input',e=>{e.stopPropagation();clearTimeout(ST);ST=setTimeout(filt,120);
+      // ô lọc của trang (data-auto): ngừng gõ ~0,8 giây là tự áp dụng, không cần Enter
+      if(sel.dataset.auto){clearTimeout(AT);AT=setTimeout(()=>{const f=filt();const v=inp.value.trim()?(f?f.value:null):'';if(v!=null&&v!==sel.dataset.v0){sel.value=v;sel.dataset.v0=v;sel.dispatchEvent(new Event('change',{bubbles:true}))}},800)}});inp.addEventListener('change',e=>e.stopPropagation());
     inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const f=filt();if(f){sel.value=f.value;sel.dataset.v0=f.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}}else if(e.key==='Escape'){inp.value='';filt()}});
     sel.addEventListener('change',()=>{sel.dataset.v0=sel.value})};
   const scan=r=>{if(r.querySelectorAll)r.querySelectorAll('select:not([data-srch])').forEach(add)};

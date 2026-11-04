@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.33.1 – 04/11/2026
+- Sửa: **tiêu đề cột bảng biến mất khi cuộn xuống** (mọi bảng trong ứng dụng – do tính năng kéo rộng / ẩn cột ghi đè kiểu "dính" của tiêu đề). Nay tiêu đề luôn đứng yên ở đầu bảng khi cuộn.
+- Chi phí theo vị trí / xe / phòng ban: ô **Khoản mục / nhóm chi phí** có ô 🔍 riêng; ô 🔍 của cả khoản mục và mã vị trí / biển số / phòng ban **tự lọc sau khi ngừng gõ ~0,8 giây** (không cần Enter).
+
 ## v4.33.0 – 04/11/2026
 - **Chế độ tối**: nút 🌙 / ☀️ trên thanh trên cùng (ghi nhớ).
 - **Thu gọn menu**: nút ‹ cạnh logo → menu chỉ còn biểu tượng (rê chuột xem tên), bảng rộng thêm ~190px.

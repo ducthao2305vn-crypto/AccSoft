@@ -165,7 +165,7 @@ th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--gray-900)}th.s
 .filterrow{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;width:100%;padding-top:4px}
 .filterrow label{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--gray-700)}
 
-thead th{cursor:pointer;user-select:none;position:relative}thead th::before{content:'';position:absolute;right:0;top:20%;bottom:20%;width:1px;background:var(--gray-200)}.colhid{font-size:10px;color:#FA4700;font-weight:600;margin-left:4px}thead th:hover{color:#FA4700}
+thead th{cursor:pointer;user-select:none;position:sticky;top:0;z-index:3}thead th::before{content:'';position:absolute;right:0;top:20%;bottom:20%;width:1px;background:var(--gray-200)}.colhid{font-size:10px;color:#FA4700;font-weight:600;margin-left:4px}thead th:hover{color:#FA4700}
 thead th[data-sorted]::after{content:' ▲';font-size:10px;color:#FA4700}thead th[data-sorted="desc"]::after{content:' ▼'}
 #ctxMenu{position:fixed;z-index:100;background:#fff;border:1px solid var(--gray-200);border-radius:10px;box-shadow:var(--shadow-lg);padding:6px;min-width:250px;display:flex;flex-direction:column}
 #ctxMenu button{all:unset;cursor:pointer;padding:7px 10px;border-radius:6px;font-size:13px;display:flex;justify-content:space-between;gap:12px}#ctxMenu button:hover{background:#FFF6F2}#ctxMenu button span{color:var(--gray-500);font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
