@@ -126,7 +126,8 @@ function make(FIN, monthsFn, PC, FXS = {}) {
     // Chi phí cố định định kỳ (thuê trạm, điện, xăng dầu…): không lấy bình quân / xu hướng mà lấy mức chi của tháng gốc (mặc định tháng 12 gần nhất) × 12 × (1 + % tăng thêm)
     const FX = fixedPart(o, hist, fy), FXK = ['cogs', 'sell', 'admin'];
     const serX = k => FX && FXK.includes(k) ? hist.map(x => (x.P[k] || 0) - (FX.hist[x.y] ? FX.hist[x.y][k] : 0)) : ser(k);
-    for (const k of BASE) { const r = forecastSeries(serX(k), h, model); detail[k] = r; F[k] = tweak(r.f, k === 'rev' ? adj.rev : FXK.includes(k) ? adj.cost : 0); }
+    const few = hist.length < 4, FS = (y, hh, m) => few ? { f: Array(hh).fill(y.at(-1) || 0), mape: null, models: {}, pick: 'last' } : forecastSeries(y, hh, m);
+    for (const k of BASE) { const r = FS(serX(k), h, model); detail[k] = r; F[k] = tweak(r.f, k === 'rev' ? adj.rev : FXK.includes(k) ? adj.cost : 0); }
     // Mô hình "tỷ lệ % doanh thu" cho giá vốn / chi phí: tham khảo, hiển thị song song
     const revH = ser('rev'), pctOf = k => { const w = hist.slice(-3), s = w.reduce((a, x) => a + (x.P.rev || 0), 0); return s ? w.reduce((a, x) => a + (x.P[k] || 0), 0) / s : null; };
     const ratio = {}; for (const k of ['cogs', 'sell', 'admin']) { const p = pctOf(k); ratio[k] = p == null ? null : F.rev.map(v => v * p); }
@@ -167,7 +168,7 @@ function make(FIN, monthsFn, PC, FXS = {}) {
       const hs = hist.map(x => x.B[c] || 0), nonNeg = hs.every(v => v >= -0.005) || (lastB[c] || 0) >= 0; let f, how;
       if (bsMode === 'ratio' && HOLD.includes(c)) { f = fy.map(() => lastB[c] || 0); how = 'hold'; }
       else if (bsMode === 'ratio' && WC(c) && Math.abs(revS) > 1e-6 && F.rev.some(v => v)) { const rt = w3.reduce((a, x) => a + (x.B[c] || 0), 0) / revS; f = fcP.map(x => x.P.net * rt); how = 'ratio:' + rt; }
-      else { const r = forecastSeries(hs, h, model); bsDet[c] = r; f = r.f; how = 'model'; }
+      else { const r = FS(hs, h, model); bsDet[c] = r; f = r.f; how = few ? 'hold' : 'model'; }
       if (nonNeg) f = f.map(v => Math.max(0, v)); bsHow[c] = how; f.forEach((v, i) => BF[i][c] = v); }
     // số dư B01 thực tế là tại tháng cuối có dữ liệu → cộng LNST ước của các tháng còn lại của năm dở dang
     if (INV.length) { const c220 = L1.includes('220') ? '220' : L1.find(c => sec[c] === 'B'), cL = L1.find(c => sec[c] === 'C');
@@ -180,7 +181,7 @@ function make(FIN, monthsFn, PC, FXS = {}) {
       const nonCash = L1.filter(c => (sec[c] === 'A' || sec[c] === 'B') && c !== '110').reduce((s, c) => s + (B[c] || 0), 0);
       B['110'] = B['440'] - nonCash; B.A = L1.filter(c => sec[c] === 'A').reduce((s, c) => s + (B[c] || 0), 0); B.B = L1.filter(c => sec[c] === 'B').reduce((s, c) => s + (B[c] || 0), 0); B['270'] = B.A + B.B; x.B = B; });
     const sumMape = k => (detail[k] && detail[k].models) ? Object.fromEntries(Object.entries(detail[k].models).map(([m, r]) => [m, { mape: r.mape, f: r.f, w: r.weights }])) : {};
-    return { inv: INV.length ? invY : null, costGuard, divPct: div * 100, fixed: FX, models: MODELS, model, h, years: hist.map(x => x.y), hist: hist.map(x => ({ y: x.y, months: x.months, partial: x.partial, P: x.P, B: x.B })), fc: fcP, incLines: lines, bsLines: bsL.filter(l => l.lvl <= 1),
+    return { few, inv: INV.length ? invY : null, costGuard, divPct: div * 100, fixed: FX, models: MODELS, model, h, years: hist.map(x => x.y), hist: hist.map(x => ({ y: x.y, months: x.months, partial: x.partial, P: x.P, B: x.B })), fc: fcP, incLines: lines, bsLines: bsL.filter(l => l.lvl <= 1),
       compare: { rev: sumMape('rev'), cogs: sumMape('cogs'), sell: sumMape('sell'), admin: sumMape('admin') }, ratio, mape: Object.fromEntries(BASE.map(k => [k, detail[k].mape])), bsMape: Object.fromEntries(Object.entries(bsDet).map(([c, r]) => [c, r.mape])), bsHow, bsMode };
   }
   // ---- Dự báo theo tháng cho năm dự báo đầu tiên ----
@@ -265,14 +266,16 @@ function make(FIN, monthsFn, PC, FXS = {}) {
       const hist = Object.fromEntries(years.map(y => { const t = {}; for (const col of ICOL) t[col] = (c.y[y][col] || 0) * k(y); return [y, t]; }));
       const fc = fy.map(() => ({})), mp = {};
       for (const col of ICOL) { const ser = years.map(y => hist[y][col]); if (ser.every(v => Math.abs(v) < 0.005)) { fc.forEach(x => x[col] = 0); continue; }
-        const f = forecastSeries(ser, h, model); mp[col] = f.mape; if (f.mape != null) mapes.push(f.mape);
-        tw(f.f, col === 'sales' || col === 'salesAdj' ? adj.sales : adj.buy).forEach((v, i) => fc[i][col] = (o.noNeg && v < 0 && ser.at(-1) >= 0) ? 0 : v); }
+        // Ít năm (< 4) → không ngoại suy xu hướng (2 điểm kéo thẳng ra số âm / phình to): dùng mức năm gần nhất (giữ nguyên, chỉnh theo % kịch bản)
+        const few = ser.length < 4, f = few ? { f: Array(h).fill(ser.at(-1)), mape: null } : forecastSeries(ser, h, model); mp[col] = f.mape; if (f.mape != null) mapes.push(f.mape);
+        // Giao dịch nội bộ không âm: chặn tại 0; đồng thời không giảm quá 50% / năm so với năm trước (tránh rơi tự do do xu hướng)
+        let prev = ser.at(-1); tw(f.f, col === 'sales' || col === 'salesAdj' ? adj.sales : adj.buy).forEach((v, i) => { let x = Math.max(0, v); if (prev > 0 && x < prev * 0.5) x = prev * 0.5; fc[i][col] = x; prev = x; }); }
       const tot = t => { t.buyTot = t.buy627 + t.buy641 + t.buy642 + t.buyExpO + t.buyGoods + t.buyAsset; t.salesNet = t.sales - t.salesAdj; return t; };
       Object.values(hist).forEach(tot); fc.forEach(tot);
       return { key: c.key, company: c.company, kind: c.kind, hist, fc, mape: mp };
     }).filter(x => years.some(y => Math.abs(x.hist[y].buyTot) + Math.abs(x.hist[y].salesNet) > 0.005));
     const sum = (get) => { const t = {}; for (const col of [...ICOL, 'buyTot', 'salesNet']) t[col] = rows.reduce((s, x) => s + (get(x)[col] || 0), 0); return t; };
-    return { years: years.map(Number), partial: Object.fromEntries(years.map(y => [y, cnt[y] < 12 ? cnt[y] : 0])), fy, cols: r.cols, rows, model, models: MODELS,
+    return { few: years.length < 4, years: years.map(Number), partial: Object.fromEntries(years.map(y => [y, cnt[y] < 12 ? cnt[y] : 0])), fy, cols: r.cols, rows, model, models: MODELS,
       totHist: Object.fromEntries(years.map(y => [y, sum(x => x.hist[y])])), totFc: fy.map((_, i) => sum(x => x.fc[i])), mape: mapes.length ? mapes.reduce((a, b) => a + b, 0) / mapes.length : null };
   }
   return { compute, history, monthly, internal, MODELS };

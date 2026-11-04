@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.39.1 – 04/11/2026
+- Sửa **dự báo giao dịch nội bộ ra số âm** (vd Telemor Fintech −504.238 … −8.533.619): giao dịch nội bộ không bao giờ âm (chặn tại 0) và không giảm quá 50% / năm so với năm trước.
+- Khi chỉ có < 4 năm dữ liệu (vd chọn "Dùng dữ liệu từ năm 2026" → chỉ 2025–2026), **không ngoại suy xu hướng** nữa: mọi dòng (KQKD, CĐKT, giao dịch nội bộ) giữ mức năm gần nhất và chỉ thay đổi theo % kịch bản, chi phí cố định, kế hoạch đầu tư; trang hiện cảnh báo. Trước đây hồi quy trên 2 điểm kéo số liệu đi rất xa.
+
 ## v4.39.0 – 04/11/2026
 - Dự báo tài chính: **Kế hoạch đầu tư** – nhập từng khoản đầu tư (năm, nội dung, vốn, số năm khấu hao, % vay, lãi suất, chi phí vận hành %/năm, doanh thu tăng thêm/năm – để 0 nếu không tăng doanh thu):
   - KQKD: khấu hao đều + chi phí vận hành vào giá vốn, lãi vay vào chi phí tài chính, doanh thu tăng thêm (nếu có); có dòng "↳ trong đó …" để thấy riêng ảnh hưởng.
