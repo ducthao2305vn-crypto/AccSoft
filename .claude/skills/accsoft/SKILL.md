@@ -457,3 +457,6 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Tìm nhanh trong select (v4.31)
 - Cuối `app.js`: MutationObserver tự chèn `input.selsrch` trước mọi `<select>` ≥ 25 option (không multiple). Gõ → ẩn option không khớp (bỏ dấu), đặt value = mục khớp đầu (không bắn change); Enter → bắn `change`. Không cần sửa từng màn hình. Select có class `srch` luôn có ô tìm (vd `#lHdS` chọn hợp đồng); option thêm sau vẫn kích hoạt.
+
+### Hiệu năng ô tìm (v4.31.6)
+- Dùng `deb(fn, ms=250)` (đầu `app.js`) cho mọi `oninput` vẽ lại bảng; `bindFlt` đã debounce ô text. Bảng trong drawer không vẽ quá ~400 dòng một lần (nút Hiện thêm) – layout bảng 3.000 dòng mất ~1–3 giây.

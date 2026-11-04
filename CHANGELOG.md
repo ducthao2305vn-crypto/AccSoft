@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.31.6 – 04/11/2026
+**Sửa đơ khi gõ vào ô tìm kiếm**
+- Nguyên nhân: mỗi phím gõ vẽ lại ngay toàn bộ bảng (tới 3.000 dòng, ~3 giây / lần) nên phím gõ bị dồn lại.
+- Mọi ô tìm (lỗi nhập liệu, tuổi nợ, tồn kho, chi phí theo vị trí / xe / phòng ban, khoản mục, danh mục, ô 🔍 trong danh sách chọn) nay **chờ ngừng gõ ~0,25 giây** rồi mới lọc.
+- Cửa sổ chi tiết vị trí / xe / phòng ban hiện 400 dòng đầu, có nút **Hiện thêm**; "chọn tất cả" và "Đổi …" vẫn áp dụng cho toàn bộ dòng đang lọc. Đo trên dữ liệu thử: gõ 3 ký tự từ 8,7 giây xuống dưới 0,1 giây.
+
 ## v4.31.5 – 04/11/2026
 - Danh mục khoản mục chi phí: bảng **"chưa có trong danh mục"** cũng lọc theo ô 🔍 tìm (mã, tên; không phân biệt hoa thường / dấu), tiêu đề hiện số dòng khớp / tổng.
 

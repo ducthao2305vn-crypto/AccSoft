@@ -1,4 +1,6 @@
 "use strict";
+// Chờ người dùng ngừng gõ rồi mới lọc / vẽ lại (tránh đơ khi bảng lớn)
+const deb=(fn,ms=250)=>{let t=0;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),ms)}};
 // Logic giao diện AccSoft – mọi dữ liệu lấy qua window.api (SQLite ở tiến trình chính)
 // window.api do preload.js cung cấp
 // Mọi lỗi giao diện đều ghi vào nhật ký
@@ -206,7 +208,7 @@ async function loadErrTable(){
   $('#pgErr').innerHTML=`Trang <b>${p}</b> / ${num(pages)}<button class="btn sm" data-pg="-1" ${p<=1?'disabled':''}>‹ Trước</button><button class="btn sm" data-pg="1" ${p>=pages?'disabled':''}>Sau ›</button>`;
 }
 let tmr;const refilter=()=>{clearTimeout(tmr);tmr=setTimeout(()=>{OFF=0;FIL=readFil();loadErrTable()},250)};
-['#fSev','#fRule','#fUser','#fMonth','#fDept','#fGroup'].forEach(s=>$(s).onchange=refilter);['#fAcc','#fMin','#fMax','#fText'].forEach(s=>$(s).oninput=refilter);
+['#fSev','#fRule','#fUser','#fMonth','#fDept','#fGroup'].forEach(s=>$(s).onchange=refilter);['#fAcc','#fMin','#fMax','#fText'].forEach(s=>$(s).oninput=deb(refilter));
 $('#fReset').onclick=()=>{FIL={group:FIL.group};OFF=0;vErrors()};
 $('#grpTabs').onclick=e=>{const b=e.target.closest('[data-g]');if(!b)return;FIL.group=b.dataset.g;FIL.rule='';OFF=0;vErrors()};
 $('#stTabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.gone){$('#goneCard').scrollIntoView({behavior:'smooth'});return}FIL.status=b.dataset.st;OFF=0;vErrors(true)};
@@ -325,8 +327,8 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-pres
   $('#agGrp').value=P.grp;$('#agLevel').value=P.level;$('#agDim').value=P.dim;$('#agAcc').value='';await vAging(true);
   if(P.acc){const opt=[...$('#agAcc').options].find(o=>o.value===P.acc||o.value.startsWith(P.acc));if(opt){$('#agAcc').value=opt.value;vAging(false)}}});
 ['#agGrp','#agAcc'].forEach(s=>$(s).onchange=()=>vAging(false));
-$('#agFind').oninput=()=>vAging(false);
-['#agBpSel','#agBpSort'].forEach(s=>$(s).onchange=()=>{AGV.bpPick='';vAging(false)});$('#agBpQ').oninput=()=>vAging(false);
+$('#agFind').oninput=deb(()=>vAging(false));
+['#agBpSel','#agBpSort'].forEach(s=>$(s).onchange=()=>{AGV.bpPick='';vAging(false)});$('#agBpQ').oninput=deb(()=>vAging(false));
 let AGBT=0;$('#tAgBp').onclick=e=>{const tr=e.target.closest('[data-agb]');if(!tr)return;const x=AGV.bp[+tr.dataset.agb];clearTimeout(AGBT);if(e.detail>1)return;AGBT=setTimeout(()=>{AGV.bpPick=AGV.bpPick===x.bp?'':x.bp;vAging(false)},280)};
 $('#tAgBp').ondblclick=e=>{clearTimeout(AGBT);const tr=e.target.closest('[data-agb]');if(!tr)return;agBpDetail(AGV.bp[+tr.dataset.agb])};
 async function agBpDetail(x,tab='acc'){CUR=-1;const asOf=$('#asOf').value,term=+$('#term').value||0,level=$('#agLevel').value,dim0=$('#agDim').value;
@@ -353,7 +355,7 @@ async function agBpDetail(x,tab='acc'){CUR=-1;const asOf=$('#asOf').value,term=+
     const tot=Array(7).fill(0);V.forEach(o=>o.b.forEach((v,i)=>tot[i]+=v));
     $('#abT').innerHTML=tbl0(['Nhóm','TK','Tên tài khoản',...(REF?[REF]:[]),'#PS Nợ','#PS Có','#Số dư',...BUCKETS.map(b=>'#'+b),'#Tuổi tối đa','PS đầu','PS cuối'],V.map(o=>`<tr class=dbl data-agi="${o.i}"><td><span class="badge ${o.grp==='thu'?'b-L':'s-doing'}">${GRPN[o.grp]}</span></td><td class=nw><b>${esc(o.acc)}</b></td><td>${esc(o.accName)}</td>${REF?`<td class=nw title="${esc(o.ref)}">${esc(refShort(o.ref))}</td>`:''}<td class=n>${fmt2(o.dr)}</td><td class=n>${fmt2(o.cr)}</td><td class="n ${o.bal<0?'neg':''}"><b>${fmt2(o.bal)}</b></td>${o.b.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td class=n>${o.maxAge||''}</td><td class=nw>${vn(o.first)}</td><td class=nw>${vn(o.last)}</td></tr>`)
       .concat([`<tr style="font-weight:700;background:#FFF6F2"><td colspan=${REF?4:3}>Cộng (${num(V.length)} dòng)</td><td class=n>${fmt2(V.reduce((s,o)=>s+o.dr,0))}</td><td class=n>${fmt2(V.reduce((s,o)=>s+o.cr,0))}</td><td class=n>${fmt2(V.reduce((s,o)=>s+o.bal,0))}</td>${tot.map(v=>`<td class=n>${Math.abs(v)>=0.005?fmt2(v):''}</td>`).join('')}<td></td><td></td><td></td></tr>`]),'Không có số dư')};
-  $('#abQ').oninput=draw;draw();
+  $('#abQ').oninput=deb(draw);draw();
   $('#abT').ondblclick=e=>{const tr=e.target.closest('[data-agi]');if(!tr)return;const o=AGV.bpItems[+tr.dataset.agi],dim=tab==='ct'?'contract':'bp';
     openLedger(o.bp+(o.ref?' · '+refShort(o.ref):''),`TK ${o.acc} – ${o.accName} · đến ${vn(asOf)}`,{kind:'ag',acc:o.acc,bp:o.bp,dim,ref:o.ref,asOf},AGNAT(o.acc),()=>{})};
 }
@@ -403,7 +405,7 @@ async function vInv(reload=true){
 }
 ['#ivAsOf','#ivBy','#ivLevel'].forEach(s=>$(s).onchange=()=>{if(s!=='#ivAsOf')$('#ivAcc').value='';vInv(true)});
 $('#ivAcc').onchange=()=>vInv(false);
-$('#ivBp').onchange=()=>{if($('#ivBp').value&&!['bp','bp_product'].includes($('#ivBy').value)||$('#ivBp').value&&$('#ivBy').value==='bp'){$('#ivBy').value='bp_product';vInv(true)}else vInv(false)};$('#ivFind').oninput=()=>vInv(false);
+$('#ivBp').onchange=()=>{if($('#ivBp').value&&!['bp','bp_product'].includes($('#ivBy').value)||$('#ivBp').value&&$('#ivBy').value==='bp'){$('#ivBy').value='bp_product';vInv(true)}else vInv(false)};$('#ivFind').oninput=deb(()=>vInv(false));
 $('#ivFlag').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;IV.flag=b.dataset.f;$$('#ivFlag button').forEach(x=>x.classList.toggle('on',x===b));vInv(false)};
 $('#tIvSum').onclick=e=>{const tr=e.target.closest('[data-acc]');if(tr){$('#ivAcc').value=tr.dataset.acc;vInv(false);$('#tIv').scrollIntoView({behavior:'smooth'})}};
 $('#ivXls').onclick=()=>api.exportInventory($('#ivAsOf').value,$('#ivBy').value,$('#ivLevel').value,$('#ivAcc').value,$('#ivBp').value);
@@ -866,7 +868,7 @@ const plAccs=k=>PLA[k]||(PLK[k]||[]).flatMap(x=>PLA[x]);
 const uniq=a=>[...new Set(a.filter(x=>x!=null&&x!==''))].sort();
 function fltBar(id,F,defs){return `<div class="row" style="flex-wrap:wrap;gap:8px;align-items:center" id="${id}">${defs.map(d=>d.t==='q'?`<input data-ff="${d.k}" placeholder="${d.p}" style="flex:1;min-width:220px" value="${esc(F[d.k]||'')}">`:d.t==='n'?`<input data-ff="${d.k}" type="number" placeholder="${d.p}" style="width:110px" value="${esc(F[d.k]||'')}">`:
   `<select data-ff="${d.k}" style="max-width:240px"><option value="">${d.p}</option>${d.o.map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}" ${String(F[d.k]||'')===String(v)?'selected':''}>${esc(l)}</option>`}).join('')}</select>`).join('')}<button class="btn sm ghost" data-ffclr>Xoá lọc</button></div>`}
-function bindFlt(host,F,redraw){host.querySelectorAll('[data-ff]').forEach(el=>{el.addEventListener(el.tagName==='SELECT'?'change':'input',e=>{e.stopPropagation();F[el.dataset.ff]=el.value;redraw()})});
+function bindFlt(host,F,redraw){host.querySelectorAll('[data-ff]').forEach(el=>{let T=0;el.addEventListener(el.tagName==='SELECT'?'change':'input',e=>{e.stopPropagation();F[el.dataset.ff]=el.value;clearTimeout(T);if(el.tagName==='SELECT')redraw();else T=setTimeout(redraw,250)})});
   const c=host.querySelector('[data-ffclr]');if(c)c.onclick=()=>{for(const k in F)F[k]='';host.querySelectorAll('[data-ff]').forEach(el=>el.value='');redraw()}}
 const inRange=(v,mn,mx)=>(mn===''||mn==null||Math.abs(v)>=+mn)&&(mx===''||mx==null||Math.abs(v)<=+mx);
 const txt=(x,ks)=>ks.map(k=>x[k]||'').join(' ').toLowerCase();
@@ -935,7 +937,7 @@ async function kqMapDrawer(r){CUR=-1;const D=$('#drawer');D.classList.add('full'
   const draw=()=>{const q=F.q.toLowerCase(),L=leaves.filter(l=>(!F.st||(F.st==='no'?!l.map:!!l.map))&&(!q||[l.stt,l.en,l.vn,...(l.map?[...l.map.cost,...l.map.rev]:[])].some(v=>String(v||'').toLowerCase().includes(q))));
     $('#kmT').innerHTML=costL+tbl0(['Dòng','STT','Khoản mục (EN)','Khoản mục (VN)','Khoản mục chi phí (mã, cách nhau dấu phẩy)','Loại doanh thu (cách nhau dấu ;)','TK (vd 515:cr, 635:dr)',''],L.map(l=>{const m=l.map||{cost:[],rev:[],acc:[]};return `<tr data-kmr="${l.row}"${l.map?'':' style="background:#FFFAEB"'}><td>${l.row}</td><td class=nw>${esc(l.stt)}</td><td style="font-size:12px">${esc(l.en)}</td><td style="font-size:12px">${esc(l.vn)}</td>
       <td><input data-k="cost" list="kmCostL" value="${esc(m.cost.join(', '))}" style="width:220px"></td><td><input data-k="rev" list="kmRevL" value="${esc(m.rev.join('; '))}" style="width:260px"></td><td><input data-k="acc" value="${esc(m.acc.map(a=>a.p+':'+a.side).join(', '))}" style="width:130px"></td><td class=nw><button class="btn sm primary" data-kms="${l.row}">Lưu</button> <button class="btn sm ghost" data-kmc="${l.row}" title="Xoá ánh xạ">${ic('x')}</button></td></tr>`}),'Không có dòng phù hợp')};
-  draw();$('#kmQ').oninput=e=>{F.q=e.target.value;draw()};$('#kmS').onchange=e=>{e.stopPropagation();F.st=e.target.value;draw()};
+  draw();$('#kmQ').oninput=deb(e=>{F.q=e.target.value;draw()});$('#kmS').onchange=e=>{e.stopPropagation();F.st=e.target.value;draw()};
   $('#kmT').onclick=async e=>{const s=e.target.closest('[data-kms]'),c=e.target.closest('[data-kmc]');const row=+(s||c||{}).dataset?.kms||+(c||{}).dataset?.kmc;if(!s&&!c)return;
     const tr=e.target.closest('tr'),l=leaves.find(x=>x.row===(s?+s.dataset.kms:+c.dataset.kmc));
     if(c){await aq('kqClearMap',l.row);l.map=null;return draw()}
@@ -1463,7 +1465,7 @@ function dmRowSearch(){const B=$('#dmIn');if(!B||B.querySelector('#dmRQ'))return
   const t=tb.closest('.tbl')||tb.closest('table');t.parentNode.insertBefore(w,t);
   const go=()=>{const q=nm($('#dmRQ').value.trim());DMF.rq=$('#dmRQ').value;let n=0,all=0;for(const tr of tb.rows){all++;const txt=nm([...tr.cells].filter(c=>!c.querySelector('select')).map(c=>c.textContent).join(' ')+' '+[...tr.querySelectorAll('select')].map(x=>x.selectedOptions[0]?x.selectedOptions[0].textContent:'').join(' '));const k=!q||txt.includes(q);tr.style.display=k?'':'none';if(k)n++}
     $('#dmRN').textContent=q?`${num(n)} / ${num(all)} dòng`:''};
-  $('#dmRQ').addEventListener('input',go);$('#dmRQ').addEventListener('change',e=>e.stopPropagation());go();
+  $('#dmRQ').addEventListener('input',deb(go,150));$('#dmRQ').addEventListener('change',e=>e.stopPropagation());go();
 }
 async function dmDept(){const L=await aq('dmDeptList');
   $('#dmIn').innerHTML=`<div class="hint" style="margin:8px 0">${num(L.length)} phòng ban · một phòng ban danh mục có thể gắn nhiều tên phòng ban trong dữ liệu gốc (xem / sửa ở tab "Ánh xạ").</div>`+tbl0(['Mã','Tên','Mô tả','Phòng ban dữ liệu gốc đã gắn','#Số dòng hạch toán','Ghi chú',''],L.map(d=>`<tr><td class=nw><b>${esc(d.code)}</b></td><td>${esc(d.name||'')}</td><td>${esc(d.descr||'')}</td><td style="font-size:12px">${d.maps.map(m=>`<span class="badge" title="${num(m.n)} dòng">${esc(m.src)}</span>`).join(' ')||'<span class=mut>chưa gắn</span>'}</td><td class=n>${num(d.n)}</td><td>${esc(d.note||'')}</td><td class=nw><button class="btn sm" data-dme="${esc(d.code)}">Sửa</button> <button class="btn sm ghost" data-dmd="${esc(d.code)}">${ic('x')}</button></td></tr>`),'Chưa có phòng ban');
@@ -1540,7 +1542,7 @@ function dimDraw(d){const U=DIMU[d],F=DIMF[d],r=DIMR[d],H=$('#'+U.page),q=F.q.tr
     <div class="tbl" style="max-height:calc(100vh - 380px)"><table><thead><tr>${byG?`<th>Khoản mục chi phí</th><th>${What}</th>`:`<th>${What}</th>${isD?'<th>Phòng ban danh mục</th>':''}<th>Nhóm chi phí</th>`}${M.map(m=>`<th class=n>${ymLbl(m)}</th>`).join('')}<th class=n>Tổng</th><th class=n>Bình quân / tháng</th>${isL?'<th class=n>Số tháng thiếu</th>':`<th class=n>So với ${isV?'đội xe':'các phòng'}</th>`}</tr></thead><tbody>${body}</tbody></table></div></div>`;
   const rd=()=>{F.from=$('#dF_'+d).value;F.to=$('#dT_'+d).value;const v=$('#dmG_'+d).value;F.g=v?[v]:[];F.key=$('#dK_'+d).value;F.q=$('#dQ_'+d).value;F.only=$('#dO_'+d).checked};
   $('#dGo_'+d).onclick=()=>{rd();vDim(d)};$('#dmG_'+d).onchange=()=>{rd();vDim(d)};$('#dK_'+d).onchange=()=>{F.key=$('#dK_'+d).value;ls.set('dimPick_'+d,F);dimDraw(d)};
-  $('#dQ_'+d).oninput=()=>{F.q=$('#dQ_'+d).value;dimDraw(d);const e=$('#dQ_'+d);e.focus();e.setSelectionRange(e.value.length,e.value.length)};$('#dO_'+d).onchange=()=>{F.only=$('#dO_'+d).checked;dimDraw(d)};
+  $('#dQ_'+d).oninput=deb(()=>{F.q=$('#dQ_'+d).value;dimDraw(d);const e=$('#dQ_'+d);e.focus();e.setSelectionRange(e.value.length,e.value.length)});$('#dO_'+d).onchange=()=>{F.only=$('#dO_'+d).checked;dimDraw(d)};
   if(isV)$('#vnSave').onclick=async()=>{const o={};H.querySelectorAll('[data-vn]').forEach(x=>{if(+x.value>0)o[x.dataset.vn]=+x.value});await aq('locSetNorms',o);vDim(d)};
   H.querySelector('tbody').ondblclick=e=>{const td=e.target.closest('[data-dm]'),tr=e.target.closest('tr');if(!td||!tr)return;const m=td.dataset.dm,fr=m||F.from,to=m||F.to;
     if(tr.dataset.dri!=null)return dimDetail(d,r.rows[+tr.dataset.dri],fr,to);
@@ -1558,11 +1560,11 @@ async function dimDetail(d,o,from,to){const U=DIMU[d];CUR=-1;const Dw=$('#drawer
       <select id="dmTo" style="max-width:360px"><option value="">— Chọn ${U.what} đúng (${num(vals.length)}) —</option><option value="__EMPTY__">(Xoá trống)</option>${vals.map(v=>`<option value="${esc(v.v)}">${esc(v.v)}${v.cat?' → '+esc(v.cat):''} · ${num(v.n)} dòng</option>`).join('')}</select>
       <input id="dmNew" class="hide" placeholder="Nhập ${U.what} mới" style="width:200px"><label style="display:flex;gap:4px;align-items:center;font-size:13px"><input type="checkbox" id="dmMan">Nhập thủ công</label><input id="dmNote" placeholder="Ghi chú" style="width:150px">
       <button class="btn sm primary" id="dmApply" disabled>Đổi ${U.what}</button><button class="btn sm ghost" id="dmUndo" disabled>Trả về giá trị gốc</button></div><div id="dmTb" style="margin-top:8px"></div></div>`;
-  let cur=[];
-  const draw=()=>{const q=F.q.toLowerCase();cur=rows.filter(x=>(!F.m||x.ym===F.m)&&(!q||[x.doc,x.ds,x.bp,x.bpCr,x.u].some(v=>String(v||'').toLowerCase().includes(q))));
+  let cur=[],LIM=400;
+  const draw=(more)=>{if(!more)LIM=400;const q=F.q.toLowerCase();cur=rows.filter(x=>(!F.m||x.ym===F.m)&&(!q||[x.doc,x.ds,x.bp,x.bpCr,x.u].some(v=>String(v||'').toLowerCase().includes(q))));
     $('#dmSum').textContent=`${num(cur.length)} / ${num(rows.length)} bút toán · chi phí ${fmt2(cur.reduce((s,x)=>s+x.v,0))}`;
-    $('#dmTb').innerHTML=`<div class="tbl" style="max-height:calc(100vh - 300px)"><table><thead><tr><th><input type="checkbox" id="dmAll"></th><th>Ngày</th><th>Chứng từ</th><th>TK Nợ</th><th>TK Có</th><th>Khoản mục</th><th>Đối tượng</th><th class=n>Chi phí</th><th>${esc(U.what[0].toUpperCase()+U.what.slice(1))}${d==='dept'?' (Department Sub)':''}</th>${d==='dept'?'<th>Department (hạch toán)</th>':''}<th>Diễn giải</th><th>Người nhập</th></tr></thead><tbody>${cur.slice(0,3000).map((x,i)=>`<tr class=dbl data-eid="${x.id}"><td><input type="checkbox" data-dmi="${i}" ${sel.has(x.id)?'checked':''}></td><td class=nw>${vn(x.d)}</td><td class=nw>${esc(x.doc)}</td><td><div class="clamp s">${esc(x.drName||x.dr)}</div></td><td><div class="clamp s">${esc(x.crName||x.cr)}</div></td><td style="font-size:12px"><div class="clamp s" title="${esc(x.t)}">${esc(x.t)}</div></td><td><div class="clamp s" title="${esc(x.bpCr||x.bp||'')}">${esc(x.bpCr||x.bp||'')}</div></td><td class=n>${fmt2(x.v)}</td><td style="font-size:12px">${x.newVal!=null?`<div class=mut style="text-decoration:line-through">${esc(x.orig||'(trống)')}</div><span class="badge b-H">${esc(x.newVal||'(trống)')}</span>`:esc(x.orig||'')}</td>${d==='dept'?`<td style="font-size:12px" class="${x.deptAcc!==(x.newVal??x.orig)?'neg':''}">${esc(x.deptAcc||'')}</td>`:''}<td><div class=clamp title="${esc(x.ds)}">${esc(x.ds)}</div></td><td class=nw>${esc(short(x.u))}</td></tr>`).join('')||'<tr><td colspan=11 class=mut style="text-align:center;padding:20px">Không có bút toán</td></tr>'}</tbody></table></div>`;
-    $('#dmAll').onchange=e=>{cur.slice(0,3000).forEach(x=>e.target.checked?sel.add(x.id):sel.delete(x.id));draw()};$('#dmAll').checked=cur.length>0&&cur.slice(0,3000).every(x=>sel.has(x.id));upd()};
+    $('#dmTb').innerHTML=`<div class="tbl" style="max-height:calc(100vh - 300px)"><table><thead><tr><th><input type="checkbox" id="dmAll"></th><th>Ngày</th><th>Chứng từ</th><th>TK Nợ</th><th>TK Có</th><th>Khoản mục</th><th>Đối tượng</th><th class=n>Chi phí</th><th>${esc(U.what[0].toUpperCase()+U.what.slice(1))}${d==='dept'?' (Department Sub)':''}</th>${d==='dept'?'<th>Department (hạch toán)</th>':''}<th>Diễn giải</th><th>Người nhập</th></tr></thead><tbody>${cur.slice(0,LIM).map((x,i)=>`<tr class=dbl data-eid="${x.id}"><td><input type="checkbox" data-dmi="${i}" ${sel.has(x.id)?'checked':''}></td><td class=nw>${vn(x.d)}</td><td class=nw>${esc(x.doc)}</td><td><div class="clamp s">${esc(x.drName||x.dr)}</div></td><td><div class="clamp s">${esc(x.crName||x.cr)}</div></td><td style="font-size:12px"><div class="clamp s" title="${esc(x.t)}">${esc(x.t)}</div></td><td><div class="clamp s" title="${esc(x.bpCr||x.bp||'')}">${esc(x.bpCr||x.bp||'')}</div></td><td class=n>${fmt2(x.v)}</td><td style="font-size:12px">${x.newVal!=null?`<div class=mut style="text-decoration:line-through">${esc(x.orig||'(trống)')}</div><span class="badge b-H">${esc(x.newVal||'(trống)')}</span>`:esc(x.orig||'')}</td>${d==='dept'?`<td style="font-size:12px" class="${x.deptAcc!==(x.newVal??x.orig)?'neg':''}">${esc(x.deptAcc||'')}</td>`:''}<td><div class=clamp title="${esc(x.ds)}">${esc(x.ds)}</div></td><td class=nw>${esc(short(x.u))}</td></tr>`).join('')||'<tr><td colspan=11 class=mut style="text-align:center;padding:20px">Không có bút toán</td></tr>'}${cur.length>LIM?`<tr><td colspan=12 style="text-align:center;padding:10px"><button class="btn sm" id="dmMore">Hiện thêm ${num(Math.min(1000,cur.length-LIM))} dòng (đang hiện ${num(LIM)} / ${num(cur.length)})</button> <span class=mut>· tích "chọn tất cả" vẫn chọn đủ ${num(cur.length)} dòng đang lọc</span></td></tr>`:''}</tbody></table></div>`;if($('#dmMore'))$('#dmMore').onclick=()=>{LIM+=1000;draw(true)};
+    $('#dmAll').onchange=e=>{cur.forEach(x=>e.target.checked?sel.add(x.id):sel.delete(x.id));draw()};$('#dmAll').checked=cur.length>0&&cur.every(x=>sel.has(x.id));upd()};
   const tgt=()=>sel.size?rows.filter(x=>sel.has(x.id)):cur;
   const upd=()=>{$('#dmSel').textContent=sel.size?`Đã chọn ${num(sel.size)} dòng`:`Chưa chọn dòng → áp dụng cho cả ${num(cur.length)} dòng đang lọc`;$('#dmApply').disabled=!tgt().length;$('#dmUndo').disabled=!tgt().some(x=>x.newVal!=null)};
   bindFlt($('#dmDF'),F,draw);draw();
@@ -1684,7 +1686,7 @@ const COLP=(()=>{
     const filt=()=>{const q=norm(inp.value.trim());let first=null,n=0;for(const o of sel.options){const keep=!o.value||!q||norm(o.textContent+' '+o.value).includes(q);o.hidden=!keep;if(keep&&o.value&&o.value!=='__EMPTY__'){n++;if(!first)first=o}}
       inp.title=q?n+' mục khớp':'';if(q&&first)sel.value=first.value;else if(!q&&sel.dataset.v0!=null)sel.value=sel.dataset.v0;return first};
     sel.dataset.v0=sel.value;
-    inp.addEventListener('input',e=>{e.stopPropagation();filt()});inp.addEventListener('change',e=>e.stopPropagation());
+    let ST=0;inp.addEventListener('input',e=>{e.stopPropagation();clearTimeout(ST);ST=setTimeout(filt,120)});inp.addEventListener('change',e=>e.stopPropagation());
     inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const f=filt();if(f){sel.value=f.value;sel.dataset.v0=f.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}}else if(e.key==='Escape'){inp.value='';filt()}});
     sel.addEventListener('change',()=>{sel.dataset.v0=sel.value})};
   const scan=r=>{if(r.querySelectorAll)r.querySelectorAll('select:not([data-srch])').forEach(add)};
