@@ -456,4 +456,4 @@ await p.evaluate(()=>window.api.q('stats'));
 4. Không tạo PR nếu người dùng không yêu cầu.
 
 ### Tìm nhanh trong select (v4.31)
-- Cuối `app.js`: MutationObserver tự chèn `input.selsrch` trước mọi `<select>` ≥ 25 option (không multiple). Gõ → ẩn option không khớp (bỏ dấu), đặt value = mục khớp đầu (không bắn change); Enter → bắn `change`. Không cần sửa từng màn hình.
+- Cuối `app.js`: MutationObserver tự chèn `input.selsrch` trước mọi `<select>` ≥ 25 option (không multiple). Gõ → ẩn option không khớp (bỏ dấu), đặt value = mục khớp đầu (không bắn change); Enter → bắn `change`. Không cần sửa từng màn hình. Select có class `srch` luôn có ô tìm (vd `#lHdS` chọn hợp đồng); option thêm sau vẫn kích hoạt.

@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.31.1 – 04/11/2026
+- Ô **chọn hợp đồng** (sổ chi tiết công nợ / tuổi nợ theo hợp đồng) luôn có ô 🔍 tìm nhanh, kể cả khi danh sách ít mục.
+- Sửa: danh sách nạp sau (bất đồng bộ) trước đây không hiện ô tìm – nay tự gắn khi danh sách được điền.
+
 ## v4.31.0 – 03/11/2026
 - **Tìm nhanh trong danh sách chọn dài** (mã vị trí, biển số, hợp đồng, phòng ban, đối tượng…): mọi danh sách từ 25 mục trở lên có thêm ô 🔍 bên cạnh. Gõ vài ký tự (không phân biệt hoa thường / dấu) → danh sách chỉ còn mục chứa ký tự đó và tự chọn mục đầu tiên; **Enter** để chốt, **Esc** để xoá tìm.
 

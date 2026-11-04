@@ -571,7 +571,7 @@ async function openLedger(title,sub,spec,nat=1,after){
    ${fltBar('lF',F,[{t:'q',k:'q',p:'Tìm chứng từ, diễn giải, đối tượng, người nhập…'},{k:'side',p:'Nợ & Có',o:[['dr','Phát sinh Nợ'],['cr','Phát sinh Có']]},{k:'ctr',p:'Mọi TK đối ứng',o:uniq(rows.map(ctrOf))},{k:'ym',p:'Mọi tháng',o:uniq(rows.map(r=>String(r.date).slice(0,7))).map(m=>[m,ymLbl(m)])},
      ...(REF?[{k:'ref',p:'Mọi '+REF[1].toLowerCase(),o:uniq(rows.map(r=>r[REF[0]]||'(trống)')).slice(0,2000).map(v=>[v,refShort(v)])}]:[]),{k:'err',p:'Tất cả dòng',o:[['1','Chỉ dòng có lỗi']]},{t:'n',k:'min',p:'Số tiền từ'},{t:'n',k:'max',p:'đến'}])}
    ${canC?`<div class="row" style="flex-wrap:wrap;gap:8px;align-items:center;background:#FFF6F2;padding:8px 10px;border-radius:8px;margin-top:8px"><b id="lSum"></b><div style="flex:1"></div><span id="lSel" class="mut">Chưa chọn dòng</span>
-     <select id="lHdS" style="max-width:420px"><option value="">Đang tải hợp đồng của đối tượng…</option></select><input id="lHd" class="hide" placeholder="Nhập hợp đồng mới" style="width:240px">
+     <select id="lHdS" class="srch" style="max-width:420px"><option value="">Đang tải hợp đồng của đối tượng…</option></select><input id="lHd" class="hide" placeholder="Nhập hợp đồng mới" style="width:240px">
      <label style="display:flex;gap:4px;align-items:center;font-size:13px"><input type="checkbox" id="lHdM">Nhập thủ công</label><input id="lNote" placeholder="Ghi chú" style="width:150px">
      <button class="btn sm primary" id="lHdGo" disabled>Đổi hợp đồng</button></div>`:'<div id="lSum" style="margin:8px 0;font-weight:600"></div>'}
    <div id="lT" style="margin-top:8px"></div></div></div>`;
@@ -1662,7 +1662,7 @@ const COLP=(()=>{
 
 // Tìm nhanh trong danh sách chọn dài (mã vị trí, biển số, hợp đồng, phòng ban…): gõ vài ký tự → chỉ còn các mục chứa ký tự đó; Enter để chọn
 (function(){const MIN=25,norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
-  const add=sel=>{if(sel.dataset.srch||sel.multiple||sel.options.length<MIN||!sel.parentNode)return;sel.dataset.srch=1;
+  const add=sel=>{if(sel.dataset.srch||sel.multiple||(sel.options.length<MIN&&!sel.classList.contains('srch'))||!sel.parentNode)return;sel.dataset.srch=1;
     const inp=document.createElement('input');inp.type='search';inp.placeholder='🔍 Gõ để tìm… (Enter chọn)';inp.className='selsrch';inp.style.cssText='width:150px;margin-right:4px';
     if(sel.classList.contains('hide'))inp.classList.add('hide');new MutationObserver(()=>inp.classList.toggle('hide',sel.classList.contains('hide'))).observe(sel,{attributes:true,attributeFilter:['class']});
     sel.parentNode.insertBefore(inp,sel);
@@ -1673,5 +1673,5 @@ const COLP=(()=>{
     inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const f=filt();if(f){sel.value=f.value;sel.dataset.v0=f.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}}else if(e.key==='Escape'){inp.value='';filt()}});
     sel.addEventListener('change',()=>{sel.dataset.v0=sel.value})};
   const scan=r=>{if(r.querySelectorAll)r.querySelectorAll('select:not([data-srch])').forEach(add)};
-  new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.tagName==='SELECT')add(n);else scan(n)}}).observe(document.documentElement,{childList:true,subtree:true});
+  new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.tagName==='SELECT')add(n);else if(n.tagName==='OPTION'||n.tagName==='OPTGROUP'){const sl=n.closest('select');if(sl)add(sl)}else scan(n)}}).observe(document.documentElement,{childList:true,subtree:true});
   document.addEventListener('DOMContentLoaded',()=>scan(document));})();
