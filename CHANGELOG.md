@@ -1,5 +1,14 @@
 # Lịch sử phiên bản
 
+## v4.38.1 – 04/11/2026
+- Sửa **dự báo Cân đối kế toán ra số âm** (đầu tư tài chính, XDCB dở dang… bị ngoại suy xu hướng xuống dưới 0). Phương pháp mới (mặc định, theo cách lập kế hoạch):
+  - Vốn lưu động – phải thu, tồn kho, TS ngắn hạn khác, nợ phải trả = **tỷ lệ % trên doanh thu thuần** bình quân 3 năm gần nhất × doanh thu dự báo.
+  - Đầu tư tài chính ngắn / dài hạn, XDCB dở dang, TS dài hạn khác: **giữ số dư cuối kỳ gần nhất** (quyết định đầu tư, không ngoại suy).
+  - TSCĐ: mô hình chuỗi thời gian. Mọi khoản chưa từng âm trong lịch sử **không được dự báo âm**.
+  - Cột cuối ghi rõ cách tính từng khoản; Tiền (khoản cân đối) âm được cảnh báo "thiếu tiền – cần vay / góp vốn".
+  - Vẫn chọn được cách cũ "Theo mô hình chuỗi thời gian từng khoản" (đã chặn âm).
+- KQKD: các dòng chưa từng âm (doanh thu, giá vốn, chi phí tài chính, bán hàng, quản lý…) không còn bị dự báo âm.
+
 ## v4.38.0 – 04/11/2026
 - Dự báo KQKD: **chi phí cố định định kỳ** (thuê trạm BTS / phòng máy / cột, thuê văn phòng – nhà nghỉ – cửa hàng – kho – đất, điện trạm & điện văn phòng, xăng dầu máy phát, xăng dầu xe, thuê xe, khấu hao phương tiện) được **tách riêng**: dự báo = chi phí của **tháng gốc × 12 × (1 + % tăng thêm)**, không lấy bình quân / xu hướng như các chi phí khác.
   - Tháng gốc: tháng 12 gần nhất (mặc định) / tháng gần nhất có dữ liệu / bình quân 3 tháng gần nhất; % tăng thêm mỗi năm; chọn nhóm chi phí tính là cố định (theo danh mục nhóm của báo cáo chi phí theo vị trí / xe).

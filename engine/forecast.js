@@ -132,6 +132,8 @@ function make(FIN, monthsFn, PC, FXS = {}) {
     const ratio = {}; for (const k of ['cogs', 'sell', 'admin']) { const p = pctOf(k); ratio[k] = p == null ? null : F.rev.map(v => v * p); }
     if (o.costByRatio) for (const k of ['cogs', 'sell', 'admin']) { const w = hist.slice(-3), sr = w.reduce((a, x) => a + (x.P.rev || 0), 0), p = sr ? w.reduce((a, x) => a + (x.P[k] || 0) - (FX && FX.hist[x.y] ? FX.hist[x.y][k] : 0), 0) / sr : null; if (p != null) F[k] = tweak(F.rev.map(v => v * p), adj.cost); }
     if (FX) for (const k of FXK) F[k] = F[k].map((v, i) => v + FX.fc[i][k]);
+    // dòng B02 chưa từng âm (doanh thu, giá vốn, chi phí tài chính, bán hàng…) không dự báo âm
+    for (const k of BASE) if (ser(k).every(v => v >= -0.005)) F[k] = F[k].map(v => Math.max(0, v));
     const T = i => { const g = x => F[x][i]; const net = g('rev') - g('ded'), gp = net - g('cogs'), op = gp + g('finInc') - g('finExp') - g('sell') - g('admin'), other = g('othInc') - g('othExp'), pbt = op + other;
       const er = (() => { const w = hist.slice(-3).filter(x => (x.P.pbt || 0) > 0); const s = w.reduce((a, x) => a + x.P.pbt, 0); return s ? Math.max(0, Math.min(0.5, w.reduce((a, x) => a + (x.P.tax || 0), 0) / s)) : 0.2; })();
       const tax = pbt > 0 ? pbt * er : 0; return { net, gp, op, other, pbt, tax, pat: pbt - tax, er }; };
@@ -140,7 +142,20 @@ function make(FIN, monthsFn, PC, FXS = {}) {
     const L1 = bsL.filter(l => l.lvl === 1).map(l => l.code), sec = {}; let cur = null;
     for (const l of bsL) { if (l.lvl === 0 && /^[ABCD]$/.test(l.code)) cur = l.code; if (l.lvl === 1) sec[l.code] = cur; }
     const bsDet = {}, BF = fy.map(() => ({}));
-    for (const c of L1) { if (c === '110' || sec[c] === 'D') continue; const r = forecastSeries(hist.map(x => x.B[c] || 0), h, model); bsDet[c] = r; r.f.forEach((v, i) => BF[i][c] = v); }
+    // Phương pháp B01 (mặc định 'ratio' – cách lập kế hoạch thường dùng):
+    //  • vốn lưu động (phải thu 130, tồn kho 140, TS ngắn hạn khác 150, nợ phải trả mục C) = tỷ lệ / doanh thu thuần bình quân 3 năm gần nhất × doanh thu dự báo
+    //  • đầu tư tài chính (120, 250), XDCB dở dang (240), TS dài hạn khác (260): giữ bằng số dư cuối kỳ gần nhất (là quyết định đầu tư, không ngoại suy)
+    //  • TSCĐ (220) và các khoản khác: mô hình chuỗi thời gian
+    //  Mọi khoản chưa từng âm trong lịch sử thì không được dự báo âm (chặn tại 0).
+    const bsMode = o.bsMode === 'model' ? 'model' : 'ratio', HOLD = ['120', '250', '240', '260'], WC = c => ['130', '140', '150'].includes(c) || sec[c] === 'C';
+    const lastB = H.at(-1).B, w3 = hist.slice(-3), revS = w3.reduce((a, x) => a + (x.P.net || 0), 0);
+    const bsHow = {};
+    for (const c of L1) { if (c === '110' || sec[c] === 'D') continue;
+      const hs = hist.map(x => x.B[c] || 0), nonNeg = hs.every(v => v >= -0.005) || (lastB[c] || 0) >= 0; let f, how;
+      if (bsMode === 'ratio' && HOLD.includes(c)) { f = fy.map(() => lastB[c] || 0); how = 'hold'; }
+      else if (bsMode === 'ratio' && WC(c) && Math.abs(revS) > 1e-6 && F.rev.some(v => v)) { const rt = w3.reduce((a, x) => a + (x.B[c] || 0), 0) / revS; f = fcP.map(x => x.P.net * rt); how = 'ratio:' + rt; }
+      else { const r = forecastSeries(hs, h, model); bsDet[c] = r; f = r.f; how = 'model'; }
+      if (nonNeg) f = f.map(v => Math.max(0, v)); bsHow[c] = how; f.forEach((v, i) => BF[i][c] = v); }
     // số dư B01 thực tế là tại tháng cuối có dữ liệu → cộng LNST ước của các tháng còn lại của năm dở dang
     const HL = H.at(-1); let eq = (HL.B['D'] || 0) + (HL.partial ? (HL.P.pat || 0) * (12 - HL.months) / 12 : 0);
     fcP.forEach((x, i) => { const B = BF[i]; eq += x.P.pat; for (const c of L1) if (sec[c] === 'D') B[c] = 0; const eqc = L1.find(c => sec[c] === 'D'); if (eqc) B[eqc] = eq;
@@ -149,7 +164,7 @@ function make(FIN, monthsFn, PC, FXS = {}) {
       B['110'] = B['440'] - nonCash; B.A = L1.filter(c => sec[c] === 'A').reduce((s, c) => s + (B[c] || 0), 0); B.B = L1.filter(c => sec[c] === 'B').reduce((s, c) => s + (B[c] || 0), 0); B['270'] = B.A + B.B; x.B = B; });
     const sumMape = k => (detail[k] && detail[k].models) ? Object.fromEntries(Object.entries(detail[k].models).map(([m, r]) => [m, { mape: r.mape, f: r.f, w: r.weights }])) : {};
     return { fixed: FX, models: MODELS, model, h, years: hist.map(x => x.y), hist: hist.map(x => ({ y: x.y, months: x.months, partial: x.partial, P: x.P, B: x.B })), fc: fcP, incLines: lines, bsLines: bsL.filter(l => l.lvl <= 1),
-      compare: { rev: sumMape('rev'), cogs: sumMape('cogs'), sell: sumMape('sell'), admin: sumMape('admin') }, ratio, mape: Object.fromEntries(BASE.map(k => [k, detail[k].mape])), bsMape: Object.fromEntries(Object.entries(bsDet).map(([c, r]) => [c, r.mape])) };
+      compare: { rev: sumMape('rev'), cogs: sumMape('cogs'), sell: sumMape('sell'), admin: sumMape('admin') }, ratio, mape: Object.fromEntries(BASE.map(k => [k, detail[k].mape])), bsMape: Object.fromEntries(Object.entries(bsDet).map(([c, r]) => [c, r.mape])), bsHow, bsMode };
   }
   // ---- Dự báo theo tháng cho năm dự báo đầu tiên ----
   let MC = null;
