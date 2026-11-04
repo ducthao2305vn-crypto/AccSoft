@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.43.0 – 04/11/2026
+**Mô-đun mới: Công nợ tạm ứng theo nhân viên & đối chiếu** (menu Phân tích → Công nợ tạm ứng)
+- Theo TK 141 (hoặc 1411 / 1412): số dư đầu kỳ, tạm ứng (Nợ), hoàn ứng / quyết toán (Có), số dư cuối kỳ cho từng nhân viên – gộp mọi mã đối tượng của cùng một người theo *Danh mục nhân viên → Ghép đối tượng công nợ*; đối tượng chưa ghép vẫn hiện riêng (tô vàng).
+- Khoản tạm ứng **còn treo** tính FIFO (hoàn ứng trừ khoản cũ nhất), tuổi ≤ 30 / 31–60 / 61–90 / > 90 ngày, khoản cũ nhất; lọc còn số dư / quá hạn / chưa xác nhận / chưa ghép, phòng ban, tìm kiếm; tổng khớp số dư TK 141 trên sổ.
+- Nhấn đúp nhân viên: sổ chi tiết tạm ứng có số dư luỹ kế, danh sách khoản còn treo (chứng từ, đề nghị tạm ứng, nội dung, số ngày).
+- **Đối chiếu**: xuất **biên bản đối chiếu** Excel (biên bản + khoản còn treo + sổ chi tiết; nhiều nhân viên → mỗi người 1 sheet); **gửi email đối chiếu** riêng cho từng nhân viên kèm file biên bản; theo dõi trạng thái *Đã gửi / Đã xác nhận / Có chênh lệch*, số dư nhân viên xác nhận và chênh lệch so với sổ.
+- Xuất báo cáo công nợ tạm ứng Excel.
+
 ## v4.42.0 – 04/11/2026
 - Danh mục nhân viên: tab mới **Ghép đối tượng công nợ** – dò mọi đối tượng công nợ dạng mã nhân viên trong sổ (vd `VTL_HOEMP000305_Luong Van Thai`) và ghép với nhân viên trong danh mục.
   - **Tự ghép theo họ tên** (không phân biệt hoa thường / dấu; trùng tên hoặc trùng đủ các từ, chỉ ghép khi duy nhất một người khớp); gợi ý từng dòng, bấm để nhận.
