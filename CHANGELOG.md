@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.31.5 – 04/11/2026
+- Danh mục khoản mục chi phí: bảng **"chưa có trong danh mục"** cũng lọc theo ô 🔍 tìm (mã, tên; không phân biệt hoa thường / dấu), tiêu đề hiện số dòng khớp / tổng.
+
 ## v4.31.4 – 04/11/2026
 - **Danh mục khoản mục chi phí**: ô 🔍 tìm nhanh – gõ liên tục không bị mất con trỏ (trước đây mỗi lần lọc lại phải bấm lại vào ô); tìm thêm theo **nhóm chi phí** ngoài mã, tên, mô tả, tiếng Việt, KD1.
 
