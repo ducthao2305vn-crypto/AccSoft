@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   q: (name, ...args) => ipcRenderer.invoke('q', name, ...args),
+  refocus: () => ipcRenderer.invoke('win:refocus'),
   logError: (msg, stack) => ipcRenderer.invoke('log:renderer', msg, stack),
   openLogs: () => ipcRenderer.invoke('log:open'),
   info: () => ipcRenderer.invoke('app:info'),

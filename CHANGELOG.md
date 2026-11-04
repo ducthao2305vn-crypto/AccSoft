@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.31.7 – 04/11/2026
+- Sửa: sau hộp thoại xác nhận / thông báo (vd "Đổi mã vị trí của N bút toán?"), không bấm vào ô gõ được – phải chuyển sang ứng dụng khác rồi quay lại mới hiện con trỏ (lỗi Electron trên Windows). Nay cửa sổ tự lấy lại focus bàn phím ngay sau mỗi hộp thoại.
+
 ## v4.31.6 – 04/11/2026
 **Sửa đơ khi gõ vào ô tìm kiếm**
 - Nguyên nhân: mỗi phím gõ vẽ lại ngay toàn bộ bảng (tới 3.000 dòng, ~3 giây / lần) nên phím gõ bị dồn lại.

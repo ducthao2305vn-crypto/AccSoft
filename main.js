@@ -274,6 +274,8 @@ async function init() {
   log.init(path.join(path.dirname(dbFile), 'logs'));
   log.info(`Khởi động AccSoft ${app.getVersion()}`, { dbFile, appDir: appDir(), platform: process.platform, arch: process.arch, electron: process.versions.electron, packaged: app.isPackaged, ...dbInfo });
   const handle = (ch, fn) => ipcMain.handle(ch, async (...a) => { try { return await fn(...a); } catch (e) { log.error(`Lỗi khi xử lý "${ch}"`, e); throw e; } });
+  // Windows: sau alert/confirm cửa sổ mất focus bàn phím (không gõ được tới khi chuyển ứng dụng) → trả lại focus
+  ipcMain.handle('win:refocus', e => { const w = BrowserWindow.fromWebContents(e.sender); if (w && !w.isDestroyed()) { w.blur(); w.focus(); w.webContents.focus(); } return true; });
   const r = open(dbFile, { cleanup: true });
   dbHandle = r.db;
   Q = make(r.db);

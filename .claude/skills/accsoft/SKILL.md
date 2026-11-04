@@ -460,3 +460,6 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Hiệu năng ô tìm (v4.31.6)
 - Dùng `deb(fn, ms=250)` (đầu `app.js`) cho mọi `oninput` vẽ lại bảng; `bindFlt` đã debounce ô text. Bảng trong drawer không vẽ quá ~400 dòng một lần (nút Hiện thêm) – layout bảng 3.000 dòng mất ~1–3 giây.
+
+### Focus sau alert/confirm (v4.31.7)
+- Đầu `app.js` bọc `alert/confirm/prompt` → gọi `api.refocus()` (IPC `win:refocus` ở main.js: `blur(); focus(); webContents.focus()`), rồi focus lại phần tử cũ. Không dùng hộp thoại native khác mà bỏ qua wrapper này.

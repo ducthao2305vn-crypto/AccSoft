@@ -1,4 +1,8 @@
 "use strict";
+// Sau hộp thoại alert / confirm / prompt (Windows) trả lại focus bàn phím cho cửa sổ, tránh phải chuyển ứng dụng mới gõ được
+(()=>{const fix=()=>{const el=document.activeElement;try{window.api&&api.refocus&&api.refocus().then(()=>{if(el&&el!==document.body&&el.isConnected)el.focus()})}catch{}};
+  for(const k of ['alert','confirm','prompt']){const o=window[k];if(typeof o!=='function')continue;window[k]=function(...a){const r=o.apply(window,a);setTimeout(fix,0);return r}}
+})();
 // Chờ người dùng ngừng gõ rồi mới lọc / vẽ lại (tránh đơ khi bảng lớn)
 const deb=(fn,ms=250)=>{let t=0;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),ms)}};
 // Logic giao diện AccSoft – mọi dữ liệu lấy qua window.api (SQLite ở tiến trình chính)
