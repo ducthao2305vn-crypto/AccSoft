@@ -484,7 +484,15 @@ function make(db) {
   const DM = require('./catalogs').make(db, all, get, (q, ...a) => db.prepare(q).run(...a));
   const KQ = require('./kqkd').make(db, all, get, (q, ...a) => db.prepare(q).run(...a), okYm, (f, t) => plBy(`'x'`, f, t, true)[0] || null);
   const LC = require('./loccost').make(db, all, get, okYm);
-  const FC = require('./forecast').make(FIN, () => months(), PC);
+  // Chi phí cố định định kỳ (thuê trạm, điện, xăng dầu, thuê văn phòng…) theo tháng × dòng B02 (giá vốn 62x/632, bán hàng 641, quản lý 642) – dùng cho dự báo
+  const FXC = `CASE WHEN instr(e.type_of_cost,'_')>0 THEN substr(e.type_of_cost,1,instr(e.type_of_cost,'_')-1) ELSE e.type_of_cost END`;
+  const fixedCosts = (codes) => { if (!codes.length) return []; const ph = codes.map(() => '?').join(','), out = new Map();
+    for (const [side, sg] of [['debit', 1], ['credit', -1]]) for (const r of all(`SELECT e.ym, CASE WHEN e.acc_${side} LIKE '641%' THEN 'sell' WHEN e.acc_${side} LIKE '642%' THEN 'admin' ELSE 'cogs' END k, sum(e.amount) a FROM entries e
+        WHERE (e.acc_${side} LIKE '62%' OR e.acc_${side} LIKE '632%' OR e.acc_${side} LIKE '641%' OR e.acc_${side} LIKE '642%') AND ${FXC} IN (${ph}) GROUP BY 1,2`, ...codes)) {
+      const o = out.get(r.ym) || out.set(r.ym, { ym: r.ym, cogs: 0, sell: 0, admin: 0 }).get(r.ym); o[r.k] += sg * r.a; }
+    return [...out.values()].sort((a, b) => a.ym.localeCompare(b.ym)); };
+  const fixedGroups = () => [...LC.groups('location').map(g => ({ ...g, d: 'location' })), ...LC.groups('plate').map(g => ({ ...g, d: 'plate' }))];
+  const FC = require('./forecast').make(FIN, () => months(), PC, { fixedCosts, fixedGroups });
   const FA = require('./fieldadj').make(db, all, (q, ...a) => db.prepare(q).run(...a), okYm, FIN);
   // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
   // Dòng trích trước của một kỳ dịch vụ (làm mẫu lập trích kỳ mới) + đánh dấu khoản đã có trích ở kỳ đích

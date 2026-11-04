@@ -78,8 +78,24 @@ function forecastSeries(y, h, model) {
   return { pick, f: res[pick].f, mape: res[pick].mape, models: res };
 }
 
-function make(FIN, monthsFn, PC) {
-  let HC = null;
+function make(FIN, monthsFn, PC, FXS = {}) {
+  let HC = null, FXC = null;
+  const FIXDEF = g => g.d === 'location' || (g.d === 'plate' && ['fuel', 'rent', 'dep'].includes(g.k));
+  function fixedMonths(codes) { const key = codes.join(','); if (FXC && FXC.key === key && Date.now() - FXC.t < 15 * 60e3) return FXC.v; const v = FXS.fixedCosts ? FXS.fixedCosts(codes) : []; FXC = { key, t: Date.now(), v }; return v; }
+  function fixedPart(o, hist, fy) {
+    if (o.fixed === false || !FXS.fixedGroups) return null;
+    const G = FXS.fixedGroups(), keys = Array.isArray(o.fixedKeys) && o.fixedKeys.length ? o.fixedKeys : G.filter(FIXDEF).map(g => g.d + ':' + g.k);
+    const sel = G.filter(g => keys.includes(g.d + ':' + g.k)), codes = [...new Set(sel.flatMap(g => g.codes))].sort();
+    const M = fixedMonths(codes), yms = monthsFn().map(m => m.ym).sort(); if (!M.length) return { groups: G.map(g => ({ key: g.d + ':' + g.k, n: g.n, d: g.d, on: keys.includes(g.d + ':' + g.k) })), hist: {}, fc: fy.map(() => ({ cogs: 0, sell: 0, admin: 0 })), base: null, empty: true };
+    const get = ym => M.find(x => x.ym === ym) || { ym, cogs: 0, sell: 0, admin: 0 }, cnt = {}; for (const m of yms) cnt[m.slice(0, 4)] = (cnt[m.slice(0, 4)] || 0) + 1;
+    const H = {}; for (const x of hist) { const t = { cogs: 0, sell: 0, admin: 0 }; for (const m of yms.filter(m => m.startsWith(String(x.y)))) { const v = get(m); t.cogs += v.cogs; t.sell += v.sell; t.admin += v.admin; } const k = cnt[x.y] < 12 ? 12 / cnt[x.y] : 1; for (const c in t) t[c] *= k; H[x.y] = t; }
+    const mode = ['dec', 'last', 'avg3'].includes(o.fixedBase) ? o.fixedBase : 'dec', decs = yms.filter(m => m.endsWith('-12'));
+    let bm = mode === 'dec' && decs.length ? [decs.at(-1)] : mode === 'avg3' ? yms.slice(-3) : [yms.at(-1)];
+    const base = { cogs: 0, sell: 0, admin: 0 }; for (const m of bm) { const v = get(m); for (const c in base) base[c] += v[c] / bm.length; }
+    const by = +bm.at(-1).slice(0, 4), g = (+o.fixedG || 0) / 100;
+    const fc = fy.map(y => { const f = Math.pow(1 + g, Math.max(1, y - by)); return { cogs: base.cogs * 12 * f, sell: base.sell * 12 * f, admin: base.admin * 12 * f }; });
+    return { groups: G.map(x => ({ key: x.d + ':' + x.k, n: x.n, d: x.d, on: keys.includes(x.d + ':' + x.k) })), mode, baseMonths: bm, base, g: +o.fixedG || 0, hist: H, fc, months: M };
+  }
   // Lịch sử theo năm: B02 cả năm (năm dở dang quy đổi 12 tháng) + B01 số dư cuối năm
   function history(force) {
     const yms = monthsFn().map(m => m.ym).sort();
@@ -107,11 +123,15 @@ function make(FIN, monthsFn, PC) {
     const ser = k => hist.map(x => x.P[k] || 0), tweak = (arr, pct) => pct ? arr.map((v, i) => v * Math.pow(1 + pct / 100, i + 1)) : arr;
     // 1) Doanh thu thuần & các dòng gốc dự báo trực tiếp; 2) dòng tổng tính lại theo công thức B02 cho khớp
     const BASE = ['rev', 'ded', 'cogs', 'finInc', 'finExp', 'sell', 'admin', 'othInc', 'othExp'], detail = {}, F = {};
-    for (const k of BASE) { const r = forecastSeries(ser(k), h, model); detail[k] = r; F[k] = tweak(r.f, k === 'rev' ? adj.rev : ['cogs', 'sell', 'admin'].includes(k) ? adj.cost : 0); }
+    // Chi phí cố định định kỳ (thuê trạm, điện, xăng dầu…): không lấy bình quân / xu hướng mà lấy mức chi của tháng gốc (mặc định tháng 12 gần nhất) × 12 × (1 + % tăng thêm)
+    const FX = fixedPart(o, hist, fy), FXK = ['cogs', 'sell', 'admin'];
+    const serX = k => FX && FXK.includes(k) ? hist.map(x => (x.P[k] || 0) - (FX.hist[x.y] ? FX.hist[x.y][k] : 0)) : ser(k);
+    for (const k of BASE) { const r = forecastSeries(serX(k), h, model); detail[k] = r; F[k] = tweak(r.f, k === 'rev' ? adj.rev : FXK.includes(k) ? adj.cost : 0); }
     // Mô hình "tỷ lệ % doanh thu" cho giá vốn / chi phí: tham khảo, hiển thị song song
     const revH = ser('rev'), pctOf = k => { const w = hist.slice(-3), s = w.reduce((a, x) => a + (x.P.rev || 0), 0); return s ? w.reduce((a, x) => a + (x.P[k] || 0), 0) / s : null; };
     const ratio = {}; for (const k of ['cogs', 'sell', 'admin']) { const p = pctOf(k); ratio[k] = p == null ? null : F.rev.map(v => v * p); }
-    if (o.costByRatio) for (const k of ['cogs', 'sell', 'admin']) if (ratio[k]) F[k] = tweak(ratio[k], adj.cost);
+    if (o.costByRatio) for (const k of ['cogs', 'sell', 'admin']) { const w = hist.slice(-3), sr = w.reduce((a, x) => a + (x.P.rev || 0), 0), p = sr ? w.reduce((a, x) => a + (x.P[k] || 0) - (FX && FX.hist[x.y] ? FX.hist[x.y][k] : 0), 0) / sr : null; if (p != null) F[k] = tweak(F.rev.map(v => v * p), adj.cost); }
+    if (FX) for (const k of FXK) F[k] = F[k].map((v, i) => v + FX.fc[i][k]);
     const T = i => { const g = x => F[x][i]; const net = g('rev') - g('ded'), gp = net - g('cogs'), op = gp + g('finInc') - g('finExp') - g('sell') - g('admin'), other = g('othInc') - g('othExp'), pbt = op + other;
       const er = (() => { const w = hist.slice(-3).filter(x => (x.P.pbt || 0) > 0); const s = w.reduce((a, x) => a + x.P.pbt, 0); return s ? Math.max(0, Math.min(0.5, w.reduce((a, x) => a + (x.P.tax || 0), 0) / s)) : 0.2; })();
       const tax = pbt > 0 ? pbt * er : 0; return { net, gp, op, other, pbt, tax, pat: pbt - tax, er }; };
@@ -128,7 +148,7 @@ function make(FIN, monthsFn, PC) {
       const nonCash = L1.filter(c => (sec[c] === 'A' || sec[c] === 'B') && c !== '110').reduce((s, c) => s + (B[c] || 0), 0);
       B['110'] = B['440'] - nonCash; B.A = L1.filter(c => sec[c] === 'A').reduce((s, c) => s + (B[c] || 0), 0); B.B = L1.filter(c => sec[c] === 'B').reduce((s, c) => s + (B[c] || 0), 0); B['270'] = B.A + B.B; x.B = B; });
     const sumMape = k => (detail[k] && detail[k].models) ? Object.fromEntries(Object.entries(detail[k].models).map(([m, r]) => [m, { mape: r.mape, f: r.f, w: r.weights }])) : {};
-    return { models: MODELS, model, h, years: hist.map(x => x.y), hist: hist.map(x => ({ y: x.y, months: x.months, partial: x.partial, P: x.P, B: x.B })), fc: fcP, incLines: lines, bsLines: bsL.filter(l => l.lvl <= 1),
+    return { fixed: FX, models: MODELS, model, h, years: hist.map(x => x.y), hist: hist.map(x => ({ y: x.y, months: x.months, partial: x.partial, P: x.P, B: x.B })), fc: fcP, incLines: lines, bsLines: bsL.filter(l => l.lvl <= 1),
       compare: { rev: sumMape('rev'), cogs: sumMape('cogs'), sell: sumMape('sell'), admin: sumMape('admin') }, ratio, mape: Object.fromEntries(BASE.map(k => [k, detail[k].mape])), bsMape: Object.fromEntries(Object.entries(bsDet).map(([c, r]) => [c, r.mape])) };
   }
   // ---- Dự báo theo tháng cho năm dự báo đầu tiên ----
@@ -160,8 +180,13 @@ function make(FIN, monthsFn, PC) {
       // tỷ trọng mùa vụ: bình quân tỷ trọng từng tháng trong các năm đủ 12 tháng (3 năm gần nhất); thiếu năm đủ → chia đều
       const ys = [...full].sort().slice(-3), sh = Array(12).fill(0); let used = 0;
       for (const y of ys) { const vs = MH.filter(x => x.ym.startsWith(y)).map(x => x.P[k] || 0), tot = vs.reduce((s, v) => s + v, 0); if (Math.abs(tot) < 1e-6) continue; vs.forEach((v, i) => sh[i] += v / tot); used++; }
-      const S = used ? sh.map(v => v / used) : Array(12).fill(1 / 12); share[k] = S;
-      const annual = R.fc[0].P[k] || 0, a1 = S.map(v => annual * v);
+      let S = used ? sh.map(v => v / used) : Array(12).fill(1 / 12);
+      const FXr = R.fixed && ['cogs', 'sell', 'admin'].includes(k) && !R.fixed.empty ? R.fixed : null, fx0 = FXr ? FXr.fc[0][k] : 0;
+      if (FXr) { // tỷ trọng mùa vụ tính trên phần chi phí KHÔNG cố định; phần cố định chia đều 12 tháng
+        const sh2 = Array(12).fill(0); let u2 = 0; for (const y of ys) { const vs = MH.filter(x => x.ym.startsWith(y)).map(x => (x.P[k] || 0) - ((FXr.months.find(m => m.ym === x.ym) || {})[k] || 0)), tot = vs.reduce((s, v) => s + v, 0); if (Math.abs(tot) < 1e-6) continue; vs.forEach((v, i) => sh2[i] += v / tot); u2++; }
+        S = u2 ? sh2.map(v => v / u2) : Array(12).fill(1 / 12); }
+      share[k] = S;
+      const annual = R.fc[0].P[k] || 0, a1 = FXr ? S.map(v => (annual - fx0) * v + fx0 / 12) : S.map(v => annual * v);
       // Holt-Winters: chuỗi tháng đến hết dữ liệu, dự báo tới hết năm Y
       const ser = MH.map(x => x.P[k] || 0), lastYm = MH.at(-1).ym, gap = (Y - +lastYm.slice(0, 4)) * 12 - +lastYm.slice(5, 7);
       const hwf = hw(ser, gap + 12), a2 = hwf ? hwf.slice(gap, gap + 12) : null;

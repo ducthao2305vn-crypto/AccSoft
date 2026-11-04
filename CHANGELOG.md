@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.38.0 – 04/11/2026
+- Dự báo KQKD: **chi phí cố định định kỳ** (thuê trạm BTS / phòng máy / cột, thuê văn phòng – nhà nghỉ – cửa hàng – kho – đất, điện trạm & điện văn phòng, xăng dầu máy phát, xăng dầu xe, thuê xe, khấu hao phương tiện) được **tách riêng**: dự báo = chi phí của **tháng gốc × 12 × (1 + % tăng thêm)**, không lấy bình quân / xu hướng như các chi phí khác.
+  - Tháng gốc: tháng 12 gần nhất (mặc định) / tháng gần nhất có dữ liệu / bình quân 3 tháng gần nhất; % tăng thêm mỗi năm; chọn nhóm chi phí tính là cố định (theo danh mục nhóm của báo cáo chi phí theo vị trí / xe).
+  - Tách theo dòng B02 (giá vốn 62x/632, bán hàng 641, quản lý 642); bảng hiện dòng "↳ trong đó cố định định kỳ". Phần chi phí còn lại vẫn dự báo bằng mô hình đã chọn.
+  - Dự báo theo tháng: phần cố định chia đều 12 tháng, chỉ phần còn lại theo mùa vụ.
+- Sửa: biểu đồ dự báo có lúc trắng – nay vẽ sau khi khung hiển thị xong và tự vẽ lại; nếu lỗi sẽ báo rõ thay vì để trống.
+
 ## v4.37.0 – 04/11/2026
 - Dự báo tài chính: tab mới **Giao dịch nội bộ** – dự báo giao dịch với từng đơn vị nội bộ cho các năm tới (cùng số năm, mô hình, "dùng dữ liệu từ năm" như trang dự báo).
   - Chỉ tiêu giống báo cáo nội bộ theo năm: mua ghi 627 / 641 / 642 / chi phí khác, mua hàng hoá vật tư, mua tài sản – XDCB – trả trước, tổng mua, bán (doanh thu), giảm trừ, bán thuần; mỗi chỉ tiêu × mỗi công ty dự báo riêng, tổng tính lại.
