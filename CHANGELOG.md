@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.45.0 – 04/11/2026
+- Công nợ tạm ứng: **Backup money** (tạm ứng duy trì, mặc định 12 tháng).
+  - Nhấn đúp nhân viên → mục **💼 Backup money** liệt kê các khoản tạm ứng **số tiền chẵn** (tích "Hiện mọi khoản tạm ứng" để xem tất cả); tích chọn khoản là backup money rồi **Lưu**.
+  - Khoản backup **không tính quá hạn** theo hạn thường (vd 30 ngày); hoàn ứng / quyết toán trừ vào **các khoản tạm ứng thường trước**, chỉ phần dư mới trừ vào backup → tuổi nợ, quá hạn tính tiếp đúng cho các giao dịch khác.
+  - Backup chỉ quá hạn khi vượt số tháng backup (ô "Backup money … tháng" trên thanh lọc). Bảng có cột **Backup money** (đỏ nếu quá hạn backup); xuất Excel có thêm cột backup.
+
 ## v4.44.0 – 04/11/2026
 **Mô-đun mới: Danh mục chủ nhà trạm** (menu Phân tích → Chủ nhà trạm)
 - Tự lấy từ sổ: chủ nhà = đối tượng **Có 331** trong bút toán **Nợ 24211**; đã trả = **Nợ 331 / Có 112**; còn phải trả = số dư 331 của đối tượng.

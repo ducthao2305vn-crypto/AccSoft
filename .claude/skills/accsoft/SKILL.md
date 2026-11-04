@@ -491,3 +491,4 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Chủ nhà trạm (v4.44, `engine/landlord.js`)
 - `scan(o)`: đối tượng Có 331 khi Nợ 24211 (gộp theo partner_credit), paid Nợ 331/Có 11x, bal 331; site regex `[A-Z]{2}\d{4}` từ partner/contract/bts_site/location/diễn giải; period `dd/mm/yyyy - dd/mm/yyyy`, rate `$x/month` hoặc `$x * n months`. Bảng `landlord(bp PK, site, bank_acc, bank_name, acc_holder, phone, address, contract_end, rent_month, status, note)` ghi đè. IPC READ llScan/llDetail, WRITE llSave/llClear/llImport, `ll:import`. UI `vLL`, `llForm` (trang `landl`).
+- v4.45: bảng `adv_backup(id = entries.id của dòng Nợ 141, key, note)`; `fifo(L, asOf, BK)` 2 hàng đợi (thường / backup), Có 141 trừ hàng thường trước rồi backup; report `bkAmt, bkOver` (quá `backupMonths`×30.4 ngày); detail `advances` (round = chẵn chục), `bkItems`; WRITE `advSetBackup(ids, key, on)`.
