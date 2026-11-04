@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('api', {
   riskPdf: () => ipcRenderer.invoke('report:pdf'),
   kqTemplate: () => ipcRenderer.invoke('kq:template'),
   dmImport: (kind, mode) => ipcRenderer.invoke('dm:import', kind, mode),
+  llImport: () => ipcRenderer.invoke('ll:import'),
   advReconBook: (keys, o) => ipcRenderer.invoke('adv:reconBook', keys, o),
   advReconMail: (keys, o) => ipcRenderer.invoke('adv:reconMail', keys, o),
   staffImport: mode => ipcRenderer.invoke('staff:import', mode),

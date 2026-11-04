@@ -488,3 +488,6 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Công nợ tạm ứng (v4.43, `engine/advance.js`)
 - `lines(acc, asOf, bps)` hai phía Nợ/Có TK 141x; gộp theo `staff_bp` (key `S:<mã NV>` hoặc `P:<đối tượng>`); `fifo` khoản treo + tuổi; `report(o)` / `detail(key,o)`; bảng `adv_recon(key, as_of, status sent|confirmed|disputed, amount, confirmed, note, sent_to)`. main: `adv:reconBook` (biên bản xlsx, ≤60 NV), `adv:reconMail` (thư + đính kèm, set 'sent'). UI `vAdv`, `advDetail`, `advMail` (trang `adv`). `askText()` thay `prompt()` (Electron không hỗ trợ).
+
+### Chủ nhà trạm (v4.44, `engine/landlord.js`)
+- `scan(o)`: đối tượng Có 331 khi Nợ 24211 (gộp theo partner_credit), paid Nợ 331/Có 11x, bal 331; site regex `[A-Z]{2}\d{4}` từ partner/contract/bts_site/location/diễn giải; period `dd/mm/yyyy - dd/mm/yyyy`, rate `$x/month` hoặc `$x * n months`. Bảng `landlord(bp PK, site, bank_acc, bank_name, acc_holder, phone, address, contract_end, rent_month, status, note)` ghi đè. IPC READ llScan/llDetail, WRITE llSave/llClear/llImport, `ll:import`. UI `vLL`, `llForm` (trang `landl`).

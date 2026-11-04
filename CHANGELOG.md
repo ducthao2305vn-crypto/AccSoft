@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.44.0 – 04/11/2026
+**Mô-đun mới: Danh mục chủ nhà trạm** (menu Phân tích → Chủ nhà trạm)
+- Tự lấy từ sổ: chủ nhà = đối tượng **Có 331** trong bút toán **Nợ 24211**; đã trả = **Nợ 331 / Có 112**; còn phải trả = số dư 331 của đối tượng.
+- Tự rút: tên chủ nhà, mã nhà cung cấp, **mã nhà trạm** (vd AN0002 – từ tên đối tượng, hợp đồng, diễn giải), **hợp đồng thuê** (cột Contract), **kỳ thuê gần nhất** và ngày hết hạn, **giá thuê / tháng** (đọc "$40/month", "$60 * 6 months" trong diễn giải), ngày trả gần nhất.
+- **Số tài khoản, ngân hàng, chủ tài khoản, SĐT, địa chỉ** (sổ không có): nhập tay (nhấn đúp) hoặc **nạp từ file Excel** (khớp theo mã đối tượng / mã NCC / mã trạm / tên); có thể sửa mã trạm, ngày hết hạn, giá thuê, ghi chú.
+- Lọc: chưa có số tài khoản, chưa có mã trạm, còn công nợ, kỳ thuê sắp / đã hết hạn (số ngày tự đặt); sổ công nợ 331 từng chủ nhà; xuất Excel.
+
 ## v4.43.0 – 04/11/2026
 **Mô-đun mới: Công nợ tạm ứng theo nhân viên & đối chiếu** (menu Phân tích → Công nợ tạm ứng)
 - Theo TK 141 (hoặc 1411 / 1412): số dư đầu kỳ, tạm ứng (Nợ), hoàn ứng / quyết toán (Có), số dư cuối kỳ cho từng nhân viên – gộp mọi mã đối tượng của cùng một người theo *Danh mục nhân viên → Ghép đối tượng công nợ*; đối tượng chưa ghép vẫn hiện riêng (tô vàng).
