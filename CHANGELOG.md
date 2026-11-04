@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.33.2 – 04/11/2026
+- Sửa: cùng một mã vị trí / biển số / phòng ban hiện thành **2 dòng** (vd "211026_Guest House Suai Cov_Ain Branch") – do dữ liệu gốc có khoảng trắng thừa / ký tự trắng ẩn (dấu cách đầu-cuối, NBSP, tab, xuống dòng, 2 dấu cách). Nay mọi mã được chuẩn hoá khoảng trắng trước khi gộp, nên mã giống nhau gộp về một dòng; danh sách chọn cũng không còn mã trùng.
+
 ## v4.33.1 – 04/11/2026
 - Sửa: **tiêu đề cột bảng biến mất khi cuộn xuống** (mọi bảng trong ứng dụng – do tính năng kéo rộng / ẩn cột ghi đè kiểu "dính" của tiêu đề). Nay tiêu đề luôn đứng yên ở đầu bảng khi cuộn.
 - Chi phí theo vị trí / xe / phòng ban: ô **Khoản mục / nhóm chi phí** có ô 🔍 riêng; ô 🔍 của cả khoản mục và mã vị trí / biển số / phòng ban **tự lọc sau khi ngừng gõ ~0,8 giây** (không cần Enter).

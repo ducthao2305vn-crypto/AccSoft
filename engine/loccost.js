@@ -34,7 +34,10 @@ const monthsOf = (f, t) => { const o = []; for (let m = f; m <= t; m = addM(m, 1
 
 function make(db, all, get, okYm) {
   const D = d => DIMS[d] || DIMS.location;
-  const VAL = d => `coalesce(f.value, ${D(d).col}, '')`, FJ = d => `LEFT JOIN field_adj f ON f.id=e.id AND f.field='${D(d).f}'`;
+  // chuẩn hoá khoảng trắng (đầu/cuối, NBSP, tab, xuống dòng, 2 dấu cách) để cùng một mã không bị tách thành 2 dòng
+  const NORM = x => `trim(replace(replace(replace(replace(replace(replace(${x}, char(160), ' '), char(9), ' '), char(13), ' '), char(10), ' '), '  ', ' '), '  ', ' '))`;
+  const nz = v => String(v ?? '').replace(/[\u00a0\t\r\n]/g, ' ').replace(/ {2,}/g, ' ').trim();
+  const VAL = d => NORM(`coalesce(f.value, ${D(d).col}, '')`), FJ = d => `LEFT JOIN field_adj f ON f.id=e.id AND f.field='${D(d).f}'`;
   const setting = (k, def) => { const s = get(`SELECT v FROM settings WHERE k=?`, k); try { return s && s.v ? JSON.parse(s.v) : def; } catch { return def; } };
   // Nhóm chi phí: vị trí / xe theo danh sách mã; phòng ban theo Expense Group của danh mục khoản mục
   function groups(d) {
@@ -55,7 +58,7 @@ function make(db, all, get, okYm) {
         const key = r.k + '|' + g, o = m.get(key) || m.set(key, { k: r.k || '', g, v: {}, n: 0 }).get(key); o.v[r.ym] = (o.v[r.ym] || 0) + sg * r.a; o.n += r.n; }
     const months = monthsOf(f, t), gn = Object.fromEntries(G.map(g => [g.k, g.n])), N = d === 'plate' ? norms() : {};
     // phòng ban: tên theo danh mục phòng ban (ánh xạ)
-    const dmap = isDept ? new Map(all(`SELECT m.src, d.code, d.name FROM dept_map m JOIN dept_cat d ON d.code=m.code`).map(r => [r.src, r])) : null;
+    const dmap = isDept ? new Map(all(`SELECT m.src, d.code, d.name FROM dept_map m JOIN dept_cat d ON d.code=m.code`).map(r => [nz(r.src), r])) : null;
     let rows = [...m.values()].map(o => {
       const nz = Object.keys(o.v).filter(k => Math.abs(o.v[k]) > 0.004).sort(), first = nz[0] || null;
       const inP = months.filter(x => Math.abs(o.v[x] || 0) > 0.004), tot = months.reduce((s, x) => s + (o.v[x] || 0), 0), avg = inP.length ? tot / inP.length : 0;
@@ -87,9 +90,9 @@ function make(db, all, get, okYm) {
   // Giá trị đang dùng của chiều (để chọn khi điều chỉnh); phòng ban kèm tên danh mục
   function values(d) {
     const c = D(d).col.replace('e.', ''), f = D(d).f;
-    const rows = all(`SELECT v, sum(n) n FROM (SELECT ${c} v, count(*) n FROM entries WHERE ${c} IS NOT NULL AND ${c}<>'' GROUP BY 1 UNION ALL SELECT value, count(*) FROM field_adj WHERE field=? AND value<>'' GROUP BY 1) GROUP BY 1 ORDER BY 2 DESC LIMIT 5000`, f);
+    const rows = all(`SELECT ${NORM('v')} v, sum(n) n FROM (SELECT ${c} v, count(*) n FROM entries WHERE ${c} IS NOT NULL AND ${c}<>'' GROUP BY 1 UNION ALL SELECT value, count(*) FROM field_adj WHERE field=? AND value<>'' GROUP BY 1) WHERE ${NORM('v')}<>'' GROUP BY 1 ORDER BY 2 DESC LIMIT 5000`, f);
     if (d !== 'dept') return rows;
-    const dm = new Map(all(`SELECT m.src, d.code, d.name FROM dept_map m JOIN dept_cat d ON d.code=m.code`).map(r => [r.src, r]));
+    const dm = new Map(all(`SELECT m.src, d.code, d.name FROM dept_map m JOIN dept_cat d ON d.code=m.code`).map(r => [nz(r.src), r]));
     return rows.map(r => ({ ...r, cat: dm.get(r.v) ? dm.get(r.v).code + ' – ' + (dm.get(r.v).name || '') : '' }));
   }
   return { matrix, detail, values, groups, norms };
