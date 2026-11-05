@@ -10,6 +10,8 @@ function make(db, all, get, run) {
     CREATE INDEX IF NOT EXISTS ix_inv_line_acc ON inv_line(acc);
     CREATE TABLE IF NOT EXISTS inv_issue(issue_date TEXT, ym TEXT, ym_bill TEXT, acc TEXT, cust TEXT, contract TEXT, invoice TEXT, service TEXT, amt_notax REAL, amt_tax REAL, total REAL, src TEXT, UNIQUE(invoice, acc, ym, total));
     CREATE INDEX IF NOT EXISTS ix_inv_issue_acc ON inv_issue(acc)`);
+  for (const c of ['kind TEXT', 'shop TEXT', 'staff TEXT', 'txtype TEXT']) { try { db.exec(`ALTER TABLE inv_issue ADD COLUMN ${c}`); } catch { } }
+  try { db.exec(`UPDATE inv_issue SET kind='cuoc' WHERE kind IS NULL`); } catch { }
   const s = v => v == null ? '' : String(v).replace(/\s+/g, ' ').trim(), num = v => { const n = typeof v === 'number' ? v : +String(v || '').replace(/,/g, ''); return Number.isFinite(n) ? n : 0; };
   const dmy = v => { if (v instanceof Date && !isNaN(v)) return v.toISOString().slice(0, 10); if (typeof v === 'number' && v > 20000) return new Date(Math.round((v - 25569) * 864e5)).toISOString().slice(0, 10);
     const m = s(v).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : s(v).slice(0, 10); };
@@ -17,7 +19,7 @@ function make(db, all, get, run) {
 
   // Nạp workbook: sheets = { name: aoa }. Nhận sheet danh mục (có cột "Account" + "Code ERP") và sheet hóa đơn (có "Invoice no" + "Subscriber")
   function importBook(sheets, mode = 'merge') {
-    let nC = 0, nL = 0, dup = 0, nI = 0, dupI = 0, sheetC = '', sheetL = '', sheetI = '';
+    let nC = 0, nL = 0, dup = 0, nI = 0, dupI = 0, nB = 0, dupB = 0, sheetC = '', sheetL = '', sheetI = '', sheetB = '';
     db.exec('BEGIN'); try {
       if (mode === 'replace') { run(`DELETE FROM inv_line`); } if (mode === 'replaceIssue') run(`DELETE FROM inv_issue`);
       for (const [name, aoa] of Object.entries(sheets)) {
@@ -29,6 +31,20 @@ function make(db, all, get, run) {
             const code = s(r[C.code]) || old.erp_code || '', en = s(r[C.ename]) || old.erp_name || '';
             run(`INSERT OR REPLACE INTO inv_cust(acc, name, bw, price, fee, erp_code, erp_name, note, updated_at) VALUES(?,?,?,?,?,?,?,?,datetime('now','localtime'))`, acc, s(r[C.name]), s(r[C.bw]), num(r[C.price]), num(r[C.fee]), code.toUpperCase(), en, old.note || ''); nC++; }
           continue; }
+        // Doanh thu bán hàng BCCS: cột Transaction code + Invoice no + After tax (+ Name of customer, Code ERP…)
+        { const hb = aoa.findIndex(r => { const L = low(r); return L.includes('transaction code') && L.includes('invoice no') && L.some(c => /after tax/.test(c)); });
+          if (hb >= 0) { const H = low(aoa[hb]), c = re => H.findIndex(x => re.test(x)); sheetB = name;
+            const C = { txc: c(/^transaction code$/), shop: c(/^shop$/), st: c(/^staff$/), tt: c(/transaction type/), d: c(/date of creation|^date$/), bt: c(/before tax/), tx: c(/^tax$/), at: c(/after tax/), status: c(/^status$/), inv: c(/^invoice no$/), cust: c(/name of customer|customer/), isdn: c(/^isdn$/), con: c(/contract/), code: c(/^code erp$/), ename: c(/^mã erp$|name erp/) };
+            for (const r of aoa.slice(hb + 1)) { const inv = s(r[C.inv]), st = s(r[C.status]); if (!inv || /not created/i.test(st)) continue;
+              const cust = s(r[C.cust]), code0 = s(r[C.code]).toUpperCase(), m = cust.match(/^([A-Za-z]+_(?:[A-Za-z]+_)?[A-Za-z]*\d+)\s*[-_]/), code = code0 || (m ? m[1].toUpperCase() : '');
+              const acc = code ? 'erp:' + code.toLowerCase() : 'bccs:' + cust.toLowerCase().replace(/\s+/g, ' ').trim();
+              const d = dmy(r[C.d]), tot = num(r[C.at]);
+              const x = run(`INSERT OR IGNORE INTO inv_issue(issue_date, ym, ym_bill, acc, cust, contract, invoice, service, amt_notax, amt_tax, total, src, kind, shop, staff, txtype) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                d, d.slice(0, 7), d.slice(0, 7), acc, cust, s(r[C.con]) || s(r[C.isdn]), inv + (C.txc >= 0 && s(r[C.txc]) ? '#' + s(r[C.txc]) : ''), s(r[C.tt]), num(r[C.bt]), num(r[C.tx]), tot, name, 'bccs', s(r[C.shop]), s(r[C.st]), s(r[C.tt]));
+              if (x.changes) nB++; else dupB++;
+              if (!get(`SELECT 1 x FROM inv_cust WHERE acc=?`, acc)) run(`INSERT INTO inv_cust(acc, name, erp_code, erp_name, note, updated_at) VALUES(?,?,?,?,?, datetime('now','localtime'))`, acc, cust, code, s(r[C.ename]), 'BCCS');
+              else if (code) run(`UPDATE inv_cust SET erp_code=? WHERE acc=? AND (erp_code IS NULL OR erp_code='')`, code, acc); }
+            continue; } }
         // Báo cáo PHÁT HÀNH hóa đơn: có cột số hóa đơn + account/subscriber + ngày phát hành / kỳ cước, KHÔNG có "Pay date"
         { const hi = aoa.findIndex(r => { const L = low(r); return L.some(c => /invoice|hóa đơn|hoa don/.test(c)) && L.some(c => /subscriber|account|thuê bao|isdn/.test(c)) && L.some(c => /issue|phát hành|invoice date|ngày hóa đơn|bill (cycle|month|period)|kỳ cước|cycle/.test(c)) && !L.some(c => /^pay date$/.test(c)); });
           if (hi >= 0 && (mode === 'issue' || !/pay/i.test(name))) { const H = low(aoa[hi]), c = re => H.findIndex(x => re.test(x)); sheetI = name;
@@ -37,7 +53,7 @@ function make(db, all, get, run) {
             for (const r of aoa.slice(hi + 1)) { const acc = s(r[C.acc]).toLowerCase(), inv = s(r[C.inv]); if (!acc || !inv || /^\d+$/.test(acc) && acc.length < 3) continue;
               const d = dmy(r[C.d]), ymb = ymOf(r[C.cyc]) || (C.cyc >= 0 ? dmy(r[C.cyc]).slice(0, 7) : '') || d.slice(0, 7), tot = num(r[C.tot]) || (num(r[C.nt]) + num(r[C.tx]));
               if (!tot && !num(r[C.nt])) continue;
-              const x = run(`INSERT OR IGNORE INTO inv_issue(issue_date, ym, ym_bill, acc, cust, contract, invoice, service, amt_notax, amt_tax, total, src) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, d, (d || ymb).slice(0, 7), ymb, acc, s(r[C.cust]), s(r[C.con]), inv, s(r[C.svc]), num(r[C.nt]), num(r[C.tx]), tot, name);
+              const x = run(`INSERT OR IGNORE INTO inv_issue(issue_date, ym, ym_bill, acc, cust, contract, invoice, service, amt_notax, amt_tax, total, src) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, d, (d || ymb).slice(0, 7), ymb, acc, s(r[C.cust]), s(r[C.con]), inv, s(r[C.svc]), num(r[C.nt]), num(r[C.tx]), tot, name); run(`UPDATE inv_issue SET kind='cuoc' WHERE kind IS NULL`);
               if (x.changes) nI++; else dupI++;
               if (!get(`SELECT 1 x FROM inv_cust WHERE acc=?`, acc)) run(`INSERT INTO inv_cust(acc, name, erp_code, updated_at) VALUES(?,?, '', datetime('now','localtime'))`, acc, s(r[C.cust])); }
             continue; } }
@@ -54,8 +70,8 @@ function make(db, all, get, run) {
       }
       db.exec('COMMIT');
     } catch (e) { db.exec('ROLLBACK'); throw e; }
-    if (!sheetC && !sheetL && !sheetI) throw new Error('Không thấy sheet danh mục (Account + Code ERP), sheet thu cước (Invoice no + Subscriber + Pay date) hoặc sheet phát hành hóa đơn (số hóa đơn + account + ngày phát hành / kỳ cước)');
-    return { nC, nL, dup, nI, dupI, sheetC, sheetL, sheetI, issues: get(`SELECT count(*) n FROM inv_issue`).n, cust: get(`SELECT count(*) n FROM inv_cust`).n, lines: get(`SELECT count(*) n FROM inv_line`).n };
+    if (!sheetC && !sheetL && !sheetI && !sheetB) throw new Error('Không thấy sheet danh mục (Account + Code ERP), sheet thu cước (Invoice no + Subscriber + Pay date) hoặc sheet phát hành hóa đơn (số hóa đơn + account + ngày phát hành / kỳ cước)');
+    return { nC, nL, dup, nI, dupI, nB, dupB, sheetB, bccs: get(`SELECT count(*) n FROM inv_issue WHERE kind='bccs'`).n, sheetC, sheetL, sheetI, issues: get(`SELECT count(*) n FROM inv_issue`).n, cust: get(`SELECT count(*) n FROM inv_cust`).n, lines: get(`SELECT count(*) n FROM inv_line`).n };
   }
 
   // Đối tượng ERP của TK (mã + tên) để chọn khi map
@@ -84,10 +100,19 @@ function make(db, all, get, run) {
     const map = new Map(all(`SELECT acc, erp_code FROM inv_cust`).map(r => [r.acc, r.erp_code || ''])), P = erpPartners(acc), pname = new Map(P.map(p => [p.code, p.name]));
     const ymCol = basis === 'pay' ? 'ym_pay' : basis === 'issue' ? 'ym' : 'ym_bill', W = [], A = []; if (f) { W.push(`${ymCol}>=?`); A.push(f); } if (t) { W.push(`${ymCol}<=?`); A.push(t); }
     const G = new Map(), cell = (k, ym) => { const g = G.get(k) || G.set(k, { key: k, accs: new Set(), m: {}, inv: 0, erp: 0 }).get(k); return g.m[ym] || (g.m[ym] = { inv: 0, erp: 0, nInv: 0, nErp: 0 }); };
+    if (TBL === 'inv_issue' && o.src && o.src !== 'all') { W.push('kind=?'); A.push(o.src); }
     for (const r of all(`SELECT acc, ${ymCol} ym, sum(${o.notax ? 'amt_notax' : 'total'}) a, count(*) n FROM ${TBL} ${W.length ? 'WHERE ' + W.join(' AND ') : ''} GROUP BY 1,2`, ...A)) {
       const code = map.get(r.acc) || ('?' + r.acc), c = cell(code, r.ym); c.inv += r.a; c.nInv += r.n; G.get(code).accs.add(r.acc); }
+    // Cước phát sinh (file thu cước theo hóa đơn – TH_1) cũng là doanh thu: gộp theo kỳ cước khi so doanh thu (nguồn 'all' / 'cuoc'), trừ khi đã có báo cáo phát hành cước riêng
+    if (TBL === 'inv_issue' && (!o.src || o.src === 'all' || o.src === 'cuoc') && !get(`SELECT 1 x FROM inv_issue WHERE kind='cuoc' LIMIT 1`)) {
+      const W2 = [], A2 = []; if (f) { W2.push('ym_bill>=?'); A2.push(f); } if (t) { W2.push('ym_bill<=?'); A2.push(t); }
+      for (const r of all(`SELECT acc, ym_bill ym, sum(${o.notax ? 'amt_notax' : 'total'}) a, count(*) n FROM inv_line ${W2.length ? 'WHERE ' + W2.join(' AND ') : ''} GROUP BY 1,2`, ...A2)) {
+        const code = map.get(r.acc) || ('?' + r.acc), c = cell(code, r.ym); c.inv += r.a; c.nInv += r.n; G.get(code).accs.add(r.acc); } }
     const WE = [], AE = []; if (f) { WE.push('ym>=?'); AE.push(f); } if (t) { WE.push('ym<=?'); AE.push(t); }
     for (const r of all(`SELECT partner_${side} p, ym, sum(amount) a, count(*) n FROM entries WHERE acc_${side}=? ${WE.length ? 'AND ' + WE.join(' AND ') : ''} GROUP BY 1,2`, acc, ...AE)) {
+      const c = cell(codeOf(r.p), r.ym); c.erp += r.a; c.nErp += r.n; }
+    // Doanh thu BCCS đối tượng BC19 ghi Nợ 138811 (cấu hình được): cộng thêm vào phía ERP
+    const x11 = s(o.extra11 ?? 'BC19'); if (side === 'debit' && x11) for (const r of all(`SELECT partner_debit p, ym, sum(amount) a, count(*) n FROM entries WHERE acc_debit='138811' AND upper(partner_debit) LIKE ? ${WE.length ? 'AND ' + WE.join(' AND ') : ''} GROUP BY 1,2`, x11.toUpperCase() + '%', ...AE)) {
       const c = cell(codeOf(r.p), r.ym); c.erp += r.a; c.nErp += r.n; }
     const months = [...new Set([...G.values()].flatMap(g => Object.keys(g.m)))].sort();
     const rows = [...G.values()].map(g => { let inv = 0, erp = 0; for (const v of Object.values(g.m)) { inv += v.inv; erp += v.erp; }
@@ -101,13 +126,17 @@ function make(db, all, get, run) {
       for (const a of pos) for (const b of neg) if (Math.abs(a.d - b.d) <= Math.max(0.5, a.d * 0.001)) sus.push({ ym: m, amt: a.d, short: a.r.key, shortName: a.r.name, over: b.r.key, overName: b.r.name }); }
     rows.sort((a, b) => (a.status === 'ok') - (b.status === 'ok') || Math.abs(b.diff) - Math.abs(a.diff));
     const tm = Object.fromEntries(months.map(m => [m, { inv: rows.reduce((x, r) => x + (r.m[m] ? r.m[m].inv : 0), 0), erp: rows.reduce((x, r) => x + (r.m[m] ? r.m[m].erp : 0), 0) }]));
-    return { acc, basis, months, rows, tm, sus, inv: rows.reduce((x, r) => x + r.inv, 0), erp: rows.reduce((x, r) => x + r.erp, 0), lines: get(`SELECT count(*) n FROM inv_line`).n, issues: get(`SELECT count(*) n FROM inv_issue`).n };
+    return { acc, basis, months, rows, tm, sus, inv: rows.reduce((x, r) => x + r.inv, 0), erp: rows.reduce((x, r) => x + r.erp, 0), lines: get(`SELECT count(*) n FROM inv_line`).n, issues: get(`SELECT count(*) n FROM inv_issue`).n, bccs: get(`SELECT count(*) n FROM inv_issue WHERE kind='bccs'`).n };
   }
   function cellDetail(key, ym, o = {}) {
     const acc = s(o.acc) || '138812', basis = ['pay', 'issue', 'issuecyc'].includes(o.basis) ? o.basis : 'bill', side = basis === 'pay' ? 'credit' : 'debit', ymCol = basis === 'pay' ? 'ym_pay' : basis === 'issue' ? 'ym' : 'ym_bill', TBL = basis.startsWith('issue') ? 'inv_issue' : 'inv_line';
     const accs = key.startsWith('?') ? [key.slice(1)] : all(`SELECT acc FROM inv_cust WHERE erp_code=?`, key).map(r => r.acc), Y = ym ? ` AND ${ymCol}=?` : '';
-    const inv = accs.length ? all(`SELECT * FROM ${TBL} WHERE acc IN (${accs.map(() => '?').join(',')})${Y} ORDER BY ${TBL === 'inv_issue' ? 'issue_date' : 'pay_date'} LIMIT 20000`, ...accs, ...(ym ? [ym] : [])) : [];
-    const erp = key.startsWith('?') ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_${side} p, amount a, description ds FROM entries WHERE acc_${side}=? AND upper(partner_${side}) LIKE ?${ym ? ' AND ym=?' : ''} ORDER BY account_date, id LIMIT 20000`, acc, key + '%', ...(ym ? [ym] : []));
+    const SRC = TBL === 'inv_issue' && o.src && o.src !== 'all' ? ` AND kind='${o.src === 'bccs' ? 'bccs' : 'cuoc'}'` : '';
+    const inv = accs.length ? all(`SELECT * FROM ${TBL} WHERE acc IN (${accs.map(() => '?').join(',')})${Y}${SRC} ORDER BY ${TBL === 'inv_issue' ? 'issue_date' : 'pay_date'} LIMIT 20000`, ...accs, ...(ym ? [ym] : [])) : [];
+    const x11 = s(o.extra11 ?? 'BC19'), accs2 = side === 'debit' && x11 && key.toUpperCase().startsWith(x11.toUpperCase()) ? [acc, '138811'] : [acc];
+    const erp = key.startsWith('?') ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_${side} p, amount a, description ds FROM entries WHERE acc_${side} IN (${accs2.map(() => '?').join(',')}) AND upper(partner_${side}) LIKE ?${ym ? ' AND ym=?' : ''} ORDER BY account_date, id LIMIT 20000`, ...accs2, key + '%', ...(ym ? [ym] : []));
+    if (TBL === 'inv_issue' && (!o.src || o.src === 'all' || o.src === 'cuoc') && accs.length && !get(`SELECT 1 x FROM inv_issue WHERE kind='cuoc' LIMIT 1`))
+      for (const l of all(`SELECT * FROM inv_line WHERE acc IN (${accs.map(() => '?').join(',')})${ym ? ' AND ym_bill=?' : ''} ORDER BY pay_date LIMIT 20000`, ...accs, ...(ym ? [ym] : []))) inv.push({ ...l, issue_date: l.pay_date, kind: 'cuoc', amt_tax: l.amt_tax });
     return { key, ym, accs, inv, erp, issue: TBL === 'inv_issue' };
   }
   return { importBook, customers, setMap, compare, cellDetail, erpPartners };

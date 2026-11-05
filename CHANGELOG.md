@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.51.0 – 05/11/2026
+- Đối chiếu hóa đơn – 138812: thêm **doanh thu bán hàng BCCS** (file "Doanh thu theo hóa đơn BCCS": Shop, Staff, Transaction type/code, Date of creation, Before tax, Tax, After tax, Status, Invoice no, Name of customer, ISDN, Contract, Code ERP…).
+  - Chỉ lấy giao dịch đã lập hóa đơn (bỏ "Not created invoice"); khách hàng có *Code ERP* hoặc tên dạng "VTL_VEN_043-…" được map sẵn mã ERP, còn lại map ở tab Map (có gợi ý tên).
+  - Doanh thu so với ERP = **cước phát sinh** (file thu cước theo hóa đơn, theo kỳ cước) **+ doanh thu BCCS**; chọn nguồn *Cước + BCCS / Chỉ cước / Chỉ BCCS*.
+  - Phía ERP = **Nợ 138812 (mọi đối tượng) + Nợ 138811 của đối tượng BC19** (đổi được mã đối tượng 138811 tính thêm).
+  - **Nạp bổ sung** bất kỳ lúc nào cho tháng mới / tương lai (cùng nút *Nạp file (bổ sung)*): mọi loại file – danh mục, cước, phát hành, BCCS – nạp chồng, dòng đã có tự bỏ qua (BCCS khoá theo số hóa đơn + mã giao dịch).
+  - Chi tiết ô ghi rõ dòng BCCS (shop, nhân viên) và dòng cước.
+
 ## v4.50.0 – 05/11/2026
 - Đối chiếu hóa đơn – 138812: thêm **báo cáo phát hành hóa đơn** để so với **Nợ 138812** (doanh thu ghi nhận ERP).
   - Nạp cùng nút *Nạp file*: sheet có cột số hóa đơn + account / subscriber + ngày phát hành / kỳ cước (không có "Pay date") được nhận là báo cáo phát hành; tự nhận các cột chưa thuế / thuế / tổng tiền, khách hàng, hợp đồng, dịch vụ. Nạp lại không nhân đôi.
