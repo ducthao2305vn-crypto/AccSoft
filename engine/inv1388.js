@@ -127,6 +127,8 @@ function make(db, all, get, run) {
     // Nộp tiền (ERP Có 138812): cột riêng để biết tháng đó đối tác có nộp tiền – không tính vào chênh lệch doanh thu
     if (side === 'debit') for (const r of all(`SELECT partner_credit p, ym, sum(amount) a, count(*) n FROM entries WHERE acc_credit=? ${WE.length ? 'AND ' + WE.join(' AND ') : ''} GROUP BY 1,2`, acc, ...AE)) {
       const c = cell(codeOf(r.p), r.ym); c.pay += r.a; c.nPay += r.n; }
+    if (side === 'debit' && x11) for (const r of all(`SELECT partner_credit p, ym, sum(amount) a, count(*) n FROM entries WHERE acc_credit='138811' AND upper(partner_credit) LIKE ? ${WE.length ? 'AND ' + WE.join(' AND ') : ''} GROUP BY 1,2`, x11.toUpperCase() + '%', ...AE)) {
+      const c = cell(codeOf(r.p), r.ym); c.pay += r.a; c.nPay += r.n; }
     const months = [...new Set([...G.values()].flatMap(g => Object.keys(g.m)))].sort();
     const rows = [...G.values()].map(g => { let inv = 0, erp = 0, pay = 0; for (const v of Object.values(g.m)) { inv += v.inv; erp += v.erp; pay += v.pay || 0; }
       const unm = g.key.startsWith('?'), diffM = months.filter(m => g.m[m] && Math.abs(g.m[m].inv - g.m[m].erp) > 0.5).length;
@@ -148,7 +150,7 @@ function make(db, all, get, run) {
     const inv = accs.length ? all(`SELECT rowid rid, * FROM ${TBL} WHERE acc IN (${accs.map(() => '?').join(',')})${Y}${SRC} ORDER BY ${TBL === 'inv_issue' ? 'issue_date' : 'pay_date'} LIMIT 20000`, ...accs, ...YP) : [];
     const x11 = s(o.extra11 ?? 'BC19'), accs2 = side === 'debit' && x11 && key.toUpperCase().startsWith(x11.toUpperCase()) ? [acc, '138811'] : [acc];
     const erp = key.startsWith('?') ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_${side} p, amount a, description ds FROM entries WHERE acc_${side} IN (${accs2.map(() => '?').join(',')}) AND upper(partner_${side}) LIKE ?${ym ? ' AND ym=?' : R ? ' AND ym BETWEEN ? AND ?' : ''} ORDER BY account_date, id LIMIT 20000`, ...accs2, key + '%', ...YP);
-    const pay = key.startsWith('?') || side !== 'debit' ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_credit p, amount a, description ds FROM entries WHERE acc_credit=? AND upper(partner_credit) LIKE ?${ym ? ' AND ym=?' : R ? ' AND ym BETWEEN ? AND ?' : ''} ORDER BY account_date, id LIMIT 20000`, acc, key + '%', ...YP);
+    const pay = key.startsWith('?') || side !== 'debit' ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_credit p, amount a, description ds FROM entries WHERE acc_credit IN (${accs2.map(() => '?').join(',')}) AND upper(partner_credit) LIKE ?${ym ? ' AND ym=?' : R ? ' AND ym BETWEEN ? AND ?' : ''} ORDER BY account_date, id LIMIT 20000`, ...accs2, key + '%', ...YP);
     if (TBL === 'inv_issue' && (!o.src || o.src === 'all' || o.src === 'cuoc') && accs.length && !get(`SELECT 1 x FROM inv_issue WHERE kind='cuoc' LIMIT 1`))
       for (const l of all(`SELECT * FROM inv_line WHERE acc IN (${accs.map(() => '?').join(',')})${ym ? ' AND ym_bill=?' : R ? ' AND ym_bill BETWEEN ? AND ?' : ''} ORDER BY pay_date LIMIT 20000`, ...accs, ...YP)) inv.push({ ...l, issue_date: l.pay_date, kind: 'cuoc', amt_tax: l.amt_tax });
     return { key, ym, from: R && R[0], to: R && R[1], accs, inv, erp, pay, issue: TBL === 'inv_issue' };

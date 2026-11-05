@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.54.1 – 05/11/2026
+- Đối chiếu hóa đơn: cột **Nộp tiền** cộng thêm **Có 138811** của đối tượng BC19 (giống phía ghi nhận Nợ 138811 BC19); bảng chi tiết nộp tiền cũng hiện bút toán 138811.
+
 ## v4.54.0 – 05/11/2026
 - Đối chiếu hóa đơn – 138812: **nộp tiền tách cột riêng** – mỗi ô tháng thêm dòng 💰 nộp tiền (ERP Có 138812) và cột **Nộp tiền** tổng; không tính vào chênh lệch (chênh lệch chỉ so doanh thu hóa đơn ↔ ghi nhận Nợ 138812). Bỏ chế độ so sánh “Thu cước theo ngày nộp ↔ Có 138812”. Nhấn đúp ô: thêm bảng bút toán nộp tiền. Xuất Excel có cột nộp tiền theo tháng.
 
