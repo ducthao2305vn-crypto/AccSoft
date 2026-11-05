@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.50.0 – 05/11/2026
+- Đối chiếu hóa đơn – 138812: thêm **báo cáo phát hành hóa đơn** để so với **Nợ 138812** (doanh thu ghi nhận ERP).
+  - Nạp cùng nút *Nạp file*: sheet có cột số hóa đơn + account / subscriber + ngày phát hành / kỳ cước (không có "Pay date") được nhận là báo cáo phát hành; tự nhận các cột chưa thuế / thuế / tổng tiền, khách hàng, hợp đồng, dịch vụ. Nạp lại không nhân đôi.
+  - Cách so sánh mới (mặc định): **Phát hành hóa đơn theo tháng phát hành ↔ Nợ 138812**, hoặc **theo kỳ cước ↔ Nợ 138812**; tuỳ chọn **Chưa thuế**. Vẫn giữ so sánh thu cước (kỳ cước / ngày nộp).
+  - Chi tiết ô: danh sách hóa đơn phát hành (ngày phát hành, kỳ cước, số hóa đơn, thuế, tổng) và bút toán ERP.
+
 ## v4.49.0 – 05/11/2026
 **Mô-đun mới: Đối chiếu hóa đơn – 138812** (menu Phân tích)
 - **Nạp file** Excel nhiều sheet: sheet danh mục khách hàng (cột *Account chuẩn hoá*, *Code ERP*, *Name ERP*, phí tháng…) và sheet báo cáo thu cước theo hóa đơn (*Pay date, Contract no, Subscriber, Customer name, Total amount, Invoice no, Year_month_Cuoc*…); tự nhận theo tên cột, nạp lại không nhân đôi hóa đơn, giữ map đã sửa.

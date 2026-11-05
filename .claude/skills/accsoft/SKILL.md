@@ -505,3 +505,4 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Đối chiếu hóa đơn 138812 (v4.49, `engine/inv1388.js`)
 - Bảng `inv_cust(acc PK, name, fee, erp_code…)`, `inv_line(pay_date, ym_pay, ym_bill, acc, total, invoice… UNIQUE(invoice, acc, pay_date, total))`. `importBook(sheets)` dò sheet có cột Account + Code ERP (danh mục) và Invoice no + Subscriber (hóa đơn, dòng có Index số). `codeOf(partner)` = tiền tố mã (VTL_HOVEN00316 / VTL_VEN_197). `compare(o)` basis bill (ym_bill ↔ Nợ 138812) | pay (ym_pay ↔ Có 138812); `sus` cặp thiếu–thừa bằng nhau cùng tháng. IPC `inv:import`, READ invCustomers/invCompare/invCell, WRITE invImport/invSetMap. UI `vInv88` (trang `inv88`).
+- v4.50: bảng `inv_issue(issue_date, ym, ym_bill, acc, invoice, amt_notax, amt_tax, total… UNIQUE(invoice, acc, ym, total))`; sheet phát hành = có cột hóa đơn + account + ngày phát hành/kỳ cước, không có 'Pay date'. compare basis `issue` (ym) | `issuecyc` (ym_bill) ↔ Nợ 138812, `notax`.
