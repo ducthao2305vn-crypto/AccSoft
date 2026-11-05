@@ -94,12 +94,12 @@ function make(db, all, get, run) {
   const STOP = new Set(['unip', 'lda', 'timor', 'leste', 'viettel', 'branch', 'company', 'ltd', 'limited', 'unipessoal', 'the', 'and', 'office', 'centre', 'center', 'national', 'nasional', 'block', 'dili', 'uni']);
   const nz = t => s(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
   function customers(o = {}) {
-    const P = erpPartners(o.acc), byCode = new Map(P.map(p => [p.code, p])), C = all(`SELECT c.*, l.n, l.amt, l.last FROM inv_cust c LEFT JOIN (SELECT acc, count(*) n, sum(total) amt, max(pay_date) last FROM inv_line GROUP BY acc) l ON l.acc=c.acc ORDER BY c.name`);
+    const P = erpPartners(o.acc), byCode = new Map(P.map(p => [p.code, p])), C = all(`SELECT c.*, coalesce(l.n,0)+coalesce(b.n,0) n, coalesce(l.amt,0)+coalesce(b.amt,0) amt, max(coalesce(l.last,''), coalesce(b.last,'')) last, CASE WHEN c.acc LIKE 'bccs:%' OR c.acc LIKE 'erp:%' OR c.note='BCCS' THEN 'bccs' ELSE 'cuoc' END srcK FROM inv_cust c LEFT JOIN (SELECT acc, count(*) n, sum(total) amt, max(pay_date) last FROM inv_line GROUP BY acc) l ON l.acc=c.acc LEFT JOIN (SELECT acc, count(*) n, sum(total) amt, max(issue_date) last FROM inv_issue WHERE kind='bccs' GROUP BY acc) b ON b.acc=c.acc ORDER BY c.name`);
     const PN = P.map(p => ({ ...p, t: new Set(nz(p.name).split(' ').filter(w => w.length > 2 && !STOP.has(w))) }));
     for (const c of C) { c.erpName = c.erp_code ? ((byCode.get(c.erp_code) || {}).name || c.erp_name || '(không có trên ERP)') : '';
       if (!c.erp_code) { const t = nz(c.name).split(' ').filter(w => w.length > 2 && !STOP.has(w)); let best = null; for (const p of PN) { const hit = t.filter(w => p.t.has(w)).length; if (hit >= Math.min(2, t.length) && hit > 0 && (!best || hit > best.hit)) best = { hit, p }; } c.sug = best ? best.p.code : ''; c.sugName = best ? best.p.name : ''; } }
     let rows = C; const q = nz(o.q); if (q) rows = rows.filter(c => nz(c.acc + ' ' + c.name + ' ' + c.erp_code + ' ' + c.erpName).includes(q));
-    if (o.only === 'unmapped') rows = rows.filter(c => !c.erp_code); else if (o.only === 'mapped') rows = rows.filter(c => c.erp_code);
+    if (o.src === 'bccs' || o.src === 'cuoc') rows = rows.filter(c => c.srcK === o.src); if (o.only === 'unmapped') rows = rows.filter(c => !c.erp_code); else if (o.only === 'mapped') rows = rows.filter(c => c.erp_code);
     return { rows, partners: P.map(({ code, name, n }) => ({ code, name, n })), total: C.length, mapped: C.filter(c => c.erp_code).length };
   }
   function setMap(accs, code, name = '') { let n = 0; for (const a of [].concat(accs || [])) { n += run(`UPDATE inv_cust SET erp_code=?, erp_name=?, updated_at=datetime('now','localtime') WHERE acc=?`, s(code).toUpperCase(), name, a).changes; } return { n }; }
@@ -153,7 +153,20 @@ function make(db, all, get, run) {
     const pay = key.startsWith('?') || side !== 'debit' ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_credit p, amount a, description ds FROM entries WHERE acc_credit IN (${accs2.map(() => '?').join(',')}) AND upper(partner_credit) LIKE ?${ym ? ' AND ym=?' : R ? ' AND ym BETWEEN ? AND ?' : ''} ORDER BY account_date, id LIMIT 20000`, ...accs2, key + '%', ...YP);
     if (TBL === 'inv_issue' && (!o.src || o.src === 'all' || o.src === 'cuoc') && accs.length && !get(`SELECT 1 x FROM inv_issue WHERE kind='cuoc' LIMIT 1`))
       for (const l of all(`SELECT * FROM inv_line WHERE acc IN (${accs.map(() => '?').join(',')})${ym ? ' AND ym_bill=?' : R ? ' AND ym_bill BETWEEN ? AND ?' : ''} ORDER BY pay_date LIMIT 20000`, ...accs, ...YP)) inv.push({ ...l, issue_date: l.pay_date, kind: 'cuoc', amt_tax: l.amt_tax });
-    return { key, ym, from: R && R[0], to: R && R[1], accs, inv, erp, pay, issue: TBL === 'inv_issue' };
+    // Ghép từng hóa đơn ↔ bút toán ERP: 1) số hóa đơn nằm trong diễn giải ERP; 2) account (Acc …) trong diễn giải + cùng số tiền; 3) cùng số tiền (duy nhất)
+    const match = [], usedI = new Set(), U = x => String(x || '').toUpperCase(), invNo = t => U(String(t.invoice || '').split('#')[0]).trim(), byNo = new Map();
+    inv.forEach((t, i) => { const k = invNo(t); if (k) (byNo.get(k) || byNo.set(k, []).get(k)).push(i); });
+    const pend = [];
+    for (const e of erp) { const D = U(e.ds), toks = D.match(/[A-Z0-9_\-\/]{4,}/g) || []; let hit = [];
+      for (const k of toks) { const L = byNo.get(k); if (L) hit = hit.concat(L.filter(i => !usedI.has(i))); }
+      if (hit.length) { hit.forEach(i => usedI.add(i)); const a = hit.reduce((x, i) => x + inv[i].total, 0); match.push({ e, inv: hit.map(i => inv[i]), how: 'Số hóa đơn', d: a - e.a }); } else pend.push(e); }
+    const amtEq = (a, b) => Math.abs(a - b) <= 0.005;
+    for (const e of pend.splice(0)) { const D = U(e.ds); const i = inv.findIndex((t, j) => !usedI.has(j) && amtEq(t.total, e.a) && t.acc && D.includes(U(t.acc)));
+      if (i >= 0) { usedI.add(i); match.push({ e, inv: [inv[i]], how: 'Account + số tiền', d: 0 }); } else pend.push(e); }
+    for (const e of pend.splice(0)) { const C = inv.map((t, j) => j).filter(j => !usedI.has(j) && amtEq(inv[j].total, e.a)), ok = C.length === 1 && erp.filter(x => amtEq(x.a, e.a)).length === 1;
+      if (ok) { usedI.add(C[0]); match.push({ e, inv: [inv[C[0]]], how: 'Số tiền', d: 0 }); } else match.push({ e, inv: [], how: '', d: -e.a }); }
+    inv.forEach((t, i) => { if (!usedI.has(i)) match.push({ e: null, inv: [t], how: '', d: t.total }); });
+    return { key, ym, from: R && R[0], to: R && R[1], accs, inv, erp, pay, match, issue: TBL === 'inv_issue' };
   }
   // Điều chỉnh hóa đơn BCCS thành âm (báo cáo BCCS xuất số dương cho hóa đơn điều chỉnh giảm). Chỉ BCCS – không áp cho hóa đơn cước.
   function bccsNeg(rids, neg = true) { let n = 0; for (const id of [].concat(rids || [])) n += run(`UPDATE inv_issue SET total=${neg ? '-abs(total)' : 'abs(total)'}, amt_notax=${neg ? '-abs(amt_notax)' : 'abs(amt_notax)'}, amt_tax=${neg ? '-abs(amt_tax)' : 'abs(amt_tax)'}, neg_adj=${neg ? 1 : 'NULL'} WHERE rowid=? AND kind='bccs'`, +id).changes; return { n }; }

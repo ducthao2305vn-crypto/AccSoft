@@ -519,3 +519,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.53.0: inv_issue.neg_adj; INV.bccsNeg(rids,neg) chỉ WHERE kind=bccs (WRITE invBccsNeg); cellDetail trả rid; nút data-bneg trong invCell.
 
 - v4.54.0: compare() cell.pay = ERP Có 138812 theo tháng (không vào diff); bỏ basis pay ở UI; cellDetail trả pay[].
+
+- v4.56.0: cellDetail.match (số HĐ trong diễn giải → acc+tiền → tiền duy nhất); invMatchCard; footSum() tfoot động; customers() srcK bccs/cuoc + thống kê inv_issue bccs, lọc o.src.

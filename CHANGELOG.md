@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v4.56.0 – 05/11/2026
+- Đối chiếu hóa đơn – nhấn đúp ô: thêm bảng **🔗 Ghép hóa đơn ↔ bút toán ERP** – ghép từng hóa đơn với từng dòng hạch toán: (1) số hóa đơn nằm trong diễn giải ERP, (2) account trong diễn giải + cùng số tiền, (3) cùng số tiền duy nhất. Trạng thái Khớp / Lệch tiền / Chỉ có hóa đơn / Chỉ có ERP, lọc nhanh bằng nút; dòng lệch xếp lên đầu.
+- Mọi bảng trong cửa sổ chi tiết có **dòng TỔNG CỘNG** (tự cộng lại theo dòng đang hiện khi lọc bằng ô tìm).
+- Map khách hàng: lọc **Nguồn: BCCS (theo tên khách hàng) / Cước (theo account)**; dòng BCCS có nhãn BCCS; số hóa đơn, tổng tiền, ngày gần nhất của BCCS nay được tính (trước chỉ tính cước).
+
 ## v4.55.1 – 05/11/2026
 - Sửa dòng tổng cộng cột HĐ BCCS / HĐ Payment.
 
