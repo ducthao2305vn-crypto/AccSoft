@@ -511,3 +511,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.51.2: inv1388.importBook(sheets,mode,force) chặn nạp trùng — hóa đơn (invoice|acc) đã có trong inv_line/inv_issue → ROLLBACK, trả {blocked,nDup,sample,months,kinds}; app.invImp hiện danh sách trùng trong drawer. Trùng trong cùng 1 file vẫn cho phép.
 
 - v4.51.3: invCell(x,ym,erpFirst) — ô Tổng gửi from/to = tháng đầu/cuối đang hiển thị (IVM); cellDetail lọc BETWEEN cho hóa đơn và ERP.
+
+- v4.52.0: tab Map (inv88): IVF.cl1/cl2 lọc c.last; checkbox data-ick + #icBulk/#icApply/#icClear gọi invSetMap(accs[],code,name) một lần.

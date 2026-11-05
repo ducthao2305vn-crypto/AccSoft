@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.52.0 – 05/11/2026
+- Đối chiếu hóa đơn – tab Map khách hàng: lọc theo **Thu gần nhất từ – đến** (ngày); **Map đồng loạt** – tick dòng (hoặc ô chọn tất cả) rồi chọn mã đối tượng ERP → *Map các dòng*; không tick dòng nào thì áp cho **toàn bộ dòng đang lọc** (vd tìm “polisia” → map 22 account một lần). Có nút *Bỏ map các dòng*.
+
 ## v4.51.3 – 05/11/2026
 - Đối chiếu hóa đơn – 138812: nhấn đúp ô **Tổng HĐ / Tổng ERP** giờ chỉ hiện hóa đơn và bút toán ERP **trong kỳ đang chọn** (Từ tháng – Đến tháng), không còn lấy toàn bộ lịch sử; nhấn đúp **Tổng ERP** hiện bảng bút toán ERP lên trước.
 
