@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.47.1 – 05/11/2026
+- Công nợ tạm ứng: mặc định **theo mã đối tượng** – mỗi mã đối tượng công nợ là một dòng, tên giống nhau nhưng mã khác là 2 đối tượng (tuổi nợ, FIFO, backup, đối chiếu tính riêng từng mã). Dòng hiện thêm mã đối tượng dưới tên nhân viên. Muốn xem tổng theo người: ô **Hiển thị → Gộp theo nhân viên (danh mục)**.
+
 ## v4.47.0 – 05/11/2026
 - **Ô tìm nhanh cho mọi bảng chi tiết, toàn ứng dụng**: mọi bảng trong cửa sổ chi tiết (nhấn đúp) – vd backup money, khoản còn treo, theo đề nghị, sổ chi tiết tạm ứng, sổ công nợ chủ nhà trạm, bút toán vị trí / xe / phòng ban, tài chính… – và các bảng trên trang chưa có ô tìm riêng đều có ô 🔍 phía trên. Gõ nhiều từ (không phân biệt hoa thường / dấu) → chỉ còn dòng chứa đủ các từ, hiện "x / y dòng"; Esc để xoá.
 

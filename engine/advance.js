@@ -19,7 +19,8 @@ function make(db, all, get, run, okYm) {
       WHERE 1${W} ORDER BY d, id`, A, t, A, t, ...(B || []));
   }
   const staffMap = () => { const m = new Map(); try { for (const r of all(`SELECT b.bp, s.code, s.name, s.dept, s.unit, s.position, s.email1, s.email2, s.status FROM staff_bp b JOIN staff s ON s.code=b.code`)) m.set(r.bp, r); } catch { } return m; };
-  const keyOf = (p, S) => { const s = S.get(p); return s ? 'S:' + s.code : 'P:' + (p || ''); };
+  // Mặc định mỗi MÃ ĐỐI TƯỢNG là một dòng (tên giống nhau nhưng mã khác = 2 đối tượng); group='staff' mới gộp theo nhân viên
+  const keyOf = (p, S, grp) => { const s = grp === 'staff' ? S.get(p) : null; return s ? 'S:' + s.code : 'P:' + (p || ''); };
 
   // FIFO: hoàn ứng trừ dần các khoản tạm ứng cũ nhất → khoản còn treo + tuổi
   // Backup money (tạm ứng duy trì – thường 12 tháng): người dùng đánh dấu bút toán tạm ứng; không tính quá hạn theo hạn thường,
@@ -60,7 +61,7 @@ function make(db, all, get, run, okYm) {
   function report(o = {}) {
     const asOf = day(o.asOf) || new Date().toISOString().slice(0, 10), from = day(o.from) || asOf.slice(0, 4) + '-01-01', S = staffMap(), L = lines(o.acc, asOf), BK = backupIds(), bkTerm = (+o.backupMonths || 12) * 30.4;
     const G = new Map();
-    for (const x of L) { const k = keyOf(x.p, S), g = G.get(k) || G.set(k, { key: k, staff: S.get(x.p) || null, partners: new Set(), L: [], open: 0, dr: 0, cr: 0, n: 0, last: '' }).get(k);
+    for (const x of L) { const k = keyOf(x.p, S, o.group), g = G.get(k) || G.set(k, { key: k, staff: S.get(x.p) || null, partners: new Set(), L: [], open: 0, dr: 0, cr: 0, n: 0, last: '' }).get(k);
       g.partners.add(x.p || ''); g.L.push(x); g.n++; if (x.d < from) g.open += x.dr - x.cr; else { g.dr += x.dr; g.cr += x.cr; } if (x.d > g.last) g.last = x.d; }
     const R = new Map(all(`SELECT key, status, amount, confirmed, note, sent_to, updated_at FROM adv_recon WHERE as_of=?`, asOf).map(r => [r.key, r]));
     const over = +o.overDays || 30;
@@ -78,7 +79,7 @@ function make(db, all, get, run, okYm) {
     else if (o.only === 'notconf') rows = rows.filter(r => Math.abs(r.close) > 0.004 && (!r.recon || r.recon.status !== 'confirmed'));
     rows.sort((a, b) => Math.abs(b.close) - Math.abs(a.close));
     const tot = k => rows.reduce((s, r) => s + r[k], 0);
-    return { mode: o.mode === 'ar' ? 'ar' : 'bp', asOf, from, acc: pfx(o.acc), over, rows, tot: { open: tot('open'), dr: tot('dr'), cr: tot('cr'), close: tot('close'), overAmt: tot('overAmt'), bkAmt: tot('bkAmt'), bkOver: tot('bkOver'), b: [0, 1, 2, 3].map(i => rows.reduce((s, r) => s + r.b[i], 0)) },
+    return { group: o.group === 'staff' ? 'staff' : 'bp', mode: o.mode === 'ar' ? 'ar' : 'bp', asOf, from, acc: pfx(o.acc), over, rows, tot: { open: tot('open'), dr: tot('dr'), cr: tot('cr'), close: tot('close'), overAmt: tot('overAmt'), bkAmt: tot('bkAmt'), bkOver: tot('bkOver'), b: [0, 1, 2, 3].map(i => rows.reduce((s, r) => s + r.b[i], 0)) },
       depts: [...new Set(rows.map(r => r.dept).filter(Boolean))].sort(), nStaff: rows.filter(r => r.mapped).length, nUnmapped: rows.filter(r => !r.mapped).length };
   }
 
@@ -86,10 +87,10 @@ function make(db, all, get, run, okYm) {
   function detail(key, o = {}) {
     const asOf = day(o.asOf) || new Date().toISOString().slice(0, 10), from = day(o.from) || asOf.slice(0, 4) + '-01-01', S = staffMap();
     const bps = key.startsWith('S:') ? all(`SELECT bp FROM staff_bp WHERE code=?`, key.slice(2)).map(r => r.bp) : [key.slice(2)];
-    const L = lines(o.acc, asOf, bps.length ? bps : ['\u0000']).filter(x => keyOf(x.p, S) === key); let bal = 0, open = 0; const book = [];
+    const L = lines(o.acc, asOf, bps.length ? bps : ['\u0000']).filter(x => keyOf(x.p, S, key.startsWith('S:') ? 'staff' : 'bp') === key); let bal = 0, open = 0; const book = [];
     for (const x of L) { if (x.d < from) { open += x.dr - x.cr; continue; } }
     bal = open; for (const x of L) { if (x.d < from) continue; bal += x.dr - x.cr; book.push({ ...x, bal }); }
-    const BK = backupIds(), F = FIFO(o.mode, L, asOf, BK), FA = fifoAR(L, asOf, BK), s = key.startsWith('S:') ? get(`SELECT * FROM staff WHERE code=?`, key.slice(2)) : null;
+    const BK = backupIds(), F = FIFO(o.mode, L, asOf, BK), FA = fifoAR(L, asOf, BK), s = key.startsWith('S:') ? get(`SELECT * FROM staff WHERE code=?`, key.slice(2)) : (get(`SELECT s.* FROM staff_bp b JOIN staff s ON s.code=b.code WHERE b.bp=?`, key.slice(2)) || null);
     return { key, asOf, from, staff: s, partners: [...new Set(L.map(x => x.p))], open, close: bal, dr: book.reduce((a, x) => a + x.dr, 0), cr: book.reduce((a, x) => a + x.cr, 0), book, items: F.open, bkItems: F.bk, ars: FA.ars, arList: [...new Set(L.map(x => x.ar).filter(Boolean))].sort(), advances: (() => { const M = new Map(); for (const y of L) { const k = String(y.ar || '').trim(), m = M.get(k) || M.set(k, { dr: 0, cr: 0 }).get(k); m.dr += y.dr; m.cr += y.cr; } return L.filter(x => x.dr > 0).map(x => { const m = M.get(String(x.ar || '').trim()) || { dr: 0, cr: 0 }; return { arDr: m.dr, arCr: m.cr, clr: m.dr > 0 ? m.cr / m.dr : 0, id: x.id, d: x.d, doc: x.doc, ar: x.ar, ds: x.ds, amt: x.dr, round: Math.abs(x.dr - Math.round(x.dr)) < 0.005 && Math.round(x.dr) % 10 === 0, backup: BK.has(x.id) }; }); })(), recon: get(`SELECT * FROM adv_recon WHERE key=? AND as_of=?`, key, asOf) || null };
   }
   function setRecon(keys, asOf, status, o = {}) { let n = 0; asOf = day(asOf);
