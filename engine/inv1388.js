@@ -34,13 +34,16 @@ function make(db, all, get, run) {
         // Doanh thu bán hàng BCCS: cột Transaction code + Invoice no + After tax (+ Name of customer, Code ERP…)
         { const hb = aoa.findIndex(r => { const L = low(r); return L.includes('transaction code') && L.includes('invoice no') && L.some(c => /after tax/.test(c)); });
           if (hb >= 0) { const H = low(aoa[hb]), c = re => H.findIndex(x => re.test(x)); sheetB = name;
-            const C = { txc: c(/^transaction code$/), shop: c(/^shop$/), st: c(/^staff$/), tt: c(/transaction type/), d: c(/date of creation|^date$/), bt: c(/before tax/), tx: c(/^tax$/), at: c(/after tax/), status: c(/^status$/), inv: c(/^invoice no$/), cust: c(/name of customer|customer/), isdn: c(/^isdn$/), con: c(/contract/), code: c(/^code erp$/), ename: c(/^mã erp$|name erp/) };
+            const C = { txc: c(/^transaction code$/), shop: c(/^shop$/), st: c(/^staff$/), tt: c(/transaction type/), d: c(/date of creation|^date$/), bt: c(/before tax/), tx: c(/^tax$/), at: c(/after tax/), status: c(/^status$/), inv: c(/^invoice no$/), cust: c(/name of customer|customer/), isdn: c(/^isdn$/), con: c(/contract/), code: c(/^code erp$/), ename: c(/^mã erp$|name erp/), ym: c(/^năm_tháng$|^nam_thang$|year_month/), yy: c(/^năm$|^year$/), mm: c(/^tháng$|^month$/) };
             for (const r of aoa.slice(hb + 1)) { const inv = s(r[C.inv]), st = s(r[C.status]); if (!inv || /not created/i.test(st)) continue;
               const cust = s(r[C.cust]), code0 = s(r[C.code]).toUpperCase(), m = cust.match(/^([A-Za-z]+_(?:[A-Za-z]+_)?[A-Za-z]*\d+)\s*[-_]/), code = code0 || (m ? m[1].toUpperCase() : '');
               const acc = code ? 'erp:' + code.toLowerCase() : 'bccs:' + cust.toLowerCase().replace(/\s+/g, ' ').trim();
               const d = dmy(r[C.d]), tot = num(r[C.at]);
-              const x = run(`INSERT OR IGNORE INTO inv_issue(issue_date, ym, ym_bill, acc, cust, contract, invoice, service, amt_notax, amt_tax, total, src, kind, shop, staff, txtype) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-                d, d.slice(0, 7), d.slice(0, 7), acc, cust, s(r[C.con]) || s(r[C.isdn]), inv + (C.txc >= 0 && s(r[C.txc]) ? '#' + s(r[C.txc]) : ''), s(r[C.tt]), num(r[C.bt]), num(r[C.tx]), tot, name, 'bccs', s(r[C.shop]), s(r[C.st]), s(r[C.tt]));
+              // Tháng ghi nhận = tháng / năm trên hóa đơn (cột Năm_tháng hoặc Năm + Tháng), không phải ngày lập / ngày nạp
+              const ymI = (C.ym >= 0 && ymOf(r[C.ym])) || (C.yy >= 0 && C.mm >= 0 && +r[C.yy] > 1990 && +r[C.mm] >= 1 && +r[C.mm] <= 12 ? `${+r[C.yy]}-${String(+r[C.mm]).padStart(2, '0')}` : '') || d.slice(0, 7);
+              const invK = inv + (C.txc >= 0 && s(r[C.txc]) ? '#' + s(r[C.txc]) : ''); run(`DELETE FROM inv_issue WHERE kind='bccs' AND invoice=? AND acc=? AND ym<>?`, invK, acc, ymI); // bản nạp cũ theo ngày lập → sửa theo tháng hóa đơn
+              const x = run(`INSERT INTO inv_issue(issue_date, ym, ym_bill, acc, cust, contract, invoice, service, amt_notax, amt_tax, total, src, kind, shop, staff, txtype) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(invoice, acc, ym, total) DO NOTHING`,
+                d, ymI, ymI, acc, cust, s(r[C.con]) || s(r[C.isdn]), inv + (C.txc >= 0 && s(r[C.txc]) ? '#' + s(r[C.txc]) : ''), s(r[C.tt]), num(r[C.bt]), num(r[C.tx]), tot, name, 'bccs', s(r[C.shop]), s(r[C.st]), s(r[C.tt]));
               if (x.changes) nB++; else dupB++;
               if (!get(`SELECT 1 x FROM inv_cust WHERE acc=?`, acc)) run(`INSERT INTO inv_cust(acc, name, erp_code, erp_name, note, updated_at) VALUES(?,?,?,?,?, datetime('now','localtime'))`, acc, cust, code, s(r[C.ename]), 'BCCS');
               else if (code) run(`UPDATE inv_cust SET erp_code=? WHERE acc=? AND (erp_code IS NULL OR erp_code='')`, code, acc); }

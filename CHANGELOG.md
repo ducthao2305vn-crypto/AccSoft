@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.51.1 – 05/11/2026
+- Đối chiếu hóa đơn – 138812: tháng so sánh = **tháng / năm trên hóa đơn** (BCCS: cột *Năm_tháng* hoặc *Năm* + *Tháng*; cước phát sinh: *Year_month_Cuoc*), không phụ thuộc ngày lập giao dịch hay ngày nạp file. Nạp lại file BCCS đã nạp trước sẽ tự sửa tháng các dòng cũ. Cách so sánh mặc định: **Doanh thu theo tháng trên hóa đơn ↔ Nợ 138812**.
+
 ## v4.51.0 – 05/11/2026
 - Đối chiếu hóa đơn – 138812: thêm **doanh thu bán hàng BCCS** (file "Doanh thu theo hóa đơn BCCS": Shop, Staff, Transaction type/code, Date of creation, Before tax, Tax, After tax, Status, Invoice no, Name of customer, ISDN, Contract, Code ERP…).
   - Chỉ lấy giao dịch đã lập hóa đơn (bỏ "Not created invoice"); khách hàng có *Code ERP* hoặc tên dạng "VTL_VEN_043-…" được map sẵn mã ERP, còn lại map ở tab Map (có gợi ý tên).
