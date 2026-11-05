@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.56.2 – 05/11/2026
+- Map khách hàng: mỗi dòng có nút **💾 Lưu** – chọn mã ERP xong dòng hiện “● chưa lưu”, bấm Lưu → “✓ đã lưu”. Thêm nút **💾 Lưu tất cả thay đổi (n)** ở hàng Map đồng loạt.
+
 ## v4.56.1 – 05/11/2026
 - Sửa lỗi **map không lưu**: gõ vào ô “🔍 Gõ để tìm” cạnh danh sách chọn trước đây tự hiện mục đầu tiên như đã chọn nhưng **chưa lưu** (phải nhấn Enter). Nay gõ chỉ lọc danh sách (ô viền vàng = có mục khớp); nhấn **Enter** để chọn mục đầu hoặc mở danh sách và chọn → lưu ngay.
 - Nạp lại danh mục khách hàng (DMKH) **không ghi đè** các map đã chọn trong phần mềm.
