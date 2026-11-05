@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.52.2 – 05/11/2026
+- Map khách hàng: ô tìm **không tải lại khi đang gõ** – gõ xong nhấn **Enter** hoặc bấm **🔍 Tìm**; tải danh mục account nhanh hơn (gộp truy vấn).
+
 ## v4.52.1 – 05/11/2026
 - Map đồng loạt: khi không tick dòng nào, áp cho các dòng **đang hiện trên bảng** – kể cả khi lọc bằng ô *Tìm trong bảng* (vd gõ “_gftth_” → 424 dòng → map 1 lần). Ô chọn tất cả chỉ tick các dòng đang hiện.
 

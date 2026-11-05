@@ -93,7 +93,7 @@ function make(db, all, get, run) {
   const STOP = new Set(['unip', 'lda', 'timor', 'leste', 'viettel', 'branch', 'company', 'ltd', 'limited', 'unipessoal', 'the', 'and', 'office', 'centre', 'center', 'national', 'nasional', 'block', 'dili', 'uni']);
   const nz = t => s(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
   function customers(o = {}) {
-    const P = erpPartners(o.acc), byCode = new Map(P.map(p => [p.code, p])), C = all(`SELECT c.*, (SELECT count(*) FROM inv_line l WHERE l.acc=c.acc) n, (SELECT sum(total) FROM inv_line l WHERE l.acc=c.acc) amt, (SELECT max(pay_date) FROM inv_line l WHERE l.acc=c.acc) last FROM inv_cust c ORDER BY c.name`);
+    const P = erpPartners(o.acc), byCode = new Map(P.map(p => [p.code, p])), C = all(`SELECT c.*, l.n, l.amt, l.last FROM inv_cust c LEFT JOIN (SELECT acc, count(*) n, sum(total) amt, max(pay_date) last FROM inv_line GROUP BY acc) l ON l.acc=c.acc ORDER BY c.name`);
     const PN = P.map(p => ({ ...p, t: new Set(nz(p.name).split(' ').filter(w => w.length > 2 && !STOP.has(w))) }));
     for (const c of C) { c.erpName = c.erp_code ? ((byCode.get(c.erp_code) || {}).name || c.erp_name || '(không có trên ERP)') : '';
       if (!c.erp_code) { const t = nz(c.name).split(' ').filter(w => w.length > 2 && !STOP.has(w)); let best = null; for (const p of PN) { const hit = t.filter(w => p.t.has(w)).length; if (hit >= Math.min(2, t.length) && hit > 0 && (!best || hit > best.hit)) best = { hit, p }; } c.sug = best ? best.p.code : ''; c.sugName = best ? best.p.name : ''; } }
