@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.46.3 – 05/11/2026
+- Backup money: danh sách mặc định **chỉ hiện các khoản đã chọn backup**; ô "Hiện" để chuyển sang *Khoản số tiền chẵn – để chọn thêm* hoặc *Mọi khoản tạm ứng* (nhân viên chưa có backup thì mở sẵn danh sách số tiền chẵn).
+
 ## v4.46.2 – 05/11/2026
 - Công nợ tạm ứng – đổi đề nghị tạm ứng: ô gợi ý mặc định **chỉ hiện các đề nghị của nhân viên còn số dư** (còn treo hoặc hoàn ứng vượt), kèm số dư từng đề nghị; tích **"Hiện tất cả đề nghị"** để xem cả đề nghị đã hết số dư.
 
