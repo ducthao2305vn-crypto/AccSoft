@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.46.1 – 05/11/2026
+- Công nợ tạm ứng: **nhấn đúp vào số liệu nào thì chỉ mở đúng phần đó** thay vì mở tất cả:
+  - Đầu kỳ / Tạm ứng / Hoàn ứng → sổ chi tiết (Tạm ứng chỉ hiện dòng tạm ứng, Hoàn ứng chỉ hiện dòng hoàn ứng).
+  - Ô ≤ 30 / 31–60 / 61–90 / > 90 ngày → chỉ các khoản còn treo của đúng nhóm tuổi đó.
+  - Ô **Backup money** → chỉ phần backup (khoản backup đang treo + danh sách chọn backup).
+  - Khoản treo / Cũ nhất → khoản còn treo + theo đề nghị tạm ứng; Đối chiếu → phần đối chiếu; Cuối kỳ → khoản treo, backup, sổ chi tiết.
+  - Nhấn đúp tên nhân viên → tất cả. Thanh chọn phía trên để chuyển phần khác mà không cần đóng.
+
 ## v4.46.0 – 05/11/2026
 - Công nợ tạm ứng: chọn **Phương pháp FIFO**:
   1. **Chỉ theo đối tượng** (như trước) – hoàn ứng trừ vào tạm ứng của cùng nhân viên.
