@@ -517,3 +517,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.52.4: inv1388 num() hiểu (x), x-, U+2212; BCCS REV regex (return/cancel/hủy…) → âm; nạp lại: hóa đơn âm khớp dòng cũ total=-tot → UPDATE đổi dấu (FX, áp cả khi blocked).
 
 - v4.53.0: inv_issue.neg_adj; INV.bccsNeg(rids,neg) chỉ WHERE kind=bccs (WRITE invBccsNeg); cellDetail trả rid; nút data-bneg trong invCell.
+
+- v4.54.0: compare() cell.pay = ERP Có 138812 theo tháng (không vào diff); bỏ basis pay ở UI; cellDetail trả pay[].

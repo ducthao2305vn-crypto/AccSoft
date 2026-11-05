@@ -109,7 +109,7 @@ function make(db, all, get, run) {
     const acc = s(o.acc) || '138812', basis = ['pay', 'issue', 'issuecyc'].includes(o.basis) ? o.basis : 'bill', f = s(o.from), t = s(o.to), side = basis === 'pay' ? 'credit' : 'debit', TBL = basis.startsWith('issue') ? 'inv_issue' : 'inv_line';
     const map = new Map(all(`SELECT acc, erp_code FROM inv_cust`).map(r => [r.acc, r.erp_code || ''])), P = erpPartners(acc), pname = new Map(P.map(p => [p.code, p.name]));
     const ymCol = basis === 'pay' ? 'ym_pay' : basis === 'issue' ? 'ym' : 'ym_bill', W = [], A = []; if (f) { W.push(`${ymCol}>=?`); A.push(f); } if (t) { W.push(`${ymCol}<=?`); A.push(t); }
-    const G = new Map(), cell = (k, ym) => { const g = G.get(k) || G.set(k, { key: k, accs: new Set(), m: {}, inv: 0, erp: 0 }).get(k); return g.m[ym] || (g.m[ym] = { inv: 0, erp: 0, nInv: 0, nErp: 0 }); };
+    const G = new Map(), cell = (k, ym) => { const g = G.get(k) || G.set(k, { key: k, accs: new Set(), m: {}, inv: 0, erp: 0 }).get(k); return g.m[ym] || (g.m[ym] = { inv: 0, erp: 0, pay: 0, nInv: 0, nErp: 0, nPay: 0 }); };
     if (TBL === 'inv_issue' && o.src && o.src !== 'all') { W.push('kind=?'); A.push(o.src); }
     for (const r of all(`SELECT acc, ${ymCol} ym, sum(${o.notax ? 'amt_notax' : 'total'}) a, count(*) n FROM ${TBL} ${W.length ? 'WHERE ' + W.join(' AND ') : ''} GROUP BY 1,2`, ...A)) {
       const code = map.get(r.acc) || ('?' + r.acc), c = cell(code, r.ym); c.inv += r.a; c.nInv += r.n; G.get(code).accs.add(r.acc); }
@@ -124,19 +124,22 @@ function make(db, all, get, run) {
     // Doanh thu BCCS đối tượng BC19 ghi Nợ 138811 (cấu hình được): cộng thêm vào phía ERP
     const x11 = s(o.extra11 ?? 'BC19'); if (side === 'debit' && x11) for (const r of all(`SELECT partner_debit p, ym, sum(amount) a, count(*) n FROM entries WHERE acc_debit='138811' AND upper(partner_debit) LIKE ? ${WE.length ? 'AND ' + WE.join(' AND ') : ''} GROUP BY 1,2`, x11.toUpperCase() + '%', ...AE)) {
       const c = cell(codeOf(r.p), r.ym); c.erp += r.a; c.nErp += r.n; }
+    // Nộp tiền (ERP Có 138812): cột riêng để biết tháng đó đối tác có nộp tiền – không tính vào chênh lệch doanh thu
+    if (side === 'debit') for (const r of all(`SELECT partner_credit p, ym, sum(amount) a, count(*) n FROM entries WHERE acc_credit=? ${WE.length ? 'AND ' + WE.join(' AND ') : ''} GROUP BY 1,2`, acc, ...AE)) {
+      const c = cell(codeOf(r.p), r.ym); c.pay += r.a; c.nPay += r.n; }
     const months = [...new Set([...G.values()].flatMap(g => Object.keys(g.m)))].sort();
-    const rows = [...G.values()].map(g => { let inv = 0, erp = 0; for (const v of Object.values(g.m)) { inv += v.inv; erp += v.erp; }
+    const rows = [...G.values()].map(g => { let inv = 0, erp = 0, pay = 0; for (const v of Object.values(g.m)) { inv += v.inv; erp += v.erp; pay += v.pay || 0; }
       const unm = g.key.startsWith('?'), diffM = months.filter(m => g.m[m] && Math.abs(g.m[m].inv - g.m[m].erp) > 0.5).length;
       return { key: g.key, code: unm ? '' : g.key, name: unm ? (get(`SELECT name FROM inv_cust WHERE acc=?`, g.key.slice(1)) || {}).name || g.key.slice(1) : (pname.get(g.key) || (get(`SELECT erp_name FROM inv_cust WHERE erp_code=? AND erp_name<>'' LIMIT 1`, g.key) || {}).erp_name || ''),
-        accs: [...g.accs], unmapped: unm, m: g.m, inv, erp, diff: inv - erp, diffM,
+        accs: [...g.accs], unmapped: unm, m: g.m, inv, erp, pay, diff: inv - erp, diffM,
         status: unm ? 'unmapped' : Math.abs(inv - erp) <= 0.5 && !diffM ? 'ok' : !inv ? 'erp_only' : !erp ? 'inv_only' : 'diff' }; });
     // Gợi ý ghi nhầm đối tượng: cùng tháng, đối tượng A thiếu (hóa đơn > ERP) đúng bằng đối tượng B thừa (ERP > hóa đơn)
     const sus = [];
     for (const m of months) { const pos = [], neg = []; for (const r of rows) { const c = r.m[m]; if (!c || r.unmapped) continue; const d = c.inv - c.erp; if (d > 0.5) pos.push({ r, d }); else if (d < -0.5) neg.push({ r, d: -d }); }
       for (const a of pos) for (const b of neg) if (Math.abs(a.d - b.d) <= Math.max(0.5, a.d * 0.001)) sus.push({ ym: m, amt: a.d, short: a.r.key, shortName: a.r.name, over: b.r.key, overName: b.r.name }); }
     rows.sort((a, b) => (a.status === 'ok') - (b.status === 'ok') || Math.abs(b.diff) - Math.abs(a.diff));
-    const tm = Object.fromEntries(months.map(m => [m, { inv: rows.reduce((x, r) => x + (r.m[m] ? r.m[m].inv : 0), 0), erp: rows.reduce((x, r) => x + (r.m[m] ? r.m[m].erp : 0), 0) }]));
-    return { acc, basis, months, rows, tm, sus, inv: rows.reduce((x, r) => x + r.inv, 0), erp: rows.reduce((x, r) => x + r.erp, 0), lines: get(`SELECT count(*) n FROM inv_line`).n, issues: get(`SELECT count(*) n FROM inv_issue`).n, bccs: get(`SELECT count(*) n FROM inv_issue WHERE kind='bccs'`).n };
+    const tm = Object.fromEntries(months.map(m => [m, { inv: rows.reduce((x, r) => x + (r.m[m] ? r.m[m].inv : 0), 0), erp: rows.reduce((x, r) => x + (r.m[m] ? r.m[m].erp : 0), 0), pay: rows.reduce((x, r) => x + (r.m[m] ? r.m[m].pay : 0), 0) }]));
+    return { acc, basis, months, rows, tm, sus, pay: rows.reduce((x, r) => x + r.pay, 0), inv: rows.reduce((x, r) => x + r.inv, 0), erp: rows.reduce((x, r) => x + r.erp, 0), lines: get(`SELECT count(*) n FROM inv_line`).n, issues: get(`SELECT count(*) n FROM inv_issue`).n, bccs: get(`SELECT count(*) n FROM inv_issue WHERE kind='bccs'`).n };
   }
   function cellDetail(key, ym, o = {}) {
     const acc = s(o.acc) || '138812', basis = ['pay', 'issue', 'issuecyc'].includes(o.basis) ? o.basis : 'bill', side = basis === 'pay' ? 'credit' : 'debit', ymCol = basis === 'pay' ? 'ym_pay' : basis === 'issue' ? 'ym' : 'ym_bill', TBL = basis.startsWith('issue') ? 'inv_issue' : 'inv_line';
@@ -145,9 +148,10 @@ function make(db, all, get, run) {
     const inv = accs.length ? all(`SELECT rowid rid, * FROM ${TBL} WHERE acc IN (${accs.map(() => '?').join(',')})${Y}${SRC} ORDER BY ${TBL === 'inv_issue' ? 'issue_date' : 'pay_date'} LIMIT 20000`, ...accs, ...YP) : [];
     const x11 = s(o.extra11 ?? 'BC19'), accs2 = side === 'debit' && x11 && key.toUpperCase().startsWith(x11.toUpperCase()) ? [acc, '138811'] : [acc];
     const erp = key.startsWith('?') ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_${side} p, amount a, description ds FROM entries WHERE acc_${side} IN (${accs2.map(() => '?').join(',')}) AND upper(partner_${side}) LIKE ?${ym ? ' AND ym=?' : R ? ' AND ym BETWEEN ? AND ?' : ''} ORDER BY account_date, id LIMIT 20000`, ...accs2, key + '%', ...YP);
+    const pay = key.startsWith('?') || side !== 'debit' ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_credit p, amount a, description ds FROM entries WHERE acc_credit=? AND upper(partner_credit) LIKE ?${ym ? ' AND ym=?' : R ? ' AND ym BETWEEN ? AND ?' : ''} ORDER BY account_date, id LIMIT 20000`, acc, key + '%', ...YP);
     if (TBL === 'inv_issue' && (!o.src || o.src === 'all' || o.src === 'cuoc') && accs.length && !get(`SELECT 1 x FROM inv_issue WHERE kind='cuoc' LIMIT 1`))
       for (const l of all(`SELECT * FROM inv_line WHERE acc IN (${accs.map(() => '?').join(',')})${ym ? ' AND ym_bill=?' : R ? ' AND ym_bill BETWEEN ? AND ?' : ''} ORDER BY pay_date LIMIT 20000`, ...accs, ...YP)) inv.push({ ...l, issue_date: l.pay_date, kind: 'cuoc', amt_tax: l.amt_tax });
-    return { key, ym, from: R && R[0], to: R && R[1], accs, inv, erp, issue: TBL === 'inv_issue' };
+    return { key, ym, from: R && R[0], to: R && R[1], accs, inv, erp, pay, issue: TBL === 'inv_issue' };
   }
   // Điều chỉnh hóa đơn BCCS thành âm (báo cáo BCCS xuất số dương cho hóa đơn điều chỉnh giảm). Chỉ BCCS – không áp cho hóa đơn cước.
   function bccsNeg(rids, neg = true) { let n = 0; for (const id of [].concat(rids || [])) n += run(`UPDATE inv_issue SET total=${neg ? '-abs(total)' : 'abs(total)'}, amt_notax=${neg ? '-abs(amt_notax)' : 'abs(amt_notax)'}, amt_tax=${neg ? '-abs(amt_tax)' : 'abs(amt_tax)'}, neg_adj=${neg ? 1 : 'NULL'} WHERE rowid=? AND kind='bccs'`, +id).changes; return { n }; }

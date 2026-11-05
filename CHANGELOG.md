@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.54.0 – 05/11/2026
+- Đối chiếu hóa đơn – 138812: **nộp tiền tách cột riêng** – mỗi ô tháng thêm dòng 💰 nộp tiền (ERP Có 138812) và cột **Nộp tiền** tổng; không tính vào chênh lệch (chênh lệch chỉ so doanh thu hóa đơn ↔ ghi nhận Nợ 138812). Bỏ chế độ so sánh “Thu cước theo ngày nộp ↔ Có 138812”. Nhấn đúp ô: thêm bảng bút toán nộp tiền. Xuất Excel có cột nộp tiền theo tháng.
+
 ## v4.53.0 – 05/11/2026
 - Đối chiếu hóa đơn: **điều chỉnh hóa đơn BCCS thành số âm** – nhấn đúp ô tháng / tổng → bảng hóa đơn có nút **− Điều chỉnh âm** trên từng dòng BCCS (báo cáo BCCS xuất số dương cho hóa đơn điều chỉnh giảm); bấm **↺ Bỏ âm** để trả lại. Chỉ áp dụng hóa đơn BCCS – hóa đơn cước không điều chỉnh được.
 
