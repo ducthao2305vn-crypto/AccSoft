@@ -33,7 +33,7 @@ function make(db, all, get, run) {
           const C = { name: c(/customer name|tên/), acc: c(/account/), bw: c(/bandwidth/), price: c(/unit price/), fee: c(/monthly fee/), code: c(/code erp/), ename: c(/name erp/) };
           for (const r of aoa.slice(h + 1)) { const acc = s(r[C.acc]).toLowerCase(); if (!acc || /^\d+$/.test(acc)) continue; const old = get(`SELECT * FROM inv_cust WHERE acc=?`, acc) || {};
             const code = s(r[C.code]) || old.erp_code || '', en = s(r[C.ename]) || old.erp_name || '';
-            run(`INSERT OR REPLACE INTO inv_cust(acc, name, bw, price, fee, erp_code, erp_name, note, updated_at) VALUES(?,?,?,?,?,?,?,?,datetime('now','localtime'))`, acc, s(r[C.name]), s(r[C.bw]), num(r[C.price]), num(r[C.fee]), code.toUpperCase(), en, old.note || ''); nC++; }
+            run(`INSERT OR REPLACE INTO inv_cust(acc, name, bw, price, fee, erp_code, erp_name, note, updated_at) VALUES(?,?,?,?,?,?,?,?,datetime('now','localtime'))`, acc, s(r[C.name]), s(r[C.bw]), num(r[C.price]), num(r[C.fee]), (old.erp_code || code).toUpperCase(), old.erp_code ? (old.erp_name || en) : en, old.note || ''); nC++; } // giữ map đã chọn trong phần mềm
           continue; }
         // Doanh thu bán hàng BCCS: cột Transaction code + Invoice no + After tax (+ Name of customer, Code ERP…)
         { const hb = aoa.findIndex(r => { const L = low(r); return L.includes('transaction code') && L.includes('invoice no') && L.some(c => /after tax/.test(c)); });

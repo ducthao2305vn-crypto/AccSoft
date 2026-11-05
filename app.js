@@ -1688,12 +1688,12 @@ const COLP=(()=>{
     if(sel.classList.contains('hide'))inp.classList.add('hide');new MutationObserver(()=>inp.classList.toggle('hide',sel.classList.contains('hide'))).observe(sel,{attributes:true,attributeFilter:['class']});
     sel.parentNode.insertBefore(inp,sel);
     const filt=()=>{const q=norm(inp.value.trim());let first=null,n=0;for(const o of sel.options){const keep=!o.value||!q||norm(o.textContent+' '+o.value).includes(q);o.hidden=!keep;if(keep&&o.value&&o.value!=='__EMPTY__'){n++;if(!first)first=o}}
-      inp.title=q?n+' mục khớp':'';if(q&&first)sel.value=first.value;else if(!q&&sel.dataset.v0!=null)sel.value=sel.dataset.v0;return first};
+      inp.title=q?n+' mục khớp'+(first?' · Enter chọn: '+first.textContent:''):'';inp.style.outline=q&&first?'2px solid #FDB022':'';if(sel.dataset.v0!=null)sel.value=sel.dataset.v0;return first};
     sel.dataset.v0=sel.value;
     let ST=0,AT=0;inp.addEventListener('input',e=>{e.stopPropagation();clearTimeout(ST);ST=setTimeout(filt,120);
       // ô lọc của trang (data-auto): ngừng gõ ~0,8 giây là tự áp dụng, không cần Enter
       if(sel.dataset.auto){clearTimeout(AT);AT=setTimeout(()=>{const f=filt();const v=inp.value.trim()?(f?f.value:null):'';if(v!=null&&v!==sel.dataset.v0){sel.value=v;sel.dataset.v0=v;sel.dispatchEvent(new Event('change',{bubbles:true}))}},800)}});inp.addEventListener('change',e=>e.stopPropagation());
-    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const f=filt();if(f){sel.value=f.value;sel.dataset.v0=f.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}}else if(e.key==='Escape'){inp.value='';filt()}});
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const f=filt();if(f){sel.value=f.value;sel.dataset.v0=f.value;inp.style.outline='';sel.dispatchEvent(new Event('change',{bubbles:true}))}}else if(e.key==='Escape'){inp.value='';filt()}});
     sel.addEventListener('change',()=>{sel.dataset.v0=sel.value})};
   const scan=r=>{if(r.querySelectorAll)r.querySelectorAll('select:not([data-srch])').forEach(add)};
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1){if(n.tagName==='SELECT')add(n);else if(n.tagName==='OPTION'||n.tagName==='OPTGROUP'){const sl=n.closest('select');if(sl)add(sl)}else scan(n)}}).observe(document.documentElement,{childList:true,subtree:true});

@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.56.1 – 05/11/2026
+- Sửa lỗi **map không lưu**: gõ vào ô “🔍 Gõ để tìm” cạnh danh sách chọn trước đây tự hiện mục đầu tiên như đã chọn nhưng **chưa lưu** (phải nhấn Enter). Nay gõ chỉ lọc danh sách (ô viền vàng = có mục khớp); nhấn **Enter** để chọn mục đầu hoặc mở danh sách và chọn → lưu ngay.
+- Nạp lại danh mục khách hàng (DMKH) **không ghi đè** các map đã chọn trong phần mềm.
+
 ## v4.56.0 – 05/11/2026
 - Đối chiếu hóa đơn – nhấn đúp ô: thêm bảng **🔗 Ghép hóa đơn ↔ bút toán ERP** – ghép từng hóa đơn với từng dòng hạch toán: (1) số hóa đơn nằm trong diễn giải ERP, (2) account trong diễn giải + cùng số tiền, (3) cùng số tiền duy nhất. Trạng thái Khớp / Lệch tiền / Chỉ có hóa đơn / Chỉ có ERP, lọc nhanh bằng nút; dòng lệch xếp lên đầu.
 - Mọi bảng trong cửa sổ chi tiết có **dòng TỔNG CỘNG** (tự cộng lại theo dòng đang hiện khi lọc bằng ô tìm).
