@@ -509,3 +509,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.51: inv_issue thêm `kind (cuoc|bccs), shop, staff, txtype`; sheet BCCS = cột Transaction code + Invoice no + After tax; invoice lưu `số HĐ#mã giao dịch`; acc = `erp:<code>` nếu có Code ERP / tên dạng mã, ngược lại `bccs:<tên>`. compare issue/issuecyc: `src` all|cuoc|bccs, khi chưa có báo cáo phát hành cước thì gộp inv_line theo ym_bill làm cước phát sinh; ERP debit + Nợ 138811 partner LIKE `extra11` (mặc định BC19).
 
 - v4.51.2: inv1388.importBook(sheets,mode,force) chặn nạp trùng — hóa đơn (invoice|acc) đã có trong inv_line/inv_issue → ROLLBACK, trả {blocked,nDup,sample,months,kinds}; app.invImp hiện danh sách trùng trong drawer. Trùng trong cùng 1 file vẫn cho phép.
+
+- v4.51.3: invCell(x,ym,erpFirst) — ô Tổng gửi from/to = tháng đầu/cuối đang hiển thị (IVM); cellDetail lọc BETWEEN cho hóa đơn và ERP.

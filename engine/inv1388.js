@@ -139,14 +139,14 @@ function make(db, all, get, run) {
   }
   function cellDetail(key, ym, o = {}) {
     const acc = s(o.acc) || '138812', basis = ['pay', 'issue', 'issuecyc'].includes(o.basis) ? o.basis : 'bill', side = basis === 'pay' ? 'credit' : 'debit', ymCol = basis === 'pay' ? 'ym_pay' : basis === 'issue' ? 'ym' : 'ym_bill', TBL = basis.startsWith('issue') ? 'inv_issue' : 'inv_line';
-    const accs = key.startsWith('?') ? [key.slice(1)] : all(`SELECT acc FROM inv_cust WHERE erp_code=?`, key).map(r => r.acc), Y = ym ? ` AND ${ymCol}=?` : '';
+    const accs = key.startsWith('?') ? [key.slice(1)] : all(`SELECT acc FROM inv_cust WHERE erp_code=?`, key).map(r => r.acc), R = !ym && o.from && o.to ? [o.from, o.to] : null, Y = ym ? ` AND ${ymCol}=?` : R ? ` AND ${ymCol} BETWEEN ? AND ?` : '', YP = ym ? [ym] : R || [];
     const SRC = TBL === 'inv_issue' && o.src && o.src !== 'all' ? ` AND kind='${o.src === 'bccs' ? 'bccs' : 'cuoc'}'` : '';
-    const inv = accs.length ? all(`SELECT * FROM ${TBL} WHERE acc IN (${accs.map(() => '?').join(',')})${Y}${SRC} ORDER BY ${TBL === 'inv_issue' ? 'issue_date' : 'pay_date'} LIMIT 20000`, ...accs, ...(ym ? [ym] : [])) : [];
+    const inv = accs.length ? all(`SELECT * FROM ${TBL} WHERE acc IN (${accs.map(() => '?').join(',')})${Y}${SRC} ORDER BY ${TBL === 'inv_issue' ? 'issue_date' : 'pay_date'} LIMIT 20000`, ...accs, ...YP) : [];
     const x11 = s(o.extra11 ?? 'BC19'), accs2 = side === 'debit' && x11 && key.toUpperCase().startsWith(x11.toUpperCase()) ? [acc, '138811'] : [acc];
-    const erp = key.startsWith('?') ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_${side} p, amount a, description ds FROM entries WHERE acc_${side} IN (${accs2.map(() => '?').join(',')}) AND upper(partner_${side}) LIKE ?${ym ? ' AND ym=?' : ''} ORDER BY account_date, id LIMIT 20000`, ...accs2, key + '%', ...(ym ? [ym] : []));
+    const erp = key.startsWith('?') ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_${side} p, amount a, description ds FROM entries WHERE acc_${side} IN (${accs2.map(() => '?').join(',')}) AND upper(partner_${side}) LIKE ?${ym ? ' AND ym=?' : R ? ' AND ym BETWEEN ? AND ?' : ''} ORDER BY account_date, id LIMIT 20000`, ...accs2, key + '%', ...YP);
     if (TBL === 'inv_issue' && (!o.src || o.src === 'all' || o.src === 'cuoc') && accs.length && !get(`SELECT 1 x FROM inv_issue WHERE kind='cuoc' LIMIT 1`))
-      for (const l of all(`SELECT * FROM inv_line WHERE acc IN (${accs.map(() => '?').join(',')})${ym ? ' AND ym_bill=?' : ''} ORDER BY pay_date LIMIT 20000`, ...accs, ...(ym ? [ym] : []))) inv.push({ ...l, issue_date: l.pay_date, kind: 'cuoc', amt_tax: l.amt_tax });
-    return { key, ym, accs, inv, erp, issue: TBL === 'inv_issue' };
+      for (const l of all(`SELECT * FROM inv_line WHERE acc IN (${accs.map(() => '?').join(',')})${ym ? ' AND ym_bill=?' : R ? ' AND ym_bill BETWEEN ? AND ?' : ''} ORDER BY pay_date LIMIT 20000`, ...accs, ...YP)) inv.push({ ...l, issue_date: l.pay_date, kind: 'cuoc', amt_tax: l.amt_tax });
+    return { key, ym, from: R && R[0], to: R && R[1], accs, inv, erp, issue: TBL === 'inv_issue' };
   }
   return { importBook, customers, setMap, compare, cellDetail, erpPartners };
 }
