@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.51.2 – 05/11/2026
+- Đối chiếu hóa đơn – 138812: **chống nạp trùng** – khi nạp bổ sung, nếu file có hóa đơn (số hóa đơn + account; BCCS: số hóa đơn + mã giao dịch) **đã nạp trước đó**, phần mềm **dừng, không nạp dòng nào** và hiện danh sách hóa đơn trùng (sheet, loại, số hóa đơn, khách hàng, tháng, số tiền) để bạn loại khỏi file rồi nạp lại. File chỉ có danh mục khách hàng vẫn nạp / cập nhật bình thường.
+
 ## v4.51.1 – 05/11/2026
 - Đối chiếu hóa đơn – 138812: tháng so sánh = **tháng / năm trên hóa đơn** (BCCS: cột *Năm_tháng* hoặc *Năm* + *Tháng*; cước phát sinh: *Year_month_Cuoc*), không phụ thuộc ngày lập giao dịch hay ngày nạp file. Nạp lại file BCCS đã nạp trước sẽ tự sửa tháng các dòng cũ. Cách so sánh mặc định: **Doanh thu theo tháng trên hóa đơn ↔ Nợ 138812**.
 

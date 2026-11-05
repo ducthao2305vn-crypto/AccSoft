@@ -18,7 +18,10 @@ function make(db, all, get, run) {
   const ymOf = v => { const t = s(v), m = t.match(/^(\d{4})[_\-\/.](\d{1,2})$/); return m ? `${m[1]}-${m[2].padStart(2, '0')}` : ''; };
 
   // Nạp workbook: sheets = { name: aoa }. Nhận sheet danh mục (có cột "Account" + "Code ERP") và sheet hóa đơn (có "Invoice no" + "Subscriber")
-  function importBook(sheets, mode = 'merge') {
+  function importBook(sheets, mode = 'merge', force = false) {
+    // Chống nạp trùng: hóa đơn (số HĐ + account) đã có trong dữ liệu từ lần nạp trước → cảnh báo, KHÔNG nạp cả file
+    const exL = new Set(all(`SELECT invoice||'|'||acc k FROM inv_line`).map(r => r.k)), exI = new Set(all(`SELECT invoice||'|'||acc k FROM inv_issue`).map(r => r.k)), dupEx = [];
+    const chk = (set, inv, acc, info) => { if (set.has(inv + '|' + acc)) { dupEx.push(info); return true; } return false; };
     let nC = 0, nL = 0, dup = 0, nI = 0, dupI = 0, nB = 0, dupB = 0, sheetC = '', sheetL = '', sheetI = '', sheetB = '';
     db.exec('BEGIN'); try {
       if (mode === 'replace') { run(`DELETE FROM inv_line`); } if (mode === 'replaceIssue') run(`DELETE FROM inv_issue`);
@@ -41,7 +44,7 @@ function make(db, all, get, run) {
               const d = dmy(r[C.d]), tot = num(r[C.at]);
               // Tháng ghi nhận = tháng / năm trên hóa đơn (cột Năm_tháng hoặc Năm + Tháng), không phải ngày lập / ngày nạp
               const ymI = (C.ym >= 0 && ymOf(r[C.ym])) || (C.yy >= 0 && C.mm >= 0 && +r[C.yy] > 1990 && +r[C.mm] >= 1 && +r[C.mm] <= 12 ? `${+r[C.yy]}-${String(+r[C.mm]).padStart(2, '0')}` : '') || d.slice(0, 7);
-              const invK = inv + (C.txc >= 0 && s(r[C.txc]) ? '#' + s(r[C.txc]) : ''); run(`DELETE FROM inv_issue WHERE kind='bccs' AND invoice=? AND acc=? AND ym<>?`, invK, acc, ymI); // bản nạp cũ theo ngày lập → sửa theo tháng hóa đơn
+              const invK = inv + (C.txc >= 0 && s(r[C.txc]) ? '#' + s(r[C.txc]) : ''); if (chk(exI, invK, acc, { sheet: name, kind: 'BCCS', invoice: inv, acc: cust, ym: ymI, amt: tot })) continue; run(`DELETE FROM inv_issue WHERE kind='bccs' AND invoice=? AND acc=? AND ym<>?`, invK, acc, ymI); // bản nạp cũ theo ngày lập → sửa theo tháng hóa đơn
               const x = run(`INSERT INTO inv_issue(issue_date, ym, ym_bill, acc, cust, contract, invoice, service, amt_notax, amt_tax, total, src, kind, shop, staff, txtype) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(invoice, acc, ym, total) DO NOTHING`,
                 d, ymI, ymI, acc, cust, s(r[C.con]) || s(r[C.isdn]), inv + (C.txc >= 0 && s(r[C.txc]) ? '#' + s(r[C.txc]) : ''), s(r[C.tt]), num(r[C.bt]), num(r[C.tx]), tot, name, 'bccs', s(r[C.shop]), s(r[C.st]), s(r[C.tt]));
               if (x.changes) nB++; else dupB++;
@@ -56,6 +59,7 @@ function make(db, all, get, run) {
             for (const r of aoa.slice(hi + 1)) { const acc = s(r[C.acc]).toLowerCase(), inv = s(r[C.inv]); if (!acc || !inv || /^\d+$/.test(acc) && acc.length < 3) continue;
               const d = dmy(r[C.d]), ymb = ymOf(r[C.cyc]) || (C.cyc >= 0 ? dmy(r[C.cyc]).slice(0, 7) : '') || d.slice(0, 7), tot = num(r[C.tot]) || (num(r[C.nt]) + num(r[C.tx]));
               if (!tot && !num(r[C.nt])) continue;
+              if (chk(exI, inv, acc, { sheet: name, kind: 'Phát hành', invoice: inv, acc, ym: ymb, amt: tot })) continue;
               const x = run(`INSERT OR IGNORE INTO inv_issue(issue_date, ym, ym_bill, acc, cust, contract, invoice, service, amt_notax, amt_tax, total, src) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, d, (d || ymb).slice(0, 7), ymb, acc, s(r[C.cust]), s(r[C.con]), inv, s(r[C.svc]), num(r[C.nt]), num(r[C.tx]), tot, name); run(`UPDATE inv_issue SET kind='cuoc' WHERE kind IS NULL`);
               if (x.changes) nI++; else dupI++;
               if (!get(`SELECT 1 x FROM inv_cust WHERE acc=?`, acc)) run(`INSERT INTO inv_cust(acc, name, erp_code, updated_at) VALUES(?,?, '', datetime('now','localtime'))`, acc, s(r[C.cust])); }
@@ -65,12 +69,14 @@ function make(db, all, get, run) {
           const C = { pd: c(/^pay date$/), con: c(/^contract no$/), acc: c(/^subscriber$/), cust: c(/^customer name$/), nt: c(/amount not tax/), at: c(/^amount tax$/), tot: c(/^total amount$/), inv: c(/^invoice no$/), col: c(/collection code/), st: c(/payment staff/), svc: c(/^service$/), ymb: c(/year_month/) };
           for (const r of aoa.slice(h + 1)) { if (typeof r[0] !== 'number' && !/^\d+$/.test(s(r[0]))) continue; const acc = s(r[C.acc]).toLowerCase(); if (!acc) continue;
             const pd = dmy(r[C.pd]), ymb = ymOf(r[C.ymb]) || pd.slice(0, 7);
+            if (chk(exL, s(r[C.inv]), acc, { sheet: name, kind: 'Cước', invoice: s(r[C.inv]), acc, ym: ymb, amt: num(r[C.tot]) })) continue;
             const x = run(`INSERT OR IGNORE INTO inv_line(pay_date, ym_pay, ym_bill, contract, acc, cust, amt_notax, amt_tax, total, invoice, collection, staff, service, src) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
               pd, pd.slice(0, 7), ymb, s(r[C.con]), acc, s(r[C.cust]), num(r[C.nt]), num(r[C.at]), num(r[C.tot]), s(r[C.inv]), s(r[C.col]), s(r[C.st]), s(r[C.svc]), name);
             if (x.changes) nL++; else dup++;
             if (!get(`SELECT 1 x FROM inv_cust WHERE acc=?`, acc)) run(`INSERT INTO inv_cust(acc, name, erp_code, updated_at) VALUES(?,?, '', datetime('now','localtime'))`, acc, s(r[C.cust])); }
         }
       }
+      if (dupEx.length && !force) { db.exec('ROLLBACK'); return { blocked: true, nDup: dupEx.length, sample: dupEx.slice(0, 60), months: [...new Set(dupEx.map(d => d.ym))].sort(), kinds: [...new Set(dupEx.map(d => d.kind))] }; }
       db.exec('COMMIT');
     } catch (e) { db.exec('ROLLBACK'); throw e; }
     if (!sheetC && !sheetL && !sheetI && !sheetB) throw new Error('Không thấy sheet danh mục (Account + Code ERP), sheet thu cước (Invoice no + Subscriber + Pay date) hoặc sheet phát hành hóa đơn (số hóa đơn + account + ngày phát hành / kỳ cước)');
