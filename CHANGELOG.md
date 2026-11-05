@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.52.3 – 05/11/2026
+- Đối chiếu hóa đơn: ô **ngày / tháng** không tải lại khi đang gõ – tab Map: chọn *Thu gần nhất từ – đến* rồi nhấn **Enter** hoặc **🔍 Tìm**; tab Đối chiếu: chọn *Từ tháng – Đến tháng* rồi bấm **Xem** (hoặc Enter).
+
 ## v4.52.2 – 05/11/2026
 - Map khách hàng: ô tìm **không tải lại khi đang gõ** – gõ xong nhấn **Enter** hoặc bấm **🔍 Tìm**; tải danh mục account nhanh hơn (gộp truy vấn).
 
