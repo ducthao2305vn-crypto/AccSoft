@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.52.4 – 05/11/2026
+- Doanh thu BCCS: **giữ đúng dấu âm** của hóa đơn âm – đọc được số âm dạng `-1,200`, `(1,200)`, `1,200-`, dấu trừ Unicode; giao dịch trả hàng / hủy / hoàn tiền / điều chỉnh giảm (theo Transaction type, Status, Reason) ghi âm nếu file để số dương.
+- Nạp lại file BCCS cũ: các hóa đơn âm đã nạp sai thành dương được **tự sửa dấu** (vẫn chặn nhân đôi các hóa đơn còn lại).
+
 ## v4.52.3 – 05/11/2026
 - Đối chiếu hóa đơn: ô **ngày / tháng** không tải lại khi đang gõ – tab Map: chọn *Thu gần nhất từ – đến* rồi nhấn **Enter** hoặc **🔍 Tìm**; tab Đối chiếu: chọn *Từ tháng – Đến tháng* rồi bấm **Xem** (hoặc Enter).
 

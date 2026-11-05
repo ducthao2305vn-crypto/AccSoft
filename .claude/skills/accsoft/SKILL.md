@@ -513,3 +513,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.51.3: invCell(x,ym,erpFirst) — ô Tổng gửi from/to = tháng đầu/cuối đang hiển thị (IVM); cellDetail lọc BETWEEN cho hóa đơn và ERP.
 
 - v4.52.0: tab Map (inv88): IVF.cl1/cl2 lọc c.last; checkbox data-ick + #icBulk/#icApply/#icClear gọi invSetMap(accs[],code,name) một lần.
+
+- v4.52.4: inv1388 num() hiểu (x), x-, U+2212; BCCS REV regex (return/cancel/hủy…) → âm; nạp lại: hóa đơn âm khớp dòng cũ total=-tot → UPDATE đổi dấu (FX, áp cả khi blocked).
