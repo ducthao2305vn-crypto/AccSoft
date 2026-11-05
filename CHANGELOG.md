@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.49.0 – 05/11/2026
+**Mô-đun mới: Đối chiếu hóa đơn – 138812** (menu Phân tích)
+- **Nạp file** Excel nhiều sheet: sheet danh mục khách hàng (cột *Account chuẩn hoá*, *Code ERP*, *Name ERP*, phí tháng…) và sheet báo cáo thu cước theo hóa đơn (*Pay date, Contract no, Subscriber, Customer name, Total amount, Invoice no, Year_month_Cuoc*…); tự nhận theo tên cột, nạp lại không nhân đôi hóa đơn, giữ map đã sửa.
+- **Map khách hàng ↔ ERP**: mỗi account gán mã đối tượng ERP của 138812 (một mã ERP có thể nhiều account); chọn trong danh sách đối tượng 138812 trên sổ, **gợi ý theo tên** (bỏ các từ chung như Unip, Lda, Timor…), *Nhận tất cả gợi ý*.
+- **Đối chiếu theo tháng × đối tượng**: *Doanh thu* – hóa đơn theo kỳ cước ↔ Nợ 138812; hoặc *Thu tiền* – hóa đơn theo ngày nộp ↔ Có 138812. Mỗi ô hiện hóa đơn / ERP, tô đỏ khi lệch; trạng thái khớp / chênh lệch / có hóa đơn ERP chưa ghi / ERP có không có hóa đơn / account chưa map.
+- **Nghi ghi nhầm đối tượng**: liệt kê các cặp cùng tháng – đối tượng A thiếu đúng bằng số đối tượng B thừa – để chuyển bút toán ở mô-đun Công nợ 138811 / 138812.
+- Nhấn đúp ô tháng / tổng: danh sách hóa đơn và bút toán ERP tương ứng; xuất Excel (đối chiếu + cặp nghi nhầm).
+
 ## v4.48.0 – 05/11/2026
 **Mô-đun mới: Công nợ 138811 / 138812 theo đối tượng** (menu Phân tích)
 - FIFO theo đối tượng: Nợ 1388x = doanh thu / ghi nợ (thường nhập ngày cuối tháng), Có = nộp / thu tiền (theo ngày thực tế). Số còn nợ = các khoản ghi Nợ gần nhất cộng đủ số dư → tiền nộp trước ngày ghi doanh thu cuối tháng vẫn cân trừ đúng, không bị tính quá hạn sai.

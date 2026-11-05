@@ -502,3 +502,6 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Công nợ 138811/138812 (v4.48, `engine/recv1388.js`)
 - `lines` hai phía TK 138811/138812, bảng `r1388_wrong(id, side dr|cr, note, to_bp)`: to_bp rỗng = loại khỏi tuổi nợ, có = chuyển sang đối tượng đó. `aging` = lấp số dư (dòng hợp lệ) bằng Nợ mới nhất. report: close theo sổ (đối tượng gốc), adj sau loại/chuyển. IPC READ r88Report/r88Detail/r88Wrong, WRITE r88SetWrong. UI `vR88`, `r88Detail`, `r88Wrong` (trang `r88`).
+
+### Đối chiếu hóa đơn 138812 (v4.49, `engine/inv1388.js`)
+- Bảng `inv_cust(acc PK, name, fee, erp_code…)`, `inv_line(pay_date, ym_pay, ym_bill, acc, total, invoice… UNIQUE(invoice, acc, pay_date, total))`. `importBook(sheets)` dò sheet có cột Account + Code ERP (danh mục) và Invoice no + Subscriber (hóa đơn, dòng có Index số). `codeOf(partner)` = tiền tố mã (VTL_HOVEN00316 / VTL_VEN_197). `compare(o)` basis bill (ym_bill ↔ Nợ 138812) | pay (ym_pay ↔ Có 138812); `sus` cặp thiếu–thừa bằng nhau cùng tháng. IPC `inv:import`, READ invCustomers/invCompare/invCell, WRITE invImport/invSetMap. UI `vInv88` (trang `inv88`).
