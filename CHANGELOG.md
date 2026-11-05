@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.53.0 – 05/11/2026
+- Đối chiếu hóa đơn: **điều chỉnh hóa đơn BCCS thành số âm** – nhấn đúp ô tháng / tổng → bảng hóa đơn có nút **− Điều chỉnh âm** trên từng dòng BCCS (báo cáo BCCS xuất số dương cho hóa đơn điều chỉnh giảm); bấm **↺ Bỏ âm** để trả lại. Chỉ áp dụng hóa đơn BCCS – hóa đơn cước không điều chỉnh được.
+
 ## v4.52.4 – 05/11/2026
 - Doanh thu BCCS: **giữ đúng dấu âm** của hóa đơn âm – đọc được số âm dạng `-1,200`, `(1,200)`, `1,200-`, dấu trừ Unicode; giao dịch trả hàng / hủy / hoàn tiền / điều chỉnh giảm (theo Transaction type, Status, Reason) ghi âm nếu file để số dương.
 - Nạp lại file BCCS cũ: các hóa đơn âm đã nạp sai thành dương được **tự sửa dấu** (vẫn chặn nhân đôi các hóa đơn còn lại).

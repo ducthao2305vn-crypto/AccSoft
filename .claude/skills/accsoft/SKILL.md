@@ -515,3 +515,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.52.0: tab Map (inv88): IVF.cl1/cl2 lọc c.last; checkbox data-ick + #icBulk/#icApply/#icClear gọi invSetMap(accs[],code,name) một lần.
 
 - v4.52.4: inv1388 num() hiểu (x), x-, U+2212; BCCS REV regex (return/cancel/hủy…) → âm; nạp lại: hóa đơn âm khớp dòng cũ total=-tot → UPDATE đổi dấu (FX, áp cả khi blocked).
+
+- v4.53.0: inv_issue.neg_adj; INV.bccsNeg(rids,neg) chỉ WHERE kind=bccs (WRITE invBccsNeg); cellDetail trả rid; nút data-bneg trong invCell.

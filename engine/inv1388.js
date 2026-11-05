@@ -10,7 +10,7 @@ function make(db, all, get, run) {
     CREATE INDEX IF NOT EXISTS ix_inv_line_acc ON inv_line(acc);
     CREATE TABLE IF NOT EXISTS inv_issue(issue_date TEXT, ym TEXT, ym_bill TEXT, acc TEXT, cust TEXT, contract TEXT, invoice TEXT, service TEXT, amt_notax REAL, amt_tax REAL, total REAL, src TEXT, UNIQUE(invoice, acc, ym, total));
     CREATE INDEX IF NOT EXISTS ix_inv_issue_acc ON inv_issue(acc)`);
-  for (const c of ['kind TEXT', 'shop TEXT', 'staff TEXT', 'txtype TEXT']) { try { db.exec(`ALTER TABLE inv_issue ADD COLUMN ${c}`); } catch { } }
+  for (const c of ['kind TEXT', 'shop TEXT', 'staff TEXT', 'txtype TEXT', 'neg_adj INTEGER']) { try { db.exec(`ALTER TABLE inv_issue ADD COLUMN ${c}`); } catch { } }
   try { db.exec(`UPDATE inv_issue SET kind='cuoc' WHERE kind IS NULL`); } catch { }
   const s = v => v == null ? '' : String(v).replace(/\s+/g, ' ').trim(), num = v => { if (typeof v === 'number') return Number.isFinite(v) ? v : 0; let t = String(v || '').replace(/[\s\u00a0,]/g, '').replace(/[\u2212\u2012\u2013\u2014]/g, '-'), neg = false;
     if (/^\(.*\)$/.test(t)) { neg = true; t = t.slice(1, -1); } if (/-$/.test(t)) { neg = true; t = t.slice(0, -1); } const n = +t; return Number.isFinite(n) ? (neg ? -Math.abs(n) : n) : 0; };
@@ -142,13 +142,15 @@ function make(db, all, get, run) {
     const acc = s(o.acc) || '138812', basis = ['pay', 'issue', 'issuecyc'].includes(o.basis) ? o.basis : 'bill', side = basis === 'pay' ? 'credit' : 'debit', ymCol = basis === 'pay' ? 'ym_pay' : basis === 'issue' ? 'ym' : 'ym_bill', TBL = basis.startsWith('issue') ? 'inv_issue' : 'inv_line';
     const accs = key.startsWith('?') ? [key.slice(1)] : all(`SELECT acc FROM inv_cust WHERE erp_code=?`, key).map(r => r.acc), R = !ym && o.from && o.to ? [o.from, o.to] : null, Y = ym ? ` AND ${ymCol}=?` : R ? ` AND ${ymCol} BETWEEN ? AND ?` : '', YP = ym ? [ym] : R || [];
     const SRC = TBL === 'inv_issue' && o.src && o.src !== 'all' ? ` AND kind='${o.src === 'bccs' ? 'bccs' : 'cuoc'}'` : '';
-    const inv = accs.length ? all(`SELECT * FROM ${TBL} WHERE acc IN (${accs.map(() => '?').join(',')})${Y}${SRC} ORDER BY ${TBL === 'inv_issue' ? 'issue_date' : 'pay_date'} LIMIT 20000`, ...accs, ...YP) : [];
+    const inv = accs.length ? all(`SELECT rowid rid, * FROM ${TBL} WHERE acc IN (${accs.map(() => '?').join(',')})${Y}${SRC} ORDER BY ${TBL === 'inv_issue' ? 'issue_date' : 'pay_date'} LIMIT 20000`, ...accs, ...YP) : [];
     const x11 = s(o.extra11 ?? 'BC19'), accs2 = side === 'debit' && x11 && key.toUpperCase().startsWith(x11.toUpperCase()) ? [acc, '138811'] : [acc];
     const erp = key.startsWith('?') ? [] : all(`SELECT id, account_date d, ym, document_no doc, acc_debit dr, acc_credit cr, partner_${side} p, amount a, description ds FROM entries WHERE acc_${side} IN (${accs2.map(() => '?').join(',')}) AND upper(partner_${side}) LIKE ?${ym ? ' AND ym=?' : R ? ' AND ym BETWEEN ? AND ?' : ''} ORDER BY account_date, id LIMIT 20000`, ...accs2, key + '%', ...YP);
     if (TBL === 'inv_issue' && (!o.src || o.src === 'all' || o.src === 'cuoc') && accs.length && !get(`SELECT 1 x FROM inv_issue WHERE kind='cuoc' LIMIT 1`))
       for (const l of all(`SELECT * FROM inv_line WHERE acc IN (${accs.map(() => '?').join(',')})${ym ? ' AND ym_bill=?' : R ? ' AND ym_bill BETWEEN ? AND ?' : ''} ORDER BY pay_date LIMIT 20000`, ...accs, ...YP)) inv.push({ ...l, issue_date: l.pay_date, kind: 'cuoc', amt_tax: l.amt_tax });
     return { key, ym, from: R && R[0], to: R && R[1], accs, inv, erp, issue: TBL === 'inv_issue' };
   }
-  return { importBook, customers, setMap, compare, cellDetail, erpPartners };
+  // Điều chỉnh hóa đơn BCCS thành âm (báo cáo BCCS xuất số dương cho hóa đơn điều chỉnh giảm). Chỉ BCCS – không áp cho hóa đơn cước.
+  function bccsNeg(rids, neg = true) { let n = 0; for (const id of [].concat(rids || [])) n += run(`UPDATE inv_issue SET total=${neg ? '-abs(total)' : 'abs(total)'}, amt_notax=${neg ? '-abs(amt_notax)' : 'abs(amt_notax)'}, amt_tax=${neg ? '-abs(amt_tax)' : 'abs(amt_tax)'}, neg_adj=${neg ? 1 : 'NULL'} WHERE rowid=? AND kind='bccs'`, +id).changes; return { n }; }
+  return { importBook, customers, setMap, compare, cellDetail, erpPartners, bccsNeg };
 }
 module.exports = { make, codeOf };
