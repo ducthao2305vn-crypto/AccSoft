@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.52.1 – 05/11/2026
+- Map đồng loạt: khi không tick dòng nào, áp cho các dòng **đang hiện trên bảng** – kể cả khi lọc bằng ô *Tìm trong bảng* (vd gõ “_gftth_” → 424 dòng → map 1 lần). Ô chọn tất cả chỉ tick các dòng đang hiện.
+
 ## v4.52.0 – 05/11/2026
 - Đối chiếu hóa đơn – tab Map khách hàng: lọc theo **Thu gần nhất từ – đến** (ngày); **Map đồng loạt** – tick dòng (hoặc ô chọn tất cả) rồi chọn mã đối tượng ERP → *Map các dòng*; không tick dòng nào thì áp cho **toàn bộ dòng đang lọc** (vd tìm “polisia” → map 22 account một lần). Có nút *Bỏ map các dòng*.
 
