@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.55.1 – 05/11/2026
+- Sửa dòng tổng cộng cột HĐ BCCS / HĐ Payment.
+
 ## v4.55.0 – 05/11/2026
 - Đối chiếu hóa đơn – 138812: tách hóa đơn thành 3 cột **HĐ BCCS**, **HĐ Payment (cước)** và **Tổng HĐ** (có ở dòng tổng cộng và file Excel).
 
