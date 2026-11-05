@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.46.0 – 05/11/2026
+- Công nợ tạm ứng: chọn **Phương pháp FIFO**:
+  1. **Chỉ theo đối tượng** (như trước) – hoàn ứng trừ vào tạm ứng của cùng nhân viên.
+  2. **Theo đối tượng + Đề nghị tạm ứng** – mỗi đề nghị tạm ứng (Advance Request) cân trừ riêng; đề nghị hoàn ứng vượt / hoàn ứng không có đề nghị được trừ vào các đề nghị còn dư cũ nhất → tổng vẫn = số dư; backup money ưu tiên trong từng đề nghị.
+- Màn hình chi tiết nhân viên: bảng **Theo đề nghị tạm ứng** (tạm ứng, hoàn ứng, chênh lệch, còn treo, tuổi; đề nghị *hoàn ứng vượt* tô đỏ – dấu hiệu chọn sai đề nghị).
+- **Sửa đề nghị tạm ứng** ngay trong sổ chi tiết: tích các dòng chọn sai → nhập / chọn đề nghị đúng → *Đổi đề nghị tạm ứng* (hoặc *Trả về gốc*). Không sửa dữ liệu gốc; lưu ở Điều chỉnh dữ liệu (trường mới "Đề nghị tạm ứng"), tuổi nợ tính lại ngay.
+- Biên bản và email đối chiếu dùng phương pháp FIFO đang chọn.
+
 ## v4.45.2 – 04/11/2026
 - Sửa công nợ tạm ứng có **backup money**: trước đây chọn backup xong tuổi nợ vẫn giữ nguyên số tiền đó (backup + tuổi nợ > số dư). Nay luôn **Tổng nợ = Backup money + các nhóm tuổi nợ**: số dư dành trước cho khoản backup đã đánh dấu, phần còn lại mới phân tuổi cho các khoản tạm ứng thường gần nhất còn treo (backup không còn bị tính quá hạn 30 ngày).
 

@@ -1,7 +1,7 @@
 'use strict';
 // Điều chỉnh các trường quản trị của bút toán (không sửa dữ liệu gốc): Hợp đồng, Mã vị trí (Location), Biển số xe, Loại dòng tiền.
 // Hợp đồng / vị trí / biển số lưu ở bảng field_adj (theo id bút toán + chữ ký nội dung); dòng tiền dùng chung bảng cf_adj của B03.
-const FIELDS = { contract: { col: 'contract', name: 'Hợp đồng' }, location: { col: 'location', name: 'Mã vị trí (Location)' }, plate: { col: 'plate', name: 'Biển số xe' }, dept: { col: 'department_sub', name: 'Phòng ban (Department Sub)' }, cf: { col: 'cashflow', name: 'Loại dòng tiền' } };
+const FIELDS = { contract: { col: 'contract', name: 'Hợp đồng' }, location: { col: 'location', name: 'Mã vị trí (Location)' }, plate: { col: 'plate', name: 'Biển số xe' }, dept: { col: 'department_sub', name: 'Phòng ban (Department Sub)' }, ar: { col: 'advance_request', name: 'Đề nghị tạm ứng (Advance Request)' }, cf: { col: 'cashflow', name: 'Loại dòng tiền' } };
 const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+r.a || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
 
 function make(db, all, run, okYm, FIN) {

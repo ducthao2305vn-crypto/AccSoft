@@ -13,9 +13,9 @@ function make(db, all, get, run, okYm) {
   function lines(acc, asOf, bps) {
     const A = pfx(acc) + '%', t = day(asOf) || '9999-12-31', B = bps && bps.length ? bps : null, W = B ? ` AND p IN (${B.map(() => '?').join(',')})` : '';
     return all(`SELECT * FROM (
-        SELECT e.id, e.account_date d, e.ym, e.document_no doc, e.acc_debit acc, e.acc_credit oacc, e.partner_debit p, e.amount dr, 0 cr, e.description ds, e.advance_request ar, e.created_by u FROM entries e WHERE e.acc_debit LIKE ? AND e.acc_debit NOT LIKE '1412%' AND e.account_date<=?
+        SELECT e.id, e.account_date d, e.ym, e.document_no doc, e.acc_debit acc, e.acc_credit oacc, e.partner_debit p, e.amount dr, 0 cr, e.description ds, coalesce((SELECT f.value FROM field_adj f WHERE f.id=e.id AND f.field='ar'), e.advance_request) ar, e.advance_request ar0, e.created_by u FROM entries e WHERE e.acc_debit LIKE ? AND e.acc_debit NOT LIKE '1412%' AND e.account_date<=?
         UNION ALL
-        SELECT e.id, e.account_date, e.ym, e.document_no, e.acc_credit, e.acc_debit, e.partner_credit, 0, e.amount, e.description, e.advance_request, e.created_by FROM entries e WHERE e.acc_credit LIKE ? AND e.acc_credit NOT LIKE '1412%' AND e.account_date<=?)
+        SELECT e.id, e.account_date, e.ym, e.document_no, e.acc_credit, e.acc_debit, e.partner_credit, 0, e.amount, e.description, coalesce((SELECT f.value FROM field_adj f WHERE f.id=e.id AND f.field='ar'), e.advance_request), e.advance_request, e.created_by FROM entries e WHERE e.acc_credit LIKE ? AND e.acc_credit NOT LIKE '1412%' AND e.account_date<=?)
       WHERE 1${W} ORDER BY d, id`, A, t, A, t, ...(B || []));
   }
   const staffMap = () => { const m = new Map(); try { for (const r of all(`SELECT b.bp, s.code, s.name, s.dept, s.unit, s.position, s.email1, s.email2, s.status FROM staff_bp b JOIN staff s ON s.code=b.code`)) m.set(r.bp, r); } catch { } return m; };
@@ -37,6 +37,25 @@ function make(db, all, get, run, okYm) {
     return { open: n1.out, bk: b1.out, neg: bal < 0 ? -bal : 0, unalloc: n1.rest };
   }
 
+  // FIFO theo đối tượng + Đề nghị tạm ứng: mỗi đề nghị (AR) cân trừ riêng (tạm ứng − hoàn ứng của chính đề nghị đó);
+  // đề nghị hoàn ứng vượt / hoàn ứng không có đề nghị → trừ vào các đề nghị còn dư cũ nhất. Tổng vẫn = số dư; backup ưu tiên trong từng đề nghị.
+  const ARK = x => String(x.ar || '').trim();
+  function fifoAR(L, asOf, BK = new Set()) {
+    const G = new Map(); for (const x of L) { const k = ARK(x), g = G.get(k) || G.set(k, { ar: k, L: [], bal: 0, first: x.d }).get(k); g.L.push(x); g.bal += x.dr - x.cr; }
+    let pool = 0; const pos = []; for (const g of G.values()) { if (!g.ar) { pool += g.bal; if (g.bal > 0) { pos.push(g); pool -= g.bal; } } else if (g.bal < 0) pool += g.bal; else if (g.bal > 0) pos.push(g); }
+    pos.sort((a, b) => a.first.localeCompare(b.first)); let neg = -Math.min(0, pool);
+    for (const g of pos) { const u = Math.min(g.bal, neg); g.left = g.bal - u; neg -= u; }
+    const open = [], bk = [], ars = [];
+    for (const g of pos) { if (g.left <= 0.004) continue; const D = g.L.filter(x => x.dr > 0), fill = (rows, amt) => { let r = amt; const out = [];
+        for (const x of rows.slice().reverse()) { if (r <= 0.004) break; const u = Math.min(x.dr, r); r -= u; out.push({ id: x.id, d: x.d, doc: x.doc, ar: x.ar, ar0: x.ar0, ds: x.ds, p: x.p, acc: x.acc, amt: x.dr, left: u, backup: BK.has(x.id), age: days(x.d, asOf) }); } return { out: out.reverse(), rest: r }; };
+      const b1 = fill(D.filter(x => BK.has(x.id)), g.left), n1 = fill(D.filter(x => !BK.has(x.id)), b1.rest); bk.push(...b1.out); open.push(...n1.out);
+      const it = [...b1.out, ...n1.out]; ars.push({ ar: g.ar || '(không có đề nghị)', first: g.first, dr: D.reduce((a, x) => a + x.dr, 0), cr: g.L.reduce((a, x) => a + x.cr, 0), bal: g.bal, left: g.left, age: it.length ? Math.max(...it.map(t => t.age)) : 0, n: g.L.length }); }
+    for (const g of G.values()) if (!pos.includes(g) && g.ar) ars.push({ ar: g.ar, first: g.first, dr: g.L.reduce((a, x) => a + x.dr, 0), cr: g.L.reduce((a, x) => a + x.cr, 0), bal: g.bal, left: 0, age: 0, n: g.L.length, over: g.bal < -0.004 });
+    open.sort((a, b) => a.d.localeCompare(b.d)); bk.sort((a, b) => a.d.localeCompare(b.d)); ars.sort((a, b) => b.left - a.left || a.first.localeCompare(b.first));
+    return { open, bk, ars, neg: 0 };
+  }
+  const FIFO = (mode, L, asOf, BK) => mode === 'ar' ? fifoAR(L, asOf, BK) : fifo(L, asOf, BK);
+
   // Báo cáo theo nhân viên. o = { asOf, from (YYYY-MM-DD), acc ('141' | '1411' | '1412'), q, dept, only: 'open' | 'over' , overDays }
   function report(o = {}) {
     const asOf = day(o.asOf) || new Date().toISOString().slice(0, 10), from = day(o.from) || asOf.slice(0, 4) + '-01-01', S = staffMap(), L = lines(o.acc, asOf), BK = backupIds(), bkTerm = (+o.backupMonths || 12) * 30.4;
@@ -45,11 +64,11 @@ function make(db, all, get, run, okYm) {
       g.partners.add(x.p || ''); g.L.push(x); g.n++; if (x.d < from) g.open += x.dr - x.cr; else { g.dr += x.dr; g.cr += x.cr; } if (x.d > g.last) g.last = x.d; }
     const R = new Map(all(`SELECT key, status, amount, confirmed, note, sent_to, updated_at FROM adv_recon WHERE as_of=?`, asOf).map(r => [r.key, r]));
     const over = +o.overDays || 30;
-    let rows = [...G.values()].map(g => { const close = g.open + g.dr - g.cr, F = fifo(g.L, asOf, BK), b = [0, 0, 0, 0], bkAmt = F.bk.reduce((a, x) => a + x.left, 0), bkOver = F.bk.filter(x => x.age > bkTerm).reduce((a, x) => a + x.left, 0);
+    let rows = [...G.values()].map(g => { const close = g.open + g.dr - g.cr, F = FIFO(o.mode, g.L, asOf, BK), b = [0, 0, 0, 0], bkAmt = F.bk.reduce((a, x) => a + x.left, 0), bkOver = F.bk.filter(x => x.age > bkTerm).reduce((a, x) => a + x.left, 0);
       for (const it of F.open) b[it.age <= 30 ? 0 : it.age <= 60 ? 1 : it.age <= 90 ? 2 : 3] += it.left;
       const s = g.staff, rc = R.get(g.key);
       return { key: g.key, code: s ? s.code : '', name: s ? s.name : String([...g.partners][0] || '(không có đối tượng)'), dept: s ? s.dept : '', unit: s ? s.unit : '', position: s ? s.position : '', email: s ? (s.email1 || s.email2 || '') : '', status: s ? s.status : '',
-        mapped: !!s, partners: [...g.partners], open: g.open, dr: g.dr, cr: g.cr, close, nOpen: F.open.length, oldest: F.open.length ? Math.max(...F.open.map(x => x.age)) : 0, b, overAmt: F.open.filter(x => x.age > over).reduce((a, x) => a + x.left, 0) + bkOver, bkAmt, bkOver, nBk: F.bk.length, last: g.last,
+        mapped: !!s, partners: [...g.partners], open: g.open, dr: g.dr, cr: g.cr, close, nOpen: F.open.length, nAr: F.ars ? F.ars.filter(a => a.left > 0.004).length : null, oldest: F.open.length ? Math.max(...F.open.map(x => x.age)) : 0, b, overAmt: F.open.filter(x => x.age > over).reduce((a, x) => a + x.left, 0) + bkOver, bkAmt, bkOver, nBk: F.bk.length, last: g.last,
         recon: rc ? { status: rc.status, amount: rc.amount, confirmed: rc.confirmed, note: rc.note, sent: rc.sent_to, at: rc.updated_at } : null };
     }).filter(r => Math.abs(r.open) > 0.004 || Math.abs(r.dr) > 0.004 || Math.abs(r.cr) > 0.004 || Math.abs(r.close) > 0.004);
     const q = String(o.q || '').toLowerCase();
@@ -59,7 +78,7 @@ function make(db, all, get, run, okYm) {
     else if (o.only === 'notconf') rows = rows.filter(r => Math.abs(r.close) > 0.004 && (!r.recon || r.recon.status !== 'confirmed'));
     rows.sort((a, b) => Math.abs(b.close) - Math.abs(a.close));
     const tot = k => rows.reduce((s, r) => s + r[k], 0);
-    return { asOf, from, acc: pfx(o.acc), over, rows, tot: { open: tot('open'), dr: tot('dr'), cr: tot('cr'), close: tot('close'), overAmt: tot('overAmt'), bkAmt: tot('bkAmt'), bkOver: tot('bkOver'), b: [0, 1, 2, 3].map(i => rows.reduce((s, r) => s + r.b[i], 0)) },
+    return { mode: o.mode === 'ar' ? 'ar' : 'bp', asOf, from, acc: pfx(o.acc), over, rows, tot: { open: tot('open'), dr: tot('dr'), cr: tot('cr'), close: tot('close'), overAmt: tot('overAmt'), bkAmt: tot('bkAmt'), bkOver: tot('bkOver'), b: [0, 1, 2, 3].map(i => rows.reduce((s, r) => s + r.b[i], 0)) },
       depts: [...new Set(rows.map(r => r.dept).filter(Boolean))].sort(), nStaff: rows.filter(r => r.mapped).length, nUnmapped: rows.filter(r => !r.mapped).length };
   }
 
@@ -70,8 +89,8 @@ function make(db, all, get, run, okYm) {
     const L = lines(o.acc, asOf, bps.length ? bps : ['\u0000']).filter(x => keyOf(x.p, S) === key); let bal = 0, open = 0; const book = [];
     for (const x of L) { if (x.d < from) { open += x.dr - x.cr; continue; } }
     bal = open; for (const x of L) { if (x.d < from) continue; bal += x.dr - x.cr; book.push({ ...x, bal }); }
-    const BK = backupIds(), F = fifo(L, asOf, BK), s = key.startsWith('S:') ? get(`SELECT * FROM staff WHERE code=?`, key.slice(2)) : null;
-    return { key, asOf, from, staff: s, partners: [...new Set(L.map(x => x.p))], open, close: bal, dr: book.reduce((a, x) => a + x.dr, 0), cr: book.reduce((a, x) => a + x.cr, 0), book, items: F.open, bkItems: F.bk, advances: L.filter(x => x.dr > 0).map(x => ({ id: x.id, d: x.d, doc: x.doc, ar: x.ar, ds: x.ds, amt: x.dr, round: Math.abs(x.dr - Math.round(x.dr)) < 0.005 && Math.round(x.dr) % 10 === 0, backup: BK.has(x.id) })), recon: get(`SELECT * FROM adv_recon WHERE key=? AND as_of=?`, key, asOf) || null };
+    const BK = backupIds(), F = FIFO(o.mode, L, asOf, BK), FA = fifoAR(L, asOf, BK), s = key.startsWith('S:') ? get(`SELECT * FROM staff WHERE code=?`, key.slice(2)) : null;
+    return { key, asOf, from, staff: s, partners: [...new Set(L.map(x => x.p))], open, close: bal, dr: book.reduce((a, x) => a + x.dr, 0), cr: book.reduce((a, x) => a + x.cr, 0), book, items: F.open, bkItems: F.bk, ars: FA.ars, arList: [...new Set(L.map(x => x.ar).filter(Boolean))].sort(), advances: L.filter(x => x.dr > 0).map(x => ({ id: x.id, d: x.d, doc: x.doc, ar: x.ar, ds: x.ds, amt: x.dr, round: Math.abs(x.dr - Math.round(x.dr)) < 0.005 && Math.round(x.dr) % 10 === 0, backup: BK.has(x.id) })), recon: get(`SELECT * FROM adv_recon WHERE key=? AND as_of=?`, key, asOf) || null };
   }
   function setRecon(keys, asOf, status, o = {}) { let n = 0; asOf = day(asOf);
     for (const k of [].concat(keys || [])) { const old = get(`SELECT * FROM adv_recon WHERE key=? AND as_of=?`, k, asOf) || {};
@@ -79,6 +98,13 @@ function make(db, all, get, run, okYm) {
     return { n }; }
   function clearRecon(keys, asOf) { let n = 0; for (const k of [].concat(keys || [])) n += run(`DELETE FROM adv_recon WHERE key=? AND as_of=?`, k, day(asOf)).changes; return { n }; }
   function setBackup(ids, key, on, note = '') { let n = 0; for (const id of [].concat(ids || [])) { if (on) run(`INSERT OR REPLACE INTO adv_backup(id, key, note, updated_at) VALUES(?,?,?,datetime('now','localtime'))`, +id, key || '', note); else run(`DELETE FROM adv_backup WHERE id=?`, +id); n++; } return { n }; }
-  return { report, detail, setRecon, clearRecon, setBackup };
+  // Sửa đề nghị tạm ứng (lưu ở field_adj field 'ar' – không sửa dữ liệu gốc; '' = bỏ điều chỉnh)
+  function setAr(ids, value, note = '') { let n = 0;
+    for (const id of [].concat(ids || [])) { const e = get(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, partner_debit bp, partner_credit bpCr, advance_request ar, ym FROM entries WHERE id=?`, +id); if (!e) continue;
+      const v = String(value ?? '').trim();
+      if (!v || v === String(e.ar || '').trim()) run(`DELETE FROM field_adj WHERE id=? AND field='ar'`, e.id);
+      else run(`INSERT OR REPLACE INTO field_adj(id, field, value, orig, sig, doc, d, ym, note, updated_at) VALUES(?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`, e.id, 'ar', v, e.ar, [e.doc, e.d, e.dr, e.cr, Math.round((+e.a || 0) * 100), e.bp || '', e.bpCr || ''].join('|'), e.doc, e.d, e.ym, note); n++; }
+    return { n }; }
+  return { report, detail, setRecon, clearRecon, setBackup, setAr };
 }
 module.exports = { make };
