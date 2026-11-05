@@ -498,3 +498,4 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ### Ô tìm bảng tự động (v4.47)
 - Cuối `app.js`: MutationObserver gắn `.tsrchw input.tsrch` trước mọi `.tbl` – trong `#dPane` khi ≥ 2 dòng, trên trang khi ≥ 6 dòng và card chưa có ô tìm riêng. Lọc ẩn `tr` theo text (bỏ dấu, nhiều từ = AND). Bảng mới không cần làm gì thêm.
+- v4.47.1–2: advance mặc định `group='bp'` (key P:<mã đối tượng>), `group='staff'` gộp S:<mã NV>. adv_recon luôn key P:; key S: cũ tự chuyển; setRecon/clearRecon `expand` S: → các P:.

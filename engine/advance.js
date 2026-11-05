@@ -63,7 +63,14 @@ function make(db, all, get, run, okYm) {
     const G = new Map();
     for (const x of L) { const k = keyOf(x.p, S, o.group), g = G.get(k) || G.set(k, { key: k, staff: S.get(x.p) || null, partners: new Set(), L: [], open: 0, dr: 0, cr: 0, n: 0, last: '' }).get(k);
       g.partners.add(x.p || ''); g.L.push(x); g.n++; if (x.d < from) g.open += x.dr - x.cr; else { g.dr += x.dr; g.cr += x.cr; } if (x.d > g.last) g.last = x.d; }
-    const R = new Map(all(`SELECT key, status, amount, confirmed, note, sent_to, updated_at FROM adv_recon WHERE as_of=?`, asOf).map(r => [r.key, r]));
+    // Trạng thái đối chiếu lưu theo MÃ ĐỐI TƯỢNG (key 'P:<mã>'); bản ghi cũ lưu theo nhân viên ('S:<mã NV>') được chuyển sang từng mã đối tượng của người đó
+    try { for (const r of all(`SELECT * FROM adv_recon WHERE key LIKE 'S:%'`)) { for (const b of all(`SELECT bp FROM staff_bp WHERE code=?`, r.key.slice(2)))
+        run(`INSERT OR IGNORE INTO adv_recon(key, as_of, status, amount, confirmed, note, sent_to, updated_at) VALUES(?,?,?,?,?,?,?,?)`, 'P:' + b.bp, r.as_of, r.status, null, null, r.note, r.sent_to, r.updated_at);
+      run(`DELETE FROM adv_recon WHERE key=? AND as_of=?`, r.key, r.as_of); } } catch { }
+    const R0 = new Map(all(`SELECT key, status, amount, confirmed, note, sent_to, updated_at FROM adv_recon WHERE as_of=?`, asOf).map(r => [r.key, r]));
+    // Chế độ gộp theo nhân viên: trạng thái chung = trạng thái các mã (đều xác nhận → đã xác nhận; có chênh lệch → chênh lệch; có gửi → đã gửi)
+    const R = { get: k => { if (!k.startsWith('S:')) return R0.get(k); const L = all(`SELECT bp FROM staff_bp WHERE code=?`, k.slice(2)).map(b => R0.get('P:' + b.bp)).filter(Boolean); if (!L.length) return null;
+      const st = L.some(x => x.status === 'disputed') ? 'disputed' : L.every(x => x.status === 'confirmed') ? 'confirmed' : 'sent'; return { status: st, note: L.map(x => x.note).filter(Boolean).join('; '), sent_to: L[0].sent_to, updated_at: L[0].updated_at }; } };
     const over = +o.overDays || 30;
     let rows = [...G.values()].map(g => { const close = g.open + g.dr - g.cr, F = FIFO(o.mode, g.L, asOf, BK), b = [0, 0, 0, 0], bkAmt = F.bk.reduce((a, x) => a + x.left, 0), bkOver = F.bk.filter(x => x.age > bkTerm).reduce((a, x) => a + x.left, 0);
       for (const it of F.open) b[it.age <= 30 ? 0 : it.age <= 60 ? 1 : it.age <= 90 ? 2 : 3] += it.left;
@@ -91,13 +98,14 @@ function make(db, all, get, run, okYm) {
     for (const x of L) { if (x.d < from) { open += x.dr - x.cr; continue; } }
     bal = open; for (const x of L) { if (x.d < from) continue; bal += x.dr - x.cr; book.push({ ...x, bal }); }
     const BK = backupIds(), F = FIFO(o.mode, L, asOf, BK), FA = fifoAR(L, asOf, BK), s = key.startsWith('S:') ? get(`SELECT * FROM staff WHERE code=?`, key.slice(2)) : (get(`SELECT s.* FROM staff_bp b JOIN staff s ON s.code=b.code WHERE b.bp=?`, key.slice(2)) || null);
-    return { key, asOf, from, staff: s, partners: [...new Set(L.map(x => x.p))], open, close: bal, dr: book.reduce((a, x) => a + x.dr, 0), cr: book.reduce((a, x) => a + x.cr, 0), book, items: F.open, bkItems: F.bk, ars: FA.ars, arList: [...new Set(L.map(x => x.ar).filter(Boolean))].sort(), advances: (() => { const M = new Map(); for (const y of L) { const k = String(y.ar || '').trim(), m = M.get(k) || M.set(k, { dr: 0, cr: 0 }).get(k); m.dr += y.dr; m.cr += y.cr; } return L.filter(x => x.dr > 0).map(x => { const m = M.get(String(x.ar || '').trim()) || { dr: 0, cr: 0 }; return { arDr: m.dr, arCr: m.cr, clr: m.dr > 0 ? m.cr / m.dr : 0, id: x.id, d: x.d, doc: x.doc, ar: x.ar, ds: x.ds, amt: x.dr, round: Math.abs(x.dr - Math.round(x.dr)) < 0.005 && Math.round(x.dr) % 10 === 0, backup: BK.has(x.id) }; }); })(), recon: get(`SELECT * FROM adv_recon WHERE key=? AND as_of=?`, key, asOf) || null };
+    return { key, asOf, from, staff: s, partners: [...new Set(L.map(x => x.p))], open, close: bal, dr: book.reduce((a, x) => a + x.dr, 0), cr: book.reduce((a, x) => a + x.cr, 0), book, items: F.open, bkItems: F.bk, ars: FA.ars, arList: [...new Set(L.map(x => x.ar).filter(Boolean))].sort(), advances: (() => { const M = new Map(); for (const y of L) { const k = String(y.ar || '').trim(), m = M.get(k) || M.set(k, { dr: 0, cr: 0 }).get(k); m.dr += y.dr; m.cr += y.cr; } return L.filter(x => x.dr > 0).map(x => { const m = M.get(String(x.ar || '').trim()) || { dr: 0, cr: 0 }; return { arDr: m.dr, arCr: m.cr, clr: m.dr > 0 ? m.cr / m.dr : 0, id: x.id, d: x.d, doc: x.doc, ar: x.ar, ds: x.ds, amt: x.dr, round: Math.abs(x.dr - Math.round(x.dr)) < 0.005 && Math.round(x.dr) % 10 === 0, backup: BK.has(x.id) }; }); })(), recon: key.startsWith('S:') ? (get(`SELECT * FROM adv_recon WHERE as_of=? AND key IN (SELECT 'P:'||bp FROM staff_bp WHERE code=?) LIMIT 1`, asOf, key.slice(2)) || null) : (get(`SELECT * FROM adv_recon WHERE key=? AND as_of=?`, key, asOf) || null) };
   }
+  const expand = keys => [].concat(keys || []).flatMap(k => k.startsWith('S:') ? all(`SELECT bp FROM staff_bp WHERE code=?`, k.slice(2)).map(b => 'P:' + b.bp) : [k]);
   function setRecon(keys, asOf, status, o = {}) { let n = 0; asOf = day(asOf);
-    for (const k of [].concat(keys || [])) { const old = get(`SELECT * FROM adv_recon WHERE key=? AND as_of=?`, k, asOf) || {};
+    for (const k of expand(keys)) { const old = get(`SELECT * FROM adv_recon WHERE key=? AND as_of=?`, k, asOf) || {};
       run(`INSERT OR REPLACE INTO adv_recon(key, as_of, status, amount, confirmed, note, sent_to, updated_at) VALUES(?,?,?,?,?,?,?,datetime('now','localtime'))`, k, asOf, status || old.status || '', o.amount ?? old.amount ?? null, o.confirmed ?? old.confirmed ?? null, o.note ?? old.note ?? '', o.sent ?? old.sent_to ?? ''); n++; }
     return { n }; }
-  function clearRecon(keys, asOf) { let n = 0; for (const k of [].concat(keys || [])) n += run(`DELETE FROM adv_recon WHERE key=? AND as_of=?`, k, day(asOf)).changes; return { n }; }
+  function clearRecon(keys, asOf) { let n = 0; for (const k of expand(keys)) n += run(`DELETE FROM adv_recon WHERE key=? AND as_of=?`, k, day(asOf)).changes; return { n }; }
   function setBackup(ids, key, on, note = '') { let n = 0; for (const id of [].concat(ids || [])) { if (on) run(`INSERT OR REPLACE INTO adv_backup(id, key, note, updated_at) VALUES(?,?,?,datetime('now','localtime'))`, +id, key || '', note); else run(`DELETE FROM adv_backup WHERE id=?`, +id); n++; } return { n }; }
   // Sửa đề nghị tạm ứng (lưu ở field_adj field 'ar' – không sửa dữ liệu gốc; '' = bỏ điều chỉnh)
   function setAr(ids, value, note = '') { let n = 0;

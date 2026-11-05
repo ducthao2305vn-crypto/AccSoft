@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.47.2 – 05/11/2026
+- Công nợ tạm ứng: **trạng thái đối chiếu lưu theo mã đối tượng** (đã gửi / đã xác nhận / có chênh lệch, ghi chú, số xác nhận). Trạng thái cũ lưu theo nhân viên được tự chuyển sang từng mã đối tượng của người đó. Ở chế độ *Gộp theo nhân viên*, đánh dấu sẽ áp cho mọi mã của người đó và trạng thái hiển thị tổng hợp từ các mã (có chênh lệch → chênh lệch; tất cả xác nhận → đã xác nhận).
+
 ## v4.47.1 – 05/11/2026
 - Công nợ tạm ứng: mặc định **theo mã đối tượng** – mỗi mã đối tượng công nợ là một dòng, tên giống nhau nhưng mã khác là 2 đối tượng (tuổi nợ, FIFO, backup, đối chiếu tính riêng từng mã). Dòng hiện thêm mã đối tượng dưới tên nhân viên. Muốn xem tổng theo người: ô **Hiển thị → Gộp theo nhân viên (danh mục)**.
 
