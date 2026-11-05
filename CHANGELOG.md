@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.48.0 – 05/11/2026
+**Mô-đun mới: Công nợ 138811 / 138812 theo đối tượng** (menu Phân tích)
+- FIFO theo đối tượng: Nợ 1388x = doanh thu / ghi nợ (thường nhập ngày cuối tháng), Có = nộp / thu tiền (theo ngày thực tế). Số còn nợ = các khoản ghi Nợ gần nhất cộng đủ số dư → tiền nộp trước ngày ghi doanh thu cuối tháng vẫn cân trừ đúng, không bị tính quá hạn sai.
+- **Đánh dấu bút toán ghi sai đối tượng** (doanh thu hoặc thu tiền) ngay trong sổ chi tiết, kèm ghi chú: *loại khỏi tuổi nợ* (để trống đối tượng đúng) hoặc *chuyển sang đối tượng đúng* (bút toán được tính cho đối tượng đó). Dữ liệu gốc không bị sửa; danh sách bút toán ghi sai xem / bỏ đánh dấu tập trung.
+- Bảng theo đối tượng: đầu kỳ, phát sinh Nợ / Có, cuối kỳ theo sổ, phần ghi sai, số dư tính tuổi nợ, ≤ 30 / 31–60 / 61–90 / > 90 ngày, khoản cũ nhất; lọc còn số dư / quá hạn / số dư âm / có bút toán ghi sai; nhấn đúp số liệu nào mở đúng phần đó; xuất Excel.
+
 ## v4.47.2 – 05/11/2026
 - Công nợ tạm ứng: **trạng thái đối chiếu lưu theo mã đối tượng** (đã gửi / đã xác nhận / có chênh lệch, ghi chú, số xác nhận). Trạng thái cũ lưu theo nhân viên được tự chuyển sang từng mã đối tượng của người đó. Ở chế độ *Gộp theo nhân viên*, đánh dấu sẽ áp cho mọi mã của người đó và trạng thái hiển thị tổng hợp từ các mã (có chênh lệch → chênh lệch; tất cả xác nhận → đã xác nhận).
 

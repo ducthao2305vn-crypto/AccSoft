@@ -499,3 +499,6 @@ await p.evaluate(()=>window.api.q('stats'));
 ### Ô tìm bảng tự động (v4.47)
 - Cuối `app.js`: MutationObserver gắn `.tsrchw input.tsrch` trước mọi `.tbl` – trong `#dPane` khi ≥ 2 dòng, trên trang khi ≥ 6 dòng và card chưa có ô tìm riêng. Lọc ẩn `tr` theo text (bỏ dấu, nhiều từ = AND). Bảng mới không cần làm gì thêm.
 - v4.47.1–2: advance mặc định `group='bp'` (key P:<mã đối tượng>), `group='staff'` gộp S:<mã NV>. adv_recon luôn key P:; key S: cũ tự chuyển; setRecon/clearRecon `expand` S: → các P:.
+
+### Công nợ 138811/138812 (v4.48, `engine/recv1388.js`)
+- `lines` hai phía TK 138811/138812, bảng `r1388_wrong(id, side dr|cr, note, to_bp)`: to_bp rỗng = loại khỏi tuổi nợ, có = chuyển sang đối tượng đó. `aging` = lấp số dư (dòng hợp lệ) bằng Nợ mới nhất. report: close theo sổ (đối tượng gốc), adj sau loại/chuyển. IPC READ r88Report/r88Detail/r88Wrong, WRITE r88SetWrong. UI `vR88`, `r88Detail`, `r88Wrong` (trang `r88`).
