@@ -2095,3 +2095,15 @@ async function llForm(x,r){CUR=-1;const Dw=$('#drawer');Dw.classList.add('full')
   W.innerHTML=`<div class="card-h"><h3>Sổ công nợ 331 (${num(L.length)} dòng)</h3></div>${tbl0(['Ngày','Chứng từ','TK Nợ','TK Có','Hợp đồng','Diễn giải','#Phải trả (Có 331)','#Đã trả / giảm (Nợ 331)','#Số dư'],L.map(t=>{b+=t.sgn;return `<tr class=dbl data-eid="${t.id}"><td class=nw>${vn(t.d)}</td><td class=nw>${esc(t.doc)}</td><td>${esc(t.dr)}</td><td>${esc(t.cr)}</td><td style="font-size:12px">${esc(t.contract||'')}</td><td><div class=clamp title="${esc(t.ds)}">${esc(t.ds)}</div></td><td class=n>${t.sgn>0?fmt2(t.a):''}</td><td class=n>${t.sgn<0?fmt2(t.a):''}</td><td class=n>${fmt2(b)}</td></tr>`}),'Không có phát sinh')}`;
   W.ondblclick=e=>{const tr=e.target.closest('tr[data-eid]');if(tr)showDetail(null,+tr.dataset.eid)};
 }
+
+/* ===== v4.47: Ô tìm nhanh tự động cho mọi bảng chi tiết (cửa sổ chi tiết và bảng chưa có ô tìm riêng) ===== */
+(function(){const MIN=6,nz=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
+  const hasOwn=box=>{const c=box.closest('.card')||box.parentNode;return c&&[...c.querySelectorAll('input[type=search],input[placeholder]')].some(i=>!i.classList.contains('selsrch')&&!i.classList.contains('tsrch')&&/tìm|search|🔍/i.test(i.placeholder||'')&&!box.contains(i))};
+  const apply=(tb,q)=>{const Q=nz(q).split(/\s+/).filter(Boolean);let n=0,all=0;for(const tr of tb.rows){if(tr.cells.length<2)continue;all++;if(!tr._tsx)tr._tsx=nz(tr.textContent);const ok=!Q.length||Q.every(w=>tr._tsx.includes(w));tr.style.display=ok?'':'none';if(ok)n++}return [n,all]};
+  const attach=box=>{if(box.dataset.ts)return;const t=box.querySelector('table'),tb=t&&t.tBodies[0];if(!tb)return;const inDrawer=!!box.closest('#dPane');if(tb.rows.length<(inDrawer?2:MIN))return;if(!inDrawer&&hasOwn(box))return;
+    box.dataset.ts=1;const w=document.createElement('div');w.className='tsrchw';w.innerHTML=`<input type="search" class="tsrch" placeholder="🔍 Tìm trong bảng (chứng từ, nội dung, số tiền, đề nghị…)"><span class="mut tsn"></span>`;box.parentNode.insertBefore(w,box);
+    const i=w.querySelector('input'),n=w.querySelector('.tsn'),run=()=>{const [a,b]=apply(tb,i.value);n.textContent=i.value.trim()?`${a} / ${b} dòng`:''};
+    i.addEventListener('input',deb(run,180));i.addEventListener('change',e=>e.stopPropagation());i.addEventListener('keydown',e=>{if(e.key==='Escape'){i.value='';run()}});
+    new MutationObserver(()=>{if(i.value.trim())run()}).observe(tb,{childList:true})};
+  let T=0;const scan=()=>document.querySelectorAll('.tbl').forEach(attach);
+  new MutationObserver(()=>{clearTimeout(T);T=setTimeout(scan,120)}).observe(document.body,{childList:true,subtree:true});})();

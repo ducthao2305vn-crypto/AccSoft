@@ -495,3 +495,6 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.45.1: advance.lines luôn loại `1412%` (tạm ứng vật tư thuộc tuổi tồn kho); acc '1412' bị đổi về '141'.
 - v4.45.2: `fifo` mới: bal = Σ(Nợ−Có); backup = các dòng Nợ đã đánh dấu, lấp từ mới nhất tới min(bal); phần còn lại lấp các dòng Nợ thường từ mới nhất → Σbuckets + bkAmt = max(0, close).
 - v4.46: `lines()` ar = coalesce(field_adj field 'ar', advance_request), ar0 gốc. `fifoAR` (o.mode='ar'): nhóm theo AR, nhóm âm + nhóm không AR dồn vào pool trừ nhóm dương cũ nhất; trong nhóm lấp backup rồi khoản thường từ mới nhất; `ars[]` bảng theo đề nghị. `setAr(ids, value)` ghi field_adj (sig như fieldadj); FIELDS thêm `ar`. UI: `#adM` (bp|ar), bảng AR + chọn dòng sổ chi tiết đổi AR.
+
+### Ô tìm bảng tự động (v4.47)
+- Cuối `app.js`: MutationObserver gắn `.tsrchw input.tsrch` trước mọi `.tbl` – trong `#dPane` khi ≥ 2 dòng, trên trang khi ≥ 6 dòng và card chưa có ô tìm riêng. Lọc ẩn `tr` theo text (bỏ dấu, nhiều từ = AND). Bảng mới không cần làm gì thêm.

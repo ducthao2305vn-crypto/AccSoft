@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.47.0 – 05/11/2026
+- **Ô tìm nhanh cho mọi bảng chi tiết, toàn ứng dụng**: mọi bảng trong cửa sổ chi tiết (nhấn đúp) – vd backup money, khoản còn treo, theo đề nghị, sổ chi tiết tạm ứng, sổ công nợ chủ nhà trạm, bút toán vị trí / xe / phòng ban, tài chính… – và các bảng trên trang chưa có ô tìm riêng đều có ô 🔍 phía trên. Gõ nhiều từ (không phân biệt hoa thường / dấu) → chỉ còn dòng chứa đủ các từ, hiện "x / y dòng"; Esc để xoá.
+
 ## v4.46.4 – 05/11/2026
 - Backup money: danh sách để chọn **loại các khoản thuộc đề nghị tạm ứng đã clear** (hoàn ứng / quyết toán) **từ 60% trở lên** tổng số tiền của đề nghị – ngưỡng % chỉnh được (ô "Ẩn đề nghị đã clear ≥ … %", ghi nhớ). Bảng thêm cột *Đề nghị: tạm ứng*, *Đã clear*, *% clear*. Khoản đã chọn backup luôn hiện.
 
