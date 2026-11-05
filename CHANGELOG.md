@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.46.4 – 05/11/2026
+- Backup money: danh sách để chọn **loại các khoản thuộc đề nghị tạm ứng đã clear** (hoàn ứng / quyết toán) **từ 60% trở lên** tổng số tiền của đề nghị – ngưỡng % chỉnh được (ô "Ẩn đề nghị đã clear ≥ … %", ghi nhớ). Bảng thêm cột *Đề nghị: tạm ứng*, *Đã clear*, *% clear*. Khoản đã chọn backup luôn hiện.
+
 ## v4.46.3 – 05/11/2026
 - Backup money: danh sách mặc định **chỉ hiện các khoản đã chọn backup**; ô "Hiện" để chuyển sang *Khoản số tiền chẵn – để chọn thêm* hoặc *Mọi khoản tạm ứng* (nhân viên chưa có backup thì mở sẵn danh sách số tiền chẵn).
 
