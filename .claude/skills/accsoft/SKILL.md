@@ -525,3 +525,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.57.0: queries.entrySearch(o) (READ) + entryFind() popup #efWrap, Ctrl+K, nút #btnFind.
 
 - v4.58.0: settings invCollect [{pat,code,name}]; inv1388 effAcc() CASE trên collection||staff → @CODE cho inv_line trong compare/cellDetail; UI invCollDlg (#ivColl).
+
+- v4.60.0: engine/ap331.js (report/detail/setContract field_adj contract/setPartner ap331_partner), engine/ap331x.js (buildXlsx style tự chèn, buildDocx từ vendor/c331_confirm.docx + vendor/c331_tpl.json {row,adv}, token {{DATE}} {{PARTNER}} {{PEND}} {{PSTART}} {{PAY}} {{ADVROW}} {{ROWS}}); main ap:export; trang ap331.

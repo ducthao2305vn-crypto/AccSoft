@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v4.60.0 – 06/11/2026
+- **Đối chiếu công nợ 331 theo hợp đồng** (menu mới): chọn khoảng ngày → danh sách đối tượng × hợp đồng có số dư đầu kỳ, phát sinh Có (phải trả), phát sinh Nợ (trả / ứng), cuối kỳ; **tách số dư phải trả (dư Có) và ứng trước cho NCC (dư Nợ) theo từng hợp đồng** (TK 3311 vừa phải trả vừa cho ứng trước). Lọc: còn số dư / có ứng trước / vừa phải trả vừa ứng trước / có số dư không có hợp đồng.
+- Nhấn đúp đối tượng → cửa sổ chi tiết: hợp đồng **còn số dư** (ẩn hợp đồng hết dư, có nút hiện tất cả) và toàn bộ giao dịch của các hợp đồng đó; tick dòng → chọn / nhập **hợp đồng đúng** → Lưu (lưu ở điều chỉnh dữ liệu, không sửa dữ liệu gốc; có “trả về hợp đồng gốc”). Lưu tên đối tác / liên hệ in trên biên bản.
+- **Xuất biên bản**: Word xác nhận số dư theo mẫu (số dư phải trả, ứng trước, số dư từng hợp đồng – đã bỏ phần phải thu) và Excel (sheet Summary theo mẫu đối chiếu chỉ phần phải trả + cột để đối tác điền, sheet Detail giao dịch từng hợp đồng trong kỳ có số dư đầu / cuối). Xuất một đối tượng hoặc nhiều đối tượng đã tick (chọn thư mục).
+
 ## v4.59.0 – 06/11/2026
 - Chi phí theo phòng ban: lựa chọn **Hiển thị: Tổng hợp / Chi tiết theo type of cost**. Chi tiết: mỗi phòng ban × nhóm chi phí tách thành từng dòng type of cost theo tháng, có dòng cộng của phòng ban; nhấn đúp ô của một dòng type of cost → chỉ các bút toán của type of cost đó để điều chỉnh phòng ban. Ô Tìm cũng tìm theo type of cost.
 
