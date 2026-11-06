@@ -523,3 +523,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.56.0: cellDetail.match (số HĐ trong diễn giải → acc+tiền → tiền duy nhất); invMatchCard; footSum() tfoot động; customers() srcK bccs/cuoc + thống kê inv_issue bccs, lọc o.src.
 
 - v4.57.0: queries.entrySearch(o) (READ) + entryFind() popup #efWrap, Ctrl+K, nút #btnFind.
+
+- v4.58.0: settings invCollect [{pat,code,name}]; inv1388 effAcc() CASE trên collection||staff → @CODE cho inv_line trong compare/cellDetail; UI invCollDlg (#ivColl).

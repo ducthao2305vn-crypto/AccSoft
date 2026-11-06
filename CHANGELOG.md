@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.58.0 – 06/11/2026
+- Đối chiếu hóa đơn – 138812: **🏦 Thu hộ** – quy tắc “mã gạch nợ (Collection code / Payment staff) chứa … → đối tượng ERP thu hộ”. Mặc định **MOSANMM_VTL** (Mosan); hóa đơn Payment khớp quy tắc được tính cho đối tượng thu hộ (vd **Telemor Fintech**) thay vì khách hàng gốc, cả ở bảng đối chiếu lẫn cửa sổ chi tiết (dòng có nhãn 🏦 thu hộ). Có thể thêm nhiều quy tắc.
+
 ## v4.57.1 – 06/11/2026
 - Map khách hàng: **nhấn đúp một dòng** (chỗ không phải ô chọn / nút) → cửa sổ giao dịch gần nhất của account đó: hóa đơn BCCS (ngày lập, tháng HĐ, số HĐ, shop, nhân viên, loại giao dịch, hợp đồng/ISDN, tiền), hóa đơn phát hành và Payment (ngày nộp, kỳ cước, số HĐ, hợp đồng, dịch vụ, nhân viên thu) – 100 dòng mới nhất mỗi loại, có dòng tổng – để nhận diện khách hàng trước khi map.
 
