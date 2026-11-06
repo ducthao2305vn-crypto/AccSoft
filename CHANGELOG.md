@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.59.0 – 06/11/2026
+- Chi phí theo phòng ban: lựa chọn **Hiển thị: Tổng hợp / Chi tiết theo type of cost**. Chi tiết: mỗi phòng ban × nhóm chi phí tách thành từng dòng type of cost theo tháng, có dòng cộng của phòng ban; nhấn đúp ô của một dòng type of cost → chỉ các bút toán của type of cost đó để điều chỉnh phòng ban. Ô Tìm cũng tìm theo type of cost.
+
 ## v4.58.1 – 06/11/2026
 - Chi phí theo phòng ban: thêm cột **Type of cost** – mỗi dòng (phòng ban × nhóm chi phí) hiện các type of cost trong kỳ xem kèm số tiền (3 loại lớn nhất, rê chuột xem đủ) để xác định chi phí thuộc phòng ban nào trước khi điều chỉnh.
 
