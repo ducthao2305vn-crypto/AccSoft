@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.61.1 – 06/11/2026
+- Sửa lỗi Excel đối chiếu 331 báo “Repaired … XML error” khi mở: phần cài đặt in (khổ ngang) bị chèn sai thứ tự trong sheet – nay đúng chuẩn Excel.
+
 ## v4.61.0 – 06/11/2026
 - Đối chiếu 331: **trạng thái đối chiếu theo đối tượng** – ✅ Đã khớp / ❌ Chưa khớp / chưa đối chiếu, kèm ghi chú (lý do chưa khớp…) và ngày số dư đã đối chiếu. Đánh dấu hàng loạt (tick đối tượng → nút ✅ Đã khớp / ❌ Chưa khớp) hoặc trong cửa sổ chi tiết; cột **Đối chiếu** trong danh sách, bộ lọc **Đối chiếu** (đã khớp / chưa khớp / chưa đối chiếu) và số đếm ở thẻ Đối tượng.
 

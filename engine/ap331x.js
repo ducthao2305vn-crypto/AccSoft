@@ -86,7 +86,7 @@ function style(buf, ST) {
     // ô trống được định dạng (khung) cần tồn tại: bổ sung ô rỗng cho các ô có kiểu nhưng chưa có trong sheet
     // in: khổ ngang, vừa 1 trang chiều rộng
     x = x.replace(/<worksheet([^>]*)>/, '<worksheet$1><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>').replace(/<pageMargins[^>]*\/>/, m => m + '<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>');
-    if (!/<pageSetup /.test(x)) x = x.replace('</worksheet>', '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>');
+    if (!/<pageSetup /.test(x)) { const ps = '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>'; x = /<ignoredErrors/.test(x) ? x.replace('<ignoredErrors', ps + '<ignoredErrors') : x.replace('</worksheet>', ps + '</worksheet>'); }
     put(p, x); }
   return Buffer.from(XLSX.CFB.write(z, { type: 'buffer', fileType: 'zip', compression: true }));
 }
