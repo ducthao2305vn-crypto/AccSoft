@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.60.1 – 06/11/2026
+- Đối chiếu 331: **nhấn đúp một dòng hợp đồng** (ở danh sách hoặc bảng hợp đồng trong cửa sổ chi tiết, kể cả “(không có hợp đồng)”) → chỉ hiện giao dịch của đúng hợp đồng đó; nút **↺ Xem tất cả hợp đồng** để quay lại. Nhấn đúp dòng đối tượng vẫn hiện giao dịch mọi hợp đồng còn số dư. Sau khi lưu sửa hợp đồng vẫn giữ hợp đồng đang lọc.
+
 ## v4.60.0 – 06/11/2026
 - **Đối chiếu công nợ 331 theo hợp đồng** (menu mới): chọn khoảng ngày → danh sách đối tượng × hợp đồng có số dư đầu kỳ, phát sinh Có (phải trả), phát sinh Nợ (trả / ứng), cuối kỳ; **tách số dư phải trả (dư Có) và ứng trước cho NCC (dư Nợ) theo từng hợp đồng** (TK 3311 vừa phải trả vừa cho ứng trước). Lọc: còn số dư / có ứng trước / vừa phải trả vừa ứng trước / có số dư không có hợp đồng.
 - Nhấn đúp đối tượng → cửa sổ chi tiết: hợp đồng **còn số dư** (ẩn hợp đồng hết dư, có nút hiện tất cả) và toàn bộ giao dịch của các hợp đồng đó; tick dòng → chọn / nhập **hợp đồng đúng** → Lưu (lưu ở điều chỉnh dữ liệu, không sửa dữ liệu gốc; có “trả về hợp đồng gốc”). Lưu tên đối tác / liên hệ in trên biên bản.
