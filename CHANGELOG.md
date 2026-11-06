@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.64.2 – 06/11/2026
+- Đối chiếu 331 – ô **Hiện** thêm 2 lựa chọn: **Tổng số dư = 0 nhưng còn dư theo hợp đồng** (nghi nhân viên chọn sai hợp đồng khi thanh toán – cần chuyển hợp đồng) và **Tổng số dư khác 0** (đối tượng thật sự còn nợ / ứng trước).
+
 ## v4.64.1 – 06/11/2026
 - Đối chiếu 331 – sửa theo diễn giải: thêm ô **Chỉ hiện dòng lệch diễn giải** (chỉ còn các dòng có gợi ý để kiểm tra) và nút **↪ chuyển** ngay trên từng dòng để chuyển riêng dòng đó về hợp đồng ghi trong diễn giải.
 
