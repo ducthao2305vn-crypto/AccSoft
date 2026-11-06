@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.63.0 – 06/11/2026
+- Đối chiếu 331 – chi tiết hợp đồng: **làm nổi bật khoản còn treo (chưa thanh toán)**. Mỗi hợp đồng ghép khoản phát sinh với khoản thanh toán theo thứ tự: (1) **khớp đúng số tiền**, (2) **theo diễn giải** (thanh toán nhắc số chứng từ / số hóa đơn / mã tham chiếu của khoản phát sinh), (3) **FIFO** cho phần còn lại. Cột **Còn treo** (tô vàng) và **Khớp với** (cách ghép + chứng từ đối ứng); tùy chọn **Chỉ khoản còn treo** kèm số dòng và tổng tiền. Hợp đồng dư Nợ (ứng trước) thì khoản ứng là khoản treo, khoản nhận hàng / hóa đơn là khoản trừ.
+
 ## v4.62.0 – 06/11/2026
 - Đối chiếu 331: trạng thái đã khớp / chưa khớp **lưu theo tháng phân tích** (tháng của ô “Đến ngày”) – vd tháng 09 đã khớp thì tháng 10 vẫn là “chưa đối chiếu”, kèm gợi ý trạng thái tháng gần nhất trước đó; cửa sổ chi tiết có lịch sử trạng thái theo tháng. Bộ lọc **Trạng thái tháng**: Tất cả / **Ẩn đã khớp** / Đã khớp / Chưa khớp / Chưa đối chiếu; thẻ Đối tượng đếm theo tháng. Trạng thái đã đánh dấu ở bản trước được chuyển sang đúng tháng.
 
