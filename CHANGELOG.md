@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.57.0 – 06/11/2026
+- **🔎 Tra cứu bút toán ERP** (nút trên thanh đầu trang hoặc **Ctrl+K**): popup tìm bút toán theo ô tìm nhanh mọi trường (gõ nhiều từ = phải chứa tất cả; gõ số = khớp đúng số tiền hoặc chứa số đó) và lọc riêng theo số chứng từ, nội dung, đối tượng công nợ (Nợ/Có), hợp đồng, mã vị trí / trạm, biển số xe, nhân viên nhập, tài khoản, số hóa đơn, đề nghị tạm ứng, khoảng số tiền, khoảng ngày. Kết quả có dòng tổng cộng; nhấn đúp dòng để xem toàn bộ chứng từ (đóng chi tiết quay lại kết quả tìm). Giữ điều kiện tìm lần trước.
+
 ## v4.56.2 – 05/11/2026
 - Map khách hàng: mỗi dòng có nút **💾 Lưu** – chọn mã ERP xong dòng hiện “● chưa lưu”, bấm Lưu → “✓ đã lưu”. Thêm nút **💾 Lưu tất cả thay đổi (n)** ở hàng Map đồng loạt.
 
