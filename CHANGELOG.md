@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.63.1 – 06/11/2026
+- Sửa lỗi đối chiếu 331: hợp đồng có **khoảng trắng thừa ở cuối mã** (vd “…Promotion Telemor image ”) có số dư nhưng nhấn đúp không ra giao dịch (sheet Detail của Excel cũng trống) – nay chuẩn hóa mã hợp đồng.
+- Nhấn đúp theo ô (danh sách và bảng hợp đồng trong chi tiết): **Đầu kỳ** → chỉ giao dịch trước kỳ tạo số dư đầu kỳ; **Phát sinh Có** / **Phát sinh Nợ** → chỉ phát sinh Có / Nợ trong kỳ; **Cuối kỳ** → phát sinh Nợ + Có trong kỳ; **tên hợp đồng / đối tượng** → toàn bộ giao dịch đến ngày cuối kỳ. Tiêu đề bảng ghi rõ đang xem phần nào; nút ↺ Xem tất cả.
+
 ## v4.63.0 – 06/11/2026
 - Đối chiếu 331 – chi tiết hợp đồng: **làm nổi bật khoản còn treo (chưa thanh toán)**. Mỗi hợp đồng ghép khoản phát sinh với khoản thanh toán theo thứ tự: (1) **khớp đúng số tiền**, (2) **theo diễn giải** (thanh toán nhắc số chứng từ / số hóa đơn / mã tham chiếu của khoản phát sinh), (3) **FIFO** cho phần còn lại. Cột **Còn treo** (tô vàng) và **Khớp với** (cách ghép + chứng từ đối ứng); tùy chọn **Chỉ khoản còn treo** kèm số dòng và tổng tiền. Hợp đồng dư Nợ (ứng trước) thì khoản ứng là khoản treo, khoản nhận hàng / hóa đơn là khoản trừ.
 

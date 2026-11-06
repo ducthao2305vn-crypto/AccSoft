@@ -49,7 +49,7 @@ function make(db, all, get, run) {
     const to = day(o.to) || new Date().toISOString().slice(0, 10), from = day(o.from) || to.slice(0, 4) + '-01-01', L = legs({ ...o, to }, [bp]);
     const C = agg(L, from), keep = new Set(C.filter(c => o.all || nz(c.close)).map(c => c.c));
     const contracts = C.filter(c => keep.has(c.c)).sort((a, b) => Math.abs(b.close) - Math.abs(a.close));
-    const lines = L.filter(x => keep.has(s(x.c))).map(x => ({ ...x, v: x.side === 'cr' ? x.a : -x.a, inP: x.d >= from, adj: s(x.c) !== s(x.c0) }));
+    const lines = L.filter(x => keep.has(s(x.c))).map(x => ({ ...x, c: s(x.c), v: x.side === 'cr' ? x.a : -x.a, inP: x.d >= from, adj: s(x.c) !== s(x.c0) }));
     const allC = [...new Set(C.map(c => c.c).concat(all(`SELECT DISTINCT contract c FROM entries WHERE (partner_debit=? OR partner_credit=?) AND contract<>'' LIMIT 500`, bp, bp).map(r => r.c)))].filter(Boolean).sort();
     return { bp, from, to, contracts, lines, allC, hidden: C.length - contracts.length, info: get(`SELECT * FROM ap331_partner WHERE bp=?`, bp) || null, st: get(`SELECT * FROM ap331_status WHERE bp=? AND ym=?`, bp, to.slice(0, 7)) || null, hist: all(`SELECT * FROM ap331_status WHERE bp=? ORDER BY ym DESC LIMIT 24`, bp) };
   }
