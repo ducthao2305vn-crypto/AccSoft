@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.64.1 – 06/11/2026
+- Đối chiếu 331 – sửa theo diễn giải: thêm ô **Chỉ hiện dòng lệch diễn giải** (chỉ còn các dòng có gợi ý để kiểm tra) và nút **↪ chuyển** ngay trên từng dòng để chuyển riêng dòng đó về hợp đồng ghi trong diễn giải.
+
 ## v4.64.0 – 06/11/2026
 - Đối chiếu 331 – chi tiết: **sửa hợp đồng theo diễn giải**. Dòng có diễn giải nhắc số hợp đồng (thuộc danh sách hợp đồng của đối tượng) khác với hợp đồng nhân viên đã chọn được đánh dấu “⚠ theo diễn giải: …”. Nút **☑ Tick dòng lệch diễn giải** và **✔ Sửa theo diễn giải (dòng đã tick)** – mỗi dòng chuyển về đúng hợp đồng ghi trong diễn giải của nó (xác nhận trước khi lưu, lưu ở điều chỉnh dữ liệu, có thể trả về hợp đồng gốc).
 
