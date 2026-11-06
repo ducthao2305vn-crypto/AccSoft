@@ -53,9 +53,9 @@ function make(db, all, get, okYm) {
     const codes = [...gm.keys()]; if (!codes.length && !other) return { months: monthsOf(f, t), rows: [], groups: G };
     const W = isDept ? '' : ` AND ${codes.every(c => c.startsWith('E17.1.')) ? "e.type_of_cost LIKE 'E17.1.%' AND " : ''}${CODE} IN (${codes.map(() => '?').join(',')})`, m = new Map();
     for (const [side, sg] of [['debit', 1], ['credit', -1]])
-      for (const r of all(`SELECT e.ym, ${VAL(d)} k, ${CODE} c, sum(e.amount) a, count(*) n FROM entries e ${FJ(d)} WHERE e.ym>=? AND e.ym<=? AND ${EXP(side)}${W} GROUP BY 1,2,3`, addM(f, -12), t, ...(isDept ? [] : codes))) {
+      for (const r of all(`SELECT e.ym, ${VAL(d)} k, ${CODE} c, ${isDept ? 'e.type_of_cost' : "''"} tc, sum(e.amount) a, count(*) n FROM entries e ${FJ(d)} WHERE e.ym>=? AND e.ym<=? AND ${EXP(side)}${W} GROUP BY 1,2,3,4`, addM(f, -12), t, ...(isDept ? [] : codes))) {
         let g = gm.get(r.c); if (!g && isDept && other) g = '(khoản mục ngoài danh mục)'; if (!g) continue;
-        const key = r.k + '|' + g, o = m.get(key) || m.set(key, { k: r.k || '', g, v: {}, n: 0 }).get(key); o.v[r.ym] = (o.v[r.ym] || 0) + sg * r.a; o.n += r.n; }
+        const key = r.k + '|' + g, o = m.get(key) || m.set(key, { k: r.k || '', g, v: {}, n: 0 }).get(key); o.v[r.ym] = (o.v[r.ym] || 0) + sg * r.a; o.n += r.n; if (isDept && r.ym >= f) { o.tc = o.tc || {}; o.tc[r.tc || ''] = (o.tc[r.tc || ''] || 0) + sg * r.a; } }
     const months = monthsOf(f, t), gn = Object.fromEntries(G.map(g => [g.k, g.n])), N = d === 'plate' ? norms() : {};
     // phòng ban: tên theo danh mục phòng ban (ánh xạ)
     const dmap = isDept ? new Map(all(`SELECT m.src, d.code, d.name FROM dept_map m JOIN dept_cat d ON d.code=m.code`).map(r => [nz(r.src), r])) : null;
@@ -66,7 +66,7 @@ function make(db, all, get, okYm) {
       const gaps = d === 'location' && o.k && inP.length >= 1 && first && nz.length >= 2 ? months.filter(x => x >= first && Math.abs(o.v[x] || 0) <= 0.004) : [];
       const high = months.filter(x => avg > 0 && (o.v[x] || 0) > 1.8 * avg && inP.length >= 3), lim = +N[o.g] || 0, over = lim ? months.filter(x => (o.v[x] || 0) > lim) : [];
       const dm = dmap && dmap.get(o.k);
-      return { k: o.k, label: o.k || D(d).none, cat: dm ? dm.code + ' – ' + (dm.name || '') : '', g: o.g, gn: gn[o.g] || o.g, v: Object.fromEntries(months.map(x => [x, o.v[x] || 0])), tot, avg, n: o.n, gaps, high, over, lim };
+      return { k: o.k, label: o.k || D(d).none, cat: dm ? dm.code + ' – ' + (dm.name || '') : '', g: o.g, gn: gn[o.g] || o.g, v: Object.fromEntries(months.map(x => [x, o.v[x] || 0])), tot, avg, n: o.n, gaps, high, over, lim, tcs: o.tc ? Object.entries(o.tc).filter(([, a]) => Math.abs(a) > 0.004).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1])).map(([tc, a]) => ({ tc, a })) : [] };
     }).filter(o => months.some(x => Math.abs(o.v[x]) > 0.004) || o.gaps.length);
     // so với cả đội xe / toàn bộ phòng ban: tổng kỳ của dòng so với trung vị các dòng cùng nhóm
     const byG = new Map(); for (const o of rows) if (o.k) (byG.get(o.g) || byG.set(o.g, []).get(o.g)).push(o.tot);

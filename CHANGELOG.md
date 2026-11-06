@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.58.1 – 06/11/2026
+- Chi phí theo phòng ban: thêm cột **Type of cost** – mỗi dòng (phòng ban × nhóm chi phí) hiện các type of cost trong kỳ xem kèm số tiền (3 loại lớn nhất, rê chuột xem đủ) để xác định chi phí thuộc phòng ban nào trước khi điều chỉnh.
+
 ## v4.58.0 – 06/11/2026
 - Đối chiếu hóa đơn – 138812: **🏦 Thu hộ** – quy tắc “mã gạch nợ (Collection code / Payment staff) chứa … → đối tượng ERP thu hộ”. Mặc định **MOSANMM_VTL** (Mosan); hóa đơn Payment khớp quy tắc được tính cho đối tượng thu hộ (vd **Telemor Fintech**) thay vì khách hàng gốc, cả ở bảng đối chiếu lẫn cửa sổ chi tiết (dòng có nhãn 🏦 thu hộ). Có thể thêm nhiều quy tắc.
 
