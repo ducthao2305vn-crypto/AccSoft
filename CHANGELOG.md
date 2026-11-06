@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.64.0 – 06/11/2026
+- Đối chiếu 331 – chi tiết: **sửa hợp đồng theo diễn giải**. Dòng có diễn giải nhắc số hợp đồng (thuộc danh sách hợp đồng của đối tượng) khác với hợp đồng nhân viên đã chọn được đánh dấu “⚠ theo diễn giải: …”. Nút **☑ Tick dòng lệch diễn giải** và **✔ Sửa theo diễn giải (dòng đã tick)** – mỗi dòng chuyển về đúng hợp đồng ghi trong diễn giải của nó (xác nhận trước khi lưu, lưu ở điều chỉnh dữ liệu, có thể trả về hợp đồng gốc).
+
 ## v4.63.1 – 06/11/2026
 - Sửa lỗi đối chiếu 331: hợp đồng có **khoảng trắng thừa ở cuối mã** (vd “…Promotion Telemor image ”) có số dư nhưng nhấn đúp không ra giao dịch (sheet Detail của Excel cũng trống) – nay chuẩn hóa mã hợp đồng.
 - Nhấn đúp theo ô (danh sách và bảng hợp đồng trong chi tiết): **Đầu kỳ** → chỉ giao dịch trước kỳ tạo số dư đầu kỳ; **Phát sinh Có** / **Phát sinh Nợ** → chỉ phát sinh Có / Nợ trong kỳ; **Cuối kỳ** → phát sinh Nợ + Có trong kỳ; **tên hợp đồng / đối tượng** → toàn bộ giao dịch đến ngày cuối kỳ. Tiêu đề bảng ghi rõ đang xem phần nào; nút ↺ Xem tất cả.
