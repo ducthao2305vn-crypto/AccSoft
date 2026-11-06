@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.65.0 – 06/11/2026
+- Công nợ phải thu (trước là “Công nợ 138811 / 138812”): ô **Tài khoản** thêm **1388 (tất cả TK con)** và **131 – Phải thu khách hàng**; FIFO / tuổi nợ, đánh dấu bút toán ghi sai đối tượng, chuyển sang đối tượng đúng dùng chung cho các TK này.
+- Bảng **⚠ Nghi trùng tên khác mã**: nhóm các đối tượng có tên giống nhau hoặc gần giống (bỏ mã, dấu, Lda / Unip / S.A / Corp…, phần trong ngoặc) nhưng khác mã, kèm số dư từng mã và tổng nhóm – nhấn đúp để mở sổ chi tiết, đánh dấu bút toán chọn sai đối tượng và chuyển về mã đúng.
+
 ## v4.64.2 – 06/11/2026
 - Đối chiếu 331 – ô **Hiện** thêm 2 lựa chọn: **Tổng số dư = 0 nhưng còn dư theo hợp đồng** (nghi nhân viên chọn sai hợp đồng khi thanh toán – cần chuyển hợp đồng) và **Tổng số dư khác 0** (đối tượng thật sự còn nợ / ứng trước).
 
