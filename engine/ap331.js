@@ -7,6 +7,8 @@ const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+r.a || 0) * 100), r.bp 
 function make(db, all, get, run) {
   db.exec(`CREATE TABLE IF NOT EXISTS ap331_partner(bp TEXT PRIMARY KEY, name TEXT, contact TEXT, email TEXT, tel TEXT, updated_at TEXT)`);
   for (const c of ['status TEXT', 'st_note TEXT', 'st_asof TEXT', 'st_at TEXT']) { try { db.exec(`ALTER TABLE ap331_partner ADD COLUMN ${c}`); } catch { } }
+  db.exec(`CREATE TABLE IF NOT EXISTS ap331_status(bp TEXT, ym TEXT, status TEXT, note TEXT, at TEXT, PRIMARY KEY(bp, ym))`);
+  try { db.exec(`INSERT OR IGNORE INTO ap331_status(bp, ym, status, note, at) SELECT bp, substr(st_asof,1,7), status, st_note, st_at FROM ap331_partner WHERE status<>'' AND st_asof<>''`); } catch { }
   const day = d => String(d || '').slice(0, 10), s = v => String(v ?? '').trim();
   const accW = a => { const p = s(a).replace(/[^0-9]/g, '') || '331'; return { w: p, l: p + '%' }; };
   // các vế 331 (mỗi dòng bút toán có thể có vế Nợ 331 và/hoặc vế Có 331)
@@ -30,16 +32,17 @@ function make(db, all, get, run) {
     const to = day(o.to) || new Date().toISOString().slice(0, 10), from = day(o.from) || to.slice(0, 4) + '-01-01', L = legs({ ...o, to }), G = new Map();
     for (const x of L) { const k = x.bp || ''; (G.get(k) || G.set(k, []).get(k)).push(x); }
     const info = new Map(all(`SELECT * FROM ap331_partner`).map(r => [r.bp, r]));
+    const ym = to.slice(0, 7), STm = new Map(all(`SELECT * FROM ap331_status WHERE ym=?`, ym).map(r => [r.bp, r])), PREV = new Map(all(`SELECT s.* FROM ap331_status s JOIN (SELECT bp, max(ym) m FROM ap331_status WHERE ym<? GROUP BY bp) x ON x.bp=s.bp AND x.m=s.ym`, ym).map(r => [r.bp, r]));
     let rows = [...G].map(([bp, X]) => { const C = agg(X, from).filter(c => nz(c.open) || nz(c.cr) || nz(c.dr) || nz(c.close)).sort((a, b) => Math.abs(b.close) - Math.abs(a.close));
       const t = k => C.reduce((q, c) => q + c[k], 0);
       return { bp, contracts: C, open: t('open'), cr: t('cr'), dr: t('dr'), close: t('close'), pay: C.filter(c => c.close > 0.004).reduce((q, c) => q + c.close, 0), adv: -C.filter(c => c.close < -0.004).reduce((q, c) => q + c.close, 0),
-        nOpenC: C.filter(c => nz(c.close)).length, noC: C.filter(c => !c.c && nz(c.close)).reduce((q, c) => q + c.close, 0), info: info.get(bp) || null }; })
+        nOpenC: C.filter(c => nz(c.close)).length, noC: C.filter(c => !c.c && nz(c.close)).reduce((q, c) => q + c.close, 0), info: info.get(bp) || null, st: STm.get(bp) || null, prev: PREV.get(bp) || null }; })
       .filter(r => r.contracts.length);
     const q = s(o.q).toLowerCase(); if (q) rows = rows.filter(r => (r.bp + ' ' + r.contracts.map(c => c.c).join(' ')).toLowerCase().includes(q));
-    if (o.only === 'open') rows = rows.filter(r => r.nOpenC); else if (o.only === 'adv') rows = rows.filter(r => r.adv > 0.004); else if (o.only === 'mixed') rows = rows.filter(r => r.adv > 0.004 && r.pay > 0.004); else if (o.only === 'noc') rows = rows.filter(r => nz(r.noC)); if (o.st) rows = rows.filter(r => (o.st === 'none' ? !(r.info && r.info.status) : r.info && r.info.status === o.st));
+    if (o.only === 'open') rows = rows.filter(r => r.nOpenC); else if (o.only === 'adv') rows = rows.filter(r => r.adv > 0.004); else if (o.only === 'mixed') rows = rows.filter(r => r.adv > 0.004 && r.pay > 0.004); else if (o.only === 'noc') rows = rows.filter(r => nz(r.noC)); const stOf = r => (r.st && r.st.status) || ''; if (o.st === 'hideok') rows = rows.filter(r => stOf(r) !== 'ok'); else if (o.st === 'none') rows = rows.filter(r => !stOf(r)); else if (o.st) rows = rows.filter(r => stOf(r) === o.st);
     rows.sort((a, b) => Math.abs(b.close) - Math.abs(a.close));
     const t = k => rows.reduce((q, r) => q + r[k], 0);
-    return { from, to, acc: accW(o.acc).w, rows, tot: { open: t('open'), cr: t('cr'), dr: t('dr'), close: t('close'), pay: t('pay'), adv: t('adv') } };
+    return { from, to, ym: to.slice(0, 7), acc: accW(o.acc).w, rows, tot: { open: t('open'), cr: t('cr'), dr: t('dr'), close: t('close'), pay: t('pay'), adv: t('adv') } };
   }
   // Chi tiết một đối tượng: giao dịch theo hợp đồng – chỉ các hợp đồng còn số dư (trừ khi all=true)
   function detail(bp, o = {}) {
@@ -48,7 +51,7 @@ function make(db, all, get, run) {
     const contracts = C.filter(c => keep.has(c.c)).sort((a, b) => Math.abs(b.close) - Math.abs(a.close));
     const lines = L.filter(x => keep.has(s(x.c))).map(x => ({ ...x, v: x.side === 'cr' ? x.a : -x.a, inP: x.d >= from, adj: s(x.c) !== s(x.c0) }));
     const allC = [...new Set(C.map(c => c.c).concat(all(`SELECT DISTINCT contract c FROM entries WHERE (partner_debit=? OR partner_credit=?) AND contract<>'' LIMIT 500`, bp, bp).map(r => r.c)))].filter(Boolean).sort();
-    return { bp, from, to, contracts, lines, allC, hidden: C.length - contracts.length, info: get(`SELECT * FROM ap331_partner WHERE bp=?`, bp) || null };
+    return { bp, from, to, contracts, lines, allC, hidden: C.length - contracts.length, info: get(`SELECT * FROM ap331_partner WHERE bp=?`, bp) || null, st: get(`SELECT * FROM ap331_status WHERE bp=? AND ym=?`, bp, to.slice(0, 7)) || null, hist: all(`SELECT * FROM ap331_status WHERE bp=? ORDER BY ym DESC LIMIT 24`, bp) };
   }
   // Điều chỉnh hợp đồng của bút toán (theo id) – lưu ở field_adj 'contract'; value '' = trả về hợp đồng gốc
   function setContract(ids, value, note = '') { let n = 0; const v = s(value);
@@ -59,8 +62,8 @@ function make(db, all, get, run) {
     return { n }; }
   function setPartner(bp, o = {}) { run(`INSERT INTO ap331_partner(bp, name, contact, email, tel, updated_at) VALUES(?,?,?,?,?,datetime('now','localtime')) ON CONFLICT(bp) DO UPDATE SET name=excluded.name, contact=excluded.contact, email=excluded.email, tel=excluded.tel, updated_at=excluded.updated_at`, bp, s(o.name), s(o.contact), s(o.email), s(o.tel)); return get(`SELECT * FROM ap331_partner WHERE bp=?`, bp); }
   // Trạng thái đối chiếu theo đối tượng: 'ok' đã khớp, 'diff' chưa khớp, '' chưa đối chiếu
-  function setStatus(bps, status, note = '', asOf = '') { let n = 0;
-    for (const bp of [].concat(bps || [])) { run(`INSERT INTO ap331_partner(bp, status, st_note, st_asof, st_at) VALUES(?,?,?,?,datetime('now','localtime')) ON CONFLICT(bp) DO UPDATE SET status=excluded.status, st_note=excluded.st_note, st_asof=excluded.st_asof, st_at=excluded.st_at`, bp, s(status), s(note), s(asOf)); n++; }
+  function setStatus(bps, status, note = '', asOf = '') { let n = 0; const ym = day(asOf).slice(0, 7) || new Date().toISOString().slice(0, 7);
+    for (const bp of [].concat(bps || [])) { if (!s(status)) run(`DELETE FROM ap331_status WHERE bp=? AND ym=?`, bp, ym); else run(`INSERT OR REPLACE INTO ap331_status(bp, ym, status, note, at) VALUES(?,?,?,?,datetime('now','localtime'))`, bp, ym, s(status), s(note)); n++; }
     return { n }; }
   return { report, detail, setContract, setPartner, setStatus };
 }

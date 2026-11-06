@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.62.0 – 06/11/2026
+- Đối chiếu 331: trạng thái đã khớp / chưa khớp **lưu theo tháng phân tích** (tháng của ô “Đến ngày”) – vd tháng 09 đã khớp thì tháng 10 vẫn là “chưa đối chiếu”, kèm gợi ý trạng thái tháng gần nhất trước đó; cửa sổ chi tiết có lịch sử trạng thái theo tháng. Bộ lọc **Trạng thái tháng**: Tất cả / **Ẩn đã khớp** / Đã khớp / Chưa khớp / Chưa đối chiếu; thẻ Đối tượng đếm theo tháng. Trạng thái đã đánh dấu ở bản trước được chuyển sang đúng tháng.
+
 ## v4.61.1 – 06/11/2026
 - Sửa lỗi Excel đối chiếu 331 báo “Repaired … XML error” khi mở: phần cài đặt in (khổ ngang) bị chèn sai thứ tự trong sheet – nay đúng chuẩn Excel.
 
