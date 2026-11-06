@@ -18,21 +18,27 @@ function buildXlsx(d, company = 'VIETTEL TIMOR UNIP LDA') {
   const A = [], M = [], st = (r, c, k) => { ST['S1|' + XLSX.utils.encode_cell({ r, c })] = k; };
   A.push([`CONFIRMATION OF CLOSING BALANCE BETWEEN ${P.toUpperCase()} AND ${company} AS ${dmy(d.to)}`]); M.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }); st(0, 0, 'T');
   A.push([`Period: ${dmy(d.from)} – ${dmy(d.to)} · Partner code: ${d.bp}`]); st(1, 0, 'I');
-  A.push([]); A.push(['', '', '', '', '', '', '', '', '', '', '', '', '', 'Currency: USD']);
+  A.push([]); A.push(['', '', '', '', '', '', '', '', '', '', '', '', 'Currency: USD']); st(3, 12, 'CUR');
   A.push(['No', 'Contract', 'Balance type', `STATISTIC OF ${company} (Trade payables)`, '', '', '', `STATISTIC OF ${P} (Trade receivable)`, '', '', '', 'Difference', 'Reasons']);
   A.push(['', '', '', 'Opening balance', 'Performance amount (Expenses)', 'Paid', 'Closing balance', 'Opening balance', 'Performance amount (Revenue)', 'Received', 'Closing balance', '', '']);
   M.push({ s: { r: 4, c: 3 }, e: { r: 4, c: 6 } }, { s: { r: 4, c: 7 }, e: { r: 4, c: 10 } }); for (const c of [0, 1, 2, 11, 12]) M.push({ s: { r: 4, c }, e: { r: 5, c } });
-  for (let r = 4; r <= 5; r++) for (let c = 0; c <= 12; c++) st(r, c, 'H');
+  for (let r = 4; r <= 5; r++) for (let c = 0; c <= 12; c++) st(r, c, c >= 7 && c <= 10 ? 'HP' : 'H');
   const R0 = A.length;
-  C.forEach((c, i) => { const r = A.length + 1; A.push([i + 1, c.c || '(không có hợp đồng)', c.close < -0.004 ? 'Advance (prepayment)' : 'Payable', r2(c.open), r2(c.cr), r2(c.dr), { f: `D${r}+E${r}-F${r}`, v: r2(c.close) }, null, null, null, null, { f: `G${r}-K${r}`, v: r2(c.close) }, '']);
-    for (let k = 0; k <= 12; k++) st(A.length - 1, k, k >= 3 && k <= 11 ? 'N' : 'B'); });
+  C.forEach((c, i) => { const r = A.length + 1; A.push([i + 1, c.c || '(no contract)', c.close < -0.004 ? 'Advance (prepayment)' : 'Payable', r2(c.open), r2(c.cr), r2(c.dr), { f: `D${r}+E${r}-F${r}`, v: r2(c.close) }, r2(c.open), r2(c.cr), r2(c.dr), { f: `H${r}+I${r}-J${r}`, v: r2(c.close) }, { f: `G${r}-K${r}`, v: 0 }, '']);
+    for (let k = 0; k <= 12; k++) st(A.length - 1, k, k >= 7 && k <= 10 ? 'NP' : k >= 3 && k <= 11 ? 'N' : k === 0 ? 'C' : 'B'); });
   const RT = A.length + 1, col = 'DEFGHIJKL'.split('');
-  A.push(['', 'Total', '', ...col.map(L => ({ f: `SUBTOTAL(9,${L}${R0 + 1}:${L}${RT - 1})`, v: L === 'D' ? r2(d.open) : L === 'E' ? r2(d.cr) : L === 'F' ? r2(d.dr) : L === 'G' || L === 'L' ? r2(d.close) : 0 })), '']);
+  A.push(['', 'Total', '', ...col.map(L => ({ f: `SUBTOTAL(9,${L}${R0 + 1}:${L}${RT - 1})`, v: L === 'D' ? r2(d.open) : L === 'E' ? r2(d.cr) : L === 'F' ? r2(d.dr) : L === 'G' || L === 'K' ? r2(d.close) : L === 'H' ? r2(d.open) : L === 'I' ? r2(d.cr) : L === 'J' ? r2(d.dr) : 0 })), '']);
   for (let k = 0; k <= 12; k++) st(A.length - 1, k, k >= 3 && k <= 11 ? 'NT' : 'BT');
   A.push([]); A.push(['', `Of which: amount payable ${fmt(d.pay)} · advance (prepayment) ${fmt(d.adv)} · net ${fmt(d.close)}`]); st(A.length - 1, 1, 'I');
-  A.push([]); A.push(['', company, '', '', '', '', '', '', P]); st(A.length - 1, 1, 'BB'); st(A.length - 1, 8, 'BB');
-  A.push(['', 'Accountant', '', 'Chief accountant', '', '', '', '', 'Accountant', '', 'Chief accountant']);
-  const ws = XLSX.utils.aoa_to_sheet(A); ws['!merges'] = M; ws['!cols'] = [6, 34, 18, 15, 17, 15, 15, 15, 17, 15, 15, 14, 24].map(w => ({ wch: w }));
+  // chân ký: VTL bên trái (B–F), đối tác bên phải (H–L)
+  A.push([]); let r = A.length; A.push(['', `Confirmed by ${company}`, '', '', '', '', '', `Confirmed by ${P}`]); M.push({ s: { r, c: 1 }, e: { r, c: 5 } }, { s: { r, c: 7 }, e: { r, c: 11 } }); st(r, 1, 'SGN'); st(r, 7, 'SGN');
+  r = A.length; A.push(['', 'Date: ……/……/………', '', '', '', '', '', 'Date: ……/……/………']); M.push({ s: { r, c: 1 }, e: { r, c: 5 } }, { s: { r, c: 7 }, e: { r, c: 11 } }); st(r, 1, 'SGI'); st(r, 7, 'SGI');
+  r = A.length; A.push(['', 'Accountant', '', 'Chief accountant', '', '', '', 'Accountant', '', '', 'Chief accountant']); M.push({ s: { r, c: 1 }, e: { r, c: 2 } }, { s: { r, c: 3 }, e: { r, c: 5 } }, { s: { r, c: 7 }, e: { r, c: 9 } }, { s: { r, c: 10 }, e: { r, c: 11 } }); for (const c of [1, 3, 7, 10]) st(r, c, 'SGT');
+  r = A.length; A.push(['', '(Signature, full name)', '', '(Signature, full name)', '', '', '', '(Signature, full name)', '', '', '(Signature, full name)']); M.push({ s: { r, c: 1 }, e: { r, c: 2 } }, { s: { r, c: 3 }, e: { r, c: 5 } }, { s: { r, c: 7 }, e: { r, c: 9 } }, { s: { r, c: 10 }, e: { r, c: 11 } }); for (const c of [1, 3, 7, 10]) st(r, c, 'SGI');
+  for (let k = 0; k < 4; k++) A.push([]);
+  r = A.length; A.push(['', '……………………………', '', '……………………………', '', '', '', '……………………………', '', '', '……………………………']); M.push({ s: { r, c: 1 }, e: { r, c: 2 } }, { s: { r, c: 3 }, e: { r, c: 5 } }, { s: { r, c: 7 }, e: { r, c: 9 } }, { s: { r, c: 10 }, e: { r, c: 11 } }); for (const c of [1, 3, 7, 10]) st(r, c, 'SGT');
+  A.push([]); r = A.length; A.push(['', `Partner columns are pre-filled with ${company}'s figures – please amend any figure that differs from your records and state the reason; the Difference column updates automatically.`]); M.push({ s: { r, c: 1 }, e: { r, c: 12 } }); st(r, 1, 'I');
+  const ws = XLSX.utils.aoa_to_sheet(A); ws['!merges'] = M; ws['!cols'] = [6, 34, 18, 15, 17, 15, 15, 15, 17, 15, 15, 15, 26].map(w => ({ wch: w })); ws['!rows'] = [{ hpt: 26 }, , , , { hpt: 22 }, { hpt: 32 }];
   for (const k in ws) if (k[0] !== '!' && typeof ws[k].v === 'number' && ws[k].t === 'n') ws[k].z = '#,##0.00;[Red]-#,##0.00';
   XLSX.utils.book_append_sheet(wb, ws, 'Summary');
   // Sheet 2: chi tiết giao dịch theo hợp đồng
@@ -59,15 +65,18 @@ function style(buf, ST) {
   const put = (p, s) => { const f = XLSX.CFB.find(z, p); f.content = Buffer.from(s, 'utf8'); f.size = f.content.length; };
   let st = get('/xl/styles.xml'); const grab = t => { const m = st.match(new RegExp(`<${t} count="(\\d+)">([\\s\\S]*?)</${t}>`)); return { n: +m[1], body: m[2] }; };
   const fonts = grab('fonts'), fills = grab('fills'), borders = grab('borders'), xfs = grab('cellXfs'), F = fonts.n, L = fills.n, Bd = borders.n;
-  const nf = ['<font><b/><sz val="14"/><color rgb="FF101828"/><name val="Times New Roman"/></font>', '<font><b/><sz val="11"/><name val="Times New Roman"/></font>', '<font><sz val="11"/><name val="Times New Roman"/></font>', '<font><i/><sz val="10"/><color rgb="FF475467"/><name val="Times New Roman"/></font>'];
-  const nl = ['<fill><patternFill patternType="solid"><fgColor rgb="FFDDEBF7"/><bgColor indexed="64"/></patternFill></fill>', '<fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/><bgColor indexed="64"/></patternFill></fill>', '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF2CC"/><bgColor indexed="64"/></patternFill></fill>'];
-  const nb = ['<border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border>'];
+  const nf = ['<font><b/><sz val="14"/><color rgb="FFFA4700"/><name val="Times New Roman"/></font>', '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Times New Roman"/></font>', '<font><b/><sz val="11"/><name val="Times New Roman"/></font>', '<font><sz val="11"/><name val="Times New Roman"/></font>', '<font><i/><sz val="10"/><color rgb="FF475467"/><name val="Times New Roman"/></font>'];
+  const fl = c => `<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`, nl = [fl('FA4700'), fl('FFF1EB'), fl('FFF6F2'), fl('FDE0D2'), fl('FFFBF8')];
+  const nb = ['<border><left style="thin"><color rgb="FFF4B79A"/></left><right style="thin"><color rgb="FFF4B79A"/></right><top style="thin"><color rgb="FFF4B79A"/></top><bottom style="thin"><color rgb="FFF4B79A"/></bottom><diagonal/></border>'];
   st = st.replace(/<numFmts count="(\d+)">/, (m, n) => `<numFmts count="${+n + 1}"><numFmt numFmtId="190" formatCode="#,##0.00;[Red]\\-#,##0.00"/>`);
   if (!/<numFmts/.test(st)) st = st.replace('<fonts', '<numFmts count="1"><numFmt numFmtId="190" formatCode="#,##0.00;[Red]\\-#,##0.00"/></numFmts><fonts');
   const X = (num, font, fill, border, al) => `<xf numFmtId="${num}" fontId="${font}" fillId="${fill}" borderId="${border}" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment ${al}/></xf>`;
-  const K = { T: X(0, F, 0, 0, 'horizontal="center" vertical="center"'), I: X(0, F + 3, 0, 0, 'vertical="center"'), H: X(0, F + 1, L, Bd, 'horizontal="center" vertical="center" wrapText="1"'),
-    B: X(0, F + 2, 0, Bd, 'vertical="top" wrapText="1"'), N: X(190, F + 2, 0, Bd, 'vertical="top"'), BT: X(0, F + 1, L + 1, Bd, 'vertical="top"'), NT: X(190, F + 1, L + 1, Bd, 'vertical="top"'),
-    G: X(0, F + 1, L + 2, Bd, 'vertical="center"'), BB: X(0, F + 1, 0, 0, 'horizontal="left"') };
+  const FW = F + 1, FB = F + 2, FR = F + 3, FI = F + 4, LO = L, LT = L + 1, LG = L + 2, LP = L + 3, LI = L + 4;
+  const K = { T: X(0, F, 0, 0, 'horizontal="center" vertical="center"'), I: X(0, FI, 0, 0, 'vertical="center"'), CUR: X(0, FI, 0, 0, 'horizontal="right" vertical="center"'),
+    H: X(0, FW, LO, Bd, 'horizontal="center" vertical="center" wrapText="1"'), HP: X(0, FB, LP, Bd, 'horizontal="center" vertical="center" wrapText="1"'),
+    B: X(0, FR, 0, Bd, 'vertical="top" wrapText="1"'), C: X(0, FR, 0, Bd, 'horizontal="center" vertical="top"'), N: X(190, FR, 0, Bd, 'vertical="top"'), NP: X(190, FR, LI, Bd, 'vertical="top"'),
+    BT: X(0, FB, LT, Bd, 'vertical="top"'), NT: X(190, FB, LT, Bd, 'vertical="top"'), G: X(0, FB, LG, Bd, 'vertical="center"'), BB: X(0, FB, 0, 0, 'horizontal="left"'),
+    SGN: X(0, FB, 0, 0, 'horizontal="center" vertical="center" wrapText="1"'), SGT: X(0, FB, 0, 0, 'horizontal="center"'), SGI: X(0, FI, 0, 0, 'horizontal="center"') };
   const base = (xfs.body.match(/<xf\b[^>]*?(?:\/>|>[\s\S]*?<\/xf>)/g) || []), keys = Object.keys(K), id = Object.fromEntries(keys.map((k, i) => [k, base.length + i]));
   st = st.replace(/<fonts count="\d+">[\s\S]*?<\/fonts>/, `<fonts count="${F + nf.length}">${fonts.body}${nf.join('')}</fonts>`).replace(/<fills count="\d+">[\s\S]*?<\/fills>/, `<fills count="${L + nl.length}">${fills.body}${nl.join('')}</fills>`)
     .replace(/<borders count="\d+">[\s\S]*?<\/borders>/, `<borders count="${Bd + nb.length}">${borders.body}${nb.join('')}</borders>`).replace(/<cellXfs count="\d+">[\s\S]*?<\/cellXfs>/, `<cellXfs count="${base.length + keys.length}">${base.join('')}${keys.map(k => K[k]).join('')}</cellXfs>`);
@@ -75,6 +84,9 @@ function style(buf, ST) {
   for (const [sh, p] of [['S1', '/xl/worksheets/sheet1.xml'], ['S2', '/xl/worksheets/sheet2.xml']]) { let x = get(p); if (!x) continue;
     x = x.replace(/<c r="([A-Z]+\d+)"([^>]*?)(\/?)>/g, (all, ref, at, sc) => { const k = ST[sh + '|' + ref]; return k ? `<c r="${ref}"${at.replace(/\ss="\d+"/, '')} s="${id[k]}"${sc}>` : all; });
     // ô trống được định dạng (khung) cần tồn tại: bổ sung ô rỗng cho các ô có kiểu nhưng chưa có trong sheet
+    // in: khổ ngang, vừa 1 trang chiều rộng
+    x = x.replace(/<worksheet([^>]*)>/, '<worksheet$1><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>').replace(/<pageMargins[^>]*\/>/, m => m + '<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>');
+    if (!/<pageSetup /.test(x)) x = x.replace('</worksheet>', '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>');
     put(p, x); }
   return Buffer.from(XLSX.CFB.write(z, { type: 'buffer', fileType: 'zip', compression: true }));
 }

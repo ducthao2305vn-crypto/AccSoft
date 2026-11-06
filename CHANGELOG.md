@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.60.2 – 06/11/2026
+- Excel đối chiếu 331: thiết kế lại theo tông màu ứng dụng (tiêu đề cam, khung viền cam nhạt, dòng tổng nền cam nhạt), **cột của đối tác điền sẵn bằng số của công ty** (đầu kỳ, phát sinh, đã nhận, cuối kỳ = công thức) để đối tác chỉ sửa số khác – cột Chênh lệch tự tính; “Currency: USD” canh đúng mép phải bảng; **chân ký** mới: “Confirmed by …”, ngày, Kế toán / Kế toán trưởng mỗi bên, dòng ký tên; in khổ ngang vừa 1 trang.
+
 ## v4.60.1 – 06/11/2026
 - Đối chiếu 331: **nhấn đúp một dòng hợp đồng** (ở danh sách hoặc bảng hợp đồng trong cửa sổ chi tiết, kể cả “(không có hợp đồng)”) → chỉ hiện giao dịch của đúng hợp đồng đó; nút **↺ Xem tất cả hợp đồng** để quay lại. Nhấn đúp dòng đối tượng vẫn hiện giao dịch mọi hợp đồng còn số dư. Sau khi lưu sửa hợp đồng vẫn giữ hợp đồng đang lọc.
 
