@@ -6,6 +6,7 @@ const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+r.a || 0) * 100), r.bp 
 
 function make(db, all, get, run) {
   db.exec(`CREATE TABLE IF NOT EXISTS ap331_partner(bp TEXT PRIMARY KEY, name TEXT, contact TEXT, email TEXT, tel TEXT, updated_at TEXT)`);
+  for (const c of ['status TEXT', 'st_note TEXT', 'st_asof TEXT', 'st_at TEXT']) { try { db.exec(`ALTER TABLE ap331_partner ADD COLUMN ${c}`); } catch { } }
   const day = d => String(d || '').slice(0, 10), s = v => String(v ?? '').trim();
   const accW = a => { const p = s(a).replace(/[^0-9]/g, '') || '331'; return { w: p, l: p + '%' }; };
   // các vế 331 (mỗi dòng bút toán có thể có vế Nợ 331 và/hoặc vế Có 331)
@@ -35,7 +36,7 @@ function make(db, all, get, run) {
         nOpenC: C.filter(c => nz(c.close)).length, noC: C.filter(c => !c.c && nz(c.close)).reduce((q, c) => q + c.close, 0), info: info.get(bp) || null }; })
       .filter(r => r.contracts.length);
     const q = s(o.q).toLowerCase(); if (q) rows = rows.filter(r => (r.bp + ' ' + r.contracts.map(c => c.c).join(' ')).toLowerCase().includes(q));
-    if (o.only === 'open') rows = rows.filter(r => r.nOpenC); else if (o.only === 'adv') rows = rows.filter(r => r.adv > 0.004); else if (o.only === 'mixed') rows = rows.filter(r => r.adv > 0.004 && r.pay > 0.004); else if (o.only === 'noc') rows = rows.filter(r => nz(r.noC));
+    if (o.only === 'open') rows = rows.filter(r => r.nOpenC); else if (o.only === 'adv') rows = rows.filter(r => r.adv > 0.004); else if (o.only === 'mixed') rows = rows.filter(r => r.adv > 0.004 && r.pay > 0.004); else if (o.only === 'noc') rows = rows.filter(r => nz(r.noC)); if (o.st) rows = rows.filter(r => (o.st === 'none' ? !(r.info && r.info.status) : r.info && r.info.status === o.st));
     rows.sort((a, b) => Math.abs(b.close) - Math.abs(a.close));
     const t = k => rows.reduce((q, r) => q + r[k], 0);
     return { from, to, acc: accW(o.acc).w, rows, tot: { open: t('open'), cr: t('cr'), dr: t('dr'), close: t('close'), pay: t('pay'), adv: t('adv') } };
@@ -56,7 +57,11 @@ function make(db, all, get, run) {
       else run(`INSERT OR REPLACE INTO field_adj(id, field, value, orig, sig, doc, d, ym, note, updated_at) VALUES(?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`, e.id, 'contract', v, e.contract, sigOf(e), e.doc, e.d, String(e.d || '').slice(0, 7), note || 'Đối chiếu 331');
       n++; }
     return { n }; }
-  function setPartner(bp, o = {}) { run(`INSERT OR REPLACE INTO ap331_partner(bp, name, contact, email, tel, updated_at) VALUES(?,?,?,?,?,datetime('now','localtime'))`, bp, s(o.name), s(o.contact), s(o.email), s(o.tel)); return get(`SELECT * FROM ap331_partner WHERE bp=?`, bp); }
-  return { report, detail, setContract, setPartner };
+  function setPartner(bp, o = {}) { run(`INSERT INTO ap331_partner(bp, name, contact, email, tel, updated_at) VALUES(?,?,?,?,?,datetime('now','localtime')) ON CONFLICT(bp) DO UPDATE SET name=excluded.name, contact=excluded.contact, email=excluded.email, tel=excluded.tel, updated_at=excluded.updated_at`, bp, s(o.name), s(o.contact), s(o.email), s(o.tel)); return get(`SELECT * FROM ap331_partner WHERE bp=?`, bp); }
+  // Trạng thái đối chiếu theo đối tượng: 'ok' đã khớp, 'diff' chưa khớp, '' chưa đối chiếu
+  function setStatus(bps, status, note = '', asOf = '') { let n = 0;
+    for (const bp of [].concat(bps || [])) { run(`INSERT INTO ap331_partner(bp, status, st_note, st_asof, st_at) VALUES(?,?,?,?,datetime('now','localtime')) ON CONFLICT(bp) DO UPDATE SET status=excluded.status, st_note=excluded.st_note, st_asof=excluded.st_asof, st_at=excluded.st_at`, bp, s(status), s(note), s(asOf)); n++; }
+    return { n }; }
+  return { report, detail, setContract, setPartner, setStatus };
 }
 module.exports = { make };

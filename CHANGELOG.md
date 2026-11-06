@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.61.0 – 06/11/2026
+- Đối chiếu 331: **trạng thái đối chiếu theo đối tượng** – ✅ Đã khớp / ❌ Chưa khớp / chưa đối chiếu, kèm ghi chú (lý do chưa khớp…) và ngày số dư đã đối chiếu. Đánh dấu hàng loạt (tick đối tượng → nút ✅ Đã khớp / ❌ Chưa khớp) hoặc trong cửa sổ chi tiết; cột **Đối chiếu** trong danh sách, bộ lọc **Đối chiếu** (đã khớp / chưa khớp / chưa đối chiếu) và số đếm ở thẻ Đối tượng.
+
 ## v4.60.2 – 06/11/2026
 - Excel đối chiếu 331: thiết kế lại theo tông màu ứng dụng (tiêu đề cam, khung viền cam nhạt, dòng tổng nền cam nhạt), **cột của đối tác điền sẵn bằng số của công ty** (đầu kỳ, phát sinh, đã nhận, cuối kỳ = công thức) để đối tác chỉ sửa số khác – cột Chênh lệch tự tính; “Currency: USD” canh đúng mép phải bảng; **chân ký** mới: “Confirmed by …”, ngày, Kế toán / Kế toán trưởng mỗi bên, dòng ký tên; in khổ ngang vừa 1 trang.
 
