@@ -170,6 +170,10 @@ function make(db, all, get, run) {
   }
   // Điều chỉnh hóa đơn BCCS thành âm (báo cáo BCCS xuất số dương cho hóa đơn điều chỉnh giảm). Chỉ BCCS – không áp cho hóa đơn cước.
   function bccsNeg(rids, neg = true) { let n = 0; for (const id of [].concat(rids || [])) n += run(`UPDATE inv_issue SET total=${neg ? '-abs(total)' : 'abs(total)'}, amt_notax=${neg ? '-abs(amt_notax)' : 'abs(amt_notax)'}, amt_tax=${neg ? '-abs(amt_tax)' : 'abs(amt_tax)'}, neg_adj=${neg ? 1 : 'NULL'} WHERE rowid=? AND kind='bccs'`, +id).changes; return { n }; }
-  return { importBook, customers, setMap, compare, cellDetail, erpPartners, bccsNeg };
+  // Giao dịch gần nhất của một account / khách hàng (để nhận diện khi map): hóa đơn BCCS / phát hành + Payment (thu cước)
+  function custTx(acc, lim = 100) { const c = get(`SELECT * FROM inv_cust WHERE acc=?`, acc) || { acc };
+    const issue = all(`SELECT rowid rid, * FROM inv_issue WHERE acc=? ORDER BY issue_date DESC LIMIT ${+lim}`, acc), pay = all(`SELECT rowid rid, * FROM inv_line WHERE acc=? ORDER BY pay_date DESC LIMIT ${+lim}`, acc);
+    return { c, issue, pay, nIssue: get(`SELECT count(*) n FROM inv_issue WHERE acc=?`, acc).n, nPay: get(`SELECT count(*) n FROM inv_line WHERE acc=?`, acc).n }; }
+  return { importBook, customers, setMap, compare, cellDetail, erpPartners, bccsNeg, custTx };
 }
 module.exports = { make, codeOf };

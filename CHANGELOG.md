@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.57.1 – 06/11/2026
+- Map khách hàng: **nhấn đúp một dòng** (chỗ không phải ô chọn / nút) → cửa sổ giao dịch gần nhất của account đó: hóa đơn BCCS (ngày lập, tháng HĐ, số HĐ, shop, nhân viên, loại giao dịch, hợp đồng/ISDN, tiền), hóa đơn phát hành và Payment (ngày nộp, kỳ cước, số HĐ, hợp đồng, dịch vụ, nhân viên thu) – 100 dòng mới nhất mỗi loại, có dòng tổng – để nhận diện khách hàng trước khi map.
+
 ## v4.57.0 – 06/11/2026
 - **🔎 Tra cứu bút toán ERP** (nút trên thanh đầu trang hoặc **Ctrl+K**): popup tìm bút toán theo ô tìm nhanh mọi trường (gõ nhiều từ = phải chứa tất cả; gõ số = khớp đúng số tiền hoặc chứa số đó) và lọc riêng theo số chứng từ, nội dung, đối tượng công nợ (Nợ/Có), hợp đồng, mã vị trí / trạm, biển số xe, nhân viên nhập, tài khoản, số hóa đơn, đề nghị tạm ứng, khoảng số tiền, khoảng ngày. Kết quả có dòng tổng cộng; nhấn đúp dòng để xem toàn bộ chứng từ (đóng chi tiết quay lại kết quả tìm). Giữ điều kiện tìm lần trước.
 
