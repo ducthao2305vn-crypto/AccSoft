@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.74.0 – 07/11/2026
+- Phân tích ledger – **sửa thứ tự tự khớp** theo đúng nghiệp vụ: (1) cùng chứng từ Nợ = Có → (2) **theo chứng từ**: tổng một chứng từ = chứng từ ngược chiều (ưu tiên cùng nội dung diễn giải, gần ngày) → (3) một khoản = tổng nhiều dòng gần ngày / cùng diễn giải → (4) **sau cùng mới ghép từng dòng theo số tiền** → nhóm tham chiếu / diễn giải → FIFO. Trước đây ghép dòng lẻ theo số tiền chạy trước nên các dòng 50 USD của chứng từ VTLMN… bị ghép lẻ với nơi khác, chứng từ không còn khớp được với chứng từ thanh toán VTL_HOBT….
+- Kết quả tự động cũ được **phân tích lại một lần** theo thứ tự mới (giữ nguyên dòng sửa tay và ghi chú).
+
 ## v4.73.2 – 07/11/2026
 - Phân tích ledger: đổi tình trạng bằng ô xổ xuống nay **báo lỗi rõ** nếu không lưu được (trước đây lỗi bị bỏ qua nên tải lại vẫn thấy tình trạng cũ); dòng chưa có trong bảng kết quả đã lưu được tạo mới khi sửa tay thay vì bị bỏ qua.
 

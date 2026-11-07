@@ -11,6 +11,7 @@
 function make(db, all, get, run) {
   db.exec(`CREATE TABLE IF NOT EXISTS lg_line(id INTEGER, side TEXT, acc TEXT, bp TEXT, status TEXT, grp TEXT, how TEXT, note TEXT, manual INTEGER DEFAULT 0, left REAL, at TEXT, PRIMARY KEY(id, side));
     CREATE INDEX IF NOT EXISTS ix_lg_line_bp ON lg_line(acc, bp);
+    CREATE TABLE IF NOT EXISTS lg_meta(k TEXT PRIMARY KEY, v TEXT);
     CREATE TABLE IF NOT EXISTS lg_run(acc TEXT, bp TEXT, from_d TEXT, to_d TEXT, at TEXT, n INTEGER, n_ok INTEGER, n_check INTEGER, n_open INTEGER, open_amt REAL, close REAL, PRIMARY KEY(acc, bp));`);
   const s = v => String(v ?? '').trim(), day = d => String(d || '').slice(0, 10), Z = v => Math.abs(v) < 0.005;
   const accL = a => (s(a).replace(/[^0-9]/g, '') || '0') + '%';
@@ -32,14 +33,7 @@ function make(db, all, get, run) {
     // 1) cùng chứng từ
     const byDoc = new Map(); for (const x of L) { const k = s(x.doc); if (k) (byDoc.get(k) || byDoc.set(k, []).get(k)).push(x); }
     for (const [, xs] of byDoc) if (xs.length > 1 && Z(xs.reduce((q, x) => q + x.v, 0))) mark(xs, 'Cùng chứng từ (Nợ = Có)');
-    // 2) cặp đúng số tiền
     const rest = () => L.filter(x => !done.has(key(x))), RF = new Map(L.map(x => [key(x), refs(x)]));
-    const pos = rest().filter(x => x.v > 0), neg = rest().filter(x => x.v < 0), byAmt = new Map();
-    for (const x of neg) { const k = Math.round(-x.v * 100); (byAmt.get(k) || byAmt.set(k, []).get(k)).push(x); }
-    for (const x of pos) { const C = (byAmt.get(Math.round(x.v * 100)) || []).filter(y => !done.has(key(y))); if (!C.length) continue;
-      const rx = RF.get(key(x)), sc = y => { const ry = RF.get(key(y)); let c = 0; for (const w of rx) if (ry.has(w)) c++; return c; };
-      const t0 = Date.parse(x.d), best = C.map(y => ({ y, c: sc(y), dd: Math.abs(Date.parse(y.d) - t0) })).sort((a, b) => b.c - a.c || a.dd - b.dd)[0];
-      mark([x, best.y], best.c ? 'Cặp đúng số tiền + cùng tham chiếu' : 'Cặp đúng số tiền'); }
     // 2b) theo tổng chứng từ: tổng các dòng cùng chứng từ (cùng chiều) = một chứng từ ngược chiều (vd chứng từ ghi nhận nhiều dòng ↔ một lần chi trả)
     { const U = new Map(); for (const x of rest()) { const k = s(x.doc) + '|' + (x.v > 0 ? '+' : '-'); (U.get(k) || U.set(k, { xs: [], v: 0, d: x.d, w: new Set() }).get(k)).xs.push(x); }
       for (const u of U.values()) { u.v = u.xs.reduce((q, x) => q + x.v, 0); u.d = u.xs[0].d; for (const x of u.xs) for (const w of String(x.ds || '').toLowerCase().split(/[^a-z0-9]+/)) if (w.length > 3) u.w.add(w); }
@@ -70,6 +64,13 @@ function make(db, all, get, run) {
         if (!hit && simL.length >= 2) { hit = contig(simL, T); how = 'Một khoản = tổng các dòng cùng diễn giải'; }
         if (!hit) { const top = [...opp].sort((a, b) => b.sm - a.sm || Math.abs(a.t - t0) - Math.abs(b.t - t0)).slice(0, 20).sort((a, b) => b.c - a.c); hit = subset(top, T); how = 'Một khoản = tổ hợp các dòng gần ngày / giống diễn giải'; }
         if (hit) mark([...u, ...hit.map(o => o.y)], how); } }
+    // 2d) sau cùng mới ghép cặp đúng số tiền từng dòng (ưu tiên cùng tham chiếu, gần ngày)
+    const pos = rest().filter(x => x.v > 0), neg = rest().filter(x => x.v < 0), byAmt = new Map();
+    for (const x of neg) { const k = Math.round(-x.v * 100); (byAmt.get(k) || byAmt.set(k, []).get(k)).push(x); }
+    for (const x of pos) { const C = (byAmt.get(Math.round(x.v * 100)) || []).filter(y => !done.has(key(y))); if (!C.length) continue;
+      const rx = RF.get(key(x)), sc = y => { const ry = RF.get(key(y)); let c = 0; for (const w of rx) if (ry.has(w)) c++; return c; };
+      const t0 = Date.parse(x.d), best = C.map(y => ({ y, c: sc(y), dd: Math.abs(Date.parse(y.d) - t0) })).sort((a, b) => b.c - a.c || a.dd - b.dd)[0];
+      mark([x, best.y], best.c ? 'Cặp đúng số tiền + cùng tham chiếu' : 'Cặp đúng số tiền'); }
     // 3) nhóm theo tham chiếu chung có tổng = 0
     const byRef = new Map(); for (const x of rest()) for (const w of RF.get(key(x))) (byRef.get(w) || byRef.set(w, []).get(w)).push(x);
     const cand = [...byRef].filter(([, xs]) => xs.length >= 2 && xs.length <= 60).sort((a, b) => a[1].length - b[1].length);
@@ -98,6 +99,7 @@ function make(db, all, get, run) {
     // các dòng đã khớp (tự động) hoặc đã sửa tay giữ nguyên; phần còn lại phân tích lại
     // nhóm khớp tự động đã lưu phải cân (Nợ = Có); nhóm lệch (vd mã nhóm trùng của bản cũ, dữ liệu nạp lại) → phân tích lại
     const GS0 = grpStat(new Set([...S.values()].filter(r => r.status === 'ok' && !r.manual).map(r => r.grp))), badG = new Set([...GS0].filter(([, r]) => Math.abs(r.v) > 0.005).map(([g]) => g));
+    const ALG = '2', algOld = ((get(`SELECT v FROM lg_meta WHERE k='alg'`) || {}).v || '') !== ALG; if (algOld) { run(`UPDATE lg_line SET status='open', grp='' WHERE manual=0`); run(`INSERT OR REPLACE INTO lg_meta(k, v) VALUES('alg', ?)`, ALG); for (const r of S.values()) if (!r.manual) { r.status = 'open'; r.grp = ''; } }
     const keep = x => { const r = S.get(key(x)); return r && (r.manual || (r.status === 'ok' && r.grp && !badG.has(r.grp))) && (!o.reanalyze || r.manual); };
     const todo = L.filter(x => !keep(x)), A = analyze(todo), stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     db.exec('BEGIN'); try {
