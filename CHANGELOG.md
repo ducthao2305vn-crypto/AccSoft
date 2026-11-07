@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.72.5 – 07/11/2026
+- Phân tích ledger (gom theo chứng từ): **bấm** dòng tổng → xổ chi tiết ngay dưới; **nhấn đúp** dòng tổng hoặc dòng chi tiết (số tiền…) → mở bút toán gốc. Khi gom theo chứng từ, bấm tiêu đề cột không sắp xếp lại bảng (trước đây làm dòng chi tiết tách khỏi chứng từ tổng) – dùng ô Sắp xếp.
+
 ## v4.72.4 – 07/11/2026
 - Xuất Excel ledger: cột xếp đúng thứ tự Số chứng từ · Ngày · Diễn giải · TK Nợ · TK Có · Số tiền Nợ · Số tiền Có · Nợ / Có · **Tình trạng** · **Nhóm khớp** · Cách khớp · Ghi chú (trước đây cột Nợ / Có bị đẩy lên đầu, Tình trạng / Nhóm khớp nằm cuối dễ bị bỏ sót).
 
