@@ -504,6 +504,7 @@ Menu.setApplicationMenu(Menu.buildFromTemplate([
 
 process.on('uncaughtException', e => log.error('Lỗi không bắt được (main)', e));
 process.on('unhandledRejection', e => log.error('Promise bị từ chối không xử lý (main)', e));
+app.commandLine.appendSwitch('lang', 'en-GB'); // ô ngày hiển thị dd/mm/yyyy
 app.whenReady().then(init).then(async needRecheck => {
   createWindow();
   // CSDL từ phiên bản cũ: tính lại bảng lỗi một lần

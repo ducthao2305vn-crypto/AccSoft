@@ -20,7 +20,7 @@ const pct=v=>isFinite(v)?(v*100).toFixed(1)+'%':'–';
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const vn=s=>s?s.split('-').reverse().join('/'):'';
 const short=u=>String(u||'').split('_')[0];
-const num=v=>(+v||0).toLocaleString('vi');
+const num=v=>(+v||0).toLocaleString('en-US');
 const ic=n=>`<svg class="icon"><use href="#i-${n}"/></svg>`;
 const kpi=(cls,icon,lb,v,s)=>`<div class="kpi ${cls}"><div class="ic">${ic(icon)}</div><div class="lb">${lb}</div><div class="v">${v}</div><div class="s">${s||''}</div></div>`;
 const ls={get:(k,d)=>{try{const v=localStorage.getItem('accsoft.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem('accsoft.'+k,JSON.stringify(v))}catch(e){}}};
@@ -2428,3 +2428,10 @@ function lgDraw(){const r=LGR,F=LGF,HW=[...new Set(r.rows.map(x=>x.how).filter(B
   T.ondblclick=e=>{if(e.target.closest('input,a'))return;const tr=e.target.closest('[data-lg]');if(tr)showDetail(null,r.rows[+tr.dataset.lg].id)};
   $('#lgApply').onclick=async()=>{if(!sel.size)return alert('Tick chọn dòng');const st=$('#lgSet').value,n=$('#lgN').value;if(!st&&!n)return alert('Chọn tình trạng hoặc nhập ghi chú');await aq('lgSetLine',[...sel].map(i=>({id:r.rows[i].id,side:r.rows[i].side})),st,n||null);lgRun(false)};
   $('#lgX').onclick=async()=>{try{const f=await api.xlsxSheets(`AccSoft_Ledger_${r.acc}_${String(all?'TatCa':r.bp).replace(/[^\w]+/g,'_').slice(0,40)}_${r.from}_${r.to}.xlsx`,[['Ledger',[{'Số chứng từ':'','Ngày':'','Diễn giải':'SỐ DƯ ĐẦU KỲ','Nợ / Có':r.open}].concat(R.map(x=>({'Số chứng từ':x.doc,'Ngày':x.d,'Diễn giải':x.ds,...(all?{'Đối tượng':x.bp}:{}),'TK Nợ':x.dr,'TK Có':x.cr,'Số tiền Nợ':x.v>0?x.a:null,'Số tiền Có':x.v<0?x.a:null,'Nợ / Có':x.v,'Tình trạng':LGST[x.status][0],'Nhóm khớp':x.grp,'Cách khớp':x.how,'Ghi chú':x.note})))]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}}}
+
+/* v4.69: menu nhóm thu gọn / mở; tự mở nhóm chứa trang đang xem; gợi ý dài bấm để xem đủ */
+(function(){const K='navClosed',get=()=>{try{return JSON.parse(localStorage.getItem(K)||'[]')}catch{return []}},put=a=>{try{localStorage.setItem(K,JSON.stringify(a))}catch{}};
+  const apply=()=>{const C=new Set(get());document.querySelectorAll('#nav .sec[data-g]').forEach(h=>{const g=document.querySelector(`#nav .grp[data-g="${h.dataset.g}"]`),on=g&&g.querySelector('button.on');const c=C.has(h.dataset.g)&&!on;h.classList.toggle('closed',c);if(g)g.classList.toggle('closed',c)})};
+  document.addEventListener('click',e=>{const h=e.target.closest('#nav .sec[data-g]');if(h){const C=new Set(get());C.has(h.dataset.g)?C.delete(h.dataset.g):C.add(h.dataset.g);put([...C]);apply();return}
+    const t=e.target.closest('.subbar .hint,.card-h .hint,.card-h .dblhint');if(t&&!e.target.closest('a,button,input,select'))t.classList.toggle('open')});
+  document.addEventListener('DOMContentLoaded',apply);setTimeout(apply,500);new MutationObserver(apply).observe(document.getElementById('nav')||document.body,{attributes:true,subtree:true,attributeFilter:['class']})})();

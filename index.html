@@ -335,39 +335,78 @@ body.focusm #uiExit{display:inline-flex}
 [data-theme=dark] .note,[data-theme=dark] .pendNote{background:#2A1D16!important;border-color:#4A2A18!important;color:#E9D3C6}
 [data-theme=dark] ::-webkit-scrollbar-thumb{background:#3A414E;background-clip:padding-box}
 .tsrchw{display:flex;align-items:center;gap:10px;margin:0 0 6px}.tsrchw .tsrch{width:min(420px,100%);padding-left:30px}.tsrchw .tsn{font-size:12px}
+
+/* v4.69: menu nhóm thu gọn được, gợi ý dài thu 1 dòng */
+nav .sec{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+nav .sec::after{content:'▾';font-size:10px;transition:transform .15s}
+nav .sec.closed::after{transform:rotate(-90deg)}
+nav .grp.closed{display:none}
+body.mini nav .grp.closed{display:block}
+nav button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.subbar .hint,.card-h .hint,.card-h .dblhint{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;max-width:100%}
+.subbar .hint.open,.card-h .hint.open,.card-h .dblhint.open{-webkit-line-clamp:unset}
+.subbar .hint:not(.open)::before,.card-h .hint:not(.open)::before{content:'ⓘ ';color:#FA4700}
+
+/* v4.69: thẻ số liệu gọn (biểu tượng bên trái), cột đầu bảng rộng hơn cho tên đối tượng / hợp đồng */
+.kpi{display:grid!important;grid-template-columns:38px 1fr;column-gap:12px;row-gap:2px;padding:14px 16px!important;align-items:center}
+.kpi .ic{grid-row:1/span 2;width:38px;height:38px}
+.kpi .lb,.kpi .v{grid-column:2}
+.kpi .v{font-size:22px!important}
+.kpi .s{grid-column:1/-1;margin-top:4px}
+.kpi .s:empty{display:none}
+#apT1 th:nth-child(2),#apT1 td:nth-child(2){min-width:320px}
 </style>
 </head>
 <body>
 <aside>
   <div class="brand"><img src="vendor/telemor-logo.svg" alt="Telemor"><div class="app">AccSoft <span id="ver"></span></div></div>
   <nav id="nav">
-    <div class="sec">Phân tích</div>
+    <div class="sec" data-g="0">Tổng quan</div>
+    <div class="grp" data-g="0">
     <button data-p="overview" class="on"><svg class="icon"><use href="#i-home"/></svg>Tổng quan</button>
     <button data-p="errors"><svg class="icon"><use href="#i-alert"/></svg>Lỗi nhập liệu<span class="count hide" id="navErr"></span></button>
+    </div>
+    <div class="sec" data-g="1">Công nợ phải thu</div>
+    <div class="grp" data-g="1">
     <button data-p="aging"><svg class="icon"><use href="#i-wallet"/></svg>Công nợ & tuổi nợ</button>
-    <button data-p="adv"><svg class="icon"><use href="#i-wallet"/></svg>Công nợ tạm ứng</button>
-    <button data-p="r88"><svg class="icon"><use href="#i-wallet"/></svg>Công nợ phải thu 1388 / 131</button>
-    <button data-p="lgr"><svg class="icon"><use href="#i-file"/></svg>Phân tích sổ chi tiết (ledger)</button>
-    <button data-p="ap331"><svg class="icon"><use href="#i-file"/></svg>Đối chiếu công nợ 331</button>
-    <button data-p="inv88"><svg class="icon"><use href="#i-file"/></svg>Đối chiếu hóa đơn – 138812</button>
+    <button data-p="r88"><svg class="icon"><use href="#i-wallet"/></svg>Phải thu 1388 / 131</button>
+    <button data-p="inv88"><svg class="icon"><use href="#i-file"/></svg>Đối chiếu hóa đơn 138812</button>
+    <button data-p="adv"><svg class="icon"><use href="#i-wallet"/></svg>Tạm ứng 141</button>
+    </div>
+    <div class="sec" data-g="2">Công nợ phải trả</div>
+    <div class="grp" data-g="2">
+    <button data-p="ap331"><svg class="icon"><use href="#i-file"/></svg>Đối chiếu phải trả 331</button>
     <button data-p="landl"><svg class="icon"><use href="#i-home"/></svg>Chủ nhà trạm</button>
+    </div>
+    <div class="sec" data-g="3">Sổ sách & phân tích</div>
+    <div class="grp" data-g="3">
+    <button data-p="lgr"><svg class="icon"><use href="#i-file"/></svg>Phân tích sổ chi tiết</button>
+    <button data-p="deep"><svg class="icon"><use href="#i-trend"/></svg>Phân tích chuyên sâu</button>
     <button data-p="inv"><svg class="icon"><use href="#i-box"/></svg>Tuổi hàng tồn kho</button>
+    </div>
+    <div class="sec" data-g="4">Kết quả & báo cáo</div>
+    <div class="grp" data-g="4">
     <button data-p="pl"><svg class="icon"><use href="#i-chart"/></svg>Kết quả kinh doanh</button>
     <button data-p="cost"><svg class="icon"><use href="#i-pie"/></svg>Doanh thu & Chi phí</button>
     <button data-p="fin"><svg class="icon"><use href="#i-file"/></svg>Báo cáo tài chính</button>
     <button data-p="fcst"><svg class="icon"><use href="#i-trend"/></svg>Dự báo tài chính</button>
+    </div>
+    <div class="sec" data-g="5">Chi phí quản trị</div>
+    <div class="grp" data-g="5">
     <button data-p="locc"><svg class="icon"><use href="#i-file"/></svg>Chi phí theo vị trí</button>
     <button data-p="vehc"><svg class="icon"><use href="#i-file"/></svg>Chi phí theo xe</button>
     <button data-p="deptc"><svg class="icon"><use href="#i-file"/></svg>Chi phí theo phòng ban</button>
-    <button data-p="deep"><svg class="icon"><use href="#i-trend"/></svg>Phân tích chuyên sâu</button>
-    <div class="sec">Kiểm soát</div>
-    <button data-p="report"><svg class="icon"><use href="#i-mail"/></svg>Báo cáo & Thông báo</button>
+    </div>
+    <div class="sec" data-g="6">Danh mục & dữ liệu</div>
+    <div class="grp" data-g="6">
     <button data-p="cat"><svg class="icon"><use href="#i-users"/></svg>Danh mục đối tượng</button>
-    <button data-p="dmc"><svg class="icon"><use href="#i-file"/></svg>Danh mục phòng ban & chi phí</button>
+    <button data-p="dmc"><svg class="icon"><use href="#i-file"/></svg>Phòng ban & chi phí</button>
     <button data-p="staff"><svg class="icon"><use href="#i-users"/></svg>Danh mục nhân viên</button>
     <button data-p="fadj"><svg class="icon"><use href="#i-file"/></svg>Điều chỉnh dữ liệu</button>
     <button data-p="data"><svg class="icon"><use href="#i-db"/></svg>Quản lý dữ liệu</button>
-  </nav>
+    <button data-p="report"><svg class="icon"><use href="#i-mail"/></svg>Báo cáo & Thông báo</button>
+    </div>
+</nav>
   <div class="side-rv" id="sideRv" title="Đổi kỳ rà soát trong tab Lỗi nhập liệu"></div>
   <div class="side-foot" id="sideFoot"></div>
 </aside>

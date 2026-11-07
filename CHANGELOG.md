@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v4.69.0 – 07/11/2026
+- Giao diện: **menu chia 7 nhóm** theo nghiệp vụ (Tổng quan · Công nợ phải thu · Công nợ phải trả · Sổ sách & phân tích · Kết quả & báo cáo · Chi phí quản trị · Danh mục & dữ liệu), bấm tên nhóm để thu gọn / mở (nhớ lựa chọn, nhóm chứa trang đang xem luôn mở); tên menu ngắn gọn một dòng.
+- **Thống nhất định dạng số** 1,234,567.89 trên mọi màn hình (trước đây số đếm dùng dấu chấm, số tiền dùng dấu phẩy); ô chọn ngày hiển thị **dd/mm/yyyy**.
+- Thẻ số liệu gọn hơn (biểu tượng bên trái, thấp hơn ~40%) để bảng dữ liệu lên cao hơn; dòng hướng dẫn dài thu còn 1 dòng (ⓘ, bấm để xem đủ); cột đối tượng / hợp đồng ở đối chiếu 331 rộng hơn.
+
 ## v4.68.0 – 07/11/2026
 - Phân tích ledger – thêm luật khớp **một khoản = tổng nhiều dòng ngược chiều gần ngày** (vd chi phí hạch toán 1 dòng ↔ thanh toán nhiều dòng, hoặc ngược lại; khoản có thể là 1 dòng hoặc tổng 1 chứng từ), trong cửa sổ ±120 ngày, thử lần lượt: chuỗi dòng liên tiếp theo ngày → chuỗi các dòng có diễn giải giống → tổ hợp tối đa 20 dòng giống diễn giải / gần ngày nhất.
 - Lọc nhanh theo tình trạng bằng nút có số đếm: Tất cả / Chưa xong / Chưa khớp / Cần phân tích / Khớp / **Sửa tay** / **Có ghi chú**; thêm lọc **Cách khớp**.
