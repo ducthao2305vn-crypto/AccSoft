@@ -529,3 +529,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.60.0: engine/ap331.js (report/detail/setContract field_adj contract/setPartner ap331_partner), engine/ap331x.js (buildXlsx style tự chèn, buildDocx từ vendor/c331_confirm.docx + vendor/c331_tpl.json {row,adv}, token {{DATE}} {{PARTNER}} {{PEND}} {{PSTART}} {{PAY}} {{ADVROW}} {{ROWS}}); main ap:export; trang ap331.
 
 - v4.66.0: recv1388 r1388_exempt(k bp:<bp>|e:<id>, note, exp); markEx → overAmt loại khoản ex.live, exAmt/expAmt; r88SetExempt/r88Exempt.
+
+- v4.67.0: engine/ledgerx.js (lg_line id+side lưu status/grp/how/note/manual/left; report = WRITE lgReport), trang lgr.

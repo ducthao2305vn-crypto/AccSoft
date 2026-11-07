@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v4.67.0 – 07/11/2026
+- **Phân tích sổ chi tiết (ledger)** (menu mới): chọn kỳ, tài khoản (vd 33888, 1388, 331 – theo tiền tố) và đối tượng (hoặc tất cả) → bảng: số chứng từ, ngày, diễn giải, TK Nợ, TK Có, số tiền Nợ, số tiền Có, **Nợ / Có** (Nợ dương, Có âm), **tình trạng** (Khớp / Cần phân tích / Chưa khớp), cách khớp + mã nhóm khớp, **ghi chú** (sửa trực tiếp, tự lưu).
+- Tự đánh giá tình trạng theo thứ tự: (1) cùng chứng từ Nợ = Có, (2) cặp đúng số tiền (ưu tiên cùng tham chiếu / gần ngày), (3) tổng một chứng từ = chứng từ ngược chiều (vd ghi nhận nhiều dòng ↔ một lần chi), (4) nhóm cùng số tham chiếu / cùng diễn giải có tổng = 0 → **Khớp**; phần còn lại bù trừ FIFO → **Cần phân tích**; còn treo → **Chưa khớp** (kèm số còn treo).
+- **Kết quả tự lưu**: lần sau cùng tài khoản + đối tượng chỉ phân tích dòng mới và dòng chưa khớp; dòng sửa tay (tình trạng / ghi chú) không bị ghi đè; có “Phân tích lại từ đầu”. Lọc theo tình trạng, bấm mã nhóm để xem các dòng cùng nhóm, nhấn đúp xem chứng từ, xuất Excel.
+
 ## v4.66.0 – 07/11/2026
 - Công nợ phải thu (1388 / 131): **🛡 khoản đặc biệt – chắc chắn thu được, không tính quá hạn**. Trong sổ chi tiết đối tượng (thẻ Khoản còn nợ): nhập **lý do** + **ngày dự kiến thu** rồi áp dụng cho **các khoản đã tick** hoặc **cả đối tượng**; bỏ được. Khoản đặc biệt vẫn hiện tuổi nợ nhưng không cộng vào “Quá hạn”, tô xanh; **quá ngày dự kiến thu** mà chưa thu → tự tính quá hạn lại và cảnh báo đỏ. Thẻ Quá hạn hiện số miễn quá hạn và số quá ngày cam kết; danh sách có nhãn 🛡 / ⚠ và bộ lọc “Có khoản đặc biệt”, “Khoản đặc biệt đã quá ngày dự kiến thu”.
 
