@@ -86,6 +86,9 @@ function make(db, all, get, run) {
     let i = 0, j = 0; while (i < P.length && j < N.length) { const q = Math.min(P[i].left, N[j].left); P[i].left -= q; N[j].left -= q; if (P[i].left < 0.005) i++; if (N[j].left < 0.005) j++; }
     for (const o of P.concat(N)) R.set(key(o.x), Z(o.left) ? { status: 'check', grp: '', how: 'Bù trừ FIFO (tương đối)', left: 0 } : { status: 'open', grp: '', how: o.left < Math.abs(o.x.v) - 0.004 ? 'Còn treo một phần (FIFO)' : 'Chưa có khoản đối ứng', left: (o.x.v > 0 ? 1 : -1) * o.left });
     return R; }
+  // Tổng Nợ − Có, số dòng, ngày nhỏ / lớn nhất của từng nhóm khớp (theo toàn bộ thành viên đã lưu, không giới hạn kỳ)
+  function grpStat(G) { const M = new Map(); const L = [...G].filter(Boolean); for (let i = 0; i < L.length; i += 500) { const P = L.slice(i, i + 500);
+      for (const r of all(`SELECT l.grp g, sum(CASE WHEN l.side='dr' THEN e.amount ELSE -e.amount END) v, count(*) n, min(e.account_date) d0, max(e.account_date) d1 FROM lg_line l JOIN entries e ON e.id=l.id WHERE l.grp IN (${P.map(() => '?').join(',')}) GROUP BY 1`, ...P)) M.set(r.g, r); } return M; }
   // Báo cáo: phân tích (dùng kết quả đã lưu) và trả các dòng trong kỳ
   function report(o = {}) {
     const acc = s(o.acc), bp = o.bp == null ? '' : String(o.bp), to = day(o.to) || new Date().toISOString().slice(0, 10), from = day(o.from) || '1900-01-01';
@@ -93,27 +96,30 @@ function make(db, all, get, run) {
     const L = legs(acc, bp, to), key = x => x.id + '|' + x.side;
     const S = new Map(all(`SELECT * FROM lg_line WHERE id IN (SELECT id FROM entries WHERE (acc_debit LIKE ? OR acc_credit LIKE ?) AND account_date<=?)`, accL(acc), accL(acc), to).map(r => [r.id + '|' + r.side, r]));
     // các dòng đã khớp (tự động) hoặc đã sửa tay giữ nguyên; phần còn lại phân tích lại
-    const keep = x => { const r = S.get(key(x)); return r && (r.manual || r.status === 'ok') && (!o.reanalyze || r.manual); };
+    // nhóm khớp tự động đã lưu phải cân (Nợ = Có); nhóm lệch (vd mã nhóm trùng của bản cũ, dữ liệu nạp lại) → phân tích lại
+    const GS0 = grpStat(new Set([...S.values()].filter(r => r.status === 'ok' && !r.manual).map(r => r.grp))), badG = new Set([...GS0].filter(([, r]) => Math.abs(r.v) > 0.005).map(([g]) => g));
+    const keep = x => { const r = S.get(key(x)); return r && (r.manual || (r.status === 'ok' && r.grp && !badG.has(r.grp))) && (!o.reanalyze || r.manual); };
     const todo = L.filter(x => !keep(x)), A = analyze(todo), stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     db.exec('BEGIN'); try {
       for (const x of todo) { const a = A.get(key(x)), r = S.get(key(x));
         run(`INSERT INTO lg_line(id, side, acc, bp, status, grp, how, note, manual, left, at) VALUES(?,?,?,?,?,?,?,?,0,?,?) ON CONFLICT(id, side) DO UPDATE SET acc=excluded.acc, bp=excluded.bp, status=excluded.status, grp=excluded.grp, how=excluded.how, left=excluded.left, at=excluded.at`,
           x.id, x.side, x.acc, x.p || '', a.status, a.grp, a.how, r ? r.note : '', a.left, stamp); S.set(key(x), { ...(r || {}), ...a, note: r ? r.note : '', manual: 0 }); }
       db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
+    const GS = grpStat(new Set([...S.values()].filter(r => r.status === 'ok').map(r => r.grp)));
     let open = 0; const rows = [];
     for (const x of L) { const r = S.get(key(x)) || {}; if (x.d < from) { open += x.v; continue; }
-      rows.push({ id: x.id, side: x.side, d: x.d, doc: x.doc, ds: x.ds, dr: x.dr, cr: x.cr, acc: x.acc, oacc: x.oacc, bp: x.p || '', a: x.a, v: x.v, u: x.u, status: r.status || 'open', grp: r.grp || '', how: r.how || '', note: r.note || '', manual: !!r.manual, left: r.left ?? x.v }); }
+      rows.push({ id: x.id, side: x.side, d: x.d, doc: x.doc, ds: x.ds, dr: x.dr, cr: x.cr, acc: x.acc, oacc: x.oacc, bp: x.p || '', a: x.a, v: x.v, u: x.u, status: r.status || 'open', grp: r.grp || '', how: r.how || '', gbal: r.status === 'ok' && r.grp && GS.get(r.grp) ? GS.get(r.grp).v : (r.status === 'ok' ? x.v : 0), gout: r.status === 'ok' && r.grp && GS.get(r.grp) ? (GS.get(r.grp).d0 < from || GS.get(r.grp).d1 > to) : false, note: r.note || '', manual: !!r.manual, left: r.left ?? x.v }); }
     { const c = k => [...S.values()].filter(r => r.status === k).length; let close = 0; for (const x of L) close += x.v;
       run(`INSERT OR REPLACE INTO lg_run(acc, bp, from_d, to_d, at, n, n_ok, n_check, n_open, open_amt, close) VALUES(?,?,?,?,datetime('now','localtime'),?,?,?,?,?,?)`, acc, bp, from, to, L.length, L.filter(x => (S.get(key(x)) || {}).status === 'ok').length, L.filter(x => (S.get(key(x)) || {}).status === 'check').length, L.filter(x => (S.get(key(x)) || {}).status === 'open').length, L.reduce((q, x) => q + (((S.get(key(x)) || {}).status === 'open') ? ((S.get(key(x)) || {}).left || 0) : 0), 0), close); }
     const cnt = k => rows.filter(r => r.status === k).length, sum = k => rows.filter(r => r.status === k).reduce((q, r) => q + r.v, 0);
     return { acc, bp, from, to, open, dr: rows.filter(r => r.v > 0).reduce((q, r) => q + r.v, 0), cr: -rows.filter(r => r.v < 0).reduce((q, r) => q + r.v, 0), close: open + rows.reduce((q, r) => q + r.v, 0),
-      rows, n: { ok: cnt('ok'), open: cnt('open'), check: cnt('check') }, sum: { ok: sum('ok'), open: rows.filter(r => r.status === 'open').reduce((q, r) => q + (r.left || 0), 0), check: sum('check') }, analyzed: todo.length, total: L.length };
+      rows, n: { ok: cnt('ok'), open: cnt('open'), check: cnt('check') }, sum: { ok: sum('ok'), open: rows.filter(r => r.status === 'open').reduce((q, r) => q + (r.left || 0), 0), check: sum('check') }, analyzed: todo.length, total: L.length, reset: badG.size };
   }
   // Sửa tay: trạng thái và / hoặc ghi chú cho các dòng [{id, side}]; status '' = giữ nguyên trạng thái, chỉ sửa ghi chú; status 'auto' = trả về tự động
-  function setLine(keys, status, note) { let n = 0;
+  function setLine(keys, status, note) { let n = 0; const MG = 'M' + Date.now().toString(36).toUpperCase();
     for (const k of [].concat(keys || [])) { const r = get(`SELECT * FROM lg_line WHERE id=? AND side=?`, +k.id, k.side); if (!r) continue;
       if (status === 'auto') run(`UPDATE lg_line SET manual=0, status='open', grp='', at=NULL WHERE id=? AND side=?`, +k.id, k.side);
-      else if (status) run(`UPDATE lg_line SET status=?, manual=1, how=? WHERE id=? AND side=?`, status, 'Người dùng đánh dấu', +k.id, k.side);
+      else if (status) run(`UPDATE lg_line SET status=?, manual=1, how=?, grp=? WHERE id=? AND side=?`, status, 'Người dùng đánh dấu', status === 'ok' ? MG : '', +k.id, k.side);
       if (note != null) run(`UPDATE lg_line SET note=? WHERE id=? AND side=?`, s(note), +k.id, k.side); n++; }
     return { n }; }
   function runs() { return all(`SELECT * FROM lg_run ORDER BY at DESC LIMIT 500`); }

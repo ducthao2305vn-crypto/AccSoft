@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v4.72.0 – 07/11/2026
+- Phân tích ledger – **“Khớp” phải cân Nợ = Có**: mỗi lần mở báo cáo kiểm tra lại các nhóm khớp tự động đã lưu; nhóm nào không cân (vd mã nhóm trùng của bản cũ, dữ liệu nạp lại) được **phân tích lại** – mỗi dòng chỉ thuộc một nhóm, đã khớp với chứng từ này thì không dùng để khớp chứng từ khác.
+- Đánh dấu khớp bằng tay: các dòng chọn cùng lúc thành **một nhóm khớp**; nếu chưa cân thì hỏi lại kèm số lệch. Ô “Đã chọn” hiện **Nợ − Có của các dòng đang tick** (✅ cân khi = 0) để chọn đủ dòng đối ứng trước khi lưu.
+- Dòng tiêu đề bảng hiện **“Khớp trong kỳ: Nợ − Có”** và giải thích phần lệch: **đối ứng ngoài kỳ** (dòng khớp nằm trước / sau kỳ đang xem – có nhãn ↔ trên dòng) và **nhóm khớp tay chưa cân** (nhãn ⚠ nhóm lệch).
+
 ## v4.71.0 – 07/11/2026
 - Phân tích ledger: cột **Tình trạng là ô xổ xuống** ngay trên từng dòng (✅ Khớp / ⚠ Cần phân tích / ❌ Chưa khớp / ↺ Tự động) – chọn là lưu luôn, đổi màu dòng và cập nhật số đếm, không cần tick rồi bấm Lưu. Ở chế độ gom theo chứng từ, ô xổ xuống của dòng tổng đổi tình trạng cho cả chứng từ.
 
