@@ -437,6 +437,8 @@ async function init() {
   };
   const aoaBook = sheets => { const wb = R.XLSX.utils.book_new(); for (const [n, rows] of sheets) { const ws = Array.isArray(rows[0]) || !rows.length ? R.XLSX.utils.aoa_to_sheet(rows.length ? rows : [['(không có)']]) : R.XLSX.utils.json_to_sheet(rows); R.XLSX.utils.book_append_sheet(wb, ws, n.slice(0, 31)); } return wb; };
   // Đối chiếu công nợ 331 theo hợp đồng: xuất Excel (tổng hợp + chi tiết) và/hoặc Word (xác nhận số dư) – nhiều đối tượng → chọn thư mục
+  handle('xls:color', async (_e, name, sheet, aoa, opt) => { const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: name, filters: [{ name: 'Excel', extensions: ['xlsx'] }] }); if (canceled) return null;
+    fs.writeFileSync(filePath, require('./engine/xlscolor').build(sheet, aoa, opt)); shell.showItemInFolder(filePath); return filePath; });
   handle('ap:export', async (_e, bps, o, kinds) => {
     const X = require('./engine/ap331x'), vd = p => path.join(__dirname, 'vendor', p), tpl = fs.readFileSync(vd('c331_confirm.docx')), parts = JSON.parse(fs.readFileSync(vd('c331_tpl.json'), 'utf8'));
     const rep = await qa('apReport', o), safe = t => String(t).replace(/[^\w\-]+/g, '_').replace(/_+/g, '_').slice(0, 50), ymd = String(o.to || '').replace(/-/g, '');

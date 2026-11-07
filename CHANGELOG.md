@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.73.1 – 07/11/2026
+- Xuất Excel ledger **tô màu theo nhóm khớp**: mỗi nhóm khớp một màu nền (8 màu xoay vòng), dòng chưa khớp nền đỏ nhạt, cần phân tích nền vàng nhạt; tiêu đề cột nền cam, cố định dòng tiêu đề, định dạng số, dòng số dư đầu kỳ và dòng TỔNG CỘNG; dòng đối ứng trước kỳ ghi rõ. Khi đang sắp xếp theo nhóm khớp, file cũng xếp các dòng cùng nhóm liền nhau.
+
 ## v4.73.0 – 07/11/2026
 - Phân tích ledger: Sắp xếp **Theo nhóm khớp** – các dòng khớp với nhau nằm liền nhau dưới một dòng tiêu đề nhóm (mã nhóm, số dòng, cách khớp, Nợ − Có = 0 ✅), mỗi nhóm **một màu** (viền trái + nền nhạt) xen kẽ để dễ phân biệt; nhóm sắp theo ngày phát sinh đầu tiên. Bấm lọc ✅ Khớp tự chuyển sang cách sắp xếp này.
 
