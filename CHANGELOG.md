@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.72.3 – 07/11/2026
+- Phân tích ledger: giữ **đúng bản chất bút toán** – số tiền âm hiện là số âm ở đúng cột phát sinh gốc (vd Có 33888 −150 hiện ở cột Số tiền Có là −150); cột Nợ / Có = Nợ − Có. Dòng tổng các dòng Khớp: tổng Nợ − tổng Có = 0. Thẻ phát sinh Nợ / Có và dòng gom chứng từ tính theo cùng cách.
+
 ## v4.72.2 – 07/11/2026
 - Phân tích ledger: sửa cột **Số tiền Nợ / Số tiền Có** với bút toán số tiền âm (vd Nợ 13888 / Có 33888 số tiền −150 thực chất là Nợ 33888 150): nay hiện theo chiều thực tế trên tài khoản nên dòng tổng cộng của các dòng Khớp ra Nợ = Có. Xuất Excel cũng sửa tương tự.
 
