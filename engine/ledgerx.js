@@ -119,7 +119,8 @@ function make(db, all, get, run) {
   }
   // Sửa tay: trạng thái và / hoặc ghi chú cho các dòng [{id, side}]; status '' = giữ nguyên trạng thái, chỉ sửa ghi chú; status 'auto' = trả về tự động
   function setLine(keys, status, note) { let n = 0; const MG = 'M' + Date.now().toString(36).toUpperCase();
-    for (const k of [].concat(keys || [])) { const r = get(`SELECT * FROM lg_line WHERE id=? AND side=?`, +k.id, k.side); if (!r) continue;
+    for (const k of [].concat(keys || [])) { let r = get(`SELECT * FROM lg_line WHERE id=? AND side=?`, +k.id, k.side);
+      if (!r) { const e = get(`SELECT * FROM entries WHERE id=?`, +k.id); if (!e) continue; run(`INSERT INTO lg_line(id, side, acc, bp, status, grp, how, note, manual, left, at) VALUES(?,?,?,?, 'open', '', '', '', 0, 0, datetime('now','localtime'))`, e.id, k.side, k.side === 'dr' ? e.acc_debit : e.acc_credit, (k.side === 'dr' ? e.partner_debit : e.partner_credit) || ''); r = {}; }
       if (status === 'auto') run(`UPDATE lg_line SET manual=0, status='open', grp='', at=NULL WHERE id=? AND side=?`, +k.id, k.side);
       else if (status) run(`UPDATE lg_line SET status=?, manual=1, how=?, grp=? WHERE id=? AND side=?`, status, 'Người dùng đánh dấu', status === 'ok' ? MG : '', +k.id, k.side);
       if (note != null) run(`UPDATE lg_line SET note=? WHERE id=? AND side=?`, s(note), +k.id, k.side); n++; }

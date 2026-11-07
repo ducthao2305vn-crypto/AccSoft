@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.73.2 – 07/11/2026
+- Phân tích ledger: đổi tình trạng bằng ô xổ xuống nay **báo lỗi rõ** nếu không lưu được (trước đây lỗi bị bỏ qua nên tải lại vẫn thấy tình trạng cũ); dòng chưa có trong bảng kết quả đã lưu được tạo mới khi sửa tay thay vì bị bỏ qua.
+
 ## v4.73.1 – 07/11/2026
 - Xuất Excel ledger **tô màu theo nhóm khớp**: mỗi nhóm khớp một màu nền (8 màu xoay vòng), dòng chưa khớp nền đỏ nhạt, cần phân tích nền vàng nhạt; tiêu đề cột nền cam, cố định dòng tiêu đề, định dạng số, dòng số dư đầu kỳ và dòng TỔNG CỘNG; dòng đối ứng trước kỳ ghi rõ. Khi đang sắp xếp theo nhóm khớp, file cũng xếp các dòng cùng nhóm liền nhau.
 
