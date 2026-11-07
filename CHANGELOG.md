@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.73.0 – 07/11/2026
+- Phân tích ledger: Sắp xếp **Theo nhóm khớp** – các dòng khớp với nhau nằm liền nhau dưới một dòng tiêu đề nhóm (mã nhóm, số dòng, cách khớp, Nợ − Có = 0 ✅), mỗi nhóm **một màu** (viền trái + nền nhạt) xen kẽ để dễ phân biệt; nhóm sắp theo ngày phát sinh đầu tiên. Bấm lọc ✅ Khớp tự chuyển sang cách sắp xếp này.
+
 ## v4.72.5 – 07/11/2026
 - Phân tích ledger (gom theo chứng từ): **bấm** dòng tổng → xổ chi tiết ngay dưới; **nhấn đúp** dòng tổng hoặc dòng chi tiết (số tiền…) → mở bút toán gốc. Khi gom theo chứng từ, bấm tiêu đề cột không sắp xếp lại bảng (trước đây làm dòng chi tiết tách khỏi chứng từ tổng) – dùng ô Sắp xếp.
 
