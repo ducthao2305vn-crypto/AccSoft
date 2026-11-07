@@ -6,6 +6,7 @@
 const ACCS = ['138811', '138812'];
 
 function make(db, all, get, run) {
+  db.exec(`CREATE TABLE IF NOT EXISTS r1388_exempt(k TEXT PRIMARY KEY, kind TEXT, bp TEXT, id INTEGER, note TEXT, exp TEXT, updated_at TEXT)`);
   db.exec(`CREATE TABLE IF NOT EXISTS r1388_wrong(id INTEGER, side TEXT, note TEXT, to_bp TEXT, updated_at TEXT, PRIMARY KEY(id, side))`);
   const day = d => String(d || '').slice(0, 10), days = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
   // tài khoản: '' = 138811+138812; '138811' / '138812' đúng TK; '1388' / '131' = cả nhóm (theo tiền tố)
@@ -37,6 +38,10 @@ function make(db, all, get, run) {
     const G = new Map(); X.forEach((x, i) => { const r = f(i); (G.get(r) || G.set(r, []).get(r)).push(x); });
     return [...G.values()].filter(g => g.length > 1 && new Set(g.map(x => x.bp.split('_').slice(0, 2).join('_'))).size > 1).map(g => ({ items: g.map(({ bp, name, bal }) => ({ bp, name, bal })), bal: g.reduce((q, x) => q + x.bal, 0) }))
       .sort((a, b) => b.items.length - a.items.length || Math.abs(b.bal) - Math.abs(a.bal)); }
+  // Khoản đặc biệt / chắc chắn thu được: không tính quá hạn (theo đối tượng 'bp:<mã>' hoặc theo bút toán 'e:<id>'), hết hiệu lực sau ngày dự kiến thu (exp)
+  const exMap = () => new Map(all(`SELECT * FROM r1388_exempt`).map(r => [r.k, r]));
+  const exOf = (EX, bp, id) => EX.get('e:' + id) || EX.get('bp:' + bp) || null;
+  function markEx(items, bp, EX, asOf, over) { let exAmt = 0, expAmt = 0; for (const it of items) { const e = exOf(EX, bp, it.id); if (!e) continue; const live = !e.exp || e.exp >= asOf; it.ex = { kind: e.kind, note: e.note || '', exp: e.exp || '', live }; if (it.age > over) { if (live) exAmt += it.left; else expAmt += it.left; } } return { exAmt, expAmt }; }
   function report(o = {}) {
     const asOf = day(o.asOf) || new Date().toISOString().slice(0, 10), from = day(o.from) || asOf.slice(0, 4) + '-01-01', L = lines(o.acc, asOf), G = new Map(), over = +o.overDays || 30;
     // bút toán chuyển sang đối tượng đúng: vào nhóm đối tượng đúng; bút toán ghi sai không chuyển: vẫn ở đối tượng gốc nhưng không tính tuổi nợ
@@ -44,16 +49,17 @@ function make(db, all, get, run) {
     for (const x of L) { const k = x.p || '', g = G.get(k) || G.set(k, { bp: k, L: [], open: 0, dr: 0, cr: 0, wrong: 0, nWrong: 0, moved: 0, last: '' }).get(k);
       g.L.push(x); if (x.d < from) g.open += x.dr - x.cr; else { g.dr += x.dr; g.cr += x.cr; } if (x.wrong && !x.to) { g.wrong += x.dr - x.cr; g.nWrong++; } if (x.to) g.moved++; if (x.d > g.last) g.last = x.d; }
     for (const k of BK.keys()) if (!G.has(k)) G.set(k, { bp: k, L: [], open: 0, dr: 0, cr: 0, wrong: 0, nWrong: 0, moved: 0, last: '' });
-    let rows = [...G.values()].map(g => { const close = BK.get(g.bp) || 0, A = aging(g.L, asOf), b = [0, 0, 0, 0]; for (const it of A.items) b[it.age <= 30 ? 0 : it.age <= 60 ? 1 : it.age <= 90 ? 2 : 3] += it.left;
-      return { bp: g.bp, open: g.open, dr: g.dr, cr: g.cr, close, wrong: g.wrong, nWrong: g.nWrong, moved: g.moved, adj: A.bal, b, nOpen: A.items.length, oldest: A.items.length ? Math.max(...A.items.map(x => x.age)) : 0, overAmt: A.items.filter(x => x.age > over).reduce((a, x) => a + x.left, 0), last: g.last }; })
+    const EX = exMap();
+    let rows = [...G.values()].map(g => { const close = BK.get(g.bp) || 0, A = aging(g.L, asOf), b = [0, 0, 0, 0], M = markEx(A.items, g.bp, EX, asOf, over); for (const it of A.items) b[it.age <= 30 ? 0 : it.age <= 60 ? 1 : it.age <= 90 ? 2 : 3] += it.left;
+      return { bp: g.bp, open: g.open, dr: g.dr, cr: g.cr, close, wrong: g.wrong, nWrong: g.nWrong, moved: g.moved, adj: A.bal, b, nOpen: A.items.length, oldest: A.items.length ? Math.max(...A.items.map(x => x.age)) : 0, overAmt: A.items.filter(x => x.age > over && !(x.ex && x.ex.live)).reduce((a, x) => a + x.left, 0), exAmt: M.exAmt, expAmt: M.expAmt, exBp: EX.get('bp:' + g.bp) || null, nEx: A.items.filter(x => x.ex).length, last: g.last }; })
       .filter(r => [r.open, r.dr, r.cr, r.close].some(v => Math.abs(v) > 0.004));
     const q = String(o.q || '').toLowerCase(); if (q) rows = rows.filter(r => r.bp.toLowerCase().includes(q));
-    if (o.only === 'open') rows = rows.filter(r => Math.abs(r.adj) > 0.004); else if (o.only === 'over') rows = rows.filter(r => r.overAmt > 0.004); else if (o.only === 'neg') rows = rows.filter(r => r.adj < -0.004); else if (o.only === 'wrong') rows = rows.filter(r => r.nWrong || r.moved);
+    if (o.only === 'open') rows = rows.filter(r => Math.abs(r.adj) > 0.004); else if (o.only === 'over') rows = rows.filter(r => r.overAmt > 0.004); else if (o.only === 'neg') rows = rows.filter(r => r.adj < -0.004); else if (o.only === 'wrong') rows = rows.filter(r => r.nWrong || r.moved); else if (o.only === 'exempt') rows = rows.filter(r => r.nEx || r.exBp); else if (o.only === 'expired') rows = rows.filter(r => r.expAmt > 0.004);
     rows.sort((a, b) => Math.abs(b.adj) - Math.abs(a.adj));
     // nghi trùng tên khác mã: chuẩn hoá tên (bỏ mã, dấu, từ loại hình công ty) rồi nhóm tên giống hệt hoặc gần giống
     const dups = dupNames([...BK.keys()].filter(Boolean).map(bp => ({ bp, bal: BK.get(bp) || 0 })));
     const t = k => rows.reduce((s, r) => s + r[k], 0);
-    return { asOf, from, acc: accsOf(o.acc).join(', '), over, rows, tot: { open: t('open'), dr: t('dr'), cr: t('cr'), close: t('close'), wrong: t('wrong'), adj: t('adj'), overAmt: t('overAmt'), b: [0, 1, 2, 3].map(i => rows.reduce((s, r) => s + r.b[i], 0)) },
+    return { asOf, from, acc: accsOf(o.acc).join(', '), over, rows, tot: { open: t('open'), dr: t('dr'), cr: t('cr'), close: t('close'), wrong: t('wrong'), adj: t('adj'), overAmt: t('overAmt'), exAmt: t('exAmt'), expAmt: t('expAmt'), b: [0, 1, 2, 3].map(i => rows.reduce((s, r) => s + r.b[i], 0)) },
       nWrong: all(`SELECT count(*) n FROM r1388_wrong`)[0].n, dups };
   }
   function detail(bp, o = {}) {
@@ -63,15 +69,21 @@ function make(db, all, get, run) {
     const mine = L.filter(x => x.p === bp || (x.p0 === bp && x.wrong && !x.to)); let open = 0, bal = 0; const book = [];
     for (const x of mine) if (x.d < from) open += x.dr - x.cr; bal = open;
     for (const x of mine) { if (x.d < from) continue; bal += x.dr - x.cr; book.push({ ...x, bal }); }
-    const A = aging(mine, asOf);
+    const A = aging(mine, asOf), EX = exMap(); markEx(A.items, bp, EX, asOf, +o.overDays || 30);
     const AA = accsOf(o.acc), partners = all(`SELECT p, count(*) n FROM (SELECT partner_debit p FROM entries WHERE ${accW(AA, 'acc_debit')} UNION ALL SELECT partner_credit FROM entries WHERE ${accW(AA, 'acc_credit')}) WHERE p IS NOT NULL AND p<>'' GROUP BY 1 ORDER BY 2 DESC LIMIT 3000`, ...AA, ...AA).map(r => r.p);
-    return { bp, asOf, from, open, close: bal, adj: A.bal, dr: book.reduce((a, x) => a + x.dr, 0), cr: book.reduce((a, x) => a + x.cr, 0), book, items: A.items, partners };
+    return { bp, asOf, from, open, close: bal, adj: A.bal, dr: book.reduce((a, x) => a + x.dr, 0), cr: book.reduce((a, x) => a + x.cr, 0), book, items: A.items, partners, exBp: EX.get('bp:' + bp) || null };
   }
+  // keys: [{kind:'bp', bp}] hoặc [{kind:'e', id, bp}]; on=false để bỏ
+  function setExempt(keys, on, note = '', exp = '') { let n = 0;
+    for (const k of [].concat(keys || [])) { const key = k.kind === 'bp' ? 'bp:' + k.bp : 'e:' + (+k.id);
+      if (on) run(`INSERT OR REPLACE INTO r1388_exempt(k, kind, bp, id, note, exp, updated_at) VALUES(?,?,?,?,?,?,datetime('now','localtime'))`, key, k.kind === 'bp' ? 'bp' : 'e', k.bp || '', k.kind === 'bp' ? null : +k.id, String(note || '').trim(), String(exp || '').slice(0, 10)); else run(`DELETE FROM r1388_exempt WHERE k=?`, key); n++; }
+    return { n }; }
+  function exemptList() { return all(`SELECT x.*, e.account_date d, e.document_no doc, e.amount a, e.description ds FROM r1388_exempt x LEFT JOIN entries e ON e.id=x.id ORDER BY x.updated_at DESC`); }
   // Đánh dấu bút toán ghi sai: keys [{id, side}], note, toBp ('' = chỉ loại khỏi tuổi nợ); on=false để bỏ đánh dấu
   function setWrong(keys, on, note = '', toBp = '') { let n = 0;
     for (const k of [].concat(keys || [])) { if (on) run(`INSERT OR REPLACE INTO r1388_wrong(id, side, note, to_bp, updated_at) VALUES(?,?,?,?,datetime('now','localtime'))`, +k.id, k.side, note || '', toBp || ''); else run(`DELETE FROM r1388_wrong WHERE id=? AND side=?`, +k.id, k.side); n++; }
     return { n }; }
   function wrongList() { return all(`SELECT w.*, e.account_date d, e.document_no doc, e.amount a, e.description ds, CASE WHEN w.side='dr' THEN e.partner_debit ELSE e.partner_credit END bp, CASE WHEN w.side='dr' THEN e.acc_debit ELSE e.acc_credit END acc FROM r1388_wrong w LEFT JOIN entries e ON e.id=w.id ORDER BY w.updated_at DESC`); }
-  return { report, detail, setWrong, wrongList };
+  return { report, detail, setWrong, wrongList, setExempt, exemptList };
 }
 module.exports = { make };

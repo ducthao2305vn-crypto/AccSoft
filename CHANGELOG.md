@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.66.0 – 07/11/2026
+- Công nợ phải thu (1388 / 131): **🛡 khoản đặc biệt – chắc chắn thu được, không tính quá hạn**. Trong sổ chi tiết đối tượng (thẻ Khoản còn nợ): nhập **lý do** + **ngày dự kiến thu** rồi áp dụng cho **các khoản đã tick** hoặc **cả đối tượng**; bỏ được. Khoản đặc biệt vẫn hiện tuổi nợ nhưng không cộng vào “Quá hạn”, tô xanh; **quá ngày dự kiến thu** mà chưa thu → tự tính quá hạn lại và cảnh báo đỏ. Thẻ Quá hạn hiện số miễn quá hạn và số quá ngày cam kết; danh sách có nhãn 🛡 / ⚠ và bộ lọc “Có khoản đặc biệt”, “Khoản đặc biệt đã quá ngày dự kiến thu”.
+
 ## v4.65.0 – 06/11/2026
 - Công nợ phải thu (trước là “Công nợ 138811 / 138812”): ô **Tài khoản** thêm **1388 (tất cả TK con)** và **131 – Phải thu khách hàng**; FIFO / tuổi nợ, đánh dấu bút toán ghi sai đối tượng, chuyển sang đối tượng đúng dùng chung cho các TK này.
 - Bảng **⚠ Nghi trùng tên khác mã**: nhóm các đối tượng có tên giống nhau hoặc gần giống (bỏ mã, dấu, Lda / Unip / S.A / Corp…, phần trong ngoặc) nhưng khác mã, kèm số dư từng mã và tổng nhóm – nhấn đúp để mở sổ chi tiết, đánh dấu bút toán chọn sai đối tượng và chuyển về mã đúng.
