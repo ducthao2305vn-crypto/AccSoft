@@ -107,13 +107,15 @@ function make(db, all, get, run) {
       db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
     const GS = grpStat(new Set([...S.values()].filter(r => r.status === 'ok').map(r => r.grp)));
     let open = 0; const rows = [];
-    for (const x of L) { const r = S.get(key(x)) || {}; if (x.d < from) { open += x.v; continue; }
-      rows.push({ id: x.id, side: x.side, d: x.d, doc: x.doc, ds: x.ds, dr: x.dr, cr: x.cr, acc: x.acc, oacc: x.oacc, bp: x.p || '', a: x.a, v: x.v, u: x.u, status: r.status || 'open', grp: r.grp || '', how: r.how || '', gbal: r.status === 'ok' && r.grp && GS.get(r.grp) ? GS.get(r.grp).v : (r.status === 'ok' ? x.v : 0), gout: r.status === 'ok' && r.grp && GS.get(r.grp) ? (GS.get(r.grp).d0 < from || GS.get(r.grp).d1 > to) : false, note: r.note || '', manual: !!r.manual, left: r.left ?? x.v }); }
+    // nhóm khớp có thành viên trong kỳ → kèm các dòng đối ứng trước kỳ (đánh dấu outP) để tổng Nợ = Có của nhóm hiện đủ trên bảng
+    const gIn = new Set(L.filter(x => x.d >= from).map(x => (S.get(key(x)) || {}).grp).filter(Boolean));
+    for (const x of L) { const r = S.get(key(x)) || {}; if (x.d < from) { open += x.v; if (!(r.status === 'ok' && r.grp && gIn.has(r.grp))) continue; }
+      rows.push({ outP: x.d < from, id: x.id, side: x.side, d: x.d, doc: x.doc, ds: x.ds, dr: x.dr, cr: x.cr, acc: x.acc, oacc: x.oacc, bp: x.p || '', a: x.a, v: x.v, u: x.u, status: r.status || 'open', grp: r.grp || '', how: r.how || '', gbal: r.status === 'ok' && r.grp && GS.get(r.grp) ? GS.get(r.grp).v : (r.status === 'ok' ? x.v : 0), gout: r.status === 'ok' && r.grp && GS.get(r.grp) ? (GS.get(r.grp).d0 < from || GS.get(r.grp).d1 > to) : false, note: r.note || '', manual: !!r.manual, left: r.left ?? x.v }); }
     { const c = k => [...S.values()].filter(r => r.status === k).length; let close = 0; for (const x of L) close += x.v;
       run(`INSERT OR REPLACE INTO lg_run(acc, bp, from_d, to_d, at, n, n_ok, n_check, n_open, open_amt, close) VALUES(?,?,?,?,datetime('now','localtime'),?,?,?,?,?,?)`, acc, bp, from, to, L.length, L.filter(x => (S.get(key(x)) || {}).status === 'ok').length, L.filter(x => (S.get(key(x)) || {}).status === 'check').length, L.filter(x => (S.get(key(x)) || {}).status === 'open').length, L.reduce((q, x) => q + (((S.get(key(x)) || {}).status === 'open') ? ((S.get(key(x)) || {}).left || 0) : 0), 0), close); }
-    const cnt = k => rows.filter(r => r.status === k).length, sum = k => rows.filter(r => r.status === k).reduce((q, r) => q + r.v, 0);
-    return { acc, bp, from, to, open, dr: rows.filter(r => r.v > 0).reduce((q, r) => q + r.v, 0), cr: -rows.filter(r => r.v < 0).reduce((q, r) => q + r.v, 0), close: open + rows.reduce((q, r) => q + r.v, 0),
-      rows, n: { ok: cnt('ok'), open: cnt('open'), check: cnt('check') }, sum: { ok: sum('ok'), open: rows.filter(r => r.status === 'open').reduce((q, r) => q + (r.left || 0), 0), check: sum('check') }, analyzed: todo.length, total: L.length, reset: badG.size };
+    const cnt = k => rows.filter(r => !r.outP && r.status === k).length, sum = k => rows.filter(r => !r.outP && r.status === k).reduce((q, r) => q + r.v, 0);
+    return { acc, bp, from, to, open, dr: rows.filter(r => !r.outP && r.v > 0).reduce((q, r) => q + r.v, 0), cr: -rows.filter(r => !r.outP && r.v < 0).reduce((q, r) => q + r.v, 0), close: open + rows.filter(r => !r.outP).reduce((q, r) => q + r.v, 0),
+      rows, n: { ok: cnt('ok'), open: cnt('open'), check: cnt('check') }, sum: { ok: sum('ok'), open: rows.filter(r => !r.outP && r.status === 'open').reduce((q, r) => q + (r.left || 0), 0), check: sum('check') }, analyzed: todo.length, total: L.length, reset: badG.size };
   }
   // Sửa tay: trạng thái và / hoặc ghi chú cho các dòng [{id, side}]; status '' = giữ nguyên trạng thái, chỉ sửa ghi chú; status 'auto' = trả về tự động
   function setLine(keys, status, note) { let n = 0; const MG = 'M' + Date.now().toString(36).toUpperCase();

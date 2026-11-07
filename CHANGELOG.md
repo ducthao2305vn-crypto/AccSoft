@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.72.1 – 07/11/2026
+- Phân tích ledger: lọc **✅ Khớp** nay hiện kèm các **dòng đối ứng trước kỳ** của các nhóm khớp (chữ xám nghiêng, ghi “dòng trước kỳ – đối ứng của nhóm khớp”) để **tổng Nợ = tổng Có** trên bảng; các bộ lọc khác và thẻ số liệu không tính các dòng này. Tăng giới hạn hiển thị lên 20.000 dòng để dòng tổng cộng đủ.
+
 ## v4.72.0 – 07/11/2026
 - Phân tích ledger – **“Khớp” phải cân Nợ = Có**: mỗi lần mở báo cáo kiểm tra lại các nhóm khớp tự động đã lưu; nhóm nào không cân (vd mã nhóm trùng của bản cũ, dữ liệu nạp lại) được **phân tích lại** – mỗi dòng chỉ thuộc một nhóm, đã khớp với chứng từ này thì không dùng để khớp chứng từ khác.
 - Đánh dấu khớp bằng tay: các dòng chọn cùng lúc thành **một nhóm khớp**; nếu chưa cân thì hỏi lại kèm số lệch. Ô “Đã chọn” hiện **Nợ − Có của các dòng đang tick** (✅ cân khi = 0) để chọn đủ dòng đối ứng trước khi lưu.
