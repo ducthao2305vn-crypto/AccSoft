@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.74.1 – 07/11/2026
+- Phân tích ledger: lọc trên kết quả đã phân tích **theo khoảng ngày** (Lọc ngày từ – đến) và **ô tìm** chứng từ / diễn giải / ghi chú / mã nhóm – không phải phân tích lại; kết hợp được với lọc tình trạng, cách khớp, sắp xếp, xuất Excel theo đúng phần đang lọc; nút ✕ Bỏ lọc.
+
 ## v4.74.0 – 07/11/2026
 - Phân tích ledger – **sửa thứ tự tự khớp** theo đúng nghiệp vụ: (1) cùng chứng từ Nợ = Có → (2) **theo chứng từ**: tổng một chứng từ = chứng từ ngược chiều (ưu tiên cùng nội dung diễn giải, gần ngày) → (3) một khoản = tổng nhiều dòng gần ngày / cùng diễn giải → (4) **sau cùng mới ghép từng dòng theo số tiền** → nhóm tham chiếu / diễn giải → FIFO. Trước đây ghép dòng lẻ theo số tiền chạy trước nên các dòng 50 USD của chứng từ VTLMN… bị ghép lẻ với nơi khác, chứng từ không còn khớp được với chứng từ thanh toán VTL_HOBT….
 - Kết quả tự động cũ được **phân tích lại một lần** theo thứ tự mới (giữ nguyên dòng sửa tay và ghi chú).
