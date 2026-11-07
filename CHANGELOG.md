@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.72.2 – 07/11/2026
+- Phân tích ledger: sửa cột **Số tiền Nợ / Số tiền Có** với bút toán số tiền âm (vd Nợ 13888 / Có 33888 số tiền −150 thực chất là Nợ 33888 150): nay hiện theo chiều thực tế trên tài khoản nên dòng tổng cộng của các dòng Khớp ra Nợ = Có. Xuất Excel cũng sửa tương tự.
+
 ## v4.72.1 – 07/11/2026
 - Phân tích ledger: lọc **✅ Khớp** nay hiện kèm các **dòng đối ứng trước kỳ** của các nhóm khớp (chữ xám nghiêng, ghi “dòng trước kỳ – đối ứng của nhóm khớp”) để **tổng Nợ = tổng Có** trên bảng; các bộ lọc khác và thẻ số liệu không tính các dòng này. Tăng giới hạn hiển thị lên 20.000 dòng để dòng tổng cộng đủ.
 
