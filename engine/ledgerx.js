@@ -48,6 +48,27 @@ function make(db, all, get, run) {
         const C = (byV.get(Math.round(u.v * 100)) || []).filter(v => !v.used && v.xs.every(x => !done.has(key(x)))); if (!C.length || u.xs.some(x => done.has(key(x)))) continue;
         const sim = v => { let c = 0; for (const w of u.w) if (v.w.has(w)) c++; return c; }, t0 = Date.parse(u.d);
         const b = C.map(v => ({ v, c: sim(v), dd: Math.abs(Date.parse(v.d) - t0) })).sort((a, b) => b.c - a.c || a.dd - b.dd)[0]; b.v.used = true; mark([...u.xs, ...b.v.xs], 'Khớp tổng chứng từ'); } }
+    // 2c) một khoản (dòng hoặc tổng chứng từ) = tổng nhiều dòng ngược chiều gần ngày (vd chi phí 1 dòng ↔ thanh toán 100 dòng):
+    //     thử (i) chuỗi liên tiếp theo ngày, (ii) chuỗi liên tiếp các dòng có diễn giải giống, (iii) tổ hợp nhỏ (≤ 20 dòng giống nhất)
+    { const WIN = 120 * 864e5, wd = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 3 && !/^\d+$/.test(w)));
+      const sim = (A, B) => { if (!A.size || !B.size) return 0; let c = 0; for (const w of A) if (B.has(w)) c++; return c / Math.min(A.size, B.size); };
+      const W = new Map(L.map(x => [key(x), wd(x.ds)])), C100 = v => Math.round(Math.abs(v) * 100);
+      const units = () => { const U = new Map(); for (const x of rest()) { const k = s(x.doc) + '|' + (x.v > 0 ? '+' : '-'); (U.get(k) || U.set(k, []).get(k)).push(x); }
+        const out = []; for (const xs of U.values()) { out.push(xs); if (xs.length > 1) for (const x of xs) out.push([x]); } return out.sort((a, b) => C100(b.reduce((q, x) => q + x.v, 0)) - C100(a.reduce((q, x) => q + x.v, 0))); };
+      const contig = (arr, T) => { let i = 0, sum = 0; for (let j = 0; j < arr.length; j++) { sum += arr[j].c; while (sum > T && i <= j) sum -= arr[i++].c; if (sum === T && j > i) return arr.slice(i, j + 1); } return null; };
+      const subset = (arr, T) => { let it = 0; const pick = []; const go = (k, rem) => { if (rem === 0) return pick.length >= 2; if (k >= arr.length || ++it > 40000) return false;
+          if (arr[k].c <= rem) { pick.push(arr[k]); if (go(k + 1, rem - arr[k].c)) return true; pick.pop(); } return go(k + 1, rem); };
+        return go(0, T) ? pick.slice() : null; };
+      const R0 = rest().map(y => ({ y, k: key(y), c: C100(y.v), t: Date.parse(y.d), sg: Math.sign(y.v) })).sort((a, b) => a.t - b.t || a.y.id - b.y.id), TT = R0.map(o => o.t);
+      const lo = t => { let a = 0, b = TT.length; while (a < b) { const m = (a + b) >> 1; if (TT[m] < t) a = m + 1; else b = m; } return a; };
+      for (const u of units()) { if (u.some(x => done.has(key(x)))) continue; const T = C100(u.reduce((q, x) => q + x.v, 0)); if (!T) continue;
+        const sg = Math.sign(u[0].v), t0 = Date.parse(u[0].d), uw = new Set(u.flatMap(x => [...W.get(key(x))])), uk = new Set(u.map(key)), opp = [];
+        for (let i = lo(t0 - WIN); i < R0.length && R0[i].t <= t0 + WIN; i++) { const o = R0[i]; if (o.sg === -sg && o.c <= T && !done.has(o.k) && !uk.has(o.k)) opp.push({ y: o.y, c: o.c, t: o.t, sm: sim(uw, W.get(o.k)) }); }
+        if (opp.length < 2 || opp.length > 3000) continue; let hit = contig(opp, T), how = 'Một khoản = tổng nhiều dòng liên tiếp (gần ngày)';
+        const simL = opp.filter(o => o.sm >= 0.5);
+        if (!hit && simL.length >= 2) { hit = contig(simL, T); how = 'Một khoản = tổng các dòng cùng diễn giải'; }
+        if (!hit) { const top = [...opp].sort((a, b) => b.sm - a.sm || Math.abs(a.t - t0) - Math.abs(b.t - t0)).slice(0, 20).sort((a, b) => b.c - a.c); hit = subset(top, T); how = 'Một khoản = tổ hợp các dòng gần ngày / giống diễn giải'; }
+        if (hit) mark([...u, ...hit.map(o => o.y)], how); } }
     // 3) nhóm theo tham chiếu chung có tổng = 0
     const byRef = new Map(); for (const x of rest()) for (const w of RF.get(key(x))) (byRef.get(w) || byRef.set(w, []).get(w)).push(x);
     const cand = [...byRef].filter(([, xs]) => xs.length >= 2 && xs.length <= 60).sort((a, b) => a[1].length - b[1].length);

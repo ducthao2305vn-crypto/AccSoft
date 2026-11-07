@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## v4.68.0 – 07/11/2026
+- Phân tích ledger – thêm luật khớp **một khoản = tổng nhiều dòng ngược chiều gần ngày** (vd chi phí hạch toán 1 dòng ↔ thanh toán nhiều dòng, hoặc ngược lại; khoản có thể là 1 dòng hoặc tổng 1 chứng từ), trong cửa sổ ±120 ngày, thử lần lượt: chuỗi dòng liên tiếp theo ngày → chuỗi các dòng có diễn giải giống → tổ hợp tối đa 20 dòng giống diễn giải / gần ngày nhất.
+- Lọc nhanh theo tình trạng bằng nút có số đếm: Tất cả / Chưa xong / Chưa khớp / Cần phân tích / Khớp / **Sửa tay** / **Có ghi chú**; thêm lọc **Cách khớp**.
+
 ## v4.67.0 – 07/11/2026
 - **Phân tích sổ chi tiết (ledger)** (menu mới): chọn kỳ, tài khoản (vd 33888, 1388, 331 – theo tiền tố) và đối tượng (hoặc tất cả) → bảng: số chứng từ, ngày, diễn giải, TK Nợ, TK Có, số tiền Nợ, số tiền Có, **Nợ / Có** (Nợ dương, Có âm), **tình trạng** (Khớp / Cần phân tích / Chưa khớp), cách khớp + mã nhóm khớp, **ghi chú** (sửa trực tiếp, tự lưu).
 - Tự đánh giá tình trạng theo thứ tự: (1) cùng chứng từ Nợ = Có, (2) cặp đúng số tiền (ưu tiên cùng tham chiếu / gần ngày), (3) tổng một chứng từ = chứng từ ngược chiều (vd ghi nhận nhiều dòng ↔ một lần chi), (4) nhóm cùng số tham chiếu / cùng diễn giải có tổng = 0 → **Khớp**; phần còn lại bù trừ FIFO → **Cần phân tích**; còn treo → **Chưa khớp** (kèm số còn treo).
