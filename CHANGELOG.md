@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.71.0 – 07/11/2026
+- Phân tích ledger: cột **Tình trạng là ô xổ xuống** ngay trên từng dòng (✅ Khớp / ⚠ Cần phân tích / ❌ Chưa khớp / ↺ Tự động) – chọn là lưu luôn, đổi màu dòng và cập nhật số đếm, không cần tick rồi bấm Lưu. Ở chế độ gom theo chứng từ, ô xổ xuống của dòng tổng đổi tình trạng cho cả chứng từ.
+
 ## v4.70.0 – 07/11/2026
 - Phân tích ledger: khung **📚 Đã phân tích** – danh sách tài khoản × đối tượng đã phân tích (lần cuối, kỳ, số dòng khớp / cần phân tích / chưa khớp, còn treo, số dư, thanh tiến độ % khớp), bấm để mở lại kết quả đã lưu; trong ô chọn đối tượng, đối tượng đã phân tích có dấu ✓ và ngày phân tích.
 - **Gom theo chứng từ**: các dòng cùng số chứng từ gom thành một dòng tổng (số dòng, khoảng ngày, diễn giải của dòng gần nhất, tổng Nợ / Có / Nợ−Có, tình trạng chung, ghi chú), bấm để xổ xuống chi tiết; tick dòng tổng = chọn cả chứng từ.
