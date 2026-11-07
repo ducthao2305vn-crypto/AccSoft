@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.72.4 – 07/11/2026
+- Xuất Excel ledger: cột xếp đúng thứ tự Số chứng từ · Ngày · Diễn giải · TK Nợ · TK Có · Số tiền Nợ · Số tiền Có · Nợ / Có · **Tình trạng** · **Nhóm khớp** · Cách khớp · Ghi chú (trước đây cột Nợ / Có bị đẩy lên đầu, Tình trạng / Nhóm khớp nằm cuối dễ bị bỏ sót).
+
 ## v4.72.3 – 07/11/2026
 - Phân tích ledger: giữ **đúng bản chất bút toán** – số tiền âm hiện là số âm ở đúng cột phát sinh gốc (vd Có 33888 −150 hiện ở cột Số tiền Có là −150); cột Nợ / Có = Nợ − Có. Dòng tổng các dòng Khớp: tổng Nợ − tổng Có = 0. Thẻ phát sinh Nợ / Có và dòng gom chứng từ tính theo cùng cách.
 
