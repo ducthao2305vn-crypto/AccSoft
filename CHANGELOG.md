@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v4.70.0 – 07/11/2026
+- Phân tích ledger: khung **📚 Đã phân tích** – danh sách tài khoản × đối tượng đã phân tích (lần cuối, kỳ, số dòng khớp / cần phân tích / chưa khớp, còn treo, số dư, thanh tiến độ % khớp), bấm để mở lại kết quả đã lưu; trong ô chọn đối tượng, đối tượng đã phân tích có dấu ✓ và ngày phân tích.
+- **Gom theo chứng từ**: các dòng cùng số chứng từ gom thành một dòng tổng (số dòng, khoảng ngày, diễn giải của dòng gần nhất, tổng Nợ / Có / Nợ−Có, tình trạng chung, ghi chú), bấm để xổ xuống chi tiết; tick dòng tổng = chọn cả chứng từ.
+- **Sắp xếp theo |số tiền|**: khoản âm và dương cùng giá trị nằm cạnh nhau (vd −10,000 và 10,000) để dễ đối chiếu; chứng từ tự cân (Nợ = Có) xếp cuối.
+
 ## v4.69.0 – 07/11/2026
 - Giao diện: **menu chia 7 nhóm** theo nghiệp vụ (Tổng quan · Công nợ phải thu · Công nợ phải trả · Sổ sách & phân tích · Kết quả & báo cáo · Chi phí quản trị · Danh mục & dữ liệu), bấm tên nhóm để thu gọn / mở (nhớ lựa chọn, nhóm chứa trang đang xem luôn mở); tên menu ngắn gọn một dòng.
 - **Thống nhất định dạng số** 1,234,567.89 trên mọi màn hình (trước đây số đếm dùng dấu chấm, số tiền dùng dấu phẩy); ô chọn ngày hiển thị **dd/mm/yyyy**.

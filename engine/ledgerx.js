@@ -10,7 +10,8 @@
 // chỉ các dòng mới hoặc chưa khớp được phân tích lại (để khớp với phát sinh mới).
 function make(db, all, get, run) {
   db.exec(`CREATE TABLE IF NOT EXISTS lg_line(id INTEGER, side TEXT, acc TEXT, bp TEXT, status TEXT, grp TEXT, how TEXT, note TEXT, manual INTEGER DEFAULT 0, left REAL, at TEXT, PRIMARY KEY(id, side));
-    CREATE INDEX IF NOT EXISTS ix_lg_line_bp ON lg_line(acc, bp);`);
+    CREATE INDEX IF NOT EXISTS ix_lg_line_bp ON lg_line(acc, bp);
+    CREATE TABLE IF NOT EXISTS lg_run(acc TEXT, bp TEXT, from_d TEXT, to_d TEXT, at TEXT, n INTEGER, n_ok INTEGER, n_check INTEGER, n_open INTEGER, open_amt REAL, close REAL, PRIMARY KEY(acc, bp));`);
   const s = v => String(v ?? '').trim(), day = d => String(d || '').slice(0, 10), Z = v => Math.abs(v) < 0.005;
   const accL = a => (s(a).replace(/[^0-9]/g, '') || '0') + '%';
   // đối tượng có phát sinh trên tài khoản
@@ -102,6 +103,8 @@ function make(db, all, get, run) {
     let open = 0; const rows = [];
     for (const x of L) { const r = S.get(key(x)) || {}; if (x.d < from) { open += x.v; continue; }
       rows.push({ id: x.id, side: x.side, d: x.d, doc: x.doc, ds: x.ds, dr: x.dr, cr: x.cr, acc: x.acc, oacc: x.oacc, bp: x.p || '', a: x.a, v: x.v, u: x.u, status: r.status || 'open', grp: r.grp || '', how: r.how || '', note: r.note || '', manual: !!r.manual, left: r.left ?? x.v }); }
+    { const c = k => [...S.values()].filter(r => r.status === k).length; let close = 0; for (const x of L) close += x.v;
+      run(`INSERT OR REPLACE INTO lg_run(acc, bp, from_d, to_d, at, n, n_ok, n_check, n_open, open_amt, close) VALUES(?,?,?,?,datetime('now','localtime'),?,?,?,?,?,?)`, acc, bp, from, to, L.length, L.filter(x => (S.get(key(x)) || {}).status === 'ok').length, L.filter(x => (S.get(key(x)) || {}).status === 'check').length, L.filter(x => (S.get(key(x)) || {}).status === 'open').length, L.reduce((q, x) => q + (((S.get(key(x)) || {}).status === 'open') ? ((S.get(key(x)) || {}).left || 0) : 0), 0), close); }
     const cnt = k => rows.filter(r => r.status === k).length, sum = k => rows.filter(r => r.status === k).reduce((q, r) => q + r.v, 0);
     return { acc, bp, from, to, open, dr: rows.filter(r => r.v > 0).reduce((q, r) => q + r.v, 0), cr: -rows.filter(r => r.v < 0).reduce((q, r) => q + r.v, 0), close: open + rows.reduce((q, r) => q + r.v, 0),
       rows, n: { ok: cnt('ok'), open: cnt('open'), check: cnt('check') }, sum: { ok: sum('ok'), open: rows.filter(r => r.status === 'open').reduce((q, r) => q + (r.left || 0), 0), check: sum('check') }, analyzed: todo.length, total: L.length };
@@ -113,6 +116,7 @@ function make(db, all, get, run) {
       else if (status) run(`UPDATE lg_line SET status=?, manual=1, how=? WHERE id=? AND side=?`, status, 'Người dùng đánh dấu', +k.id, k.side);
       if (note != null) run(`UPDATE lg_line SET note=? WHERE id=? AND side=?`, s(note), +k.id, k.side); n++; }
     return { n }; }
-  return { partners, report, setLine };
+  function runs() { return all(`SELECT * FROM lg_run ORDER BY at DESC LIMIT 500`); }
+  return { partners, report, setLine, runs };
 }
 module.exports = { make };
