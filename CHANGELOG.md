@@ -1,5 +1,16 @@
 # Lịch sử phiên bản
 
+## v4.87.0 – 08/11/2026
+- Module mới **Giám sát tài chính** (nhóm Kết quả & báo cáo) theo bộ biểu mẫu giám sát Tổng công ty (chỉ các sheet hiện). Chọn từ tháng – đến tháng, hạn thanh toán. Xuất 1 file Excel gồm 13 sheet.
+  - **7.1 Công nợ phải thu:** tổng hợp theo 12 nhóm công nợ (đầu kỳ, cuối kỳ, chưa đến hạn, quá hạn < 6T / 6T–1N / 1–2N / 2–3N / ≥ 3N, khó đòi đầu kỳ / cuối kỳ), PL01.1 chi tiết theo đối tượng, PL01.2 danh sách nợ khó đòi.
+  - **PL02 phân tích 1311 / 1388 / 1411:** tổng hợp theo nhóm và 3 sheet chi tiết 131_D, 138_D, 141_D.
+  - **7.2 Công nợ phải trả:** tổng hợp theo 11 nội dung (hàng hóa VTTB, kết nối trong nước / quốc tế, vay, thuế, người lao động, khác…) và PL03 chi tiết theo đối tượng.
+  - **7.3 Hàng tồn kho:** tổng hợp theo phân loại (vật tư giao thầu, ứng cứu thông tin, CIP, sim kit, thẻ cào, thiết bị đầu cuối…) và PL03.1 chi tiết mặt hàng (số lượng, giá trị đầu kỳ / nhập / xuất / tồn, tuổi tồn ≤ 6T … > 3N). Đối chiếu sổ cái từng TK.
+  - **7.4 Đầu tư lên tài sản:** số dư đầu / cuối tháng TK 211, 213, 241, 152, 151. Điều chỉnh tăng / giảm và tỷ giá nhập tay. Tính giá trị đầu tư phát sinh và luỹ kế (bản tệ, USD).
+  - **7.7 Thuế phí:** 4 nhóm theo mẫu (cơ quan thuế, khấu trừ tại nguồn, cơ quan quản lý, bảo hiểm). Gồm phải nộp, đã nộp, còn phải nộp: luỹ kế đến hết năm trước, cả năm và từng tháng.
+  - Số dư công nợ theo **nguyên tắc B01**; có đối chiếu Trial balance theo TK.
+  - Thẻ **⚙ Quy tắc phân loại:** sửa được nhóm công nợ phải thu / phải trả, phân loại hàng tồn kho, ánh xạ TK thuế. Mỗi dòng gồm tiền tố TK | biểu thức đối tượng hoặc mặt hàng | nhóm.
+
 ## v4.86.2 – 08/11/2026
 - Đầu tư ra nước ngoài – **Mẫu 05 nợ khó đòi** (quá hạn ≥ 6 tháng, TT48) theo nguyên tắc xếp chiều theo thời điểm:
   - Chỉ tính cho đối tượng / TK **đang dư Nợ tại đúng thời điểm đó**. Với TK lấy số dư ròng, chỉ tính khi TK dư Nợ ròng.

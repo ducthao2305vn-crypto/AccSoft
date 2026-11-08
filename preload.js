@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('api', {
   kqTemplate: () => ipcRenderer.invoke('kq:template'),
   dmImport: (kind, mode) => ipcRenderer.invoke('dm:import', kind, mode),
   xlsColor: (name, sheet, aoa, opt) => ipcRenderer.invoke('xls:color', name, sheet, aoa, opt),
+  gsExport: R => ipcRenderer.invoke('gs:export', R),
   khExport: (P1, P6, o) => ipcRenderer.invoke('kh:export', P1, P6, o),
   khImport: () => ipcRenderer.invoke('kh:import'),
   oiExport: (R, o) => ipcRenderer.invoke('oi:export', R, o),

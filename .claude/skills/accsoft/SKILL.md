@@ -558,3 +558,10 @@ await p.evaluate(()=>window.api.q('stats'));
 - `DUAL = 138812, 13111, 33111, 33121`: dư Nợ / dư Có tính theo đối tượng (`dualSplit(ym)`, đọc trực tiếp từ entries, có cache theo max(id) + count).
 - Các TK công nợ khác: `G(prefixes, side)` lấy số dư ròng từng TK chi tiết từ `trial(…, 0)`, bỏ TK DUAL và 14121.
 - `INV_ADV = 14121`: tính vào mã 140 (hàng tồn kho), mục V.7 thuyết minh và mã 10 của B03 gián tiếp (tính l10 trước l09).
+
+### Giám sát tài chính (v4.87, `engine/gstc.js`, xuất `engine/gstcx.js`)
+- `gsCompute({from, to, term})` trả `ar`, `ap`, `inv`, `invest`, `tax`.
+- Công nợ dùng `OI.debtsG(kind)`, cùng nguyên tắc B01 với Mẫu 03 / 05. Phải trả thêm mục V gồm 333, 334, 335, 341, 343. Tuổi nợ `ag = [chưa đến hạn, < 6T, 6T–1N, 1–2N, 2–3N, ≥ 3N]`.
+- Tồn kho: `OI.m04(from, to, 0)`, gộp theo TK × mặt hàng.
+- Phân loại theo `settings.gs_rules` = `{ar, ap, inv, tax}`, mỗi quy tắc `[tiền tố TK, regex, nhóm]`, dòng khớp đầu tiên được dùng; mặc định ở `DEF`.
+- 7.4: điều chỉnh lưu `settings.gs_adj74[ym]`, tỷ giá lưu `gs_rate74[ym]`.

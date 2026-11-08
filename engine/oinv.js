@@ -234,6 +234,10 @@ function make(db, all, get, run, FIN) {
     const a = m03(from, to, term), DS = a.secs.filter(x => x.no !== 'IV'), od = { cb: DS.reduce((s, x) => s + x.rows.reduce((t, r) => t + r.odCb, 0), 0), ob: DS.reduce((s, x) => s + x.rows.reduce((t, r) => t + (r.odY || 0), 0), 0) };
     return { from, to, term, keepM, m01: m01(from, to), m02: m02(from, to, od), m03: a, m04: m04(from, to, keepM), m05: m05(from, to, term), m06: procList() };
   }
-  return { compute, setM01, procList, procSave };
+  // Dùng cho module Giám sát tài chính: cùng nguyên tắc B01; tuổi nợ quá hạn [chưa đến hạn, < 6 tháng, 6 tháng–1 năm, 1–2, 2–3, ≥ 3 năm] tại cuối kỳ và đầu kỳ
+  const ageG = (p, p0 = []) => { const b = bk(p, [180, 365, 730, 1095]), b0 = bk(p0, [180, 365, 730, 1095]); return { ag: b, agOb: b0, bad: b[2] + b[3] + b[4] + b[5], badOb: b0[2] + b0[3] + b0[4] + b0[5] }; };
+  const AP_X = [['V', 'Thuế, phải trả người lao động, chi phí phải trả, vay (333, 334, 335, 341, 343)', [[['333', '334', '335', '341', '343'], -1, 'acctp']]]];
+  function debtsG(kind, from, to, term = 30) { return debts(kind === 'ap' ? AP_SEC.concat(AP_X) : AR_SEC, from, to, term, ageG); }
+  return { compute, setM01, procList, procSave, debtsG, m04 };
 }
 module.exports = { make };
