@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v4.81.0 – 08/11/2026
+- Phân tích ledger: dòng **Khớp** hiện ngay **↔ các chứng từ đang khớp cùng** (kèm số tiền) ở cột Cách khớp – kể cả dòng tổng chứng từ; bấm tên chứng từ để lọc nhanh chứng từ đó.
+- Ô tìm trên bảng nhận **nhiều chứng từ cách nhau dấu phẩy** (vd `VTLMN23120006, VTL_HOBT23120091, VTL_HOBT23120090`) → hiện cùng lúc để so và khớp lại.
+- Khớp lại: tick các chứng từ (kể cả chứng từ đang thuộc nhóm khớp khác) → **✅ Khớp các chứng từ đã chọn**; phần mềm báo sẽ tách khỏi nhóm cũ, phần còn lại của nhóm cũ được phân tích lại tự động.
+
 ## v4.80.1 – 08/11/2026
 - Phân tích ledger: nút **✅ Khớp các chứng từ đã chọn** trên thanh tổng luôn hiện khi chọn từ 2 dòng (tick dòng tổng chứng từ A và B) – cân thì khớp ngay, chưa cân thì hỏi lại.
 
