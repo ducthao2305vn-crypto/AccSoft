@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.80.1 – 08/11/2026
+- Phân tích ledger: nút **✅ Khớp các chứng từ đã chọn** trên thanh tổng luôn hiện khi chọn từ 2 dòng (tick dòng tổng chứng từ A và B) – cân thì khớp ngay, chưa cân thì hỏi lại.
+
 ## v4.80.0 – 08/11/2026
 - Phân tích ledger: **🕵 Rà sai TK / đối tượng** – với các dòng chưa khớp / cần phân tích (theo bộ lọc đang xem), tìm bút toán **ngược chiều cùng số tiền** trong cửa sổ thời gian nhưng **cùng tài khoản – khác đối tượng** (nghi nhân viên chọn sai đối tượng) hoặc **cùng đối tượng – khác tài khoản** (nghi hạch toán sai tài khoản; bỏ qua TK tiền 111–113). Mỗi dòng liệt kê bút toán nghi vấn (chứng từ, ngày, Nợ/Có TK · đối tượng, diễn giải, số tiền); nhấn đúp để mở; **Ghi nhận** → ghi chú vào dòng chưa khớp (“Nghi hạch toán sai đối tượng – đối ứng … ”) và chuyển Cần phân tích để theo dõi / đề nghị điều chỉnh. Hỗ trợ sai số ± theo tham số.
 
