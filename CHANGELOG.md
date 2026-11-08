@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.77.3 – 08/11/2026
+- Phân tích ledger (gom theo chứng từ): **dòng tổng chứng từ tô màu theo nhóm khớp** (viền trái + nền nhạt cùng màu cho các chứng từ cùng nhóm; rê chuột xem mã nhóm); chứng từ chưa khớp / cần phân tích giữ nền đỏ / vàng.
+
 ## v4.77.2 – 08/11/2026
 - Phân tích ledger: tick **Gom theo chứng từ** nay luôn gom (kể cả khi sắp xếp Theo nhóm khớp – các chứng từ cùng nhóm khớp xếp liền nhau); bỏ tick để xem từng dòng tô màu theo nhóm.
 
