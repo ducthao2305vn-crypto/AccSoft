@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.76.1 – 08/11/2026
+- Xuất Excel ledger: thêm cột **Liên kết chứng từ (khớp với)** – với mỗi dòng khớp, liệt kê các chứng từ khác cùng nhóm khớp kèm số tiền (vd “↔ VTL_HOBT26100064 (+15,840)”), hoặc “tự cân trong chứng từ”.
+
 ## v4.76.0 – 08/11/2026
 - Phân tích ledger – cửa sổ nhóm khớp: dòng **Liên kết chứng từ** cho biết chứng từ nào khớp với chứng từ nào (chứng từ ghi Có −số tiền ↔ chứng từ ghi Nợ +số tiền, chứng từ tự cân); mục **➕ Thêm dòng khác vào nhóm**: danh sách dòng chưa khớp / cần phân tích của cùng tài khoản – đối tượng (tìm theo chứng từ / diễn giải / số tiền, nhấn đúp xem bút toán gốc), tick để thấy Nợ − Có của nhóm sau khi thêm, bấm Thêm → cả nhóm được khoá là khớp tay.
 
