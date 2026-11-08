@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.85.2 – 08/11/2026
+- Thuyết minh B09 **V.5 / V.17:** số đầu kỳ và cuối kỳ của từng TK xếp chiều độc lập như B01, nên tổng đầu kỳ khớp B01 (mã 133 + 136; mã 316 + 319). TK đổi chiều số dư trong kỳ được ghi chú ngay trên dòng và để trống cột phát sinh.
+
 ## v4.85.1 – 08/11/2026
 - **Thuyết minh B09** theo nguyên tắc B01 mới, tổng các mục khớp đúng B01:
   - **V.3, V.4, V.12, V.13** (top 10): 13111, 33111, 33121 liệt kê theo đối tượng (ghi rõ TK). Các TK 131 / 331 chi tiết khác là một dòng "số dư ròng".

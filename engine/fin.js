@@ -289,7 +289,9 @@ function make(all, okYm, INC, plRange, run) {
     const mov = (pres, nat = 1) => { const rows = tb.rows.filter(r => pres.some(p => r.a.startsWith(p)) && !(pres.includes('141') && r.a.startsWith('14121'))).map(r => ({ a: r.a, n: r.n, ob: nat * (r.obDr - r.obCr), inc: nat > 0 ? r.dr : r.cr, dec: nat > 0 ? r.cr : r.dr, cb: nat * r.bal }));
       const tot = rows.reduce((s, r) => ({ ob: s.ob + r.ob, inc: s.inc + r.inc, dec: s.dec + r.dec, cb: s.cb + r.cb }), { ob: 0, inc: 0, dec: 0, cb: 0 }); return { rows, tot }; };
     // Theo B01: TK công nợ không lưỡng tính trình bày theo số dư ròng từng TK → dư Nợ ở V.5, dư Có ở V.17 (theo số dư cuối kỳ)
-    const sideOnly = m => ({ rows: m.rows.filter(r => r.cb > 0.005 || (Math.abs(r.cb) <= 0.005 && r.ob > 0.005)) });
+    // Đầu kỳ và cuối kỳ xếp chiều độc lập (như B01): mỗi số chỉ tính khi đúng chiều mục; TK đổi chiều trong kỳ được ghi chú
+    const sideOnly = m => ({ rows: m.rows.filter(r => r.cb > 0.005 || r.ob > 0.005).map(r => { const ob = Math.max(0, r.ob), cb = Math.max(0, r.cb), flip = (r.ob > 0.005) !== (r.cb > 0.005);
+      return { ...r, n: flip ? `${r.n} (đổi chiều số dư trong kỳ: đầu kỳ ${r.ob > 0 ? 'đúng' : 'ngược'} chiều, cuối kỳ ${r.cb > 0 ? 'đúng' : 'ngược'} chiều)` : r.n, ob, cb, inc: flip ? null : r.inc, dec: flip ? null : r.dec }; }) });
     // 138812 (lưỡng tính): thay dòng ròng bằng phần dư Nợ (V.5) / dư Có (V.17) theo đối tượng – khớp B01 mã 136 / 319
     const dualMov = (m, side) => { const sp = at => { if (!at) return 0; let v = 0; for (const x of dualPartners('138812', at).values()) v += side === 'dr' ? Math.max(0, x) : Math.max(0, -x); return v; };
       const rows = m.rows.filter(r => !r.a.startsWith('138812')), ob = sp(prev), cb = sp(t);
