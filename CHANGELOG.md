@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.77.2 – 08/11/2026
+- Phân tích ledger: tick **Gom theo chứng từ** nay luôn gom (kể cả khi sắp xếp Theo nhóm khớp – các chứng từ cùng nhóm khớp xếp liền nhau); bỏ tick để xem từng dòng tô màu theo nhóm.
+
 ## v4.77.1 – 08/11/2026
 - Phân tích ledger – **chỉ khớp khi tổng cả chứng từ khớp**: chứng từ nào có một phần dòng đã khớp / sửa tay / nằm ngoài phần phân tích thì không được dùng để tự khớp (B0, B1, B2) – không còn trường hợp một phần chứng từ A khớp với một phần hoặc cả chứng từ B. Kết quả tự động cũ được phân tích lại một lần.
 
