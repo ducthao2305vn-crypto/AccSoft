@@ -27,7 +27,7 @@ function make(db, all, get, run) {
   // tham chiếu trong diễn giải: chuỗi có chữ số, dài ≥ 5 (số chứng từ, đề nghị, hoá đơn…), bỏ ngày tháng / năm / số tiền
   const refs = x => { const t = new Set((String(x.ds || '').toUpperCase().match(/[A-Z0-9][A-Z0-9\/\-_.]{4,}/g) || []).filter(w => /\d/.test(w) && /[A-Z]/.test(w) || /\d{6,}/.test(w)).filter(w => !/^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}$/.test(w)));
     for (const k of [x.inv, x.ar]) if (s(k)) t.add(s(k).toUpperCase()); return t; };
-  function analyze(L, FULL) { FULL = FULL || new Map(); // L: các dòng cần phân tích (chưa khớp) – trả Map key→{status, grp, how, left}
+  function analyze(L, FULL, PRM = {}) { FULL = FULL || new Map(); const TOL = Math.max(0, Math.round((+PRM.tol || 0) * 100)), WM = Math.min(36, Math.max(1, +PRM.win || 5)); // L: các dòng cần phân tích (chưa khớp) – trả Map key→{status, grp, how, left}
     const R = new Map(), key = x => x.id + '|' + x.side, done = new Set(); let g = 0;
     const RUN = Date.now().toString(36).slice(-4).toUpperCase(), mark = (xs, how) => { g++; const id = RUN + '-' + g; for (const x of xs) { done.add(key(x)); R.set(key(x), { status: 'ok', grp: id, how, left: 0 }); } };
     // 1) cùng chứng từ
@@ -37,18 +37,18 @@ function make(db, all, get, run) {
     // Nguyên tắc khớp theo CHỨNG TỪ (không tách dòng của một chứng từ), các chứng từ khớp phải trong vòng 5 tháng:
     //  B1) tổng chứng từ A = − tổng chứng từ B (A Nợ = B Có) → khớp; ưu tiên cùng diễn giải, gần ngày nhất
     //  B2) chứng từ A + chứng từ B + chứng từ C = 0 (vd A Có = B Nợ + C Nợ) → khớp
-    { const WIN = 153 * 864e5, C100 = v => Math.round(v * 100), wd = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 3 && !/^\d+$/.test(w)));
+    { const WIN = Math.round(WM * 30.6) * 864e5, C100 = v => Math.round(v * 100), wd = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 3 && !/^\d+$/.test(w)));
       const D = new Map(); for (const x of rest()) { const k = s(x.doc) || ('#' + x.id); const u = D.get(k) || D.set(k, { k, xs: [], v: 0, t: Infinity, w: new Set() }).get(k); u.xs.push(x); }
       const U = [...D.values()].map(u => { u.v = C100(u.xs.reduce((q, x) => q + x.v, 0)); u.t = Math.min(...u.xs.map(x => Date.parse(x.d))); for (const x of u.xs) for (const w of wd(x.ds)) u.w.add(w); return u; }).filter(u => u.v !== 0 && u.xs.length === (FULL.get(u.k) || u.xs.length)).sort((a, b) => a.t - b.t); // chỉ chứng từ còn nguyên vẹn (mọi dòng của chứng từ đều chưa khớp)
       const sim = (a, b) => { let c = 0; for (const w of a.w) if (b.w.has(w)) c++; return c / Math.max(1, Math.min(a.w.size, b.w.size)); };
       const byV = new Map(); for (const u of U) (byV.get(u.v) || byV.set(u.v, []).get(u.v)).push(u);
       const near = (a, b) => Math.abs(a.t - b.t) <= WIN;
       // B1
-      for (const a of U) { if (a.used || a.v <= 0) continue; const C = (byV.get(-a.v) || []).filter(b => !b.used && near(a, b)); if (!C.length) continue;
+      for (const a of U) { if (a.used || a.v <= 0) continue; const C = []; for (let t = -TOL; t <= TOL; t++) for (const b of (byV.get(-a.v + t) || [])) if (!b.used && near(a, b)) C.push(b); if (!C.length) continue;
         const b = C.map(b => ({ b, sm: sim(a, b), dd: Math.abs(a.t - b.t) })).sort((x, y) => y.sm - x.sm || x.dd - y.dd)[0].b; a.used = b.used = true; mark([...a.xs, ...b.xs], 'B1: chứng từ ↔ chứng từ (cùng số tiền, ≤ 5 tháng)'); }
       // B2
       for (const a of U) { if (a.used) continue; const W = U.filter(b => !b.used && b !== a && near(a, b)); if (W.length < 2) continue; const M = new Map(); for (const b of W) (M.get(b.v) || M.set(b.v, []).get(b.v)).push(b);
-        let best = null; for (const b of W) { const need = -a.v - b.v; for (const c of (M.get(need) || [])) { if (c === b || c.used || !near(b, c)) continue; const sc = sim(a, b) + sim(a, c), dd = Math.abs(a.t - b.t) + Math.abs(a.t - c.t); if (!best || sc > best.sc || (sc === best.sc && dd < best.dd)) best = { b, c, sc, dd }; } }
+        let best = null; for (const b of W) { const need = -a.v - b.v; for (let t = -TOL; t <= TOL; t++) for (const c of (M.get(need + t) || [])) { if (c === b || c.used || !near(b, c)) continue; const sc = sim(a, b) + sim(a, c), dd = Math.abs(a.t - b.t) + Math.abs(a.t - c.t); if (!best || sc > best.sc || (sc === best.sc && dd < best.dd)) best = { b, c, sc, dd }; } }
         if (best) { a.used = best.b.used = best.c.used = true; mark([...a.xs, ...best.b.xs, ...best.c.xs], 'B2: chứng từ A = chứng từ B + chứng từ C (≤ 5 tháng)'); } } }
     // 4) FIFO
     const P = rest().filter(x => x.v > 0).map(x => ({ x, left: x.v })), N = rest().filter(x => x.v < 0).map(x => ({ x, left: -x.v }));
@@ -67,26 +67,28 @@ function make(db, all, get, run) {
     // các dòng đã khớp (tự động) hoặc đã sửa tay giữ nguyên; phần còn lại phân tích lại
     // nhóm khớp tự động đã lưu phải cân (Nợ = Có); nhóm lệch (vd mã nhóm trùng của bản cũ, dữ liệu nạp lại) → phân tích lại
     const GS0 = grpStat(new Set([...S.values()].filter(r => r.status === 'ok' && !r.manual).map(r => r.grp))), badG = new Set([...GS0].filter(([, r]) => Math.abs(r.v) > 0.005).map(([g]) => g));
-    const ALG = '4', algOld = ((get(`SELECT v FROM lg_meta WHERE k='alg'`) || {}).v || '') !== ALG; if (algOld) { run(`UPDATE lg_line SET status='open', grp='' WHERE manual=0`); run(`INSERT OR REPLACE INTO lg_meta(k, v) VALUES('alg', ?)`, ALG); for (const r of S.values()) if (!r.manual) { r.status = 'open'; r.grp = ''; } }
+    const ALG = '4|' + (+o.win || 5) + '|' + (+o.tol || 0), algOld = ((get(`SELECT v FROM lg_meta WHERE k='alg'`) || {}).v || '') !== ALG; if (algOld) { run(`UPDATE lg_line SET status='open', grp='' WHERE manual=0`); run(`INSERT OR REPLACE INTO lg_meta(k, v) VALUES('alg', ?)`, ALG); for (const r of S.values()) if (!r.manual) { r.status = 'open'; r.grp = ''; } }
     const keep = x => { const r = S.get(key(x)); return r && (r.manual || (r.status === 'ok' && r.grp && !badG.has(r.grp))) && (!o.reanalyze || r.manual); };
     const FULL = new Map(); for (const x of L) { const k = s(x.doc) || ('#' + x.id); FULL.set(k, (FULL.get(k) || 0) + 1); }
-    const todo = L.filter(x => !keep(x)), A = analyze(todo, FULL), stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const todo = L.filter(x => !keep(x)), A = analyze(todo, FULL, { win: o.win, tol: o.tol }), stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     db.exec('BEGIN'); try {
       for (const x of todo) { const a = A.get(key(x)), r = S.get(key(x));
         run(`INSERT INTO lg_line(id, side, acc, bp, status, grp, how, note, manual, left, at) VALUES(?,?,?,?,?,?,?,?,0,?,?) ON CONFLICT(id, side) DO UPDATE SET acc=excluded.acc, bp=excluded.bp, status=excluded.status, grp=excluded.grp, how=excluded.how, left=excluded.left, at=excluded.at`,
           x.id, x.side, x.acc, x.p || '', a.status, a.grp, a.how, r ? r.note : '', a.left, stamp); S.set(key(x), { ...(r || {}), ...a, note: r ? r.note : '', manual: 0 }); }
       db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
     const GS = grpStat(new Set([...S.values()].filter(r => r.status === 'ok').map(r => r.grp)));
+    let PREV = null;
     let open = 0; const rows = [];
     // nhóm khớp có thành viên trong kỳ → kèm các dòng đối ứng trước kỳ (đánh dấu outP) để tổng Nợ = Có của nhóm hiện đủ trên bảng
     const gIn = new Set(L.filter(x => x.d >= from).map(x => (S.get(key(x)) || {}).grp).filter(Boolean));
     for (const x of L) { const r = S.get(key(x)) || {}; if (x.d < from) { open += x.v; if (!(r.status === 'ok' && r.grp && gIn.has(r.grp))) continue; }
       rows.push({ outP: x.d < from, id: x.id, side: x.side, d: x.d, doc: x.doc, ds: x.ds, dr: x.dr, cr: x.cr, acc: x.acc, oacc: x.oacc, bp: x.p || '', a: x.a, v: x.v, u: x.u, status: r.status || 'open', grp: r.grp || '', how: r.how || '', gbal: r.status === 'ok' && r.grp && GS.get(r.grp) ? GS.get(r.grp).v : (r.status === 'ok' ? x.v : 0), gout: r.status === 'ok' && r.grp && GS.get(r.grp) ? (GS.get(r.grp).d0 < from || GS.get(r.grp).d1 > to) : false, note: r.note || '', manual: !!r.manual, left: r.left ?? x.v }); }
     { const c = k => [...S.values()].filter(r => r.status === k).length; let close = 0; for (const x of L) close += x.v;
+      PREV = get(`SELECT * FROM lg_run WHERE acc=? AND bp=?`, acc, bp) || null;
       run(`INSERT OR REPLACE INTO lg_run(acc, bp, from_d, to_d, at, n, n_ok, n_check, n_open, open_amt, close) VALUES(?,?,?,?,datetime('now','localtime'),?,?,?,?,?,?)`, acc, bp, from, to, L.length, L.filter(x => (S.get(key(x)) || {}).status === 'ok').length, L.filter(x => (S.get(key(x)) || {}).status === 'check').length, L.filter(x => (S.get(key(x)) || {}).status === 'open').length, L.reduce((q, x) => q + (((S.get(key(x)) || {}).status === 'open') ? ((S.get(key(x)) || {}).left || 0) : 0), 0), close); }
     const cnt = k => rows.filter(r => !r.outP && r.status === k).length, sum = k => rows.filter(r => !r.outP && r.status === k).reduce((q, r) => q + r.v, 0);
     return { acc, bp, from, to, open, dr: rows.filter(r => !r.outP && r.side === 'dr').reduce((q, r) => q + r.a, 0), cr: rows.filter(r => !r.outP && r.side === 'cr').reduce((q, r) => q + r.a, 0), close: open + rows.filter(r => !r.outP).reduce((q, r) => q + r.v, 0),
-      rows, n: { ok: cnt('ok'), open: cnt('open'), check: cnt('check') }, sum: { ok: sum('ok'), open: rows.filter(r => !r.outP && r.status === 'open').reduce((q, r) => q + (r.left || 0), 0), check: sum('check') }, analyzed: todo.length, total: L.length, reset: badG.size };
+      rows, n: { ok: cnt('ok'), open: cnt('open'), check: cnt('check') }, sum: { ok: sum('ok'), open: rows.filter(r => !r.outP && r.status === 'open').reduce((q, r) => q + (r.left || 0), 0), check: sum('check') }, analyzed: todo.length, total: L.length, reset: badG.size, prev: PREV };
   }
   // Sửa tay: trạng thái và / hoặc ghi chú cho các dòng [{id, side}]; status '' = giữ nguyên trạng thái, chỉ sửa ghi chú; status 'auto' = trả về tự động
   function setLine(keys, status, note, grp) { let n = 0; const MG = 'M' + Date.now().toString(36).toUpperCase();

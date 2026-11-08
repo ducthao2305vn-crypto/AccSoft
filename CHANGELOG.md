@@ -1,5 +1,16 @@
 # Lịch sử phiên bản
 
+## v4.79.0 – 08/11/2026
+Phân tích ledger – tăng tốc thao tác:
+- **🔍 Gợi ý chứng từ đối ứng** (nút trên dòng chưa khớp / cần phân tích hoặc phím **G**): liệt kê chứng từ ngược chiều trong cửa sổ thời gian – A ↔ B cùng số tiền, A = B + C, khớp một phần – xếp theo độ giống diễn giải và gần ngày, hiện Nợ − Có sau khi khớp; bấm **Khớp với** là xong.
+- **Phím tắt**: ↑/↓ chuyển dòng, Space tick, **K** khớp / **C** cần phân tích / **X** chưa khớp (dòng đang tick hoặc dòng hiện tại), N ghi chú, G gợi ý, Enter mở bút toán / nhóm khớp, Esc bỏ chọn (nút ⌨ xem lại).
+- **Mẫu ghi chú nhanh** (Chờ đối tác xác nhận, Hạch toán sai đối tượng, Chuyển kỳ sau…) ở ô ghi chú chung và ô ghi chú từng dòng.
+- **⚡ Khớp hàng loạt theo diễn giải**: gom dòng chưa khớp cùng mẫu diễn giải theo tháng (hoặc ≤ 3 tháng) có tổng Nợ − Có = 0 → duyệt và khớp cả loạt.
+- **📈 Chưa khớp theo tháng**: số dòng / số tiền treo từng tháng, so với lần phân tích trước; nhấn đúp một tháng để lọc.
+- **Shift + click** ô tick để chọn cả dải dòng.
+- Tham số **Cửa sổ** khớp (3 / 5 / 6 / 12 tháng) và **Sai số ±** (vd 0.05 USD làm tròn / tỷ giá); đổi tham số → tự phân tích lại phần tự động.
+- **⚡ Phân tích tất cả đối tượng** của tài khoản (có nút Dừng); danh sách “Đã phân tích” xếp đối tượng còn treo nhiều nhất lên đầu.
+
 ## v4.78.0 – 08/11/2026
 - Phân tích ledger: **thanh tổng các dòng đang chọn** nổi ở cuối màn hình khi tick dòng (hoặc tick dòng tổng chứng từ = cả chứng từ): số dòng, số chứng từ, **tổng Nợ, tổng Có, Nợ − Có** (xanh ✅ khi cân, đỏ khi lệch); khi cân có nút **Đánh dấu khớp nhóm này** (các dòng chọn thành một nhóm khớp tay); nút ✕ Bỏ chọn.
 
