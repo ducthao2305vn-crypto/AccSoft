@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.85.3 – 08/11/2026
+- Đầu tư ra nước ngoài – Mẫu 03 / 05: bảng đối chiếu Trial balance có thêm dòng **"131 khác (ròng)"** và **"331 khác (ròng)"**, tức các TK 131 / 331 chi tiết ngoài 13111, 33111, 33121. Mỗi dòng ghi số TK, số dư TB, tổng ròng, chênh lệch và phần dư đúng / ngược chiều.
+
 ## v4.85.2 – 08/11/2026
 - Thuyết minh B09 **V.5 / V.17:** số đầu kỳ và cuối kỳ của từng TK xếp chiều độc lập như B01, nên tổng đầu kỳ khớp B01 (mã 133 + 136; mã 316 + 319). TK đổi chiều số dư trong kỳ được ghi chú ngay trên dòng và để trống cột phát sinh.
 

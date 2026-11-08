@@ -102,7 +102,11 @@ function make(db, all, get, run, FIN) {
       const rows = [], tb = [];
       for (const [pre, nat, mode] of defs) {
         if (mode === 'acct') { // TK công nợ không lưỡng tính: số dư ròng từng TK chi tiết (như B01), không theo đối tượng
-          for (const a of acctBal(pre, d0, d1)) { const ob = nat * a.ob, cb = nat * (a.ob + a.dr - a.cr); if (cb <= 0.005 && ob <= 0.005) continue;
+          const AB = acctBal(pre, d0, d1), hi = pre.slice(0, -1) + String.fromCharCode(pre.charCodeAt(pre.length - 1) + 1);
+          const tbv = nat * all(`SELECT acc, sum(dr) - sum(cr) v FROM fin_mv WHERE ym<=? AND acc>=? AND acc<? GROUP BY acc`, to, pre, hi).filter(r => !DUAL.some(d => String(r.acc).startsWith(d))).reduce((x, r) => x + r.v, 0);
+          let net = 0, pos = 0, neg = 0; for (const a of AB) { const c = nat * (a.ob + a.dr - a.cr); net += c; if (c > 0) pos += c; else neg += c; }
+          tb.push({ acc: pre + ' khác (ròng)', mode: 'side', tb: tbv, net, pos, neg, rep: pos, diff: net - tbv, n: AB.length });
+          for (const a of AB) { const ob = nat * a.ob, cb = nat * (a.ob + a.dr - a.cr); if (cb <= 0.005 && ob <= 0.005) continue;
             const inc = nat > 0 ? a.dr : a.cr, dec = nat > 0 ? a.cr : a.dr, r = { acc: a.acc, accs: a.acc, bp: `TK ${a.acc} – số dư ròng (không theo đối tượng)`, ob: Math.max(0, ob), inc, dec, cb: Math.max(0, cb) };
             r.adj = r.cb - (r.ob + inc - dec); Object.assign(r, ageFn([], [])); rows.push(r); }
           continue; }
