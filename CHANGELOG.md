@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.84.0 – 08/11/2026
+- Đầu tư ra nước ngoài – **Mẫu 04 hàng tồn kho**: chi tiết theo **mã đối tượng** (đối tượng phía Nợ / Có của TK kho) × TK × mặt hàng, không còn theo kho. Ví dụ với 1412 xem được từng người tạm ứng còn tồn hàng nào, giá trị bao nhiêu, tuổi bao lâu.
+- **Mẫu 01:** thuế TNDN hoãn lại lấy từ TK 8212, cộng thêm bút toán 821 đối ứng 243/347 (khi đơn vị không tách 8212). Thuế hiện hành = tổng 821 − hoãn lại.
+- **Mẫu 03 và 05:** thêm bảng **đối chiếu Trial balance** cho từng TK:
+  - Số dư trên CĐPS so với tổng số dư ròng của mọi đối tượng, kèm chênh lệch.
+  - Tách phần dư đúng chiều (đưa vào báo cáo) và dư ngược chiều (thuộc mẫu còn lại). Có cả trên màn hình và trong file Excel.
+
 ## v4.83.1 – 08/11/2026
 - Kế hoạch năm – PL06: thêm dòng **TFU** (Telemor Fintech) là đơn vị con của VTL. Giao dịch với TFU tự vào dòng này; dòng VTL = số của VTL + TFU.
 

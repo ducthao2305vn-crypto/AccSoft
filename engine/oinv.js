@@ -21,7 +21,11 @@ function make(db, all, get, run, FIN) {
     ['admin', '7. Chi phí quản lý doanh nghiệp', p => -p.admin], ['op', '8. Lợi nhuận thuần từ hoạt động kinh doanh', p => p.op], ['othInc', '9. Thu nhập khác', p => p.othInc],
     ['othExp', '10. Chi phí khác', p => -p.othExp], ['other', '11. Lợi nhuận khác', p => p.other], ['pbt', '12. Tổng lợi nhuận kế toán trước thuế', p => p.pbt],
     ['taxC', '13. Chi phí thuế TNDN hiện hành', p => -(p.tax - p.def)], ['taxD', '14. Chi phí thuế TNDN hoãn lại', p => -p.def], ['pat', '15. Lợi nhuận sau thuế thu nhập DN', p => p.pat]];
-  const deferred = (f, t) => { const r = get(`SELECT sum(dr) - sum(cr) v FROM fin_mv WHERE ym>=? AND ym<=? AND acc LIKE '8212%'`, f, t); return r?.v || 0; };
+  // Thuế TNDN hoãn lại: TK 8212 (trừ kết chuyển 911) + bút toán 821 đối ứng 243 / 347 (tài sản / thuế thu nhập hoãn lại) khi đơn vị không tách 8212
+  const deferred = (f, t) => get(`SELECT ifnull(sum(CASE WHEN acc_debit LIKE '821%' THEN amount ELSE -amount END), 0) v FROM entries WHERE ym>=? AND ym<=? AND (
+      (acc_debit LIKE '8212%' AND acc_credit NOT LIKE '911%') OR (acc_credit LIKE '8212%' AND acc_debit NOT LIKE '911%')
+      OR (acc_debit LIKE '821%' AND acc_debit NOT LIKE '8212%' AND (acc_credit LIKE '243%' OR acc_credit LIKE '347%'))
+      OR (acc_credit LIKE '821%' AND acc_credit NOT LIKE '8212%' AND (acc_debit LIKE '243%' OR acc_debit LIKE '347%')))`, f, t).v;
   function plOf(f, t) { const inc = FIN.income(f, t), o = {}; for (const l of inc.lines) o[l.k] = l.cur; o.def = deferred(f, t); return o; }
   function m01(from, to) {
     const P = [plOf(shiftY(from, -2), shiftY(to, -2)), plOf(shiftY(from, -1), shiftY(to, -1)), plOf(from, to)];
@@ -90,8 +94,13 @@ function make(db, all, get, run, FIN) {
   function debts(secs, from, to, term, ageFn) {
     const d0 = from + '-01', d1 = lastDay(to), d00 = new Date(new Date(d0).getTime() - DAY).toISOString().slice(0, 10), out = [];
     for (const [no, title, defs] of secs) {
-      const rows = [];
-      for (const [pre, nat, mode] of defs) for (const o of partnerBal(pre, d0, d1).values()) {
+      const rows = [], tb = [];
+      for (const [pre, nat, mode] of defs) { const PB = partnerBal(pre, d0, d1);
+        // Đối chiếu Trial balance: số dư TK trên CĐPS (fin_mv) = tổng số dư ròng mọi đối tượng = dư đúng chiều (báo cáo) + dư ngược chiều (thuộc mẫu khác)
+        const tbv = nat * get(`SELECT ifnull(sum(dr) - sum(cr), 0) v FROM fin_mv WHERE ym<=? AND acc>=? AND acc<?`, to, pre, pre.slice(0, -1) + String.fromCharCode(pre.charCodeAt(pre.length - 1) + 1)).v;
+        let net = 0, pos = 0, neg = 0; for (const o of PB.values()) { const c = nat * (o.ob + o.dr - o.cr); net += c; if (c > 0) pos += c; else neg += c; }
+        tb.push({ acc: pre, mode, tb: tbv, net, pos, neg, rep: mode === 'side' ? pos : net, diff: net - tbv, n: PB.size });
+      for (const o of PB.values()) {
         const ob = nat * o.ob, cb = nat * (o.ob + o.dr - o.cr);
         if (mode === 'side' ? cb <= 0.005 && ob <= 0.005 : Math.abs(cb) <= 0.005 && Math.abs(ob) <= 0.005) continue;
         if (mode === 'side' && cb <= 0.005) { /* đối tượng đã chuyển sang dư ngược chiều cuối kỳ: vẫn ghi đầu kỳ, cuối kỳ = 0 không phải dòng này */ }
@@ -102,9 +111,9 @@ function make(db, all, get, run, FIN) {
         const A = fifo(o.mv, nat, d1, term), A0 = fifo(o.mv, nat, d00, term);
         Object.assign(r, ageFn(A.parts, A0.parts));
         rows.push(r);
-      }
+      } }
       rows.sort((a, b) => b.cb - a.cb || a.bp.localeCompare(b.bp));
-      out.push({ no, title, rows });
+      out.push({ no, title, rows, tb });
     }
     return { from, to, d0, d1, secs: out };
   }
@@ -132,7 +141,7 @@ function make(db, all, get, run, FIN) {
   function m04(from, to, keepM = 12) {
     const d0 = from + '-01', d1 = lastDay(to), at = new Date(d1).getTime(), out = [];
     for (const [no, title, pre] of INV_SEC) {
-      const objD = pre === '1412' ? 'e.partner_debit' : 'e.locator', objC = pre === '1412' ? 'e.partner_credit' : 'e.locator_credit';
+      const objD = 'e.partner_debit', objC = 'e.partner_credit'; // theo đối tượng (mã đối tượng phía Nợ / Có của TK kho)
       const self = `NOT (${rng('e.acc_debit', pre)} AND ${rng('e.acc_credit', pre)} AND e.acc_debit=e.acc_credit AND ifnull(${objD},'')=ifnull(${objC},''))`, m = new Map();
       for (const [side, obj, sg] of [['debit', objD, 1], ['credit', objC, -1]]) {
         for (const r of all(`SELECT e.acc_${side} acc, ${obj} loc, e.product prod, max(e.uom) uom, e.account_date d, sum(e.amount) v, sum(abs(ifnull(e.quantity,0))) q FROM entries e

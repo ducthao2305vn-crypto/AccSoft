@@ -78,6 +78,9 @@ async function build(R, o = {}) {
     put(ws, r, ['', 'Tổng cộng', '', '', ...Array.from({ length: 12 }, (_, i) => ({ formula: tot.map(t => col(5 + i) + t).join('+') }))], { bold: true, fill: HEAD, fmt: [null, null, null, null, ...Array(12).fill(NUM)] });
     r += 2; ws.getCell(r, 2).value = 'Đối chiếu với BCTC (B01-DN)'; ws.getCell(r, 2).font = { bold: true }; r++;
     for (const c of R.m03.check) { put(ws, r, ['', c.n, '', '', c.v, c.fs, c.diff], { fmt: [null, null, null, null, NUM, NUM, NUM] }); r++; }
+    r++; ws.getCell(r, 2).value = 'Đối chiếu Trial balance theo tài khoản (cuối kỳ)'; ws.getCell(r, 2).font = { bold: true }; r++;
+    put(ws, r, ['', 'Tài khoản', 'Số đối tượng', '', 'Số dư TB (CĐPS)', 'Tổng ròng theo đối tượng', 'Chênh lệch', 'Dư đúng chiều (báo cáo)', 'Dư ngược chiều (mẫu khác)'], { bold: true, fill: SEC }); r++;
+    for (const s of R.m03.secs) for (const t of s.tb) { put(ws, r, ['', t.acc + (t.mode === 'net' ? ' (ròng)' : ''), t.n, '', t.tb, t.net, t.diff, t.rep, t.mode === 'side' ? t.neg : null], { fmt: [null, null, '#,##0', null, NUM, NUM, NUM, NUM, NUM] }); r++; }
     ws.getCell(r, 2).value = 'Cột E: số theo báo cáo · F: số trên B01 · G: chênh lệch'; ws.getCell(r, 2).font = { italic: true, color: { argb: 'FF667085' } };
     ws.views = [{ state: 'frozen', ySplit: 10, xSplit: 2, showGridLines: false }];
     sign(ws, r + 2, [[2, 'Người lập biểu'], [6, 'Phụ trách phòng'], [12, 'Tổng Giám đốc']]); }
@@ -85,7 +88,7 @@ async function build(R, o = {}) {
   /* 04 – hàng tồn kho */
   { const ws = sheet(wb, '04', [6, 12, 46, 10, 26, 8, 12, 15, 12, 15, 12, 15, 12, 15, 15, 15, 15, 15, 15, 15, 15]);
     title(ws, 4, 'BÁO CÁO SỐ LIỆU HÀNG TỒN KHO', `Kỳ báo cáo: ${dmy(R.m04.d0)} – ${dmy(R.m04.d1)} · hạn lưu kho ${R.m04.keepM} tháng (FIFO theo ngày nhập)`, 21); ws.getCell('U6').value = 'Đơn vị tính: USD';
-    heads(ws, [[7, 1, 9, 1, 'STT'], [7, 2, 9, 2, 'MÃ HÀNG TỒN KHO'], [7, 3, 9, 3, 'TÊN HÀNG TỒN KHO'], [7, 4, 9, 4, 'Tài khoản theo dõi'], [7, 5, 9, 5, 'Kho / đối tượng'], [7, 6, 9, 6, 'ĐVT'],
+    heads(ws, [[7, 1, 9, 1, 'STT'], [7, 2, 9, 2, 'MÃ HÀNG TỒN KHO'], [7, 3, 9, 3, 'TÊN HÀNG TỒN KHO'], [7, 4, 9, 4, 'Tài khoản theo dõi'], [7, 5, 9, 5, 'Mã đối tượng'], [7, 6, 9, 6, 'ĐVT'],
       [7, 7, 8, 8, 'TỒN ĐẦU KỲ'], [7, 9, 8, 10, 'NHẬP TRONG KỲ'], [7, 11, 8, 12, 'XUẤT TRONG KỲ'], [7, 13, 8, 14, 'TỒN CUỐI KỲ'],
       ...[7, 9, 11, 13].flatMap(c => [[9, c, 9, c, 'Số lượng'], [9, c + 1, 9, c + 1, 'Giá trị']]),
       [7, 15, 7, 21, 'PHÂN LOẠI THEO THỜI GIAN LƯU KHO'], [8, 15, 9, 15, 'Trong hạn'], [8, 16, 8, 21, 'Quá hạn'], [9, 16, 9, 16, 'Tổng'], [9, 17, 9, 17, 'Quá hạn < 6 tháng'],
@@ -122,6 +125,9 @@ async function build(R, o = {}) {
     put(ws, r, ['', 'Tổng cộng', '', '', ...Array.from({ length: 19 }, (_, i) => ({ formula: tot.map(t => col(5 + i) + t).join('+') })), ''], { bold: true, fill: HEAD, fmt: F });
     r += 2; ws.getCell(r, 2).value = 'Đối chiếu với BCTC (B01-DN)'; ws.getCell(r, 2).font = { bold: true }; r++;
     for (const c of R.m05.check) { put(ws, r, ['', c.n, '', '', c.v, c.fs, c.diff], { fmt: [null, null, null, null, NUM, NUM, NUM] }); r++; }
+    r++; ws.getCell(r, 2).value = 'Đối chiếu Trial balance theo tài khoản (cuối kỳ)'; ws.getCell(r, 2).font = { bold: true }; r++;
+    put(ws, r, ['', 'Tài khoản', 'Số đối tượng', '', 'Số dư TB (CĐPS)', 'Tổng ròng theo đối tượng', 'Chênh lệch', 'Dư đúng chiều (báo cáo)', 'Dư ngược chiều (mẫu khác)'], { bold: true, fill: SEC }); r++;
+    for (const s of R.m05.secs) for (const t of s.tb) { put(ws, r, ['', t.acc + (t.mode === 'net' ? ' (ròng)' : ''), t.n, '', t.tb, t.net, t.diff, t.rep, t.mode === 'side' ? t.neg : null], { fmt: [null, null, '#,##0', null, NUM, NUM, NUM, NUM, NUM] }); r++; }
     ws.views = [{ state: 'frozen', ySplit: 10, xSplit: 2, showGridLines: false }];
     sign(ws, r + 2, [[2, 'Người lập biểu'], [8, 'Phụ trách phòng'], [16, 'Tổng Giám đốc']]); }
 
