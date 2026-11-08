@@ -27,19 +27,19 @@ function make(db, all, get, run) {
   // tham chiếu trong diễn giải: chuỗi có chữ số, dài ≥ 5 (số chứng từ, đề nghị, hoá đơn…), bỏ ngày tháng / năm / số tiền
   const refs = x => { const t = new Set((String(x.ds || '').toUpperCase().match(/[A-Z0-9][A-Z0-9\/\-_.]{4,}/g) || []).filter(w => /\d/.test(w) && /[A-Z]/.test(w) || /\d{6,}/.test(w)).filter(w => !/^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}$/.test(w)));
     for (const k of [x.inv, x.ar]) if (s(k)) t.add(s(k).toUpperCase()); return t; };
-  function analyze(L) { // L: các dòng cần phân tích (chưa khớp) – trả Map key→{status, grp, how, left}
+  function analyze(L, FULL) { FULL = FULL || new Map(); // L: các dòng cần phân tích (chưa khớp) – trả Map key→{status, grp, how, left}
     const R = new Map(), key = x => x.id + '|' + x.side, done = new Set(); let g = 0;
     const RUN = Date.now().toString(36).slice(-4).toUpperCase(), mark = (xs, how) => { g++; const id = RUN + '-' + g; for (const x of xs) { done.add(key(x)); R.set(key(x), { status: 'ok', grp: id, how, left: 0 }); } };
     // 1) cùng chứng từ
     const byDoc = new Map(); for (const x of L) { const k = s(x.doc); if (k) (byDoc.get(k) || byDoc.set(k, []).get(k)).push(x); }
-    for (const [, xs] of byDoc) if (xs.length > 1 && Z(xs.reduce((q, x) => q + x.v, 0))) mark(xs, 'Cùng chứng từ (Nợ = Có)');
+    for (const [k, xs] of byDoc) if (xs.length > 1 && xs.length === (FULL.get(k) || xs.length) && Z(xs.reduce((q, x) => q + x.v, 0))) mark(xs, 'B0: chứng từ tự cân (Nợ = Có)');
     const rest = () => L.filter(x => !done.has(key(x))), RF = new Map(L.map(x => [key(x), refs(x)]));
     // Nguyên tắc khớp theo CHỨNG TỪ (không tách dòng của một chứng từ), các chứng từ khớp phải trong vòng 5 tháng:
     //  B1) tổng chứng từ A = − tổng chứng từ B (A Nợ = B Có) → khớp; ưu tiên cùng diễn giải, gần ngày nhất
     //  B2) chứng từ A + chứng từ B + chứng từ C = 0 (vd A Có = B Nợ + C Nợ) → khớp
     { const WIN = 153 * 864e5, C100 = v => Math.round(v * 100), wd = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 3 && !/^\d+$/.test(w)));
       const D = new Map(); for (const x of rest()) { const k = s(x.doc) || ('#' + x.id); const u = D.get(k) || D.set(k, { k, xs: [], v: 0, t: Infinity, w: new Set() }).get(k); u.xs.push(x); }
-      const U = [...D.values()].map(u => { u.v = C100(u.xs.reduce((q, x) => q + x.v, 0)); u.t = Math.min(...u.xs.map(x => Date.parse(x.d))); for (const x of u.xs) for (const w of wd(x.ds)) u.w.add(w); return u; }).filter(u => u.v !== 0).sort((a, b) => a.t - b.t);
+      const U = [...D.values()].map(u => { u.v = C100(u.xs.reduce((q, x) => q + x.v, 0)); u.t = Math.min(...u.xs.map(x => Date.parse(x.d))); for (const x of u.xs) for (const w of wd(x.ds)) u.w.add(w); return u; }).filter(u => u.v !== 0 && u.xs.length === (FULL.get(u.k) || u.xs.length)).sort((a, b) => a.t - b.t); // chỉ chứng từ còn nguyên vẹn (mọi dòng của chứng từ đều chưa khớp)
       const sim = (a, b) => { let c = 0; for (const w of a.w) if (b.w.has(w)) c++; return c / Math.max(1, Math.min(a.w.size, b.w.size)); };
       const byV = new Map(); for (const u of U) (byV.get(u.v) || byV.set(u.v, []).get(u.v)).push(u);
       const near = (a, b) => Math.abs(a.t - b.t) <= WIN;
@@ -67,9 +67,10 @@ function make(db, all, get, run) {
     // các dòng đã khớp (tự động) hoặc đã sửa tay giữ nguyên; phần còn lại phân tích lại
     // nhóm khớp tự động đã lưu phải cân (Nợ = Có); nhóm lệch (vd mã nhóm trùng của bản cũ, dữ liệu nạp lại) → phân tích lại
     const GS0 = grpStat(new Set([...S.values()].filter(r => r.status === 'ok' && !r.manual).map(r => r.grp))), badG = new Set([...GS0].filter(([, r]) => Math.abs(r.v) > 0.005).map(([g]) => g));
-    const ALG = '3', algOld = ((get(`SELECT v FROM lg_meta WHERE k='alg'`) || {}).v || '') !== ALG; if (algOld) { run(`UPDATE lg_line SET status='open', grp='' WHERE manual=0`); run(`INSERT OR REPLACE INTO lg_meta(k, v) VALUES('alg', ?)`, ALG); for (const r of S.values()) if (!r.manual) { r.status = 'open'; r.grp = ''; } }
+    const ALG = '4', algOld = ((get(`SELECT v FROM lg_meta WHERE k='alg'`) || {}).v || '') !== ALG; if (algOld) { run(`UPDATE lg_line SET status='open', grp='' WHERE manual=0`); run(`INSERT OR REPLACE INTO lg_meta(k, v) VALUES('alg', ?)`, ALG); for (const r of S.values()) if (!r.manual) { r.status = 'open'; r.grp = ''; } }
     const keep = x => { const r = S.get(key(x)); return r && (r.manual || (r.status === 'ok' && r.grp && !badG.has(r.grp))) && (!o.reanalyze || r.manual); };
-    const todo = L.filter(x => !keep(x)), A = analyze(todo), stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const FULL = new Map(); for (const x of L) { const k = s(x.doc) || ('#' + x.id); FULL.set(k, (FULL.get(k) || 0) + 1); }
+    const todo = L.filter(x => !keep(x)), A = analyze(todo, FULL), stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     db.exec('BEGIN'); try {
       for (const x of todo) { const a = A.get(key(x)), r = S.get(key(x));
         run(`INSERT INTO lg_line(id, side, acc, bp, status, grp, how, note, manual, left, at) VALUES(?,?,?,?,?,?,?,?,0,?,?) ON CONFLICT(id, side) DO UPDATE SET acc=excluded.acc, bp=excluded.bp, status=excluded.status, grp=excluded.grp, how=excluded.how, left=excluded.left, at=excluded.at`,

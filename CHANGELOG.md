@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.77.1 – 08/11/2026
+- Phân tích ledger – **chỉ khớp khi tổng cả chứng từ khớp**: chứng từ nào có một phần dòng đã khớp / sửa tay / nằm ngoài phần phân tích thì không được dùng để tự khớp (B0, B1, B2) – không còn trường hợp một phần chứng từ A khớp với một phần hoặc cả chứng từ B. Kết quả tự động cũ được phân tích lại một lần.
+
 ## v4.77.0 – 08/11/2026
 - Phân tích ledger – **viết lại nguyên tắc tự khớp theo chứng từ** (không còn tách lẻ từng dòng của một chứng từ để ghép với nơi khác, bỏ các bước ghép theo diễn giải / tổ hợp nhiều dòng dễ khớp sai):
   - B0: chứng từ tự cân (Nợ = Có trong cùng chứng từ).
