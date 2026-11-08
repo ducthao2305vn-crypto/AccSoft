@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.86.1 – 08/11/2026
+- Đầu tư ra nước ngoài – **Mẫu 02 "Trong đó: Nợ quá hạn"** theo cùng nguyên tắc xếp chiều theo thời điểm:
+  - Tuổi nợ (FIFO, quá hạn ≥ 6 tháng) chỉ tính cho đối tượng / TK **đang dư Có tại thời điểm đó**. Đối tượng đã chuyển sang dư Nợ thì phần quá hạn = 0.
+  - Cột **"Đầu năm"** tính tại 31/12 năm trước, trước đây lấy nhầm đầu kỳ báo cáo. Khớp với cuối kỳ của báo cáo năm trước.
+  - Lấy từ Mẫu 03 mục I–III (công nợ phải trả), không gồm quỹ 353.
+
 ## v4.86.0 – 08/11/2026
 - Đầu tư ra nước ngoài – **Mẫu 03 / 05 lấy số theo đúng nguyên tắc B01, khớp BCTC cả đầu kỳ và cuối kỳ:**
   - **TK lưỡng tính** (13111, 138812, 33111, 33121): mỗi đối tượng được xếp theo chiều số dư **tại từng thời điểm**. Ví dụ đầu quý dư Có, cuối quý dư Nợ: ở mẫu phải trả đầu kỳ có số, cuối kỳ = 0; ở mẫu phải thu đầu kỳ = 0, cuối kỳ có số.

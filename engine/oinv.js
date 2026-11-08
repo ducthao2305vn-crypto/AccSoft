@@ -51,7 +51,7 @@ function make(db, all, get, run, FIN) {
       ['+ Đầu tư công ty con, liên kết', w => v('250', w), 2], ['+ Tài sản dài hạn khác', w => v('B', w) - S(['220', '240', '250'], w), 2],
       ['2. Vốn chủ sở hữu', w => v('D', w), 0], ['- Vốn góp chủ sở hữu', w => v('411', w), 1], ['- Lợi nhuận để lại và các quỹ', w => v('D', w) - v('411', w), 1],
       ['3. Tổng nợ', w => v('C', w), 0], ['- Nợ ngắn hạn', w => v('310', w), 1], ['+ Nợ phải trả', w => v('310', w) - v('320', w), 2],
-      ['Trong đó: Nợ quá hạn', w => w === 'cb' ? overdue?.cb ?? null : overdue?.ob ?? null, 2, 'theo mẫu 03 (quá hạn ≥ 6 tháng)'], ['+ Vay ngân hàng', w => v('320', w), 2],
+      ['Trong đó: Nợ quá hạn', w => w === 'cb' ? overdue?.cb ?? null : overdue?.ob ?? null, 2, 'theo mẫu 03 mục I–III (quá hạn ≥ 6 tháng; đầu năm tính tại 31/12 năm trước)'], ['+ Vay ngân hàng', w => v('320', w), 2],
       ['- Nợ dài hạn', () => 0, 1], ['+ Nợ phải trả', () => 0, 2], ['+ Vay ngân hàng', () => 0, 2]];
     return { rows: R.map(([n, fn, lvl, note]) => { const B = fn('cb'), C = fn('ob'); return { n, lvl, note: note || '', B: B == null ? null : B / 1e6, C: C == null ? null : C / 1e6 }; }), diff: bs.diff, unmapped: bs.unmapped };
   }
@@ -119,13 +119,13 @@ function make(db, all, get, run, FIN) {
   }
   const tbOf = (pres, to) => pres.reduce((x, pre) => x + all(`SELECT acc, sum(dr) - sum(cr) v FROM fin_mv WHERE ym<=? AND acc>=? AND acc<? GROUP BY acc`, to, pre, pre.slice(0, -1) + String.fromCharCode(pre.charCodeAt(pre.length - 1) + 1)).filter(r => !skipAcc(r.acc)).reduce((y, r) => y + r.v, 0), 0);
   function debts(secs, from, to, term, ageFn) {
-    const d0 = from + '-01', d1 = lastDay(to), d00 = new Date(new Date(d0).getTime() - DAY).toISOString().slice(0, 10), out = [];
+    const d0 = from + '-01', d1 = lastDay(to), d00 = new Date(new Date(d0).getTime() - DAY).toISOString().slice(0, 10), dY = `${+to.slice(0, 4) - 1}-12-31`, out = [];
     for (const [no, title, defs] of secs) {
       const rows = [], tb = [];
       for (const [pre, nat, mode] of defs) {
         if (mode === 'acctp') {
           const PB = accPartnerBal(pre, d0, d1), acc = new Map();
-          for (const o of PB) { const a = acc.get(o.acc) || acc.set(o.acc, { ob: 0, cb: 0 }).get(o.acc); a.ob += nat * o.ob; a.cb += nat * (o.ob + o.dr - o.cr); }
+          for (const o of PB) { const a = acc.get(o.acc) || acc.set(o.acc, { ob: 0, cb: 0, y: 0 }).get(o.acc); a.ob += nat * o.ob; a.cb += nat * (o.ob + o.dr - o.cr); a.y += nat * o.mv.filter(x => x.d <= dY).reduce((t, x) => t + x.v, 0); }
           let net = 0, pos = 0, neg = 0; for (const a of acc.values()) { net += a.cb; if (a.cb > 0) pos += a.cb; else neg += a.cb; }
           const tbv = nat * tbOf(pre, to); tb.push({ acc: pre.join(', ') + (pre.length > 1 ? '' : ' (ròng)'), mode: 'side', tb: tbv, net, pos, neg, rep: pos, diff: net - tbv, n: acc.size });
           for (const o of PB) {
@@ -133,7 +133,8 @@ function make(db, all, get, run, FIN) {
             const ob = okOb ? nat * o.ob : 0, cb = okCb ? nat * (o.ob + o.dr - o.cr) : 0; if (Math.abs(ob) <= 0.005 && Math.abs(cb) <= 0.005) continue;
             const inc = nat > 0 ? o.dr : o.cr, dec = nat > 0 ? o.cr : o.dr, r = { acc: o.acc, accs: o.acc, bp: o.bp, ob, inc, dec, cb };
             r.adj = cb - (ob + inc - dec); // TK đổi chiều trong kỳ → phần chuyển sang mẫu kia
-            Object.assign(r, ageFn(fifo(o.mv, nat, d1, term).parts, fifo(o.mv, nat, d00, term).parts)); rows.push(r);
+            // tuổi nợ chỉ tính tại thời điểm TK đúng chiều (cùng nguyên tắc với số dư)
+            Object.assign(r, ageFn(okCb ? fifo(o.mv, nat, d1, term).parts : [], okOb ? fifo(o.mv, nat, d00, term).parts : [], A.y > 0.005 ? fifo(o.mv, nat, dY, term).parts : [])); rows.push(r);
           }
           continue;
         }
@@ -146,7 +147,7 @@ function make(db, all, get, run, FIN) {
           const inc = nat > 0 ? o.dr : o.cr, dec = nat > 0 ? o.cr : o.dr;
           const r = { acc: pre, accs: [...o.accs].sort().join(', '), bp: o.bp, ob: Math.max(0, ob), inc, dec, cb: Math.max(0, cb) };
           r.adj = r.cb - (r.ob + inc - dec); // đối tượng đổi chiều: đầu kỳ / cuối kỳ phía ngược chiều = 0 ở mẫu này
-          Object.assign(r, ageFn(fifo(o.mv, nat, d1, term).parts, fifo(o.mv, nat, d00, term).parts)); rows.push(r);
+          Object.assign(r, ageFn(fifo(o.mv, nat, d1, term).parts, fifo(o.mv, nat, d00, term).parts, fifo(o.mv, nat, dY, term).parts)); rows.push(r); // fifo chỉ phân bổ khi đối tượng đúng chiều tại thời điểm đó
         }
       }
       rows.sort((a, b) => b.cb - a.cb || a.bp.localeCompare(b.bp));
@@ -167,7 +168,7 @@ function make(db, all, get, run, FIN) {
       return { n, v, fs, diff: v - fs, vOb, fsOb, diffOb: vOb - fsOb }; });
   }
   // Mẫu 03 – quá hạn tính từ 6 tháng (TT48/2019): 6 tháng–1 năm · 1–2 năm · 2–3 năm · ≥ 3 năm
-  const apAge = (p, p0) => { const b = bk(p, [180, 365, 730, 1095]), b0 = bk(p0, [180, 365, 730, 1095]); return { odOb: b0[2] + b0[3] + b0[4] + b0[5], od: [b[2], b[3], b[4], b[5]], odCb: b[2] + b[3] + b[4] + b[5], odLt6: b[1] }; };
+  const apAge = (p, p0, pY = []) => { const b = bk(p, [180, 365, 730, 1095]), b0 = bk(p0, [180, 365, 730, 1095]), bY = bk(pY, [180, 365, 730, 1095]); return { odY: bY[2] + bY[3] + bY[4] + bY[5], odOb: b0[2] + b0[3] + b0[4] + b0[5], od: [b[2], b[3], b[4], b[5]], odCb: b[2] + b[3] + b[4] + b[5], odLt6: b[1] }; };
   function m03(from, to, term = 30) {
     const r = debts(AP_SEC, from, to, term, apAge), S = r.secs;
     r.check = checkB01(r, from, to, [['Phải trả người bán – B01 mã 311', S[0].rows, ['311']], ['Người mua trả tiền trước (TK 131) – B01 mã 312', S[1].rows.filter(x => x.acc.startsWith('131')), ['312']],
@@ -224,7 +225,8 @@ function make(db, all, get, run, FIN) {
 
   function compute(o = {}) {
     const { from, to } = o, term = +o.term || 30, keepM = +o.keepM || 12;
-    const a = m03(from, to, term), od = { cb: a.secs.reduce((s, x) => s + x.rows.reduce((t, r) => t + r.odCb, 0), 0), ob: a.secs.reduce((s, x) => s + x.rows.reduce((t, r) => t + r.odOb, 0), 0) };
+    // Mẫu 02: nợ quá hạn (≥ 6 tháng) cuối kỳ và đầu năm – từ các mục nợ phải trả công nợ I–III của mẫu 03 (bỏ quỹ 353), cùng nguyên tắc xếp chiều theo thời điểm
+    const a = m03(from, to, term), DS = a.secs.filter(x => x.no !== 'IV'), od = { cb: DS.reduce((s, x) => s + x.rows.reduce((t, r) => t + r.odCb, 0), 0), ob: DS.reduce((s, x) => s + x.rows.reduce((t, r) => t + (r.odY || 0), 0), 0) };
     return { from, to, term, keepM, m01: m01(from, to), m02: m02(from, to, od), m03: a, m04: m04(from, to, keepM), m05: m05(from, to, term), m06: procList() };
   }
   return { compute, setM01, procList, procSave };
