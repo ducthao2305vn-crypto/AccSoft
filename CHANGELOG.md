@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.85.1 – 08/11/2026
+- **Thuyết minh B09** theo nguyên tắc B01 mới, tổng các mục khớp đúng B01:
+  - **V.3, V.4, V.12, V.13** (top 10): 13111, 33111, 33121 liệt kê theo đối tượng (ghi rõ TK). Các TK 131 / 331 chi tiết khác là một dòng "số dư ròng".
+  - **V.5** = B01 mã 133 + 136: TK công nợ khác có dư Nợ ròng, cộng 138812 dư Nợ theo đối tượng. 14121 đã chuyển sang mục hàng tồn kho.
+  - **V.17** = B01 mã 316 + 319: TK có dư Có ròng, cộng 138812 dư Có theo đối tượng.
+
 ## v4.85.0 – 08/11/2026
 - **Báo cáo tài chính (B01) – nguyên tắc trình bày công nợ mới:**
   - TK theo dõi **lưỡng tính** 138812, 13111, 33111, 33121: tách dư Nợ / dư Có **theo từng đối tượng của chính TK đó**.

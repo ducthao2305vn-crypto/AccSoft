@@ -268,6 +268,18 @@ function make(all, okYm, INC, plRange, run) {
     const tot = list.reduce((s, x) => s + x.v, 0), top = list.slice(0, n);
     return { rows: top.map(x => ({ p: x.p, v: x.v })), other: tot - top.reduce((s, x) => s + x.v, 0), total: tot, count: list.length };
   }
+  // Top đối tượng theo nguyên tắc B01: TK lưỡng tính (DUAL) theo đối tượng; TK công nợ khác cùng nhóm = số dư ròng từng TK chi tiết (một dòng / TK)
+  function dualPartners(p, at) { const hi = p.slice(0, -1) + String.fromCharCode(p.charCodeAt(p.length - 1) + 1), d1 = at + '-31', m = new Map();
+    for (const r of all(`SELECT partner_debit p, sum(amount) v FROM entries WHERE acc_debit>=? AND acc_debit<? AND account_date<=? GROUP BY 1`, p, hi, d1)) m.set(r.p || '(không có đối tượng)', (m.get(r.p || '(không có đối tượng)') || 0) + r.v);
+    for (const r of all(`SELECT partner_credit p, sum(amount) v FROM entries WHERE acc_credit>=? AND acc_credit<? AND account_date<=? GROUP BY 1`, p, hi, d1)) m.set(r.p || '(không có đối tượng)', (m.get(r.p || '(không có đối tượng)') || 0) - r.v);
+    return m; }
+  function topB01(grp, at, credit, n = 10) {
+    const duals = DUAL.filter(d => d.startsWith(grp)), list = [];
+    for (const d of duals) for (const [p, v] of dualPartners(d, at)) { const x = credit ? -v : v; if (x > 0.005) list.push({ p: `${p} (TK ${d})`, v: x }); }
+    for (const [acc, cb] of closeAt(at)) if (acc.startsWith(grp) && !DUAL.some(d => acc.startsWith(d)) && !INV_ADV.some(d => acc.startsWith(d))) { const x = credit ? -cb : cb; if (x > 0.005) list.push({ p: `TK ${acc} – số dư ròng (không theo đối tượng)`, v: x }); }
+    list.sort((a, b) => b.v - a.v); const tot = list.reduce((s, x) => s + x.v, 0), top = list.slice(0, n);
+    return { rows: top, other: tot - top.reduce((s, x) => s + x.v, 0), total: tot, count: list.length };
+  }
   function notes(from, to) {
     const tb = trial(from, to, 0), t = tb.to || '9999-12', f = tb.from;
     const raw = all(`SELECT ym, a3 a, p, v, 1 s FROM fin_pmv WHERE a3 IN ('131','331') AND ym<=?`, t);
@@ -276,6 +288,13 @@ function make(all, okYm, INC, plRange, run) {
     // Bảng biến động theo TK chi tiết: nat = 1 (dư Nợ: tăng = PS Nợ), −1 (dư Có: tăng = PS Có)
     const mov = (pres, nat = 1) => { const rows = tb.rows.filter(r => pres.some(p => r.a.startsWith(p)) && !(pres.includes('141') && r.a.startsWith('14121'))).map(r => ({ a: r.a, n: r.n, ob: nat * (r.obDr - r.obCr), inc: nat > 0 ? r.dr : r.cr, dec: nat > 0 ? r.cr : r.dr, cb: nat * r.bal }));
       const tot = rows.reduce((s, r) => ({ ob: s.ob + r.ob, inc: s.inc + r.inc, dec: s.dec + r.dec, cb: s.cb + r.cb }), { ob: 0, inc: 0, dec: 0, cb: 0 }); return { rows, tot }; };
+    // Theo B01: TK công nợ không lưỡng tính trình bày theo số dư ròng từng TK → dư Nợ ở V.5, dư Có ở V.17 (theo số dư cuối kỳ)
+    const sideOnly = m => ({ rows: m.rows.filter(r => r.cb > 0.005 || (Math.abs(r.cb) <= 0.005 && r.ob > 0.005)) });
+    // 138812 (lưỡng tính): thay dòng ròng bằng phần dư Nợ (V.5) / dư Có (V.17) theo đối tượng – khớp B01 mã 136 / 319
+    const dualMov = (m, side) => { const sp = at => { if (!at) return 0; let v = 0; for (const x of dualPartners('138812', at).values()) v += side === 'dr' ? Math.max(0, x) : Math.max(0, -x); return v; };
+      const rows = m.rows.filter(r => !r.a.startsWith('138812')), ob = sp(prev), cb = sp(t);
+      if (ob > 0.005 || cb > 0.005) rows.push({ a: '138812', n: side === 'dr' ? 'Phải thu 138812 – tổng dư Nợ theo đối tượng' : 'Phải thu 138812 – tổng dư Có theo đối tượng (khách hàng trả trước)', ob, inc: null, dec: null, cb });
+      const tot = rows.reduce((s, r) => ({ ob: s.ob + r.ob, inc: s.inc + (r.inc || 0), dec: s.dec + (r.dec || 0), cb: s.cb + r.cb }), { ob: 0, inc: 0, dec: 0, cb: 0 }); return { rows, tot }; };
     const pl = plRange(f, t), cost = all(`SELECT coalesce(tcost,'(chưa phân loại)') k, sum(CASE WHEN side='dr' THEN amount ELSE -amount END) v FROM agg e WHERE ${INC} AND (substr(acc,1,1) IN ('6','8')) AND acc NOT LIKE '911%'${f ? ` AND ym>='${f}'` : ''} AND ym<='${t}' GROUP BY 1 ORDER BY v DESC`);
     const top = cost.slice(0, 15), costOther = cost.slice(15).reduce((s, r) => s + r.v, 0);
     const N = (code, title, body) => ({ code, title, ...body });
@@ -283,20 +302,20 @@ function make(all, okYm, INC, plRange, run) {
       sections: [
         N('V.1', 'Tiền và các khoản tương đương tiền', { type: 'mov', ...mov(['111', '112', '113']) }),
         N('V.2', 'Các khoản đầu tư tài chính', { type: 'mov', ...mov(['121', '128', '221', '222', '228']) }),
-        N('V.3', 'Phải thu của khách hàng (10 khách hàng có số dư lớn nhất)', { type: 'top', ...PT(['131'], t), ob: prev ? PT(['131'], prev).total : 0 }),
-        N('V.4', 'Trả trước cho người bán (dư Nợ TK 331)', { type: 'top', ...PT(['331'], t), ob: prev ? PT(['331'], prev).total : 0 }),
-        N('V.5', 'Phải thu khác, tạm ứng, ký quỹ', { type: 'mov', ...mov(['136', '138', '141', '244']) }),
+        N('V.3', 'Phải thu của khách hàng (10 khoản lớn nhất: dư Nợ 13111 theo đối tượng, TK 131 khác số dư ròng)', { type: 'top', ...topB01('131', t, false), ob: prev ? topB01('131', prev, false).total : 0 }),
+        N('V.4', 'Trả trước cho người bán (dư Nợ 33111, 33121 theo đối tượng; TK 331 khác số dư ròng)', { type: 'top', ...topB01('331', t, false), ob: prev ? topB01('331', prev, false).total : 0 }),
+        N('V.5', 'Phải thu khác, tạm ứng, ký quỹ (138812: dư Nợ theo đối tượng; 14121 ở mục hàng tồn kho)', { type: 'mov', ...dualMov(sideOnly(mov(['136', '336', '138', '141', '244', '338'])), 'dr') }),
         N('V.7', 'Hàng tồn kho', { type: 'mov', ...mov(['151', '152', '153', '154', '155', '156', '157', '158', '14121']) }),
         N('V.8', 'Chi phí trả trước', { type: 'mov', ...mov(['242']) }),
         N('V.9', 'Tài sản cố định hữu hình, vô hình – nguyên giá', { type: 'mov', ...mov(['211', '212', '213']) }),
         N('V.10', 'Giá trị hao mòn luỹ kế', { type: 'mov', ...mov(['214'], -1) }),
         N('V.11', 'Chi phí xây dựng cơ bản dở dang', { type: 'mov', ...mov(['241']) }),
-        N('V.12', 'Phải trả người bán (10 nhà cung cấp có số dư lớn nhất)', { type: 'top', ...PT(['331'], t, true), ob: prev ? PT(['331'], prev, true).total : 0 }),
-        N('V.13', 'Người mua trả tiền trước (dư Có TK 131)', { type: 'top', ...PT(['131'], t, true), ob: prev ? PT(['131'], prev, true).total : 0 }),
+        N('V.12', 'Phải trả người bán (10 khoản lớn nhất: dư Có 33111, 33121 theo đối tượng, TK 331 khác số dư ròng)', { type: 'top', ...topB01('331', t, true), ob: prev ? topB01('331', prev, true).total : 0 }),
+        N('V.13', 'Người mua trả tiền trước (dư Có 13111 theo đối tượng; TK 131 khác số dư ròng)', { type: 'top', ...topB01('131', t, true), ob: prev ? topB01('131', prev, true).total : 0 }),
         N('V.14', 'Thuế và các khoản phải nộp Nhà nước', { type: 'mov', cols: ['Đầu kỳ', 'Số phải nộp', 'Số đã nộp', 'Cuối kỳ'], ...mov(['333'], -1) }),
         N('V.15', 'Phải trả người lao động', { type: 'mov', ...mov(['334'], -1) }),
         N('V.16', 'Chi phí phải trả', { type: 'mov', ...mov(['335'], -1) }),
-        N('V.17', 'Phải trả nội bộ, phải trả khác', { type: 'mov', ...mov(['336', '338', '344'], -1) }),
+        N('V.17', 'Phải trả nội bộ, phải trả khác (gồm 138812 dư Có theo đối tượng)', { type: 'mov', ...dualMov(sideOnly(mov(['136', '336', '138', '141', '244', '338', '344'], -1)), 'cr') }),
         N('V.18', 'Vay và nợ thuê tài chính', { type: 'mov', ...mov(['341', '343'], -1) }),
         N('V.20', 'Vốn chủ sở hữu – bảng đối chiếu biến động', { type: 'mov', ...mov(['411', '412', '413', '414', '418', '419', '421', '441'], -1) }),
         N('VI.1', 'Doanh thu bán hàng và cung cấp dịch vụ', { type: 'mov', cols: ['', 'Ghi Có', 'Ghi Nợ (giảm trừ/kết chuyển)', 'Thuần trong kỳ'], ...mov(['511', '521'], -1) }),
