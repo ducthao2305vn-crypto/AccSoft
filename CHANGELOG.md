@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.86.0 – 08/11/2026
+- Đầu tư ra nước ngoài – **Mẫu 03 / 05 lấy số theo đúng nguyên tắc B01, khớp BCTC cả đầu kỳ và cuối kỳ:**
+  - **TK lưỡng tính** (13111, 138812, 33111, 33121): mỗi đối tượng được xếp theo chiều số dư **tại từng thời điểm**. Ví dụ đầu quý dư Có, cuối quý dư Nợ: ở mẫu phải trả đầu kỳ có số, cuối kỳ = 0; ở mẫu phải thu đầu kỳ = 0, cuối kỳ có số.
+  - **TK công nợ khác** (131 / 331 khác, 136, 336, 138, 141, 244, 338, 344, 353): xếp theo chiều số dư ròng của từng TK chi tiết tại từng thời điểm, liệt kê các đối tượng của TK đó.
+  - Mẫu 03 thêm mục III "Phải trả khác" (mọi TK công nợ khác dư Có) và IV "Quỹ 353". Mẫu 05 mục III gồm 138812 dư Nợ và mọi TK công nợ khác dư Nợ (14121 ở Mẫu 04).
+  - Bảng **đối chiếu B01 có cả đầu kỳ và cuối kỳ**: mã 311, 312, 316 + 319, tổng nợ phải trả; mã 131, 132, 133 + 136, tổng phải thu. Đầu kỳ = số dư cuối tháng trước kỳ báo cáo.
+
 ## v4.85.4 – 08/11/2026
 - Đầu tư ra nước ngoài – Mẫu 03 / 05: thêm bảng **TK công nợ còn số dư nhưng không thuộc mẫu nào**. Liệt kê mọi TK chi tiết nhóm 131, 136, 138, 141, 244, 331, 336, 338, 344, 353 còn số dư trên TB nhưng nằm ngoài danh sách của 2 mẫu, kèm ghi chú (vd 1412 → Mẫu 04), để không sót số dư. Có cả trên màn hình và trong file Excel.
 

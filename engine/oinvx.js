@@ -77,14 +77,15 @@ async function build(R, o = {}) {
     }
     put(ws, r, ['', 'Tổng cộng', '', '', ...Array.from({ length: 12 }, (_, i) => ({ formula: tot.map(t => col(5 + i) + t).join('+') }))], { bold: true, fill: HEAD, fmt: [null, null, null, null, ...Array(12).fill(NUM)] });
     r += 2; ws.getCell(r, 2).value = 'Đối chiếu với BCTC (B01-DN)'; ws.getCell(r, 2).font = { bold: true }; r++;
-    for (const c of R.m03.check) { put(ws, r, ['', c.n, '', '', c.v, c.fs, c.diff], { fmt: [null, null, null, null, NUM, NUM, NUM] }); r++; }
+    put(ws, r, ['', 'Chỉ tiêu', '', '', 'Đầu kỳ – báo cáo', 'Đầu kỳ – B01', 'Chênh lệch', 'Cuối kỳ – báo cáo', 'Cuối kỳ – B01', 'Chênh lệch'], { bold: true, fill: SEC }); r++;
+    for (const c of R.m03.check) { put(ws, r, ['', c.n, '', '', c.vOb, c.fsOb, c.diffOb, c.v, c.fs, c.diff], { fmt: [null, null, null, null, NUM, NUM, NUM, NUM, NUM, NUM] }); r++; }
     r++; ws.getCell(r, 2).value = 'Đối chiếu Trial balance theo tài khoản (cuối kỳ)'; ws.getCell(r, 2).font = { bold: true }; r++;
     put(ws, r, ['', 'Tài khoản', 'Số đối tượng', '', 'Số dư TB (CĐPS)', 'Tổng ròng theo đối tượng', 'Chênh lệch', 'Dư đúng chiều (báo cáo)', 'Dư ngược chiều (mẫu khác)'], { bold: true, fill: SEC }); r++;
     for (const s of R.m03.secs) for (const t of s.tb) { put(ws, r, ['', t.acc + (t.mode === 'net' ? ' (ròng)' : ''), t.n, '', t.tb, t.net, t.diff, t.rep, t.mode === 'side' ? t.neg : null], { fmt: [null, null, '#,##0', null, NUM, NUM, NUM, NUM, NUM] }); r++; }
     r++; ws.getCell(r, 2).value = 'TK công nợ còn số dư nhưng không thuộc mẫu nào'; ws.getCell(r, 2).font = { bold: true }; r++;
     if (!(R.m03.rest || []).length) { ws.getCell(r, 2).value = 'Không còn TK nào bị sót'; r++; }
     for (const x of R.m03.rest || []) { put(ws, r, ['', x.acc + ' ' + x.name, '', '', x.v, x.note], { fmt: [null, null, null, null, NUM] }); r++; }
-    ws.getCell(r, 2).value = 'Cột E: số theo báo cáo · F: số trên B01 · G: chênh lệch'; ws.getCell(r, 2).font = { italic: true, color: { argb: 'FF667085' } };
+    ws.getCell(r, 2).value = 'Đầu kỳ = số dư cuối tháng trước kỳ báo cáo; mỗi đối tượng / TK xếp chiều theo số dư tại từng thời điểm như B01'; ws.getCell(r, 2).font = { italic: true, color: { argb: 'FF667085' } };
     ws.views = [{ state: 'frozen', ySplit: 10, xSplit: 2, showGridLines: false }];
     sign(ws, r + 2, [[2, 'Người lập biểu'], [6, 'Phụ trách phòng'], [12, 'Tổng Giám đốc']]); }
 
@@ -127,7 +128,8 @@ async function build(R, o = {}) {
     });
     put(ws, r, ['', 'Tổng cộng', '', '', ...Array.from({ length: 19 }, (_, i) => ({ formula: tot.map(t => col(5 + i) + t).join('+') })), ''], { bold: true, fill: HEAD, fmt: F });
     r += 2; ws.getCell(r, 2).value = 'Đối chiếu với BCTC (B01-DN)'; ws.getCell(r, 2).font = { bold: true }; r++;
-    for (const c of R.m05.check) { put(ws, r, ['', c.n, '', '', c.v, c.fs, c.diff], { fmt: [null, null, null, null, NUM, NUM, NUM] }); r++; }
+    put(ws, r, ['', 'Chỉ tiêu', '', '', 'Đầu kỳ – báo cáo', 'Đầu kỳ – B01', 'Chênh lệch', 'Cuối kỳ – báo cáo', 'Cuối kỳ – B01', 'Chênh lệch'], { bold: true, fill: SEC }); r++;
+    for (const c of R.m05.check) { put(ws, r, ['', c.n, '', '', c.vOb, c.fsOb, c.diffOb, c.v, c.fs, c.diff], { fmt: [null, null, null, null, NUM, NUM, NUM, NUM, NUM, NUM] }); r++; }
     r++; ws.getCell(r, 2).value = 'Đối chiếu Trial balance theo tài khoản (cuối kỳ)'; ws.getCell(r, 2).font = { bold: true }; r++;
     put(ws, r, ['', 'Tài khoản', 'Số đối tượng', '', 'Số dư TB (CĐPS)', 'Tổng ròng theo đối tượng', 'Chênh lệch', 'Dư đúng chiều (báo cáo)', 'Dư ngược chiều (mẫu khác)'], { bold: true, fill: SEC }); r++;
     for (const s of R.m05.secs) for (const t of s.tb) { put(ws, r, ['', t.acc + (t.mode === 'net' ? ' (ròng)' : ''), t.n, '', t.tb, t.net, t.diff, t.rep, t.mode === 'side' ? t.neg : null], { fmt: [null, null, '#,##0', null, NUM, NUM, NUM, NUM, NUM] }); r++; }
