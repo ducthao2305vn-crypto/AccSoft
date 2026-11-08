@@ -531,3 +531,10 @@ await p.evaluate(()=>window.api.q('stats'));
 - v4.66.0: recv1388 r1388_exempt(k bp:<bp>|e:<id>, note, exp); markEx → overAmt loại khoản ex.live, exAmt/expAmt; r88SetExempt/r88Exempt.
 
 - v4.67.0: engine/ledgerx.js (lg_line id+side lưu status/grp/how/note/manual/left; report = WRITE lgReport), trang lgr.
+
+### Đầu tư ra nước ngoài (v4.82, `engine/oinv.js`, xuất `engine/oinvx.js`)
+- Trang `oinv`. `oiCompute({from, to, term, keepM})` trả `m01`…`m06`.
+- 131 và 331 lấy ròng theo đối tượng ở cấp 3 số, giống B01, nên tổng khớp mã 131, 132, 311, 312. Các TK khác lấy theo tiền tố.
+- Tuổi nợ FIFO dùng ngày đến hạn, nếu không có thì ngày hạch toán + `term`.
+- Số nhập tay mẫu 01 lưu `settings.oinv_m01[from_to]`. Danh sách quy trình lưu `settings.oinv_proc`.
+- Xuất bằng ExcelJS ở main (`oi:export`). Nạp mẫu 06 qua `oi:import06`, chuẩn hoá ngày dd/mm/yyyy thành ISO.

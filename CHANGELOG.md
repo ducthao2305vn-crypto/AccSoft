@@ -1,5 +1,14 @@
 # Lịch sử phiên bản
 
+## v4.82.0 – 08/11/2026
+- Báo cáo quản trị mới **Đầu tư ra nước ngoài** (nhóm Kết quả & báo cáo), theo biểu mẫu giám sát của Tổng công ty. Chọn kỳ: tháng / quý / 6 tháng / 9 tháng / năm / tuỳ chọn. Xuất Excel đủ 6 mẫu, có định dạng và công thức.
+  - **Mẫu 01** – SXKD & tài chính (Tr USD): TH cùng kỳ 2 năm trước, năm trước và năm nay lấy từ KQKD (thuế TNDN tách hiện hành / hoãn lại 8212). Cột **KH** và số thuê bao nhập tay, lưu theo kỳ. Có tỷ lệ biến động.
+  - **Mẫu 02** – chỉ tiêu tài chính cuối kỳ / đầu năm lấy từ B01-DN. Bổ sung dòng trả trước người bán, phải thu khác, XDCB dở dang. Nợ quá hạn lấy từ mẫu 03.
+  - **Mẫu 03** – nợ phải trả theo đối tượng: dư Có 331, 131 (người mua trả trước), 138812, 3388, 353. Có đầu kỳ / tăng / giảm / cuối kỳ, quá hạn theo năm (6 tháng–1 năm, 1–2, 2–3, ≥ 3 năm; FIFO, hạn thanh toán mặc định 30 ngày hoặc theo ngày đến hạn). Đối chiếu với B01 mã 311, 312.
+  - **Mẫu 04** – hàng tồn kho 152, 153, 156, 151, 1412 theo TK × kho × mặt hàng (1412 theo đối tượng): số lượng và giá trị đầu kỳ / nhập / xuất / cuối kỳ, phân loại thời gian lưu kho (hạn lưu kho chọn được). Đối chiếu sổ cái từng nhóm.
+  - **Mẫu 05** – nợ phải thu theo đối tượng: dư Nợ 131 (1311, 1317), dư Nợ 331 (trả trước người bán), số dư ròng 138811, 13888, 1411. Tuổi nợ theo mẫu (trong hạn, < 3 tháng … ≥ 3 năm), nợ khó đòi (quá hạn ≥ 6 tháng). Đối chiếu B01 mã 131, 132.
+  - **Mẫu 06** – danh sách quy trình, quy chế: nạp từ file biểu mẫu (sheet có cột "Tên văn bản"), sửa trực tiếp, thêm / xoá dòng, tick **hết hiệu lực**. Văn bản đã qua ngày hết hiệu lực được cảnh báo, đánh dấu nhanh một lần.
+
 ## v4.81.0 – 08/11/2026
 - Phân tích ledger: dòng **Khớp** hiện ngay **↔ các chứng từ đang khớp cùng** (kèm số tiền) ở cột Cách khớp – kể cả dòng tổng chứng từ; bấm tên chứng từ để lọc nhanh chứng từ đó.
 - Ô tìm trên bảng nhận **nhiều chứng từ cách nhau dấu phẩy** (vd `VTLMN23120006, VTL_HOBT23120091, VTL_HOBT23120090`) → hiện cùng lúc để so và khớp lại.
