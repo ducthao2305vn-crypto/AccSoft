@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.76.2 – 08/11/2026
+- Bản build lại có đủ cột **Liên kết chứng từ (khớp với)** trong Excel ledger (bản 4.76.1 thiếu thay đổi này).
+
 ## v4.76.1 – 08/11/2026
 - Xuất Excel ledger: thêm cột **Liên kết chứng từ (khớp với)** – với mỗi dòng khớp, liệt kê các chứng từ khác cùng nhóm khớp kèm số tiền (vd “↔ VTL_HOBT26100064 (+15,840)”), hoặc “tự cân trong chứng từ”.
 
