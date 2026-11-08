@@ -1,5 +1,15 @@
 # Lịch sử phiên bản
 
+## v4.88.0 – 08/11/2026
+- **Trường Asset (tài sản):** trước đây không được đọc khi nạp nên dữ liệu chưa có. Từ bản này:
+  - Khi nạp file hạch toán, tự đọc cột **Asset** (chấp nhận các tên Asset / Asset Name / A_Asset_ID / Tài sản…).
+  - Dữ liệu đã nạp: dùng **Quản lý dữ liệu → Bổ sung thông tin**, chọn lại file gốc để điền Asset (không cần nạp lại).
+- Báo cáo mới **Tài sản & khấu hao** (nhóm Kết quả & báo cáo), lập theo từng tài sản:
+  - Số liệu: nguyên giá TK 211/213 (đầu kỳ, tăng, giảm, cuối kỳ), hao mòn luỹ kế 214, giá trị còn lại đầu / cuối kỳ, khấu hao trong kỳ (Có 214 / Nợ chi phí), tỷ lệ khấu hao năm, TK chi phí, ngày ghi tăng.
+  - Bộ lọc: có / không khấu hao, đã khấu hao hết, GTCL âm.
+  - Dòng "chưa gắn tài sản" và đối chiếu sổ cái.
+  - Xuất Excel gồm sổ TSCĐ, khấu hao theo tháng, đối chiếu.
+
 ## v4.87.0 – 08/11/2026
 - Module mới **Giám sát tài chính** (nhóm Kết quả & báo cáo) theo bộ biểu mẫu giám sát Tổng công ty (chỉ các sheet hiện). Chọn từ tháng – đến tháng, hạn thanh toán. Xuất 1 file Excel gồm 13 sheet.
   - **7.1 Công nợ phải thu:** tổng hợp theo 12 nhóm công nợ (đầu kỳ, cuối kỳ, chưa đến hạn, quá hạn < 6T / 6T–1N / 1–2N / 2–3N / ≥ 3N, khó đòi đầu kỳ / cuối kỳ), PL01.1 chi tiết theo đối tượng, PL01.2 danh sách nợ khó đòi.
