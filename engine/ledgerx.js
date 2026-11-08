@@ -101,6 +101,21 @@ function make(db, all, get, run) {
   function runs() { return all(`SELECT * FROM lg_run ORDER BY at DESC LIMIT 500`); }
   // Các dòng cùng nhóm khớp (để người dùng xem / điều chỉnh)
   function group(g) { return all(`SELECT l.id, l.side, l.status, l.grp, l.how, l.note, l.manual, e.account_date d, e.document_no doc, e.description ds, e.acc_debit dr, e.acc_credit cr, e.amount a, CASE WHEN l.side='dr' THEN e.amount ELSE -e.amount END v, CASE WHEN l.side='dr' THEN e.partner_debit ELSE e.partner_credit END bp FROM lg_line l JOIN entries e ON e.id=l.id WHERE l.grp=? ORDER BY e.account_date, l.id`, s(g)); }
-  return { partners, report, setLine, runs, group };
+  // Rà hạch toán sai: với các dòng chưa khớp, tìm bút toán ngược chiều cùng số tiền trong cửa sổ thời gian nhưng
+  //  (a) cùng tài khoản – KHÁC đối tượng (nghi chọn sai đối tượng) hoặc (b) cùng đối tượng – KHÁC tài khoản (nghi hạch toán sai tài khoản)
+  function cross(acc, bp, items, win = 5, tol = 0) { const A = (s(acc).replace(/[^0-9]/g, '') || '0'), L = [].concat(items || []).slice(0, 3000); if (!L.length) return {};
+    const W = Math.round((+win || 5) * 30.6) * 864e5, T = Math.max(0, +tol || 0), ds = L.map(x => Date.parse(x.d)), d0 = new Date(Math.min(...ds) - W).toISOString().slice(0, 7), d1 = new Date(Math.max(...ds) + W).toISOString().slice(0, 7);
+    const amts = [...new Set(L.map(x => Math.round(Math.abs(x.v) * 100) / 100))], out = {};
+    for (let i = 0; i < amts.length; i += 400) { const P = amts.slice(i, i + 400);
+      const C = all(`SELECT id, account_date d, document_no doc, description ds, acc_debit dr, acc_credit cr, partner_debit pd, partner_credit pc, amount a FROM entries WHERE ym BETWEEN ? AND ? AND (${T ? P.map(() => 'abs(amount-?)<=?').join(' OR ') : `amount IN (${P.map(() => '?').join(',')})`}) LIMIT 50000`, d0, d1, ...(T ? P.flatMap(a => [a, T + 0.0001]) : P));
+      for (const x of L) { const a = Math.abs(x.v), t0 = Date.parse(x.d), want = x.v > 0 ? 'cr' : 'dr', key = x.id + '|' + x.side, R = out[key] || (out[key] = []);
+        for (const c of C) { if (Math.abs(c.a - a) > T + 0.005 || Math.abs(Date.parse(c.d) - t0) > W || c.id === x.id) continue;
+          const cacc = want === 'cr' ? c.cr : c.dr, cbp = (want === 'cr' ? c.pc : c.pd) || '', onAcc = String(cacc || '').startsWith(A);
+          if (onAcc && cbp !== (bp || '')) R.push({ ...c, kind: 'bp', acc: cacc, bp: cbp, side: want });
+          else if (!onAcc && cbp && cbp === bp && !/^11[123]/.test(cacc || '')) R.push({ ...c, kind: 'acc', acc: cacc, bp: cbp, side: want });
+          if (R.length >= 12) break; } } }
+    for (const k in out) { out[k].sort((a, b) => Math.abs(Date.parse(a.d) - Date.parse(L.find(x => x.id + '|' + x.side === k).d)) - Math.abs(Date.parse(b.d) - Date.parse(L.find(x => x.id + '|' + x.side === k).d))); if (!out[k].length) delete out[k]; }
+    return out; }
+  return { partners, report, setLine, runs, group, cross };
 }
 module.exports = { make };
