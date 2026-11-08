@@ -177,11 +177,16 @@ function make(db, all, get, run, FIN) {
     return r;
   }
   // Mẫu 05 – phải thu khách hàng: trong hạn · < 3 tháng · 3–6 · 6–9 · 9–12 tháng · 1–2 · 2–3 · ≥ 3 năm; phải thu khác: trong hạn · < 6 tháng · 6 tháng–1 năm · 1–2 · 2–3 · ≥ 3 năm
-  const arAge = p => { const t = bk(p, [90, 180, 270, 365, 730, 1095]), o = bk(p, [180, 365, 730, 1095]); return { trade: t, oth: o, bad: o[2] + o[3] + o[4] + o[5] }; };
+  // Nợ khó đòi = quá hạn ≥ 6 tháng (TT48/2019), tính tại cuối kỳ và đầu kỳ; chỉ cho đối tượng / TK đang dư Nợ tại đúng thời điểm đó (như số dư)
+  const bad6 = p => { const o = bk(p, [180, 365, 730, 1095]); return o[2] + o[3] + o[4] + o[5]; };
+  const arAge = (p, p0 = [], pY = []) => { const t = bk(p, [90, 180, 270, 365, 730, 1095]), o = bk(p, [180, 365, 730, 1095]); return { trade: t, oth: o, bad: o[2] + o[3] + o[4] + o[5], badOb: bad6(p0), badY: bad6(pY) }; };
   function m05(from, to, term = 30) {
     const r = debts(AR_SEC, from, to, term, arAge), S = r.secs;
     r.check = checkB01(r, from, to, [['Phải thu khách hàng – B01 mã 131', S[0].rows, ['131']], ['Trả trước cho người bán – B01 mã 132', S[1].rows, ['132']],
       ['Phải thu khác – B01 mã 133 + 136', S[2].rows, ['133b', '136']], ['Tổng phải thu ngắn hạn (trừ dự phòng) – B01 mã 131 + 132 + 133 + 136', S[0].rows.concat(S[1].rows, S[2].rows), ['131', '132', '133b', '136']]]);
+    // Tổng nợ khó đòi so với dự phòng phải thu khó đòi đã trích (B01 mã 137, TK 2293)
+    const bs = FIN.balanceSheet(from, to), P = bs.lines.find(l => l.code === '138') || { cb: 0, ob: 0 }, all3 = S.flatMap(x => x.rows);
+    r.bad = { ob: all3.reduce((t, x) => t + (x.badOb || 0), 0), cb: all3.reduce((t, x) => t + (x.bad || 0), 0), provOb: -P.ob, provCb: -P.cb };
     return r;
   }
 

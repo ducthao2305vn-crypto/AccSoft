@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.86.2 – 08/11/2026
+- Đầu tư ra nước ngoài – **Mẫu 05 nợ khó đòi** (quá hạn ≥ 6 tháng, TT48) theo nguyên tắc xếp chiều theo thời điểm:
+  - Chỉ tính cho đối tượng / TK **đang dư Nợ tại đúng thời điểm đó**. Với TK lấy số dư ròng, chỉ tính khi TK dư Nợ ròng.
+  - Thêm cột **nợ khó đòi đầu kỳ** bên cạnh cuối kỳ, có cả trên màn hình và trong Excel. Đầu kỳ này khớp cuối kỳ của kỳ trước.
+  - Bảng mới **"Nợ khó đòi so với dự phòng đã trích"** (B01 mã 137, TK 2293), đầu kỳ và cuối kỳ, kèm phần chưa trích dự phòng.
+
 ## v4.86.1 – 08/11/2026
 - Đầu tư ra nước ngoài – **Mẫu 02 "Trong đó: Nợ quá hạn"** theo cùng nguyên tắc xếp chiều theo thời điểm:
   - Tuổi nợ (FIFO, quá hạn ≥ 6 tháng) chỉ tính cho đối tượng / TK **đang dư Có tại thời điểm đó**. Đối tượng đã chuyển sang dư Nợ thì phần quá hạn = 0.

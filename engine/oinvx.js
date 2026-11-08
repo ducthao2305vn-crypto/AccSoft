@@ -110,25 +110,26 @@ async function build(R, o = {}) {
     sign(ws, r + 2, [[3, 'NGƯỜI LẬP'], [10, 'PHỤ TRÁCH PHÒNG'], [16, 'TỔNG GIÁM ĐỐC']]); }
 
   /* 05 – nợ phải thu */
-  { const ws = sheet(wb, '05', [6, 46, 12, 18, 16, 16, 16, 16, ...Array(15).fill(14), 16]);
+  { const ws = sheet(wb, '05', [6, 46, 12, 18, 16, 16, 16, 16, ...Array(16).fill(14), 16]);
     ws.getCell('X1').value = 'Biểu 6 - Mẫu 3'; title(ws, 4, `BÁO CÁO PHÂN TÍCH NỢ PHẢI THU ${L.toUpperCase()} NĂM ${Y}`, `Từ ${dmy(R.m05.d0)} đến ${dmy(R.m05.d1)} · hạn thanh toán mặc định ${R.term} ngày (dùng ngày đến hạn nếu có)`, 24); ws.getCell('X6').value = 'Đơn vị tính: USD';
     const a = dmy(R.m05.d0), b = dmy(R.m05.d1);
-    heads(ws, [[7, 1, 9, 1, 'TT'], [7, 2, 9, 2, 'Đối tượng công nợ'], [7, 3, 9, 3, 'Tài khoản theo dõi'], [7, 4, 9, 4, 'Nội dung công nợ'], [7, 5, 7, 23, 'Công nợ phải thu'],
+    heads(ws, [[7, 1, 9, 1, 'TT'], [7, 2, 9, 2, 'Đối tượng công nợ'], [7, 3, 9, 3, 'Tài khoản theo dõi'], [7, 4, 9, 4, 'Nội dung công nợ'], [7, 5, 7, 24, 'Công nợ phải thu'],
       [8, 5, 9, 5, `Số dư tại ${a}`], [8, 6, 9, 6, 'Số phát sinh tăng trong kỳ'], [8, 7, 9, 7, 'Số phát sinh giảm trong kỳ'], [8, 8, 9, 8, `Số dư tại ${b}`],
       [8, 9, 8, 16, 'Nợ cước viễn thông, CNTT, phải thu khách hàng'], ...['Trong hạn', 'Quá hạn < 3 tháng', '3 tháng <= Nợ < 6 tháng', '6 tháng <= Nợ < 9 tháng', '9 tháng <= Nợ < 12 tháng', '1 năm <= Nợ < 2 năm', '2 năm <= Nợ < 3 năm', 'Nợ >= 3 năm'].map((t, i) => [9, 9 + i, 9, 9 + i, t]),
       [8, 17, 8, 22, 'Nợ phải thu khác'], ...['Trong hạn', 'Quá hạn < 6 tháng', '6 tháng <= Nợ < 1 năm', '1 năm <= Nợ < 2 năm', '2 năm <= Nợ < 3 năm', 'Nợ >= 3 năm'].map((t, i) => [9, 17 + i, 9, 17 + i, t]),
-      [8, 23, 9, 23, 'Nợ khó đòi (quá hạn ≥ 6 tháng)'], [7, 24, 9, 24, 'Ghi chú']]);
-    put(ws, 10, ['A', 'B', 'C', 'D', ...Array.from({ length: 19 }, (_, i) => String(i + 1)), ''], { fill: SEC });
-    let r = 11; const tot = [], F = [null, null, null, null, ...Array(19).fill(NUM)];
+      [8, 23, 8, 24, 'Nợ khó đòi (quá hạn ≥ 6 tháng)'], [9, 23, 9, 23, `Tại ${a}`], [9, 24, 9, 24, `Tại ${b}`], [7, 25, 9, 25, 'Ghi chú']]);
+    put(ws, 10, ['A', 'B', 'C', 'D', ...Array.from({ length: 20 }, (_, i) => String(i + 1)), ''], { fill: SEC });
+    let r = 11; const tot = [], F = [null, null, null, null, ...Array(20).fill(NUM)];
     R.m05.secs.forEach((s, si) => {
       const r0 = r; tot.push(r0); r++;
       s.rows.forEach((x, i) => { const trade = si === 0, ag = trade ? [...x.trade, ...Array(6).fill(null)] : [...Array(8).fill(null), ...x.oth];
-        put(ws, r, [i + 1, x.bp, x.accs, '', x.ob, x.inc + Math.max(0, x.adj || 0), x.dec - Math.min(0, x.adj || 0), { formula: `E${r}+F${r}-G${r}` }, ...ag, x.bad, x.cb < 0 ? 'Số dư ròng âm (dư Có)' : ''], { fmt: F, wrap: [1] }); r++; });
-      put(ws, r0, [s.no, s.title, '', '', ...Array.from({ length: 19 }, (_, i) => ({ formula: s.rows.length ? `SUBTOTAL(9,${col(5 + i)}${r0 + 1}:${col(5 + i)}${r - 1})` : '0' })), ''], { bold: true, fill: SEC, fmt: F });
+        put(ws, r, [i + 1, x.bp, x.accs, '', x.ob, x.inc + Math.max(0, x.adj || 0), x.dec - Math.min(0, x.adj || 0), { formula: `E${r}+F${r}-G${r}` }, ...ag, x.badOb || 0, x.bad, x.cb < 0 ? 'Số dư ròng âm (dư Có)' : ''], { fmt: F, wrap: [1] }); r++; });
+      put(ws, r0, [s.no, s.title, '', '', ...Array.from({ length: 20 }, (_, i) => ({ formula: s.rows.length ? `SUBTOTAL(9,${col(5 + i)}${r0 + 1}:${col(5 + i)}${r - 1})` : '0' })), ''], { bold: true, fill: SEC, fmt: F });
     });
-    put(ws, r, ['', 'Tổng cộng', '', '', ...Array.from({ length: 19 }, (_, i) => ({ formula: tot.map(t => col(5 + i) + t).join('+') })), ''], { bold: true, fill: HEAD, fmt: F });
+    put(ws, r, ['', 'Tổng cộng', '', '', ...Array.from({ length: 20 }, (_, i) => ({ formula: tot.map(t => col(5 + i) + t).join('+') })), ''], { bold: true, fill: HEAD, fmt: F });
     r += 2; ws.getCell(r, 2).value = 'Đối chiếu với BCTC (B01-DN)'; ws.getCell(r, 2).font = { bold: true }; r++;
     put(ws, r, ['', 'Chỉ tiêu', '', '', 'Đầu kỳ – báo cáo', 'Đầu kỳ – B01', 'Chênh lệch', 'Cuối kỳ – báo cáo', 'Cuối kỳ – B01', 'Chênh lệch'], { bold: true, fill: SEC }); r++;
+    if (R.m05.bad) { const B = R.m05.bad; put(ws, r, ['', 'Nợ khó đòi (quá hạn ≥ 6 tháng) – so với dự phòng đã trích (B01 mã 137, TK 2293)', '', '', B.ob, B.provOb, B.ob - B.provOb, B.cb, B.provCb, B.cb - B.provCb], { fmt: [null, null, null, null, NUM, NUM, NUM, NUM, NUM, NUM] }); r++; }
     for (const c of R.m05.check) { put(ws, r, ['', c.n, '', '', c.vOb, c.fsOb, c.diffOb, c.v, c.fs, c.diff], { fmt: [null, null, null, null, NUM, NUM, NUM, NUM, NUM, NUM] }); r++; }
     r++; ws.getCell(r, 2).value = 'Đối chiếu Trial balance theo tài khoản (cuối kỳ)'; ws.getCell(r, 2).font = { bold: true }; r++;
     put(ws, r, ['', 'Tài khoản', 'Số đối tượng', '', 'Số dư TB (CĐPS)', 'Tổng ròng theo đối tượng', 'Chênh lệch', 'Dư đúng chiều (báo cáo)', 'Dư ngược chiều (mẫu khác)'], { bold: true, fill: SEC }); r++;
