@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.83.1 – 08/11/2026
+- Kế hoạch năm – PL06: thêm dòng **TFU** (Telemor Fintech) là đơn vị con của VTL. Giao dịch với TFU tự vào dòng này; dòng VTL = số của VTL + TFU.
+
 ## v4.83.0 – 08/11/2026
 - Module mới **Kế hoạch năm** (nhóm Kết quả & báo cáo) theo mẫu kế hoạch Tập đoàn. Chọn từ tháng – đến tháng; xuất Excel đúng bố cục mẫu (sheet PL01 và PL06).
 - **PL01 – chỉ tiêu tài chính**

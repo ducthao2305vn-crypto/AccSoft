@@ -67,7 +67,8 @@ const NB = [['A', '', 'KHỐI PHỤ THUỘC', 0],
   ['VDTC', 'VDTC', 'Công ty CP Giao thông số Việt Nam', 1], ['DVKH', 'DVKH', 'Công ty Dịch vụ khách hàng', 1],
   ['C', '', 'KHỐI THỊ TRƯỜNG', 0],
   ['VTC', 'VTC', 'Công ty TNHH Viettel Cambodia', 1], ['NAT', 'NAT', 'Công ty National Telecom S.A (NATCOM)', 1], ['MVT', 'MVT', 'Công ty TNHH Movitel', 1],
-  ['VTL', 'VTL', 'Công ty Viettel Timor Leste, UNIP., LDA.', 1], ['VCR', 'VCR', 'Công ty Viettel Cameroon', 1], ['VTB', 'VTB', 'Công ty Viettel Burundi S.A', 1],
+  ['VTL', 'VTL', 'Công ty Viettel Timor Leste, UNIP., LDA.', 1], ['TFU', 'TFU', 'Công ty Telemor Fintech Unipessoal, Lda (công ty con của VTL)', 2],
+  ['VCR', 'VCR', 'Công ty Viettel Cameroon', 1], ['VTB', 'VTB', 'Công ty Viettel Burundi S.A', 1],
   ['VTZ', 'VTZ', 'Công ty TNHH Viettel Tanzania', 1], ['STL', 'STL', 'Công ty TNHH Viễn thông Star', 1], ['MYA', 'MYA', 'Công ty Mytel (Viettel Myanmar)', 1]];
 // Mã công ty nội bộ trong danh mục đối tượng (nb_code) → mã dòng PL06 khi tên khác nhau
 const ALIAS = { VTG: 'VPG', TTANM: 'ANM', VCS: 'ANM', M3VT: 'M3', IDCVT: 'IDC', MYTEL: 'MYA', VTPERU: 'VTP', XNKVT: 'XNK', XNKVT_CS: 'XNK', VTLIMEX: 'XNK', TD_CS: 'TD', VPTD: 'TD',
