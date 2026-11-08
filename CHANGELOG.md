@@ -1,5 +1,21 @@
 # Lịch sử phiên bản
 
+## v4.83.0 – 08/11/2026
+- Module mới **Kế hoạch năm** (nhóm Kết quả & báo cáo) theo mẫu kế hoạch Tập đoàn. Chọn từ tháng – đến tháng; xuất Excel đúng bố cục mẫu (sheet PL01 và PL06).
+- **PL01 – chỉ tiêu tài chính**
+  - Số thực hiện tự lấy theo tháng, cộng lên quý và năm, kèm TH cả năm trước:
+    - Doanh thu SP kinh tế, doanh thu tài chính, thu nhập khác.
+    - Chi phí NVL/giá vốn, khấu hao, lương, BHXH, dịch vụ mua ngoài, lãi vay, lỗ CLTG, chi phí khác (theo cặp TK). Lợi nhuận khớp B02.
+    - Thuế TNDN, phân phối lợi nhuận (Nợ 421), nộp NSNN (Nợ 333 / Có tiền), chi phí nội bộ (đối tác nội bộ Tập đoàn).
+    - Tổng tài sản, TSCĐ, nợ phải thu, VCSH, nợ phải trả (B01 cuối tháng); dự phòng 2293/2294.
+    - EBITDA, ROE, ROA, nợ/VCSH.
+  - KH năm và KH năm sau nhập tay theo tháng; dòng tổng tự tính. Có ghi chú và so sánh TH/TH năm trước, TH/KH.
+- **PL06 – giao dịch nội bộ Tập đoàn**
+  - Số TH theo kỳ chọn, chia mua (hàng để bán / xây lắp / TSCĐ-CCDC-trả trước / KHCN / dịch vụ), bán (doanh thu, 3387), chia và nhận cổ tức.
+  - Mỗi đơn vị trong danh mục đối tượng (loại NB) tự ánh xạ vào dòng mẫu; đơn vị chưa ánh xạ thì chọn dòng bằng tay.
+  - KH năm sau nhập theo 4 quý; cả năm tự cộng.
+- **Nạp KH từ file mẫu:** đọc số kế hoạch PL01 (KH năm, KH năm sau, ghi chú) và PL06 (4 quý) từ file Excel mẫu.
+
 ## v4.82.0 – 08/11/2026
 - Báo cáo quản trị mới **Đầu tư ra nước ngoài** (nhóm Kết quả & báo cáo), theo biểu mẫu giám sát của Tổng công ty. Chọn kỳ: tháng / quý / 6 tháng / 9 tháng / năm / tuỳ chọn. Xuất Excel đủ 6 mẫu, có định dạng và công thức.
   - **Mẫu 01** – SXKD & tài chính (Tr USD): TH cùng kỳ 2 năm trước, năm trước và năm nay lấy từ KQKD (thuế TNDN tách hiện hành / hoãn lại 8212). Cột **KH** và số thuê bao nhập tay, lưu theo kỳ. Có tỷ lệ biến động.

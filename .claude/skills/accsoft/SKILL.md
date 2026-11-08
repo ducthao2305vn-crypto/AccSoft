@@ -538,3 +538,18 @@ await p.evaluate(()=>window.api.q('stats'));
 - Tuổi nợ FIFO dùng ngày đến hạn, nếu không có thì ngày hạch toán + `term`.
 - Số nhập tay mẫu 01 lưu `settings.oinv_m01[from_to]`. Danh sách quy trình lưu `settings.oinv_proc`.
 - Xuất bằng ExcelJS ở main (`oi:export`). Nạp mẫu 06 qua `oi:import06`, chuẩn hoá ngày dd/mm/yyyy thành ISO.
+
+### Kế hoạch năm (v4.83, `engine/khnam.js`, xuất `engine/khnamx.js`)
+- Trang `khnam`.
+- `khPl01({from, to})`:
+  - Danh sách dòng `ROWS`, mỗi dòng có loại `t`: `l` luồng (cộng theo kỳ), `b` số dư (quý/năm lấy tháng cuối), `f` công thức, `r` tỷ lệ, `q` VCSH bình quân.
+  - `evalCol` tính công thức lặp 4 vòng, vì có dòng tham chiếu dòng phía dưới.
+- Số TH lấy theo cặp TK 4 ký tự theo tháng, bỏ đối ứng 911 và 154. Số dư lấy từ `FIN.balanceSheet`.
+- KH lưu `settings.kh_pl01[năm][dòng][tháng]`, ghi chú lưu `kh_pl01.note[năm]`.
+- `khPl06({from, to})`:
+  - Lấy dữ liệu từ `PC.internalRows`; `cls()` phân loại cột E..O.
+  - Ánh xạ mã công ty (nb_code) sang dòng mẫu: `ALIAS`, trùng mã/tên gọi khác, hoặc `settings.kh_nbmap`.
+  - KH lưu `settings.kh_pl06[năm sau][Q1..Q4][mã dòng][cột]`. Dòng cha (VTT, BC, CTCT) = số của chính nó + các dòng con.
+- `kh:import` đọc file mẫu:
+  - PL01: cột D–O và AL–AW, khớp dòng theo nội dung.
+  - PL06: khối quý bắt đầu từ cột P, 11 cột mỗi khối. Bỏ qua dòng cha để không cộng trùng.
