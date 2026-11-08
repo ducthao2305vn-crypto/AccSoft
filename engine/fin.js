@@ -53,6 +53,18 @@ function make(all, okYm, INC, plRange, run) {
     return out;
   }
 
+  const DUAL = ['138812', '13111', '33111', '33121'], INV_ADV = ['14121'];
+  // Số dư từng đối tượng của TK lưỡng tính đến cuối tháng `at` → {tk: {dr: tổng dư Nợ, cr: tổng dư Có}}
+  const dsCache = new Map();
+  function dualSplit(at) {
+    const ver = (all(`SELECT max(id) m, count(*) n FROM entries`)[0] || {}), key = at + '|' + ver.m + '|' + ver.n; if (dsCache.has(key)) return dsCache.get(key); at = String(at);
+    const d1 = at + '-31', o = {};
+    for (const p of DUAL) { const hi = p.slice(0, -1) + String.fromCharCode(p.charCodeAt(p.length - 1) + 1), m = new Map();
+      for (const r of all(`SELECT partner_debit p, sum(amount) v FROM entries WHERE acc_debit>=? AND acc_debit<? AND account_date<=? GROUP BY 1`, p, hi, d1)) m.set(r.p || '', (m.get(r.p || '') || 0) + r.v);
+      for (const r of all(`SELECT partner_credit p, sum(amount) v FROM entries WHERE acc_credit>=? AND acc_credit<? AND account_date<=? GROUP BY 1`, p, hi, d1)) m.set(r.p || '', (m.get(r.p || '') || 0) - r.v);
+      o[p] = { dr: 0, cr: 0 }; for (const v of m.values()) v > 0 ? o[p].dr += v : o[p].cr -= v; }
+    if (dsCache.size > 60) dsCache.clear(); dsCache.set(key, o); return o;
+  }
   /* B01-DN: Bảng cân đối kế toán tại cuối tháng `to` (và đầu kỳ = cuối tháng trước `from`) */
   function balanceSheet(from, to) {
     const tb = trial(from, to, 1), B = new Map(tb.rows.map(r => [r.a, r]));
@@ -61,8 +73,17 @@ function make(all, okYm, INC, plRange, run) {
     const bal = (a, when) => { const r = B.get(a); if (!r) return 0; return when === 'ob' ? r.obDr - r.obCr : r.bal; };
     const sum = (accs, when, sign = 1) => sign * accs.reduce((s, a) => s + bal(a, when), 0);
     const pos = (accs, when) => Math.max(0, sum(accs, when)), neg = (accs, when) => Math.max(0, -sum(accs, when));
-    const sp = partnerSplits([t, prevYm]);
-    const P = (a, side) => w => w === 'ob' ? (prevYm ? sp[prevYm][a][side] : 0) : sp[t][a][side];
+    // Nguyên tắc trình bày công nợ:
+    //  - TK theo dõi lưỡng tính (DUAL: 138812, 13111, 33111, 33121) → tách dư Nợ / dư Có theo từng đối tượng của chính TK đó;
+    //  - các TK công nợ khác → số dư ròng từng TK chi tiết (dư Nợ → tài sản, dư Có → nợ phải trả), không tách theo đối tượng;
+    //  - 14121 (tạm ứng vật tư) là hàng tồn kho, không phải phải thu.
+    const tb0 = trial(from, to, 0), det = tb0.rows.filter(r => r.a !== 'OB');
+    const isX = a => DUAL.some(d => a.startsWith(d)) || INV_ADV.some(d => a.startsWith(d));
+    const dbal = (r, w) => w === 'ob' ? r.obDr - r.obCr : r.bal;
+    const G = (pres, side) => w => det.filter(r => pres.some(p => r.a.startsWith(p)) && !isX(r.a)).reduce((s, r) => { const v = dbal(r, w); return s + (side === 'dr' ? Math.max(0, v) : Math.max(0, -v)); }, 0);
+    const ds = { cb: dualSplit(t), ob: prevYm ? dualSplit(prevYm) : null };
+    const D = (pres, side) => w => { const o = ds[w === 'ob' ? 'ob' : 'cb']; return o ? pres.reduce((s, p) => s + o[p][side], 0) : 0; };
+    const invAdv = w => det.filter(r => INV_ADV.some(d => r.a.startsWith(d))).reduce((s, r) => s + dbal(r, w), 0);
     // P&L chưa kết chuyển (TK loại 5–9 còn số dư) → LNST chưa phân phối
     const pl = w => -['5', '6', '7', '8', '9'].reduce((s, c) => s + tb.rows.filter(r => r.a[0] === c).reduce((x, r) => x + (w === 'ob' ? r.obDr - r.obCr : r.bal), 0), 0);
     const L = [ // [mã số, chỉ tiêu, hàm(w) → số, cấp]
@@ -70,10 +91,10 @@ function make(all, okYm, INC, plRange, run) {
       ['110', 'I. Tiền và các khoản tương đương tiền', w => sum(['111', '112', '113'], w), 1],
       ['120', 'II. Đầu tư tài chính ngắn hạn', w => sum(['121', '128'], w), 1],
       ['130', 'III. Các khoản phải thu ngắn hạn', null, 1, ['131', '132', '133b', '136', '138']],
-      ['131', '1. Phải thu ngắn hạn của khách hàng', P('131', 'dr'), 2], ['132', '2. Trả trước cho người bán ngắn hạn', P('331', 'dr'), 2],
-      ['133b', '3. Phải thu nội bộ ngắn hạn', P('136', 'dr'), 2], ['136', '6. Phải thu ngắn hạn khác (138, 141, 244, 338 dư Nợ)', w => P('138', 'dr')(w) + P('141', 'dr')(w) + P('338', 'dr')(w) + sum(['244'], w), 2],
+      ['131', '1. Phải thu ngắn hạn của khách hàng', w => D(['13111'], 'dr')(w) + G(['131'], 'dr')(w), 2], ['132', '2. Trả trước cho người bán ngắn hạn', w => D(['33111', '33121'], 'dr')(w) + G(['331'], 'dr')(w), 2],
+      ['133b', '3. Phải thu nội bộ ngắn hạn', G(['136', '336'], 'dr'), 2], ['136', '6. Phải thu ngắn hạn khác (138, 141, 244, 338 dư Nợ; 138812 dư Nợ theo đối tượng)', w => D(['138812'], 'dr')(w) + G(['138', '141', '338', '244'], 'dr')(w), 2],
       ['138', '7. Dự phòng phải thu ngắn hạn khó đòi (*)', w => -neg(['229'], w), 2],
-      ['140', 'IV. Hàng tồn kho', w => sum(['151', '152', '153', '154', '155', '156', '157', '158'], w), 1],
+      ['140', 'IV. Hàng tồn kho (gồm 14121 tạm ứng vật tư)', w => sum(['151', '152', '153', '154', '155', '156', '157', '158'], w) + invAdv(w), 1],
       ['150', 'V. Tài sản ngắn hạn khác', null, 1, ['152b', '153b']],
       ['152b', '2. Thuế GTGT được khấu trừ', w => pos(['133'], w), 2], ['153b', '3. Thuế và các khoản phải thu Nhà nước', w => pos(['333'], w), 2],
       ['B', 'B. TÀI SẢN DÀI HẠN', null, 0, ['220', '240', '250', '260']],
@@ -86,10 +107,10 @@ function make(all, okYm, INC, plRange, run) {
       ['270', 'TỔNG CỘNG TÀI SẢN (270 = 100 + 200)', null, 0, ['A', 'B']],
       ['C', 'C. NỢ PHẢI TRẢ', null, 0, ['310']],
       ['310', 'I. Nợ ngắn hạn', null, 1, ['311', '312', '313', '314', '315', '316', '319', '320', '322']],
-      ['311', '1. Phải trả người bán ngắn hạn', P('331', 'cr'), 2], ['312', '2. Người mua trả tiền trước ngắn hạn', P('131', 'cr'), 2],
+      ['311', '1. Phải trả người bán ngắn hạn', w => D(['33111', '33121'], 'cr')(w) + G(['331'], 'cr')(w), 2], ['312', '2. Người mua trả tiền trước ngắn hạn', w => D(['13111'], 'cr')(w) + G(['131'], 'cr')(w), 2],
       ['313', '3. Thuế và các khoản phải nộp Nhà nước', w => neg(['333'], w), 2], ['314', '4. Phải trả người lao động', w => -sum(['334'], w), 2],
-      ['315', '5. Chi phí phải trả ngắn hạn', w => -sum(['335'], w), 2], ['316', '6. Phải trả nội bộ ngắn hạn', P('336', 'cr'), 2],
-      ['319', '9. Phải trả ngắn hạn khác (338, 344; 138/141 dư Có)', w => P('338', 'cr')(w) + P('138', 'cr')(w) + P('141', 'cr')(w) - sum(['344'], w), 2],
+      ['315', '5. Chi phí phải trả ngắn hạn', w => -sum(['335'], w), 2], ['316', '6. Phải trả nội bộ ngắn hạn', G(['136', '336'], 'cr'), 2],
+      ['319', '9. Phải trả ngắn hạn khác (338, 344, 138/141 dư Có; 138812 dư Có theo đối tượng)', w => D(['138812'], 'cr')(w) + G(['338', '138', '141', '244'], 'cr')(w) - sum(['344'], w), 2],
       ['320', '10. Vay và nợ thuê tài chính', w => -sum(['341', '343'], w), 2], ['322', '12. Quỹ khen thưởng, phúc lợi, dự phòng phải trả', w => -sum(['352', '353', '356', '347'], w), 2],
       ['D', 'D. VỐN CHỦ SỞ HỮU', null, 0, ['410']],
       ['410', 'I. Vốn chủ sở hữu', null, 1, ['411', '416', '418', '421', '421b', 'OB']],
@@ -203,9 +224,9 @@ function make(all, okYm, INC, plRange, run) {
     const op_ = k => -((full[k] || 0) - (nop[k] || 0)), used = new Set();
     const T = (...ks) => { let v = 0; for (const k of Object.keys(full)) if (!used.has(k) && ks.some(p => k === p || (p.length < k.length && k.startsWith(p)))) { v += op_(k); used.add(k); } return v; };
     const pbt = -(full.PL || 0), l05 = nop.PL || 0; used.add('PL');
-    const A02 = ['214'], A03 = ['229', '352'], A04 = ['413'], A15 = ['821', '3334'], A09 = ['131', '133', '136', '138', '141', '244'], A10 = ['151', '152', '153', '154', '155', '156', '157', '158'], A12 = ['242'], A13 = ['121'],
+    const A02 = ['214'], A03 = ['229', '352'], A04 = ['413'], A15 = ['821', '3334'], A09 = ['131', '133', '136', '138', '141', '244'], A10 = ['151', '152', '153', '154', '155', '156', '157', '158', '14121'], A12 = ['242'], A13 = ['121'],
       A11 = ['331', '333', '334', '335', '336', '337', '338', '344', '347', '353', '356'];
-    const l02 = T(...A02), l03 = T(...A03), l04 = T(...A04), l15 = T(...A15), l09 = T(...A09), l10 = T(...A10), l12 = T(...A12), l13 = T(...A13), l11 = T(...A11);
+    const l02 = T(...A02), l03 = T(...A03), l04 = T(...A04), l15 = T(...A15), l10 = T(...A10), l09 = T(...A09), l12 = T(...A12), l13 = T(...A13), l11 = T(...A11);
     const other = Object.keys(full).filter(k => !used.has(k)).map(k => ({ a: k, n: L1[k] || k, v: op_(k) })).filter(x => Math.abs(x.v) > 0.004).sort((a, b) => Math.abs(b.v) - Math.abs(a.v));
     const l07 = other.reduce((x, o) => x + o.v, 0), l08 = pbt + l02 + l03 + l04 + l05 + l07, opI = l08 + l09 + l10 + l11 + l12 + l13 + l15;
     const indirect = [sec('', 'I. Lưu chuyển tiền từ hoạt động kinh doanh', null, 1), sec('01', '1. Lợi nhuận trước thuế', pbt, 0, ['5', '6', '7', '8']), sec('', '2. Điều chỉnh cho các khoản', null),
@@ -214,7 +235,7 @@ function make(all, okYm, INC, plRange, run) {
       sec('05', '- Lãi, lỗ từ hoạt động đầu tư (thu lãi, cổ tức, thanh lý TSCĐ đã xếp vào mục II)', l05, 0, ['515', '711', '811']), sec('06', '- Chi phí lãi vay', 0),
       sec('07', '- Các khoản điều chỉnh khác (biến động phi tiền tệ TK khác – xem bảng đối chiếu)', l07, 0, other.map(o => o.a)),
       sec('08', '3. Lợi nhuận từ HĐKD trước thay đổi vốn lưu động', l08, 1),
-      sec('09', '- Tăng, giảm các khoản phải thu (131, 133, 136, 138, 141, 244)', l09, 0, A09), sec('10', '- Tăng, giảm hàng tồn kho (151–158)', l10, 0, A10),
+      sec('09', '- Tăng, giảm các khoản phải thu (131, 133, 136, 138, 141, 244)', l09, 0, A09), sec('10', '- Tăng, giảm hàng tồn kho (151–158, 14121)', l10, 0, A10),
       sec('11', '- Tăng, giảm các khoản phải trả (331, 333, 334, 335, 336, 338… không kể thuế TNDN)', l11, 0, A11), sec('12', '- Tăng, giảm chi phí trả trước (242)', l12, 0, A12),
       sec('13', '- Tăng, giảm chứng khoán kinh doanh (121)', l13, 0, A13), sec('14', '- Tiền lãi vay đã trả', 0), sec('15', '- Thuế thu nhập doanh nghiệp đã nộp (821, 3334)', l15, 0, A15),
       sec('16', '- Tiền thu khác từ hoạt động kinh doanh', 0), sec('17', '- Tiền chi khác cho hoạt động kinh doanh', 0),
@@ -253,7 +274,7 @@ function make(all, okYm, INC, plRange, run) {
     const PT = (pres, at, credit) => partnerTop(pres, at, 10, credit, raw);
     const prev = f ? (m => { const y = +m.slice(0, 4), mo = +m.slice(5) - 1; return mo ? `${y}-${String(mo).padStart(2, '0')}` : `${y - 1}-12`; })(f) : null;
     // Bảng biến động theo TK chi tiết: nat = 1 (dư Nợ: tăng = PS Nợ), −1 (dư Có: tăng = PS Có)
-    const mov = (pres, nat = 1) => { const rows = tb.rows.filter(r => pres.some(p => r.a.startsWith(p))).map(r => ({ a: r.a, n: r.n, ob: nat * (r.obDr - r.obCr), inc: nat > 0 ? r.dr : r.cr, dec: nat > 0 ? r.cr : r.dr, cb: nat * r.bal }));
+    const mov = (pres, nat = 1) => { const rows = tb.rows.filter(r => pres.some(p => r.a.startsWith(p)) && !(pres.includes('141') && r.a.startsWith('14121'))).map(r => ({ a: r.a, n: r.n, ob: nat * (r.obDr - r.obCr), inc: nat > 0 ? r.dr : r.cr, dec: nat > 0 ? r.cr : r.dr, cb: nat * r.bal }));
       const tot = rows.reduce((s, r) => ({ ob: s.ob + r.ob, inc: s.inc + r.inc, dec: s.dec + r.dec, cb: s.cb + r.cb }), { ob: 0, inc: 0, dec: 0, cb: 0 }); return { rows, tot }; };
     const pl = plRange(f, t), cost = all(`SELECT coalesce(tcost,'(chưa phân loại)') k, sum(CASE WHEN side='dr' THEN amount ELSE -amount END) v FROM agg e WHERE ${INC} AND (substr(acc,1,1) IN ('6','8')) AND acc NOT LIKE '911%'${f ? ` AND ym>='${f}'` : ''} AND ym<='${t}' GROUP BY 1 ORDER BY v DESC`);
     const top = cost.slice(0, 15), costOther = cost.slice(15).reduce((s, r) => s + r.v, 0);
@@ -265,7 +286,7 @@ function make(all, okYm, INC, plRange, run) {
         N('V.3', 'Phải thu của khách hàng (10 khách hàng có số dư lớn nhất)', { type: 'top', ...PT(['131'], t), ob: prev ? PT(['131'], prev).total : 0 }),
         N('V.4', 'Trả trước cho người bán (dư Nợ TK 331)', { type: 'top', ...PT(['331'], t), ob: prev ? PT(['331'], prev).total : 0 }),
         N('V.5', 'Phải thu khác, tạm ứng, ký quỹ', { type: 'mov', ...mov(['136', '138', '141', '244']) }),
-        N('V.7', 'Hàng tồn kho', { type: 'mov', ...mov(['151', '152', '153', '154', '155', '156', '157', '158']) }),
+        N('V.7', 'Hàng tồn kho', { type: 'mov', ...mov(['151', '152', '153', '154', '155', '156', '157', '158', '14121']) }),
         N('V.8', 'Chi phí trả trước', { type: 'mov', ...mov(['242']) }),
         N('V.9', 'Tài sản cố định hữu hình, vô hình – nguyên giá', { type: 'mov', ...mov(['211', '212', '213']) }),
         N('V.10', 'Giá trị hao mòn luỹ kế', { type: 'mov', ...mov(['214'], -1) }),

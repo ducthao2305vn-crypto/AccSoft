@@ -72,6 +72,11 @@ function make(db, all, get, run, FIN) {
     }
     return m;
   }
+  const DUAL = ['138812', '13111', '33111', '33121'];
+  function acctBal(pre, d0, d1) { const m = new Map();
+    for (const [side, sg] of [['debit', 1], ['credit', -1]]) for (const r of all(`SELECT e.acc_${side} a, sum(CASE WHEN e.account_date<? THEN e.amount ELSE 0 END) ob, sum(CASE WHEN e.account_date>=? THEN e.amount ELSE 0 END) mv FROM entries e WHERE e.account_date<=? AND ${rng('e.acc_' + side, pre)} GROUP BY 1`, d0, d0, d1)) {
+      if (DUAL.some(d => String(r.a).startsWith(d))) continue; const o = m.get(r.a) || m.set(r.a, { acc: r.a, ob: 0, dr: 0, cr: 0 }).get(r.a); o.ob += sg * r.ob; if (sg > 0) o.dr += r.mv; else o.cr += r.mv; }
+    return [...m.values()]; }
   // Phân bổ số dư (theo chiều nat) vào các khoản tăng gần nhất (FIFO) → số ngày quá hạn của từng phần
   function fifo(mv, nat, asOf, term) {
     const at = new Date(asOf).getTime(); let bal = 0; const inc = [];
@@ -87,15 +92,21 @@ function make(db, all, get, run, FIN) {
 
   // TK 131 và 331 lấy ròng theo đối tượng ở cấp 3 số (giống B01) để tổng dư Có / dư Nợ khớp đúng mã 131, 132, 311, 312; cột 'accs' ghi TK chi tiết thực tế.
   // Nhóm báo cáo: mỗi mục = [tiêu đề, [[tiền tố, nat, chế độ ('side' = chỉ lấy đối tượng dư đúng chiều, 'net' = lấy ròng)]]]
-  const AP_SEC = [['I', 'Phải trả người bán (C331)', [['331', -1, 'side']]], ['II', 'Người mua trả tiền trước (C131, C138812)', [['131', -1, 'side'], ['138812', -1, 'side']]],
+  const AP_SEC = [['I', 'Phải trả người bán (C33111, C33121)', [['33111', -1, 'side'], ['33121', -1, 'side'], ['331', -1, 'acct']]], ['II', 'Người mua trả tiền trước (C13111, C138812)', [['13111', -1, 'side'], ['131', -1, 'acct'], ['138812', -1, 'side']]],
     ['III', 'Phải trả khác (C3388, C353)', [['3388', -1, 'side'], ['353', -1, 'side']]]];
-  const AR_SEC = [['I', 'Phải thu khách hàng (N131: 1311, 1317)', [['131', 1, 'side']]], ['II', 'Trả trước cho người bán (N331)', [['331', 1, 'side']]],
+  const AR_SEC = [['I', 'Phải thu khách hàng (N13111; 1317 ròng)', [['13111', 1, 'side'], ['131', 1, 'acct']]], ['II', 'Trả trước cho người bán (N33111, N33121)', [['33111', 1, 'side'], ['33121', 1, 'side'], ['331', 1, 'acct']]],
     ['III', 'Phải thu khác (138811, 13888, 1411 – số dư ròng)', [['138811', 1, 'net'], ['13888', 1, 'net'], ['1411', 1, 'net']]]];
   function debts(secs, from, to, term, ageFn) {
     const d0 = from + '-01', d1 = lastDay(to), d00 = new Date(new Date(d0).getTime() - DAY).toISOString().slice(0, 10), out = [];
     for (const [no, title, defs] of secs) {
       const rows = [], tb = [];
-      for (const [pre, nat, mode] of defs) { const PB = partnerBal(pre, d0, d1);
+      for (const [pre, nat, mode] of defs) {
+        if (mode === 'acct') { // TK công nợ không lưỡng tính: số dư ròng từng TK chi tiết (như B01), không theo đối tượng
+          for (const a of acctBal(pre, d0, d1)) { const ob = nat * a.ob, cb = nat * (a.ob + a.dr - a.cr); if (cb <= 0.005 && ob <= 0.005) continue;
+            const inc = nat > 0 ? a.dr : a.cr, dec = nat > 0 ? a.cr : a.dr, r = { acc: a.acc, accs: a.acc, bp: `TK ${a.acc} – số dư ròng (không theo đối tượng)`, ob: Math.max(0, ob), inc, dec, cb: Math.max(0, cb) };
+            r.adj = r.cb - (r.ob + inc - dec); Object.assign(r, ageFn([], [])); rows.push(r); }
+          continue; }
+        const PB = partnerBal(pre, d0, d1);
         // Đối chiếu Trial balance: số dư TK trên CĐPS (fin_mv) = tổng số dư ròng mọi đối tượng = dư đúng chiều (báo cáo) + dư ngược chiều (thuộc mẫu khác)
         const tbv = nat * get(`SELECT ifnull(sum(dr) - sum(cr), 0) v FROM fin_mv WHERE ym<=? AND acc>=? AND acc<?`, to, pre, pre.slice(0, -1) + String.fromCharCode(pre.charCodeAt(pre.length - 1) + 1)).v;
         let net = 0, pos = 0, neg = 0; for (const o of PB.values()) { const c = nat * (o.ob + o.dr - o.cr); net += c; if (c > 0) pos += c; else neg += c; }
@@ -122,7 +133,7 @@ function make(db, all, get, run, FIN) {
   function m03(from, to, term = 30) {
     const r = debts(AP_SEC, from, to, term, apAge);
     const bs = FIN.balanceSheet(to.slice(0, 4) + '-01', to), L = new Map(bs.lines.map(l => [l.code, l.cb]));
-    r.check = [['Phải trả người bán – B01 mã 311', r.secs[0], L.get('311') || 0], ['Người mua trả tiền trước – B01 mã 312 (chỉ 131)', { rows: r.secs[1].rows.filter(x => x.acc === '131') }, L.get('312') || 0]]
+    r.check = [['Phải trả người bán – B01 mã 311', r.secs[0], L.get('311') || 0], ['Người mua trả tiền trước – B01 mã 312 (TK 131)', { rows: r.secs[1].rows.filter(x => x.acc.startsWith('131')) }, L.get('312') || 0]]
       .map(([n, s, fs]) => { const v = s.rows.reduce((a, x) => a + x.cb, 0); return { n, v, fs, diff: v - fs }; });
     return r;
   }

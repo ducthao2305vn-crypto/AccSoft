@@ -1,5 +1,16 @@
 # Lịch sử phiên bản
 
+## v4.85.0 – 08/11/2026
+- **Báo cáo tài chính (B01) – nguyên tắc trình bày công nợ mới:**
+  - TK theo dõi **lưỡng tính** 138812, 13111, 33111, 33121: tách dư Nợ / dư Có **theo từng đối tượng của chính TK đó**.
+  - Các TK công nợ khác (131x, 331x, 136, 336, 138, 141, 244, 338…): **số dư ròng từng TK chi tiết**. Dư Nợ vào tài sản, dư Có vào nợ phải trả; không tách theo đối tượng.
+  - **14121 tạm ứng vật tư** chuyển sang **Hàng tồn kho** (B01 mã 140, B09 mục V.7, B03 gián tiếp mã 10). Không còn tính vào phải thu.
+- Đầu tư ra nước ngoài – Mẫu 03 / 05 theo cùng nguyên tắc: dòng theo đối tượng cho 4 TK lưỡng tính, dòng số dư ròng cho các TK 131 / 331 chi tiết khác, nên tổng khớp B01 mã 131, 132, 311, 312.
+- **CĐPS và CĐPS theo đối tượng tô màu cho dễ đọc:**
+  - Mỗi nhóm cột đầu kỳ / phát sinh / cuối kỳ có nền riêng; số Nợ màu xanh, số Có màu cam.
+  - Các dòng cùng một đối tượng được nhóm bằng dải màu xen kẽ; TK lưỡng tính có nhãn "2 chiều".
+  - File Excel CĐPS theo đối tượng cũng tô dải màu theo đối tượng.
+
 ## v4.84.0 – 08/11/2026
 - Đầu tư ra nước ngoài – **Mẫu 04 hàng tồn kho**: chi tiết theo **mã đối tượng** (đối tượng phía Nợ / Có của TK kho) × TK × mặt hàng, không còn theo kho. Ví dụ với 1412 xem được từng người tạm ứng còn tồn hàng nào, giá trị bao nhiêu, tuổi bao lâu.
 - **Mẫu 01:** thuế TNDN hoãn lại lấy từ TK 8212, cộng thêm bút toán 821 đối ứng 243/347 (khi đơn vị không tách 8212). Thuế hiện hành = tổng 821 − hoãn lại.

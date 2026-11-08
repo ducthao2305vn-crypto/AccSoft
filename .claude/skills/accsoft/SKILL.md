@@ -553,3 +553,8 @@ await p.evaluate(()=>window.api.q('stats'));
 - `kh:import` đọc file mẫu:
   - PL01: cột D–O và AL–AW, khớp dòng theo nội dung.
   - PL06: khối quý bắt đầu từ cột P, 11 cột mỗi khối. Bỏ qua dòng cha để không cộng trùng.
+
+### Nguyên tắc B01 công nợ (v4.85, `engine/fin.js`)
+- `DUAL = 138812, 13111, 33111, 33121`: dư Nợ / dư Có tính theo đối tượng (`dualSplit(ym)`, đọc trực tiếp từ entries, có cache theo max(id) + count).
+- Các TK công nợ khác: `G(prefixes, side)` lấy số dư ròng từng TK chi tiết từ `trial(…, 0)`, bỏ TK DUAL và 14121.
+- `INV_ADV = 14121`: tính vào mã 140 (hàng tồn kho), mục V.7 thuyết minh và mã 10 của B03 gián tiếp (tính l10 trước l09).
