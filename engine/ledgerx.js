@@ -34,54 +34,22 @@ function make(db, all, get, run) {
     const byDoc = new Map(); for (const x of L) { const k = s(x.doc); if (k) (byDoc.get(k) || byDoc.set(k, []).get(k)).push(x); }
     for (const [, xs] of byDoc) if (xs.length > 1 && Z(xs.reduce((q, x) => q + x.v, 0))) mark(xs, 'Cùng chứng từ (Nợ = Có)');
     const rest = () => L.filter(x => !done.has(key(x))), RF = new Map(L.map(x => [key(x), refs(x)]));
-    // 2b) theo tổng chứng từ: tổng các dòng cùng chứng từ (cùng chiều) = một chứng từ ngược chiều (vd chứng từ ghi nhận nhiều dòng ↔ một lần chi trả)
-    { const U = new Map(); for (const x of rest()) { const k = s(x.doc) + '|' + (x.v > 0 ? '+' : '-'); (U.get(k) || U.set(k, { xs: [], v: 0, d: x.d, w: new Set() }).get(k)).xs.push(x); }
-      for (const u of U.values()) { u.v = u.xs.reduce((q, x) => q + x.v, 0); u.d = u.xs[0].d; for (const x of u.xs) for (const w of String(x.ds || '').toLowerCase().split(/[^a-z0-9]+/)) if (w.length > 3) u.w.add(w); }
-      const UP = [...U.values()].filter(u => u.v > 0), UN = [...U.values()].filter(u => u.v < 0), byV = new Map();
-      for (const u of UN) { const k = Math.round(-u.v * 100); (byV.get(k) || byV.set(k, []).get(k)).push(u); }
-      for (const u of UP) { if (u.xs.length < 2 && (byV.get(Math.round(u.v * 100)) || []).every(v => v.xs.length < 2)) continue;
-        const C = (byV.get(Math.round(u.v * 100)) || []).filter(v => !v.used && v.xs.every(x => !done.has(key(x)))); if (!C.length || u.xs.some(x => done.has(key(x)))) continue;
-        const sim = v => { let c = 0; for (const w of u.w) if (v.w.has(w)) c++; return c; }, t0 = Date.parse(u.d);
-        const b = C.map(v => ({ v, c: sim(v), dd: Math.abs(Date.parse(v.d) - t0) })).sort((a, b) => b.c - a.c || a.dd - b.dd)[0]; b.v.used = true; mark([...u.xs, ...b.v.xs], 'Khớp tổng chứng từ'); } }
-    // 2c) một khoản (dòng hoặc tổng chứng từ) = tổng nhiều dòng ngược chiều gần ngày (vd chi phí 1 dòng ↔ thanh toán 100 dòng):
-    //     thử (i) chuỗi liên tiếp theo ngày, (ii) chuỗi liên tiếp các dòng có diễn giải giống, (iii) tổ hợp nhỏ (≤ 20 dòng giống nhất)
-    { const WIN = 120 * 864e5, wd = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 3 && !/^\d+$/.test(w)));
-      const sim = (A, B) => { if (!A.size || !B.size) return 0; let c = 0; for (const w of A) if (B.has(w)) c++; return c / Math.min(A.size, B.size); };
-      const W = new Map(L.map(x => [key(x), wd(x.ds)])), C100 = v => Math.round(Math.abs(v) * 100);
-      const units = () => { const U = new Map(); for (const x of rest()) { const k = s(x.doc) + '|' + (x.v > 0 ? '+' : '-'); (U.get(k) || U.set(k, []).get(k)).push(x); }
-        const out = []; for (const xs of U.values()) { out.push(xs); if (xs.length > 1) for (const x of xs) out.push([x]); } return out.sort((a, b) => C100(b.reduce((q, x) => q + x.v, 0)) - C100(a.reduce((q, x) => q + x.v, 0))); };
-      const contig = (arr, T) => { let i = 0, sum = 0; for (let j = 0; j < arr.length; j++) { sum += arr[j].c; while (sum > T && i <= j) sum -= arr[i++].c; if (sum === T && j > i) return arr.slice(i, j + 1); } return null; };
-      const subset = (arr, T) => { let it = 0; const pick = []; const go = (k, rem) => { if (rem === 0) return pick.length >= 2; if (k >= arr.length || ++it > 40000) return false;
-          if (arr[k].c <= rem) { pick.push(arr[k]); if (go(k + 1, rem - arr[k].c)) return true; pick.pop(); } return go(k + 1, rem); };
-        return go(0, T) ? pick.slice() : null; };
-      const R0 = rest().map(y => ({ y, k: key(y), c: C100(y.v), t: Date.parse(y.d), sg: Math.sign(y.v) })).sort((a, b) => a.t - b.t || a.y.id - b.y.id), TT = R0.map(o => o.t);
-      const lo = t => { let a = 0, b = TT.length; while (a < b) { const m = (a + b) >> 1; if (TT[m] < t) a = m + 1; else b = m; } return a; };
-      for (const u of units()) { if (u.some(x => done.has(key(x)))) continue; const T = C100(u.reduce((q, x) => q + x.v, 0)); if (!T) continue;
-        const sg = Math.sign(u[0].v), t0 = Date.parse(u[0].d), uw = new Set(u.flatMap(x => [...W.get(key(x))])), uk = new Set(u.map(key)), opp = [];
-        for (let i = lo(t0 - WIN); i < R0.length && R0[i].t <= t0 + WIN; i++) { const o = R0[i]; if (o.sg === -sg && o.c <= T && !done.has(o.k) && !uk.has(o.k)) opp.push({ y: o.y, c: o.c, t: o.t, sm: sim(uw, W.get(o.k)) }); }
-        if (opp.length < 2 || opp.length > 3000) continue; let hit = contig(opp, T), how = 'Một khoản = tổng nhiều dòng liên tiếp (gần ngày)';
-        const simL = opp.filter(o => o.sm >= 0.5);
-        if (!hit && simL.length >= 2) { hit = contig(simL, T); how = 'Một khoản = tổng các dòng cùng diễn giải'; }
-        if (!hit) { const top = [...opp].sort((a, b) => b.sm - a.sm || Math.abs(a.t - t0) - Math.abs(b.t - t0)).slice(0, 20).sort((a, b) => b.c - a.c); hit = subset(top, T); how = 'Một khoản = tổ hợp các dòng gần ngày / giống diễn giải'; }
-        if (hit) mark([...u, ...hit.map(o => o.y)], how); } }
-    // 2d) sau cùng mới ghép cặp đúng số tiền từng dòng (ưu tiên cùng tham chiếu, gần ngày)
-    const pos = rest().filter(x => x.v > 0), neg = rest().filter(x => x.v < 0), byAmt = new Map();
-    for (const x of neg) { const k = Math.round(-x.v * 100); (byAmt.get(k) || byAmt.set(k, []).get(k)).push(x); }
-    for (const x of pos) { const C = (byAmt.get(Math.round(x.v * 100)) || []).filter(y => !done.has(key(y))); if (!C.length) continue;
-      const rx = RF.get(key(x)), sc = y => { const ry = RF.get(key(y)); let c = 0; for (const w of rx) if (ry.has(w)) c++; return c; };
-      const t0 = Date.parse(x.d), best = C.map(y => ({ y, c: sc(y), dd: Math.abs(Date.parse(y.d) - t0) })).sort((a, b) => b.c - a.c || a.dd - b.dd)[0];
-      mark([x, best.y], best.c ? 'Cặp đúng số tiền + cùng tham chiếu' : 'Cặp đúng số tiền'); }
-    // 3) nhóm theo tham chiếu chung có tổng = 0
-    const byRef = new Map(); for (const x of rest()) for (const w of RF.get(key(x))) (byRef.get(w) || byRef.set(w, []).get(w)).push(x);
-    const cand = [...byRef].filter(([, xs]) => xs.length >= 2 && xs.length <= 60).sort((a, b) => a[1].length - b[1].length);
-    for (const [w, xs0] of cand) { const xs = xs0.filter(x => !done.has(key(x))); if (xs.length >= 2 && xs.some(x => x.v > 0) && xs.some(x => x.v < 0) && Z(xs.reduce((q, x) => q + x.v, 0))) mark(xs, 'Nhóm tham chiếu “' + w + '”'); }
-    // 3b) nhóm cùng nội dung diễn giải (bỏ số tiền, ký tự đặc biệt) có tổng = 0 – vd 2 dòng ghi nhận + 1 dòng chi trả cùng đề nghị
-    const dk = x => String(x.ds || '').toLowerCase().replace(/\$?\s?[\d,]+\.\d{1,2}\b/g, ' ').replace(/(amount|total|with|usd|\$)/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 90);
-    const byDs = new Map(); for (const x of rest()) { const k = dk(x); if (k.length >= 12) (byDs.get(k) || byDs.set(k, []).get(k)).push(x); }
-    for (const [, xs] of byDs) { if (xs.length < 2 || !xs.some(x => x.v > 0) || !xs.some(x => x.v < 0)) continue;
-      if (Z(xs.reduce((q, x) => q + x.v, 0))) { mark(xs, 'Nhóm cùng diễn giải'); continue; }
-      // một dòng = tổng các dòng ngược chiều cùng diễn giải
-      for (const x of xs) { if (done.has(key(x))) continue; const opp = xs.filter(y => !done.has(key(y)) && Math.sign(y.v) !== Math.sign(x.v)); if (opp.length >= 2 && opp.length <= 20 && Z(opp.reduce((q, y) => q + y.v, 0) + x.v)) mark([x, ...opp], 'Nhóm cùng diễn giải (1 ↔ nhiều)'); } }
+    // Nguyên tắc khớp theo CHỨNG TỪ (không tách dòng của một chứng từ), các chứng từ khớp phải trong vòng 5 tháng:
+    //  B1) tổng chứng từ A = − tổng chứng từ B (A Nợ = B Có) → khớp; ưu tiên cùng diễn giải, gần ngày nhất
+    //  B2) chứng từ A + chứng từ B + chứng từ C = 0 (vd A Có = B Nợ + C Nợ) → khớp
+    { const WIN = 153 * 864e5, C100 = v => Math.round(v * 100), wd = t => new Set(String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 3 && !/^\d+$/.test(w)));
+      const D = new Map(); for (const x of rest()) { const k = s(x.doc) || ('#' + x.id); const u = D.get(k) || D.set(k, { k, xs: [], v: 0, t: Infinity, w: new Set() }).get(k); u.xs.push(x); }
+      const U = [...D.values()].map(u => { u.v = C100(u.xs.reduce((q, x) => q + x.v, 0)); u.t = Math.min(...u.xs.map(x => Date.parse(x.d))); for (const x of u.xs) for (const w of wd(x.ds)) u.w.add(w); return u; }).filter(u => u.v !== 0).sort((a, b) => a.t - b.t);
+      const sim = (a, b) => { let c = 0; for (const w of a.w) if (b.w.has(w)) c++; return c / Math.max(1, Math.min(a.w.size, b.w.size)); };
+      const byV = new Map(); for (const u of U) (byV.get(u.v) || byV.set(u.v, []).get(u.v)).push(u);
+      const near = (a, b) => Math.abs(a.t - b.t) <= WIN;
+      // B1
+      for (const a of U) { if (a.used || a.v <= 0) continue; const C = (byV.get(-a.v) || []).filter(b => !b.used && near(a, b)); if (!C.length) continue;
+        const b = C.map(b => ({ b, sm: sim(a, b), dd: Math.abs(a.t - b.t) })).sort((x, y) => y.sm - x.sm || x.dd - y.dd)[0].b; a.used = b.used = true; mark([...a.xs, ...b.xs], 'B1: chứng từ ↔ chứng từ (cùng số tiền, ≤ 5 tháng)'); }
+      // B2
+      for (const a of U) { if (a.used) continue; const W = U.filter(b => !b.used && b !== a && near(a, b)); if (W.length < 2) continue; const M = new Map(); for (const b of W) (M.get(b.v) || M.set(b.v, []).get(b.v)).push(b);
+        let best = null; for (const b of W) { const need = -a.v - b.v; for (const c of (M.get(need) || [])) { if (c === b || c.used || !near(b, c)) continue; const sc = sim(a, b) + sim(a, c), dd = Math.abs(a.t - b.t) + Math.abs(a.t - c.t); if (!best || sc > best.sc || (sc === best.sc && dd < best.dd)) best = { b, c, sc, dd }; } }
+        if (best) { a.used = best.b.used = best.c.used = true; mark([...a.xs, ...best.b.xs, ...best.c.xs], 'B2: chứng từ A = chứng từ B + chứng từ C (≤ 5 tháng)'); } } }
     // 4) FIFO
     const P = rest().filter(x => x.v > 0).map(x => ({ x, left: x.v })), N = rest().filter(x => x.v < 0).map(x => ({ x, left: -x.v }));
     let i = 0, j = 0; while (i < P.length && j < N.length) { const q = Math.min(P[i].left, N[j].left); P[i].left -= q; N[j].left -= q; if (P[i].left < 0.005) i++; if (N[j].left < 0.005) j++; }
@@ -99,7 +67,7 @@ function make(db, all, get, run) {
     // các dòng đã khớp (tự động) hoặc đã sửa tay giữ nguyên; phần còn lại phân tích lại
     // nhóm khớp tự động đã lưu phải cân (Nợ = Có); nhóm lệch (vd mã nhóm trùng của bản cũ, dữ liệu nạp lại) → phân tích lại
     const GS0 = grpStat(new Set([...S.values()].filter(r => r.status === 'ok' && !r.manual).map(r => r.grp))), badG = new Set([...GS0].filter(([, r]) => Math.abs(r.v) > 0.005).map(([g]) => g));
-    const ALG = '2', algOld = ((get(`SELECT v FROM lg_meta WHERE k='alg'`) || {}).v || '') !== ALG; if (algOld) { run(`UPDATE lg_line SET status='open', grp='' WHERE manual=0`); run(`INSERT OR REPLACE INTO lg_meta(k, v) VALUES('alg', ?)`, ALG); for (const r of S.values()) if (!r.manual) { r.status = 'open'; r.grp = ''; } }
+    const ALG = '3', algOld = ((get(`SELECT v FROM lg_meta WHERE k='alg'`) || {}).v || '') !== ALG; if (algOld) { run(`UPDATE lg_line SET status='open', grp='' WHERE manual=0`); run(`INSERT OR REPLACE INTO lg_meta(k, v) VALUES('alg', ?)`, ALG); for (const r of S.values()) if (!r.manual) { r.status = 'open'; r.grp = ''; } }
     const keep = x => { const r = S.get(key(x)); return r && (r.manual || (r.status === 'ok' && r.grp && !badG.has(r.grp))) && (!o.reanalyze || r.manual); };
     const todo = L.filter(x => !keep(x)), A = analyze(todo), stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
     db.exec('BEGIN'); try {

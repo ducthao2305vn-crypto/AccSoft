@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.77.0 – 08/11/2026
+- Phân tích ledger – **viết lại nguyên tắc tự khớp theo chứng từ** (không còn tách lẻ từng dòng của một chứng từ để ghép với nơi khác, bỏ các bước ghép theo diễn giải / tổ hợp nhiều dòng dễ khớp sai):
+  - B0: chứng từ tự cân (Nợ = Có trong cùng chứng từ).
+  - **B1**: tổng chứng từ A = tổng chứng từ B ngược chiều, **trong vòng 5 tháng** (ưu tiên cùng diễn giải, gần ngày).
+  - **B2**: chứng từ A + chứng từ B + chứng từ C = 0 (vd A Có = B Nợ + C Nợ), **trong vòng 5 tháng**.
+  - Còn lại: bù trừ FIFO → Cần phân tích; còn treo → Chưa khớp.
+- Kết quả tự động cũ được phân tích lại một lần theo nguyên tắc mới (giữ dòng sửa tay và ghi chú).
+
 ## v4.76.2 – 08/11/2026
 - Bản build lại có đủ cột **Liên kết chứng từ (khớp với)** trong Excel ledger (bản 4.76.1 thiếu thay đổi này).
 
