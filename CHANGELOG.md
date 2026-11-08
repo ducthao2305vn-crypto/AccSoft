@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.75.0 – 08/11/2026
+- Phân tích ledger: **nhấn đúp một dòng Khớp** → cửa sổ liệt kê **tất cả bút toán cùng nhóm khớp** (kể cả ngoài kỳ đang xem) với Nợ − Có của nhóm; điều chỉnh ngay: **bỏ dòng đã chọn khỏi nhóm** (→ Chưa khớp; phần còn lại nếu không cân cũng chuyển Chưa khớp), chuyển dòng sang Cần phân tích, **huỷ cả nhóm**, hoặc **✅ xác nhận nhóm khớp đúng** (khoá lại, không bị phân tích tự động thay đổi). Nhấn đúp dòng trong cửa sổ để xem bút toán gốc. Dòng chưa khớp / cần phân tích nhấn đúp vẫn mở bút toán gốc.
+
 ## v4.74.1 – 07/11/2026
 - Phân tích ledger: lọc trên kết quả đã phân tích **theo khoảng ngày** (Lọc ngày từ – đến) và **ô tìm** chứng từ / diễn giải / ghi chú / mã nhóm – không phải phân tích lại; kết hợp được với lọc tình trạng, cách khớp, sắp xếp, xuất Excel theo đúng phần đang lọc; nút ✕ Bỏ lọc.
 

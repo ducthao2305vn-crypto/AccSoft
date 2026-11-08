@@ -128,6 +128,8 @@ function make(db, all, get, run) {
       if (note != null) run(`UPDATE lg_line SET note=? WHERE id=? AND side=?`, s(note), +k.id, k.side); n++; }
     return { n }; }
   function runs() { return all(`SELECT * FROM lg_run ORDER BY at DESC LIMIT 500`); }
-  return { partners, report, setLine, runs };
+  // Các dòng cùng nhóm khớp (để người dùng xem / điều chỉnh)
+  function group(g) { return all(`SELECT l.id, l.side, l.status, l.grp, l.how, l.note, l.manual, e.account_date d, e.document_no doc, e.description ds, e.acc_debit dr, e.acc_credit cr, e.amount a, CASE WHEN l.side='dr' THEN e.amount ELSE -e.amount END v, CASE WHEN l.side='dr' THEN e.partner_debit ELSE e.partner_credit END bp FROM lg_line l JOIN entries e ON e.id=l.id WHERE l.grp=? ORDER BY e.account_date, l.id`, s(g)); }
+  return { partners, report, setLine, runs, group };
 }
 module.exports = { make };
