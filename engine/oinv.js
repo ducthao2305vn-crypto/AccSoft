@@ -130,7 +130,12 @@ function make(db, all, get, run, FIN) {
       rows.sort((a, b) => b.cb - a.cb || a.bp.localeCompare(b.bp));
       out.push({ no, title, rows, tb });
     }
-    return { from, to, d0, d1, secs: out };
+    // TK chi tiết thuộc các nhóm công nợ còn số dư trên TB nhưng không nằm trong mẫu nào (03 hoặc 05) → liệt kê để không sót
+    const COVER = ['33111', '33121', '331', '13111', '131', '138812', '3388', '353', '138811', '13888', '1411'], GRP = ['131', '136', '138', '141', '244', '331', '336', '338', '344', '353'];
+    const rest = all(`SELECT acc, max(name) name, sum(dr) - sum(cr) v FROM fin_mv WHERE ym<=? AND substr(acc,1,3) IN (${GRP.map(() => '?').join(',')}) GROUP BY acc`, to, ...GRP)
+      .filter(r => Math.abs(r.v) > 0.005 && !COVER.some(c => String(r.acc).startsWith(c)))
+      .map(r => ({ acc: r.acc, name: String(r.name || '').replace(/^[^_]*_/, ''), v: r.v, note: String(r.acc).startsWith('1412') ? 'Tạm ứng vật tư – trình bày ở Mẫu 04 (hàng tồn kho)' : 'Chưa đưa vào Mẫu 03 / 05' }));
+    return { from, to, d0, d1, secs: out, rest };
   }
   // Mẫu 03 – quá hạn tính từ 6 tháng (TT48/2019): 6 tháng–1 năm · 1–2 năm · 2–3 năm · ≥ 3 năm
   const apAge = (p, p0) => { const b = bk(p, [180, 365, 730, 1095]), b0 = bk(p0, [180, 365, 730, 1095]); return { odOb: b0[2] + b0[3] + b0[4] + b0[5], od: [b[2], b[3], b[4], b[5]], odCb: b[2] + b[3] + b[4] + b[5], odLt6: b[1] }; };

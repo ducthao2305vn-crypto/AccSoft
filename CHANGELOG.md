@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.85.4 – 08/11/2026
+- Đầu tư ra nước ngoài – Mẫu 03 / 05: thêm bảng **TK công nợ còn số dư nhưng không thuộc mẫu nào**. Liệt kê mọi TK chi tiết nhóm 131, 136, 138, 141, 244, 331, 336, 338, 344, 353 còn số dư trên TB nhưng nằm ngoài danh sách của 2 mẫu, kèm ghi chú (vd 1412 → Mẫu 04), để không sót số dư. Có cả trên màn hình và trong file Excel.
+
 ## v4.85.3 – 08/11/2026
 - Đầu tư ra nước ngoài – Mẫu 03 / 05: bảng đối chiếu Trial balance có thêm dòng **"131 khác (ròng)"** và **"331 khác (ròng)"**, tức các TK 131 / 331 chi tiết ngoài 13111, 33111, 33121. Mỗi dòng ghi số TK, số dư TB, tổng ròng, chênh lệch và phần dư đúng / ngược chiều.
 
