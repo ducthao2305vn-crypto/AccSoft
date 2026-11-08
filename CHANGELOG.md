@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.78.0 – 08/11/2026
+- Phân tích ledger: **thanh tổng các dòng đang chọn** nổi ở cuối màn hình khi tick dòng (hoặc tick dòng tổng chứng từ = cả chứng từ): số dòng, số chứng từ, **tổng Nợ, tổng Có, Nợ − Có** (xanh ✅ khi cân, đỏ khi lệch); khi cân có nút **Đánh dấu khớp nhóm này** (các dòng chọn thành một nhóm khớp tay); nút ✕ Bỏ chọn.
+
 ## v4.77.3 – 08/11/2026
 - Phân tích ledger (gom theo chứng từ): **dòng tổng chứng từ tô màu theo nhóm khớp** (viền trái + nền nhạt cùng màu cho các chứng từ cùng nhóm; rê chuột xem mã nhóm); chứng từ chưa khớp / cần phân tích giữ nền đỏ / vàng.
 
