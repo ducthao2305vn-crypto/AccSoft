@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## v4.76.0 – 08/11/2026
+- Phân tích ledger – cửa sổ nhóm khớp: dòng **Liên kết chứng từ** cho biết chứng từ nào khớp với chứng từ nào (chứng từ ghi Có −số tiền ↔ chứng từ ghi Nợ +số tiền, chứng từ tự cân); mục **➕ Thêm dòng khác vào nhóm**: danh sách dòng chưa khớp / cần phân tích của cùng tài khoản – đối tượng (tìm theo chứng từ / diễn giải / số tiền, nhấn đúp xem bút toán gốc), tick để thấy Nợ − Có của nhóm sau khi thêm, bấm Thêm → cả nhóm được khoá là khớp tay.
+
 ## v4.75.0 – 08/11/2026
 - Phân tích ledger: **nhấn đúp một dòng Khớp** → cửa sổ liệt kê **tất cả bút toán cùng nhóm khớp** (kể cả ngoài kỳ đang xem) với Nợ − Có của nhóm; điều chỉnh ngay: **bỏ dòng đã chọn khỏi nhóm** (→ Chưa khớp; phần còn lại nếu không cân cũng chuyển Chưa khớp), chuyển dòng sang Cần phân tích, **huỷ cả nhóm**, hoặc **✅ xác nhận nhóm khớp đúng** (khoá lại, không bị phân tích tự động thay đổi). Nhấn đúp dòng trong cửa sổ để xem bút toán gốc. Dòng chưa khớp / cần phân tích nhấn đúp vẫn mở bút toán gốc.
 
