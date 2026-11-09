@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.88.1 – 09/11/2026
+- **Điều chỉnh dữ liệu** thêm trường **Mã tài sản (Asset)**, dùng giống biển số xe / mã vị trí:
+  - Tìm bút toán (vd TK 211, 214, 241 + diễn giải / chứng từ), tick các dòng, chọn "Mã tài sản", nhập hoặc chọn mã, bấm Áp dụng.
+  - Không sửa dữ liệu gốc; có lịch sử và bỏ điều chỉnh được.
+  - Lọc "Chỉ dòng đang trống" để tìm bút toán chưa gắn tài sản.
+- Báo cáo **Tài sản & khấu hao** ưu tiên mã tài sản đã điều chỉnh, sau đó mới đến cột Asset của file gốc.
+
 ## v4.88.0 – 08/11/2026
 - **Trường Asset (tài sản):** trước đây không được đọc khi nạp nên dữ liệu chưa có. Từ bản này:
   - Khi nạp file hạch toán, tự đọc cột **Asset** (chấp nhận các tên Asset / Asset Name / A_Asset_ID / Tài sản…).

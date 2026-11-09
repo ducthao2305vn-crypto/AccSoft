@@ -1,5 +1,5 @@
 'use strict';
-// Báo cáo tài sản cố định & khấu hao theo trường Asset của dữ liệu hạch toán (cột Asset file ERP).
+// Báo cáo tài sản cố định & khấu hao theo trường Asset của dữ liệu hạch toán (cột Asset file ERP), ưu tiên giá trị điều chỉnh ở Điều chỉnh dữ liệu (field_adj, trường 'asset').
 // Nguyên giá: TK 211, 213 (Nợ tăng, Có giảm) · hao mòn luỹ kế: TK 214 (Có tăng, Nợ giảm) · khấu hao trong kỳ: Có 214 đối ứng Nợ TK chi phí (6xx, 241, 8xx).
 const NONE = '(chưa gắn tài sản)';
 const months = (f, t) => { const o = []; let [y, m] = f.split('-').map(Number); const [ty, tm] = t.split('-').map(Number); while (y < ty || (y === ty && m <= tm)) { o.push(`${y}-${String(m).padStart(2, '0')}`); if (++m > 12) { m = 1; y++; } } return o; };
@@ -7,7 +7,7 @@ const lastDay = ym => { const [y, m] = ym.split('-').map(Number); return `${ym}-
 
 function make(db, all, get) {
   function status() {
-    const r = get(`SELECT count(*) n, count(asset) a, count(DISTINCT asset) k FROM entries WHERE (acc_debit LIKE '21%' OR acc_credit LIKE '21%')`);
+    const r = get(`SELECT count(*) n, count(nullif(coalesce(fa.value, e.asset),'')) a, count(DISTINCT nullif(coalesce(fa.value, e.asset),'')) k FROM entries e LEFT JOIN field_adj fa ON fa.id=e.id AND fa.field='asset' WHERE (e.acc_debit LIKE '21%' OR e.acc_credit LIKE '21%')`);
     return { lines: r.n, withAsset: r.a, assets: r.k };
   }
   function report(o = {}) {
@@ -15,8 +15,8 @@ function make(db, all, get) {
     const get0 = k => M.get(k) || M.set(k, { asset: k, acc: new Set(), cost: { ob: 0, inc: 0, dec: 0 }, dep: { ob: 0, inc: 0, dec: 0 }, depM: {}, expAcc: new Set(), dept: new Set(), first: null, last: null, n: 0 }).get(k);
     // Nguyên giá 211 / 213 và hao mòn 214 – gộp theo tài sản × TK × phía × trước/trong kỳ
     for (const [side, sg] of [['debit', 1], ['credit', -1]]) {
-      for (const r of all(`SELECT ifnull(asset,'') k, acc_${side} a, acc_${side === 'debit' ? 'credit' : 'debit'} o, CASE WHEN account_date<? THEN 'P' ELSE ym END p, min(account_date) d1, max(account_date) d2, max(department) dep, sum(amount) v, count(*) n
-          FROM entries WHERE account_date<=? AND (acc_${side} LIKE '211%' OR acc_${side} LIKE '213%' OR acc_${side} LIKE '214%') AND NOT (acc_debit=acc_credit AND ifnull(asset,'')=ifnull(asset,'')) GROUP BY 1,2,3,4`, d0, d1)) {
+      for (const r of all(`SELECT ifnull(nullif(coalesce(fa.value, e.asset),''),'') k, e.acc_${side} a, e.acc_${side === 'debit' ? 'credit' : 'debit'} o, CASE WHEN e.account_date<? THEN 'P' ELSE e.ym END p, min(e.account_date) d1, max(e.account_date) d2, max(e.department) dep, sum(e.amount) v, count(*) n
+          FROM entries e LEFT JOIN field_adj fa ON fa.id=e.id AND fa.field='asset' WHERE e.account_date<=? AND (e.acc_${side} LIKE '211%' OR e.acc_${side} LIKE '213%' OR e.acc_${side} LIKE '214%') AND e.acc_debit<>e.acc_credit GROUP BY 1,2,3,4`, d0, d1)) {
         const x = get0(r.k || NONE); x.n += r.n; const isDep = String(r.a).startsWith('214');
         if (!isDep) { x.acc.add(r.a); if (sg > 0 && (!x.first || r.d1 < x.first)) x.first = r.d1; }
         const B = isDep ? x.dep : x.cost, v = isDep ? -sg * r.v : sg * r.v; // hao mòn: Có = tăng
