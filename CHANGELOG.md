@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.89.1 – 09/11/2026
+- **Gắn mã tài sản đơn giản như mã vị trí / biển số xe:** ở báo cáo Tài sản & khấu hao, nhấn đúp một dòng (vd "chưa gắn tài sản") để mở danh sách bút toán TK 211/213/214.
+  - Tìm theo chứng từ, diễn giải, đối tượng; lọc theo tháng.
+  - Tick các dòng (không tick = áp dụng cho cả danh sách đang lọc), chọn mã có sẵn hoặc "Nhập mã mới", rồi bấm **Gắn mã tài sản**.
+  - Có nút trả về giá trị gốc. Báo cáo tự cập nhật khi đóng.
+- Báo cáo tài sản lọc kỳ theo tháng hạch toán (trước đây theo ngày), khớp với danh sách bút toán và sổ cái.
+
 ## v4.89.0 – 09/11/2026
 - **Nạp mã tài sản từ Excel** (ở trang Điều chỉnh dữ liệu và trang Tài sản & khấu hao):
   - **Mẫu gán mã tài sản:** xuất các dòng TK 211/213/214 (chọn được thêm 241…) chưa có mã tài sản trong kỳ, đủ thông tin số chứng từ, line, ngày, TK, số tiền, đối tượng, diễn giải, kèm cột "Mã tài sản" để trống.

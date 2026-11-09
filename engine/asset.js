@@ -15,8 +15,8 @@ function make(db, all, get) {
     const get0 = k => M.get(k) || M.set(k, { asset: k, acc: new Set(), cost: { ob: 0, inc: 0, dec: 0 }, dep: { ob: 0, inc: 0, dec: 0 }, depM: {}, expAcc: new Set(), dept: new Set(), first: null, last: null, n: 0 }).get(k);
     // Nguyên giá 211 / 213 và hao mòn 214 – gộp theo tài sản × TK × phía × trước/trong kỳ
     for (const [side, sg] of [['debit', 1], ['credit', -1]]) {
-      for (const r of all(`SELECT ifnull(nullif(coalesce(fa.value, e.asset),''),'') k, e.acc_${side} a, e.acc_${side === 'debit' ? 'credit' : 'debit'} o, CASE WHEN e.account_date<? THEN 'P' ELSE e.ym END p, min(e.account_date) d1, max(e.account_date) d2, max(e.department) dep, sum(e.amount) v, count(*) n
-          FROM entries e LEFT JOIN field_adj fa ON fa.id=e.id AND fa.field='asset' WHERE e.account_date<=? AND (e.acc_${side} LIKE '211%' OR e.acc_${side} LIKE '213%' OR e.acc_${side} LIKE '214%') AND e.acc_debit<>e.acc_credit GROUP BY 1,2,3,4`, d0, d1)) {
+      for (const r of all(`SELECT ifnull(nullif(coalesce(fa.value, e.asset),''),'') k, e.acc_${side} a, e.acc_${side === 'debit' ? 'credit' : 'debit'} o, CASE WHEN e.ym<? THEN 'P' ELSE e.ym END p, min(e.account_date) d1, max(e.account_date) d2, max(e.department) dep, sum(e.amount) v, count(*) n
+          FROM entries e LEFT JOIN field_adj fa ON fa.id=e.id AND fa.field='asset' WHERE e.ym<=? AND (e.acc_${side} LIKE '211%' OR e.acc_${side} LIKE '213%' OR e.acc_${side} LIKE '214%') AND e.acc_debit<>e.acc_credit GROUP BY 1,2,3,4`, from, to)) {
         const x = get0(r.k || NONE); x.n += r.n; const isDep = String(r.a).startsWith('214');
         if (!isDep) { x.acc.add(r.a); if (sg > 0 && (!x.first || r.d1 < x.first)) x.first = r.d1; }
         const B = isDep ? x.dep : x.cost, v = isDep ? -sg * r.v : sg * r.v; // hao mòn: Có = tăng
@@ -38,6 +38,15 @@ function make(db, all, get) {
     const check = [['Nguyên giá (211 + 213)', T(r => r.cost.cb), led('211') + led('213')], ['Hao mòn luỹ kế (214)', T(r => r.dep.cb), -led('214')]].map(([n, v, l]) => ({ n, v, l, diff: v - l }));
     return { from, to, months: ms, rows, check, status: status(), none: rows.find(r => r.asset === NONE) || null };
   }
-  return { report, status };
+  // Bút toán TK 211 / 213 / 214 của một tài sản (NONE = chưa gắn) – để gán / đổi mã tài sản như mã vị trí
+  function detail(asset, from, to) {
+    const w = [`(e.acc_debit LIKE '211%' OR e.acc_debit LIKE '213%' OR e.acc_debit LIKE '214%' OR e.acc_credit LIKE '211%' OR e.acc_credit LIKE '213%' OR e.acc_credit LIKE '214%')`, 'e.acc_debit<>e.acc_credit'], a = [];
+    if (asset === NONE) w.push(`nullif(coalesce(fa.value, e.asset),'') IS NULL`); else { w.push(`coalesce(fa.value, e.asset)=?`); a.push(asset); }
+    if (to) { w.push('e.ym<=?'); a.push(to); }
+    return all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.description ds, e.created_by u,
+      e.asset orig, fa.value newVal FROM entries e LEFT JOIN field_adj fa ON fa.id=e.id AND fa.field='asset' WHERE ${w.join(' AND ')} ORDER BY e.account_date DESC, e.id LIMIT 20000`, ...a);
+  }
+  function values() { return all(`SELECT v, count(*) n FROM (SELECT nullif(coalesce(fa.value, e.asset),'') v FROM entries e LEFT JOIN field_adj fa ON fa.id=e.id AND fa.field='asset' WHERE e.asset IS NOT NULL OR fa.value IS NOT NULL) WHERE v IS NOT NULL GROUP BY v ORDER BY v`); }
+  return { report, status, detail, values };
 }
 module.exports = { make };
