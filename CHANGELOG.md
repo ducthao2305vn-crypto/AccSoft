@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.89.2 – 09/11/2026
+- Tài sản & khấu hao:
+  - **Sửa lỗi tiêu đề bảng** bị chồng chữ khi cuộn (tiêu đề 2 tầng) → 1 tầng: NG / HM / GTCL đầu kỳ, tăng, giảm, cuối kỳ.
+  - Thêm cột **Khoản mục chi phí** cho từng tài sản. Lấy theo khoản mục (Type of cost) có số tiền lớn nhất trên bút toán khấu hao (Có 214); tài sản chưa khấu hao thì lấy theo bút toán ghi tăng 211/213.
+  - Chế độ xem mới **Theo khoản mục chi phí**: số tài sản, nguyên giá, hao mòn, GTCL, khấu hao trong kỳ của từng khoản mục. Nhấn đúp một khoản mục để xem danh sách tài sản của khoản mục đó.
+  - Ô tìm kiếm tìm được cả theo khoản mục; file Excel có thêm cột khoản mục.
+
 ## v4.89.1 – 09/11/2026
 - **Gắn mã tài sản đơn giản như mã vị trí / biển số xe:** ở báo cáo Tài sản & khấu hao, nhấn đúp một dòng (vd "chưa gắn tài sản") để mở danh sách bút toán TK 211/213/214.
   - Tìm theo chứng từ, diễn giải, đối tượng; lọc theo tháng.

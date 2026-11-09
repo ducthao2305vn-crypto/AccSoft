@@ -26,8 +26,12 @@ function make(db, all, get) {
         if (r.dep) x.dept.add(r.dep); if (!x.last || r.d2 > x.last) x.last = r.d2;
       }
     }
+    // Khoản mục chi phí của tài sản: khoản mục (Type of cost) chiếm số tiền lớn nhất trên các bút toán khấu hao (Có 214); chưa khấu hao thì lấy theo bút toán ghi tăng 211 / 213
+    const TC = new Map();
+    for (const [w, pri] of [[`e.acc_credit LIKE '214%'`, 2], [`(e.acc_debit LIKE '211%' OR e.acc_debit LIKE '213%')`, 1]]) for (const r of all(`SELECT ifnull(nullif(coalesce(fa.value, e.asset),''),'') k, e.type_of_cost t, sum(abs(e.amount)) v FROM entries e LEFT JOIN field_adj fa ON fa.id=e.id AND fa.field='asset'
+        WHERE e.ym<=? AND ${w} AND ifnull(e.type_of_cost,'')<>'' GROUP BY 1,2`, to)) { const k = r.k || NONE, o = TC.get(k); if (!o || pri > o.pri || (pri === o.pri && r.v > o.v)) TC.set(k, { t: r.t, v: r.v, pri }); }
     const rows = [...M.values()].map(x => { const cb = B => B.ob + B.inc - B.dec, ng = cb(x.cost), hm = cb(x.dep), depP = ms.reduce((s, m) => s + (x.depM[m] || 0), 0);
-      return { asset: x.asset, acc: [...x.acc].sort().join(', '), dept: [...x.dept].slice(0, 3).join(', '), expAcc: [...x.expAcc].sort().join(', '), first: x.first, n: x.n,
+      return { asset: x.asset, tcost: (TC.get(x.asset) || {}).t || '', acc: [...x.acc].sort().join(', '), dept: [...x.dept].slice(0, 3).join(', '), expAcc: [...x.expAcc].sort().join(', '), first: x.first, n: x.n,
         cost: { ...x.cost, cb: ng }, dep: { ...x.dep, cb: hm }, nbv: ng - hm, nbvOb: x.cost.ob - x.dep.ob, depP, depM: ms.map(m => x.depM[m] || 0),
         rate: ng > 0.005 ? depP / ng * 12 / ms.length : null, full: ng > 0.005 && Math.abs(ng - hm) < 0.01 }; })
       .filter(r => Math.abs(r.cost.ob) + Math.abs(r.cost.inc) + Math.abs(r.cost.dec) + Math.abs(r.dep.ob) + Math.abs(r.dep.inc) + Math.abs(r.dep.dec) > 0.005)
