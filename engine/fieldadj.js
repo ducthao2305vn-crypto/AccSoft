@@ -73,6 +73,33 @@ function make(db, all, run, okYm, FIN) {
     for (const r of all(`SELECT f.value v, count(*) n, max(f.d) l FROM field_adj f JOIN entries e ON e.id=f.id WHERE f.field='contract' AND (e.partner_debit=? OR e.partner_credit=?) GROUP BY 1`, bp, bp)) add(r.v, r.n, 0, r.l);
     return [...m.values()].sort((a, b) => b.last.localeCompare(a.last) || b.n - a.n);
   }
-  return { search, values, set, remove, list, rebind, contractsOf, FIELDS };
+  // File mẫu gán mã tài sản: các dòng TK 211 / 213 / 214 (và TK thêm) chưa có mã tài sản (gồm cả giá trị đã điều chỉnh)
+  function assetTemplate(o = {}) {
+    const f = okYm(o.from), t = okYm(o.to), pres = String(o.acc || '211,213,214').split(/[,;\s]+/).filter(Boolean), w = [], a = [];
+    if (f) { w.push('e.ym>=?'); a.push(f); } if (t) { w.push('e.ym<=?'); a.push(t); }
+    w.push('(' + pres.map(() => '(e.acc_debit LIKE ? OR e.acc_credit LIKE ?)').join(' OR ') + ')'); for (const p of pres) a.push(p + '%', p + '%');
+    if (!o.all) w.push(`nullif(coalesce((SELECT x.value FROM field_adj x WHERE x.id=e.id AND x.field='asset'), e.asset),'') IS NULL`);
+    return all(`SELECT e.document_no doc, e.line_no line, e.account_date d, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.description ds,
+      coalesce((SELECT x.value FROM field_adj x WHERE x.id=e.id AND x.field='asset'), e.asset) asset FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.document_no, e.line_no LIMIT 100000`, ...a);
+  }
+  // Nạp mã tài sản từ Excel: mỗi dòng {doc (bắt buộc), line, date, acc, amt, asset (bắt buộc), note} → gán cho mọi bút toán khớp
+  function assetImport(rows, mode = 'fill') {
+    let ok = 0, lines = 0, skip = 0; const miss = [], multi = [];
+    for (const r of rows || []) {
+      const doc = String(r.doc || '').trim(), asset = String(r.asset || '').trim(); if (!doc || !asset) { skip++; continue; }
+      const w = ['document_no=?'], a = [doc];
+      if (r.line != null && r.line !== '') { w.push('line_no=?'); a.push(+r.line); }
+      if (r.acc) { w.push('(acc_debit LIKE ? OR acc_credit LIKE ?)'); a.push(String(r.acc).trim() + '%', String(r.acc).trim() + '%'); }
+      if (r.amt != null && r.amt !== '' && !isNaN(+r.amt)) { w.push('abs(amount-?)<0.005'); a.push(+r.amt); }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(r.date || '').slice(0, 10))) { w.push('account_date=?'); a.push(String(r.date).slice(0, 10)); }
+      let hit = all(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, partner_debit bp, partner_credit bpCr, asset FROM entries WHERE ${w.join(' AND ')}`, ...a);
+      if (mode === 'fill') { const done = new Set(all(`SELECT id FROM field_adj WHERE field='asset' AND id IN (${hit.map(() => '?').join(',') || 'NULL'})`, ...hit.map(h => h.id)).map(x => x.id)); hit = hit.filter(h => !h.asset && !done.has(h.id)); }
+      if (!hit.length) { if (miss.length < 30) miss.push(`${doc}${r.line != null && r.line !== '' ? ' line ' + r.line : ''}${r.acc ? ' TK ' + r.acc : ''}${r.amt ? ' · ' + r.amt : ''}`); continue; }
+      if (hit.length > 1 && multi.length < 10 && (r.line == null || r.line === '')) multi.push(`${doc}: ${hit.length} dòng`);
+      set(hit, 'asset', asset, r.note || 'Nạp từ Excel'); ok++; lines += hit.length;
+    }
+    return { rows: (rows || []).length, ok, lines, skip, notFound: miss.length, miss, multi };
+  }
+  return { search, values, set, remove, list, rebind, contractsOf, assetTemplate, assetImport, FIELDS };
 }
 module.exports = { make, FIELDS };

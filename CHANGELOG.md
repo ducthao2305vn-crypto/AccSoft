@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## v4.89.0 – 09/11/2026
+- **Nạp mã tài sản từ Excel** (ở trang Điều chỉnh dữ liệu và trang Tài sản & khấu hao):
+  - **Mẫu gán mã tài sản:** xuất các dòng TK 211/213/214 (chọn được thêm 241…) chưa có mã tài sản trong kỳ, đủ thông tin số chứng từ, line, ngày, TK, số tiền, đối tượng, diễn giải, kèm cột "Mã tài sản" để trống.
+  - **Nạp mã tài sản từ Excel:** đọc file có cột "Số chứng từ" và "Mã tài sản" (bắt buộc), cùng Line / Ngày / TK / Số tiền / Ghi chú (tuỳ chọn) để khớp chính xác. Chọn chỉ điền dòng còn trống hoặc ghi đè.
+  - Báo kết quả gồm số bút toán đã gán và danh sách dòng không khớp.
+  - Mã được lưu như điều chỉnh (không sửa dữ liệu gốc, có lịch sử, bỏ được).
+
 ## v4.88.1 – 09/11/2026
 - **Điều chỉnh dữ liệu** thêm trường **Mã tài sản (Asset)**, dùng giống biển số xe / mã vị trí:
   - Tìm bút toán (vd TK 211, 214, 241 + diễn giải / chứng từ), tick các dòng, chọn "Mã tài sản", nhập hoặc chọn mã, bấm Áp dụng.

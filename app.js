@@ -1409,10 +1409,11 @@ async function vFA(){
       <label>Đối tượng <input data-fa="bp" value="${esc(FAF.bp)}" style="width:170px"></label><label>Diễn giải <input data-fa="q" value="${esc(FAF.q)}" style="width:170px"></label>
       <label>Lọc theo <select data-fa="field">${Object.entries(FAN).map(([k,v])=>`<option value="${k}" ${FAF.field===k?'selected':''}>${v}</option>`).join('')}</select></label><label>giá trị chứa <input data-fa="val" value="${esc(FAF.val)}" style="width:150px"></label>
       <label><input type="checkbox" data-fa="empty" ${FAF.empty?'checked':''}>Chỉ dòng đang trống</label><label><input type="checkbox" data-fa="cash" ${FAF.cash?'checked':''}>Chỉ bút toán thu/chi tiền</label><label><input type="checkbox" data-fa="adjOnly" ${FAF.adjOnly?'checked':''}>Chỉ dòng đã điều chỉnh</label>
-      <button class="btn sm primary" id="faGo">Tìm</button></div>`:''}</div><div id="faRes"></div>`;
+      <button class="btn sm primary" id="faGo">Tìm</button><span style="flex:1"></span><button class="btn sm" id="faAT" title="Tải file Excel các dòng TK 211/213/214 chưa có mã tài sản trong kỳ – điền cột Mã tài sản rồi nạp lại">${ic('download')}Mẫu gán mã tài sản</button><button class="btn sm" id="faAI">${ic('upload')}Nạp mã tài sản từ Excel</button></div>`:''}</div><div id="faRes"></div>`;
   $('#faTabs').onclick=e=>{const b=e.target.closest('[data-fat]');if(b){FAF.tab=b.dataset.fat;ls.set('faPick',FAF);vFA()}};
   H.querySelectorAll('[data-fa]').forEach(el=>el.addEventListener('change',()=>{FAF[el.dataset.fa]=el.type==='checkbox'?el.checked:el.value;ls.set('faPick',FAF)}));
   if(FAF.tab==='h')return faHist();
+  $('#faAT').onclick=()=>faAssetTpl(FAF.from,FAF.to);$('#faAI').onclick=()=>faAssetImp();
   $('#faGo').onclick=()=>{H.querySelectorAll('[data-fa]').forEach(el=>FAF[el.dataset.fa]=el.type==='checkbox'?el.checked:el.value);ls.set('faPick',FAF);FASEL.clear();faRun()};
   H.querySelectorAll('input[data-fa]').forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')$('#faGo').click()}));
   if(FAR)faDraw();else $('#faRes').innerHTML='<div class="card mut">Nhập điều kiện rồi bấm <b>Tìm</b>.</div>';
@@ -2407,6 +2408,17 @@ function apSuggest(lines,allC){const nz=t=>String(t||'').toUpperCase().replace(/
 /* ===== v4.67.0: Phân tích sổ chi tiết (ledger) theo tài khoản × đối tượng ===== */
 const LGF=Object.assign({from:'',to:'',acc:'',bp:'',st:'',how:'',re:false,grp:true,sort:'date'},ls.get('lgPick',{}));let LGP={acc:null,list:[]},LGR=null;
 const LGST={ok:['Khớp','s-fixed'],check:['Cần phân tích','b-M'],open:['Chưa khớp','b-H']};
+/* Gán mã tài sản hàng loạt bằng Excel: tải mẫu (dòng 211/213/214 chưa có mã) → điền cột "Mã tài sản" → nạp lại */
+async function faAssetTpl(from,to){const acc=prompt('Các TK cần gán mã tài sản (cách nhau dấu phẩy):','211,213,214,241');if(acc==null)return;
+  const R=await aq('faAssetTpl',{from,to,acc});if(!R.length)return alert('Không còn dòng nào chưa có mã tài sản trong kỳ '+from+' – '+to);
+  const f=await api.xlsxSheets(`AccSoft_MauGanMaTaiSan_${from}_${to}.xlsx`,[['Gan ma tai san',R.map(r=>({'Số chứng từ':r.doc,'Line':r.line,'Ngày':r.d,'TK Nợ':r.dr,'TK Có':r.cr,'TK':String(r.dr).startsWith('21')||String(r.dr).startsWith('241')?r.dr:r.cr,'Số tiền':r.a,'Đối tượng Nợ':r.bp,'Đối tượng Có':r.bpCr,'Diễn giải':r.ds,'Mã tài sản':r.asset||'','Ghi chú':''}))],
+    ['Huong dan',[{'Hướng dẫn':'Điền cột "Mã tài sản" cho từng dòng (để trống = bỏ qua). Khi nạp, mỗi dòng được khớp theo Số chứng từ + Line + Ngày + TK + Số tiền.'},{'Hướng dẫn':'Có thể tự lập file riêng: chỉ cần 2 cột bắt buộc "Số chứng từ" và "Mã tài sản"; các cột Line / Ngày / TK / Số tiền / Ghi chú là tuỳ chọn để khớp chính xác hơn.'},{'Hướng dẫn':'Không có Line thì mọi dòng của chứng từ (lọc thêm theo TK, số tiền nếu có) đều được gán mã.'}]]]);
+  if(f)alert(`Đã xuất ${num(R.length)} dòng: ${f}`)}
+async function faAssetImp(){const r=await api.faAssetRead();if(!r)return;if(!r.rows.length)return alert(r.err||'File không có dòng nào có đủ Số chứng từ và Mã tài sản');
+  const ov=await ask(`Đọc được ${num(r.rows.length)} dòng có mã tài sản (sheet "${r.sheet}").\n\nOK = ghi đè cả bút toán đã có mã tài sản · Huỷ = chỉ điền cho bút toán còn trống`);
+  const x=await aq('faAssetImport',r.rows,ov?'all':'fill');
+  alert(`Đã gán mã tài sản cho ${num(x.lines)} bút toán (từ ${num(x.ok)}/${num(x.rows)} dòng file).`+(x.notFound?`\n\nKhông tìm thấy bút toán (hoặc đã có mã) cho ${x.notFound} dòng, vd:\n- ${x.miss.slice(0,10).join('\n- ')}`:'')+(x.multi.length?`\n\nDòng không có Line được gán cho nhiều bút toán: ${x.multi.join('; ')}`:''));
+  if(typeof ASR!=='undefined')ASR=null}
 /* ---------- Tài sản & khấu hao (theo trường Asset) ---------- */
 let ASF=ls.get('asPick',{from:'',to:'',q:'',only:''}),ASR=null;
 async function vAS(){const H=$('#asBody'),F=ASF;if(!F.to){const d=new Date();F.to=d.toISOString().slice(0,7);F.from=F.to.slice(0,4)+'-01'}
@@ -2417,9 +2429,10 @@ async function vAS(){const H=$('#asBody'),F=ASF;if(!F.to){const d=new Date();F.t
    <div class="filterrow"><label>Từ tháng <input type="month" id="asF" value="${F.from}"></label><label>Đến tháng <input type="month" id="asT" value="${F.to}"></label>
     <label>Tìm tài sản <input id="asQ" value="${esc(F.q)}" style="width:220px"></label>
     <label>Lọc <select id="asO"><option value="">Tất cả</option><option value="dep" ${F.only==='dep'?'selected':''}>Có khấu hao trong kỳ</option><option value="nodep" ${F.only==='nodep'?'selected':''}>Còn giá trị nhưng không khấu hao trong kỳ</option><option value="full" ${F.only==='full'?'selected':''}>Đã khấu hao hết</option><option value="neg" ${F.only==='neg'?'selected':''}>GTCL âm (hao mòn > nguyên giá)</option></select></label>
-    <button class="btn primary" id="asGo">${ic('trend')}Lập báo cáo</button><button class="btn" id="asXls" ${ASR?'':'disabled'}>${ic('download')}Xuất Excel</button></div></div><div id="asRes"></div>`;
+    <button class="btn primary" id="asGo">${ic('trend')}Lập báo cáo</button><button class="btn" id="asXls" ${ASR?'':'disabled'}>${ic('download')}Xuất Excel</button><span style="flex:1"></span><button class="btn sm" id="asTpl">${ic('download')}Mẫu gán mã tài sản</button><button class="btn sm" id="asImp">${ic('upload')}Nạp mã tài sản từ Excel</button></div></div><div id="asRes"></div>`;
   const rd=()=>{F.from=$('#asF').value;F.to=$('#asT').value;F.q=$('#asQ').value.trim();F.only=$('#asO').value;ls.set('asPick',F)};
   $('#asGo').onclick=async()=>{rd();$('#asRes').innerHTML='<div class="card"><span class="spin"></span> Đang tính…</div>';ASR=await aq('asReport',{from:F.from,to:F.to});$('#asXls').disabled=false;asDraw()};
+  $('#asTpl').onclick=()=>{rd();faAssetTpl(F.from,F.to)};$('#asImp').onclick=async()=>{await faAssetImp();vAS()};
   $('#asQ').oninput=()=>{rd();if(ASR)asDraw()};$('#asO').onchange=()=>{rd();if(ASR)asDraw()};
   $('#asXls').onclick=()=>{const R=ASR,ms=R.months;api.xlsxSheets(`AccSoft_TaiSan_KhauHao_${R.from}_${R.to}.xlsx`,[['Tai san',R.rows.map(r=>({'Tài sản':r.asset,'TK':r.acc,'Ngày ghi tăng':r.first,'Bộ phận':r.dept,'NG đầu kỳ':r.cost.ob,'NG tăng':r.cost.inc,'NG giảm':r.cost.dec,'NG cuối kỳ':r.cost.cb,'HM đầu kỳ':r.dep.ob,'HM tăng':r.dep.inc,'HM giảm':r.dep.dec,'HM cuối kỳ':r.dep.cb,'GTCL đầu kỳ':r.nbvOb,'GTCL cuối kỳ':r.nbv,'Khấu hao trong kỳ':r.depP,'Tỷ lệ KH năm':r.rate,'TK chi phí':r.expAcc}))],
     ['Khau hao theo thang',R.rows.filter(r=>r.depP).map(r=>Object.assign({'Tài sản':r.asset,'TK':r.acc,'TK chi phí':r.expAcc},Object.fromEntries(ms.map((m,i)=>['T'+ymLbl(m),r.depM[i]])),{'Cộng':r.depP}))],
