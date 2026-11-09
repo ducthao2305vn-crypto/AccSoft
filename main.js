@@ -428,13 +428,36 @@ async function init() {
     return { ...(await qa('llImport', aoa)), file: path.basename(filePaths[0]) };
   });
   // ---- Đối chiếu công nợ tạm ứng: biên bản (Excel) & gửi email cho từng nhân viên ----
-  const advSheets = (d, co) => { const nm = d.staff ? d.staff.name : (d.partners[0] || d.key), f2 = v => Math.round((+v || 0) * 100) / 100;
+  const advSheets = (d, co, sg) => { const nm = d.staff ? d.staff.name : (d.partners[0] || d.key), f2 = v => Math.round((+v || 0) * 100) / 100;
     const head = [['BIÊN BẢN ĐỐI CHIẾU CÔNG NỢ TẠM ỨNG'], [co || ''], [], ['Nhân viên', nm], ['Mã nhân viên', d.staff ? d.staff.code : ''], ['Phòng ban / Đơn vị', d.staff ? [d.staff.dept, d.staff.unit].filter(Boolean).join(' / ') : ''], ['Mã đối tượng công nợ', d.partners.join('; ')],
       ['Kỳ đối chiếu', `${d.from} → ${d.asOf}`], [], ['Số dư đầu kỳ', f2(d.open)], ['Tạm ứng trong kỳ', f2(d.dr)], ['Hoàn ứng / quyết toán trong kỳ', f2(d.cr)], ['Số dư cuối kỳ (nhân viên còn phải hoàn / quyết toán)', f2(d.close)], [],
-      ['Xác nhận của nhân viên:  ☐ Đồng ý số dư trên      ☐ Không đồng ý – số dư theo nhân viên: ................................'], ['Ghi chú: ...........................................................................................'], [], ['Kế toán', '', '', 'Nhân viên']];
+      ['Xác nhận của nhân viên:  ☐ Đồng ý số dư trên      ☐ Không đồng ý – số dư theo nhân viên: ................................'], ['Ghi chú: ...........................................................................................'], [],
+      ['NGƯỜI TẠM ỨNG', '', 'KẾ TOÁN', '', 'GIÁM ĐỐC TÀI CHÍNH (CFO)'], ['(Ký, ghi rõ họ tên)', '', '(Ký, ghi rõ họ tên)', '', '(Ký, ghi rõ họ tên)'], [], [], [], [nm, '', (sg && sg.acc) || '', '', (sg && sg.cfo) || '']];
     return { name: nm, sheets: [['Bien ban doi chieu', head], ['Khoan tam ung con treo', d.items.map(x => ({ 'Ngày tạm ứng': x.d, 'Số chứng từ': x.doc, 'Đề nghị tạm ứng': x.ar || '', 'Nội dung': x.ds, 'Số tiền tạm ứng': f2(x.amt), 'Còn phải hoàn / quyết toán': f2(x.left), 'Số ngày': x.age }))],
       ['So chi tiet', d.book.map(x => ({ 'Ngày': x.d, 'Số chứng từ': x.doc, 'TK': x.acc, 'TK đối ứng': x.oacc, 'Đề nghị tạm ứng': x.ar || '', 'Nội dung': x.ds, 'Tạm ứng (Nợ)': f2(x.dr), 'Hoàn ứng (Có)': f2(x.cr), 'Số dư': f2(x.bal) }))]] };
   };
+  // Biên bản đối chiếu tạm ứng dạng PDF (A4) – 3 chữ ký: người tạm ứng, kế toán, CFO
+  async function advPdf(d, co, sg = {}) {
+    const e = t => String(t ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]), f = v => (+v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), dmy = s => s ? String(s).slice(0, 10).split('-').reverse().join('/') : '';
+    const nm = d.staff ? d.staff.name : (d.partners[0] || d.key), st = d.staff || {};
+    const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:'Times New Roman',serif;font-size:13px;margin:28px 34px;color:#111}h1{text-align:center;font-size:18px;margin:14px 0 2px}.c{text-align:center}.m{color:#444}
+      table{border-collapse:collapse;width:100%;margin:8px 0}td,th{border:1px solid #888;padding:3px 5px;vertical-align:top;font-size:11.5px}th{background:#f2f2f2}.n{text-align:right;white-space:nowrap}.nb td{border:none;padding:2px 4px}
+      .sig{display:flex;justify-content:space-between;margin-top:26px;text-align:center;page-break-inside:avoid}.sig>div{width:32%}.sig b{display:block}.sig i{display:block;font-size:12px;color:#444}.sig .nm{margin-top:70px;font-weight:bold}</style></head><body>
+      <div><b>${e(co || '')}</b><br><span class=m>Phòng Tài chính – Kế toán</span></div>
+      <h1>BIÊN BẢN ĐỐI CHIẾU CÔNG NỢ TẠM ỨNG</h1><div class="c m">Kỳ đối chiếu: ${dmy(d.from)} – ${dmy(d.asOf)}</div>
+      <table class=nb style="margin-top:14px"><tr><td style="width:190px">Người tạm ứng:</td><td><b>${e(nm)}</b></td></tr><tr><td>Mã nhân viên:</td><td>${e(st.code || '')}</td></tr>
+        <tr><td>Phòng ban / Đơn vị:</td><td>${e([st.dept, st.unit].filter(Boolean).join(' / '))}</td></tr><tr><td>Mã đối tượng công nợ:</td><td>${e(d.partners.join('; '))}</td></tr></table>
+      <table><tr><th>Chỉ tiêu</th><th class=n style="width:150px">Số tiền</th></tr><tr><td>Số dư đầu kỳ (${dmy(d.from)})</td><td class=n>${f(d.open)}</td></tr><tr><td>Tạm ứng trong kỳ</td><td class=n>${f(d.dr)}</td></tr>
+        <tr><td>Hoàn ứng / quyết toán trong kỳ</td><td class=n>${f(d.cr)}</td></tr><tr><td><b>Số dư cuối kỳ tại ${dmy(d.asOf)} (còn phải hoàn / quyết toán)</b></td><td class=n><b>${f(d.close)}</b></td></tr></table>
+      ${d.items.length ? `<div style="margin-top:10px"><b>Chi tiết các khoản tạm ứng chưa hoàn / quyết toán</b></div><table><tr><th>Ngày</th><th>Chứng từ</th><th>Đề nghị TƯ</th><th>Nội dung</th><th class=n>Số tạm ứng</th><th class=n>Còn lại</th><th class=n>Số ngày</th></tr>
+        ${d.items.map(t => `<tr><td>${dmy(t.d)}</td><td>${e(t.doc)}</td><td>${e(t.ar || '')}</td><td>${e(String(t.ds || '').slice(0, 90))}</td><td class=n>${f(t.amt)}</td><td class=n>${f(t.left)}</td><td class=n>${t.age}</td></tr>`).join('')}</table>` : ''}
+      <p style="margin-top:12px">Xác nhận của người tạm ứng: &nbsp; ☐ Đồng ý số dư trên &nbsp;&nbsp; ☐ Không đồng ý – số dư theo người tạm ứng: ..............................</p>
+      <p>Ghi chú / giải trình: .............................................................................................................................</p>
+      <p class=m style="font-size:12px">Đề nghị người tạm ứng kiểm tra, ký xác nhận và gửi lại Phòng Tài chính trong vòng 07 ngày. Quá thời hạn trên không có phản hồi, số dư được coi là đã xác nhận.</p>
+      <div class=sig><div><b>NGƯỜI TẠM ỨNG</b><i>(Ký, ghi rõ họ tên)</i><div class=nm>${e(String(nm).replace(/^VTL_[A-Z]+_?\d+_/, ''))}</div></div><div><b>KẾ TOÁN</b><i>(Ký, ghi rõ họ tên)</i><div class=nm>${e(sg.acc || '')}</div></div><div><b>GIÁM ĐỐC TÀI CHÍNH (CFO)</b><i>(Ký, ghi rõ họ tên)</i><div class=nm>${e(sg.cfo || '')}</div></div></div></body></html>`;
+    const w = new BrowserWindow({ show: false, width: 900, height: 1300, webPreferences: { sandbox: true } });
+    try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html)); return await w.webContents.printToPDF({ pageSize: 'A4', printBackground: true }); } finally { w.destroy(); }
+  }
   const aoaBook = sheets => { const wb = R.XLSX.utils.book_new(); for (const [n, rows] of sheets) { const ws = Array.isArray(rows[0]) || !rows.length ? R.XLSX.utils.aoa_to_sheet(rows.length ? rows : [['(không có)']]) : R.XLSX.utils.json_to_sheet(rows); R.XLSX.utils.book_append_sheet(wb, ws, n.slice(0, 31)); } return wb; };
   // Đối chiếu công nợ 331 theo hợp đồng: xuất Excel (tổng hợp + chi tiết) và/hoặc Word (xác nhận số dư) – nhiều đối tượng → chọn thư mục
   handle('xls:color', async (_e, name, sheet, aoa, opt) => { const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: name, filters: [{ name: 'Excel', extensions: ['xlsx'] }] }); if (canceled) return null;
@@ -513,20 +536,25 @@ async function init() {
   });
   handle('adv:reconBook', async (_e, keys, o) => {
     const ds = []; for (const k of keys.slice(0, 60)) ds.push(await qa('advDetail', k, o));
-    if (ds.length === 1) { const x = advSheets(ds[0], o.company); return saveXlsx(`DoiChieuTamUng_${x.name.replace(/[^\w]+/g, '_').slice(0, 40)}_${o.asOf}.xlsx`, aoaBook(x.sheets)); }
+    if (ds.length === 1) { const x = advSheets(ds[0], o.company, o.signers); return saveXlsx(`DoiChieuTamUng_${x.name.replace(/[^\w]+/g, '_').slice(0, 40)}_${o.asOf}.xlsx`, aoaBook(x.sheets)); }
     const sum = ds.map(d => ({ 'Mã NV': d.staff ? d.staff.code : '', 'Nhân viên': d.staff ? d.staff.name : d.partners[0], 'Phòng ban': d.staff ? d.staff.dept : '', 'Đầu kỳ': d.open, 'Tạm ứng': d.dr, 'Hoàn ứng': d.cr, 'Cuối kỳ': d.close, 'Khoản còn treo': d.items.length }));
-    const sh = [['Tong hop', sum]]; ds.forEach((d, i) => { const x = advSheets(d, o.company); sh.push([`${i + 1}_${x.name}`.replace(/[\\/*?:\[\]]/g, '').slice(0, 31), x.sheets[0][1].concat([[], ['KHOẢN CÒN TREO']], [['Ngày', 'Chứng từ', 'Đề nghị TƯ', 'Nội dung', 'Số tiền', 'Còn lại', 'Số ngày']], d.items.map(t => [t.d, t.doc, t.ar || '', t.ds, t.amt, t.left, t.age]))]); });
+    const sh = [['Tong hop', sum]]; ds.forEach((d, i) => { const x = advSheets(d, o.company, o.signers); sh.push([`${i + 1}_${x.name}`.replace(/[\\/*?:\[\]]/g, '').slice(0, 31), x.sheets[0][1].concat([[], ['KHOẢN CÒN TREO']], [['Ngày', 'Chứng từ', 'Đề nghị TƯ', 'Nội dung', 'Số tiền', 'Còn lại', 'Số ngày']], d.items.map(t => [t.d, t.doc, t.ar || '', t.ds, t.amt, t.left, t.age]))]); });
     return saveXlsx(`DoiChieuTamUng_${ds.length}NV_${o.asOf}.xlsx`, aoaBook(sh));
   });
+  handle('adv:reconPdf', async (_e, key, o) => { const d = await qa('advDetail', key, o), nm = d.staff ? d.staff.name : (d.partners[0] || key);
+    const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] }); if (canceled) return null;
+    fs.writeFileSync(filePath, await advPdf(d, o.company, o.signers)); shell.openPath(filePath); return filePath; });
   handle('adv:reconMail', async (_e, keys, o) => {
     const esc = t => String(t ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]), fmt = v => (+v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }), msgs = [], skip = [];
     for (const k of keys) { const d = await qa('advDetail', k, o), to = d.staff && (d.staff.email1 || d.staff.email2); if (!to) { skip.push(k); continue; }
-      const x = advSheets(d, o.company), nm = x.name, fill = t => String(t || '').replace(/\{name\}/g, nm).replace(/\{balance\}/g, fmt(d.close)).replace(/\{asOf\}/g, d.asOf);
+      const x = advSheets(d, o.company, o.signers), nm = x.name, fill = t => String(t || '').replace(/\{name\}/g, nm).replace(/\{balance\}/g, fmt(d.close)).replace(/\{asOf\}/g, d.asOf);
       const html = `<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.6">${esc(fill(o.body)).replace(/\n/g, '<br>')}
         <table style="border-collapse:collapse;margin:12px 0" border="1" cellpadding="6"><tr><td>Số dư đầu kỳ (${esc(d.from)})</td><td align="right">${fmt(d.open)}</td></tr><tr><td>Tạm ứng trong kỳ</td><td align="right">${fmt(d.dr)}</td></tr><tr><td>Hoàn ứng / quyết toán trong kỳ</td><td align="right">${fmt(d.cr)}</td></tr><tr><td><b>Số dư tại ${esc(d.asOf)}</b></td><td align="right"><b>${fmt(d.close)}</b></td></tr></table>
         ${d.items.length ? `<b>Các khoản tạm ứng chưa hoàn / quyết toán:</b><table style="border-collapse:collapse;font-size:12px" border="1" cellpadding="4"><tr><th>Ngày</th><th>Chứng từ</th><th>Đề nghị TƯ</th><th>Nội dung</th><th>Còn lại</th><th>Số ngày</th></tr>${d.items.slice(0, 50).map(t => `<tr><td>${esc(t.d)}</td><td>${esc(t.doc)}</td><td>${esc(t.ar || '')}</td><td>${esc(String(t.ds || '').slice(0, 120))}</td><td align="right">${fmt(t.left)}</td><td align="right">${t.age}</td></tr>`).join('')}</table>` : ''}
         <p>Chi tiết xem file đính kèm. Vui lòng phản hồi xác nhận <b>đồng ý</b> hoặc <b>không đồng ý</b> (kèm số dư theo anh/chị).</p></div>`;
-      msgs.push({ key: k, to, subject: fill(o.subject), html, employee: nm, count: d.items.length, amount: d.close, attachment: { name: `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}.xlsx`, base64: R.toBuffer(aoaBook(x.sheets)).toString('base64') } });
+      const fn = `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}`, att = [{ name: fn + '.xlsx', base64: R.toBuffer(aoaBook(x.sheets)).toString('base64') }];
+      if (o.pdf !== false) att.push({ name: fn + '.pdf', base64: Buffer.from(await advPdf(d, o.company, o.signers)).toString('base64') });
+      msgs.push({ key: k, to, cc: o.cc || undefined, subject: fill(o.subject), html, employee: nm, count: d.items.length, amount: d.close, attachments: att });
     }
     const res = await mailer.sendAll(Q, msgs), ok = new Set(res.filter(r => r.ok).map(r => r.to));
     for (const m of msgs) if (ok.has(m.to)) await qa('advSetRecon', [m.key], o.asOf, 'sent', { amount: m.amount, sent: m.to });

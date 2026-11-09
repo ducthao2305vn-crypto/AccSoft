@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.90.0 – 09/11/2026
+- **Công nợ tạm ứng – gửi đối chiếu qua email:** mỗi nhân viên còn nợ nhận một thư riêng, đính kèm **biên bản đối chiếu Excel + PDF**.
+  - Biên bản gồm thông tin người tạm ứng, số dư đầu kỳ / tạm ứng / hoàn ứng / cuối kỳ, chi tiết khoản còn treo, ô xác nhận đồng ý / không đồng ý.
+  - **3 chữ ký:** Người tạm ứng · Kế toán · Giám đốc tài chính (CFO).
+  - Trong hộp gửi email nhập tên Kế toán, CFO và email CC (được nhớ cho lần sau); tick "Đính kèm PDF".
+  - Sau khi gửi, trạng thái chuyển "Đã gửi đối chiếu".
+- Chi tiết nhân viên có thêm nút **📑 Biên bản PDF** để xuất / in biên bản đối chiếu.
+
 ## v4.89.2 – 09/11/2026
 - Tài sản & khấu hao:
   - **Sửa lỗi tiêu đề bảng** bị chồng chữ khi cuộn (tiêu đề 2 tầng) → 1 tầng: NG / HM / GTCL đầu kỳ, tăng, giảm, cuối kỳ.

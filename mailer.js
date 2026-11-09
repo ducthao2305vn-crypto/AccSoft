@@ -28,7 +28,7 @@ function transport(store) {
 }
 async function verify(store) { const { t } = transport(store); await t.verify(); return true; }
 
-// msgs: [{to, cc, subject, html, attachment:{name, base64}, employee, count}]
+// msgs: [{to, cc, subject, html, attachment:{name, base64} | attachments:[{name, base64}], employee, count}]
 async function sendAll(store, msgs) {
   const { c, t } = transport(store);
   const out = [];
@@ -36,7 +36,7 @@ async function sendAll(store, msgs) {
     try {
       const info = await t.sendMail({
         from: c.from || c.user, to: m.to, cc: m.cc || c.cc || undefined, subject: m.subject, html: m.html,
-        attachments: m.attachment ? [{ filename: m.attachment.name, content: Buffer.from(m.attachment.base64, 'base64') }] : [],
+        attachments: (m.attachments || (m.attachment ? [m.attachment] : [])).map(x => ({ filename: x.name, content: Buffer.from(x.base64, 'base64') })),
       });
       store.logMail(m.employee, m.to, m.subject, m.count, 'ok', info.messageId || '');
       out.push({ to: m.to, ok: true });
