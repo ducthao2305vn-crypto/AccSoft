@@ -9,9 +9,15 @@ const R = require('./engine/reports');
 const mailer = require('./mailer');
 // Ngôn ngữ file xuất: khi giao diện chọn EN, mọi file .xlsx / .docx ghi ra, PDF và email được dịch sang tiếng Anh (engine/i18n.js)
 const I18 = require('./engine/i18n');
-{ const _wfs = fs.writeFileSync; fs.writeFileSync = (p, data, ...a) => { if (I18.lang() === 'en' && typeof p === 'string' && (Buffer.isBuffer(data) || data instanceof Uint8Array)) { if (/\.xlsx$/i.test(p)) data = I18.xlsx(Buffer.from(data)); else if (/\.docx$/i.test(p)) data = I18.docx(Buffer.from(data)); } return _wfs(p, data, ...a); }; }
-{ const _sa = mailer.sendAll; mailer.sendAll = (store, msgs) => _sa(store, I18.lang() !== 'en' ? msgs : msgs.map(m => ({ ...m, subject: I18.tr(m.subject, 'text'), html: I18.html(m.html), attachment: undefined,
-    attachments: (m.attachments || (m.attachment ? [m.attachment] : [])).map(x => /\.xlsx$/i.test(x.name) ? { ...x, base64: I18.xlsx(Buffer.from(x.base64, 'base64')).toString('base64') } : /\.docx$/i.test(x.name) ? { ...x, base64: I18.docx(Buffer.from(x.base64, 'base64')).toString('base64') } : x) }))); }
+const BRAND = require('./engine/brand'); // logo Telemor trên file xuất
+{ const _wfs = fs.writeFileSync; fs.writeFileSync = (p, data, ...a) => { if (I18.lang() === 'en' && typeof p === 'string' && (Buffer.isBuffer(data) || data instanceof Uint8Array)) { if (/\.xlsx$/i.test(p)) data = I18.xlsx(Buffer.from(data)); else if (/\.docx$/i.test(p)) data = I18.docx(Buffer.from(data)); } if (typeof p === 'string' && /\.xlsx$/i.test(p) && (Buffer.isBuffer(data) || data instanceof Uint8Array)) data = BRAND.xlsx(Buffer.from(data), path.basename(p)); return _wfs(p, data, ...a); }; }
+{ const _sa = mailer.sendAll; mailer.sendAll = (store, msgs) => _sa(store, msgs.map(m => {
+    const en = I18.lang() === 'en', att = (m.attachments || (m.attachment ? [m.attachment] : [])).map(x => {
+      if (/\.xlsx$/i.test(x.name)) { let b = Buffer.from(x.base64, 'base64'); if (en) b = I18.xlsx(b); return { ...x, base64: BRAND.xlsx(b, x.name).toString('base64') }; }
+      if (en && /\.docx$/i.test(x.name)) return { ...x, base64: I18.docx(Buffer.from(x.base64, 'base64')).toString('base64') }; return x; });
+    const logo = BRAND.png(); if (logo.length) att.push({ name: 'telemor-logo.png', base64: logo.toString('base64'), cid: 'telemorlogo' }); // logo hiển thị trong thư (ảnh nhúng CID)
+    const body = (logo.length ? '<div style="text-align:right;margin:0 0 8px"><img src="cid:telemorlogo" alt="Telemor" style="height:40px"></div>' : '') + (en ? I18.html(m.html) : m.html);
+    return { ...m, subject: en ? I18.tr(m.subject, 'text') : m.subject, html: body, attachment: undefined, attachments: att }; })); }
 const log = require('./engine/log');
 const { RULES_VERSION } = require('./engine/rules');
 const firstLine = m => String(m || '').split('\n')[0];
@@ -223,7 +229,7 @@ async function riskPdf() {
       ${(rec.items || []).slice(0, 10).map(x => `<tr><td>${e((x.t || '').slice(0, 30) + ' · ' + x.name.slice(0, 25))}</td><td class="n red">${x.missing.length || ''}</td><td class="n red">${x.double.length || ''}</td></tr>`).join('') || `<tr><td colspan=3>${e(rec.note || 'Không phát hiện')}</td></tr>`}</table></div></div>
     <div class=foot>AccSoft – báo cáo quản trị rủi ro nội bộ, không thay thế báo cáo kiểm toán. Số liệu theo dữ liệu ERP đã nạp và kết quả phân tích tại thời điểm lập.</div></div></body></html>`;
   const w = new BrowserWindow({ show: false, width: 1000, height: 1400, webPreferences: { sandbox: true } });
-  await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(I18.html(html)));
+  await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(BRAND.html(I18.html(html))));
   const pdf = await w.webContents.printToPDF({ pageSize: 'A4', printBackground: true, margins: { marginType: 'none' } });
   w.destroy();
   const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `AccSoft_BaoCaoRuiRo_${new Date().toISOString().slice(0, 10)}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
@@ -477,7 +483,7 @@ async function init() {
       <p class=m style="font-size:12px">Đề nghị người tạm ứng kiểm tra, ký xác nhận và gửi lại Phòng Tài chính trong vòng 07 ngày. Quá thời hạn trên không có phản hồi, số dư được coi là đã xác nhận.</p>
       <div class=sig><div><b>NGƯỜI TẠM ỨNG</b><i>(Ký, ghi rõ họ tên)</i><div class=nm>${e(String(nm).replace(/^VTL_[A-Z]+_?\d+_/, ''))}</div></div><div><b>KẾ TOÁN</b><i>(Ký, ghi rõ họ tên)</i><div class=nm>${e(sg.acc || '')}</div></div><div><b>GIÁM ĐỐC TÀI CHÍNH (CFO)</b><i>(Ký, ghi rõ họ tên)</i><div class=nm>${e(sg.cfo || '')}</div></div></div></body></html>`;
     const w = new BrowserWindow({ show: false, width: 900, height: 1300, webPreferences: { sandbox: true } });
-    try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(I18.html(html))); return await w.webContents.printToPDF({ pageSize: 'A4', printBackground: true }); } finally { w.destroy(); }
+    try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(BRAND.html(I18.html(html)))); return await w.webContents.printToPDF({ pageSize: 'A4', printBackground: true }); } finally { w.destroy(); }
   }
   const aoaBook = sheets => { const wb = R.XLSX.utils.book_new(); for (const [n, rows] of sheets) { const ws = Array.isArray(rows[0]) || !rows.length ? R.XLSX.utils.aoa_to_sheet(rows.length ? rows : [['(không có)']]) : R.XLSX.utils.json_to_sheet(rows); R.XLSX.utils.book_append_sheet(wb, ws, n.slice(0, 31)); } return wb; };
   // Đối chiếu công nợ 331 theo hợp đồng: xuất Excel (tổng hợp + chi tiết) và/hoặc Word (xác nhận số dư) – nhiều đối tượng → chọn thư mục

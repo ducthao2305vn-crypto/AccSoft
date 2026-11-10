@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.94.0 – 10/11/2026
+- **Logo Telemor trên mọi báo cáo xuất ra:**
+  - **Excel:** logo đặt ở góc trên bên phải mỗi sheet, ngay sau cột cuối có dữ liệu nên không che số liệu. Áp dụng cho mọi file .xlsx xuất ra và file Excel đính kèm email. File mẫu dùng để nạp lại (số dư đầu kỳ, danh mục, mẫu gán mã tài sản, GL Journal) không chèn logo.
+  - **PDF:** logo ở góc trên bên phải trang đầu (biên bản đối chiếu tạm ứng, báo cáo rủi ro).
+  - **Email:** logo hiển thị ở đầu thư (ảnh nhúng, không bị chặn như ảnh liên kết).
+
 ## v4.93.0 – 10/11/2026
 - **Biên bản đối chiếu tạm ứng có 2 loại** (chọn ở chi tiết nhân viên và trong hộp gửi email; áp dụng cho PDF, Excel, xem trước và nội dung email):
   - **Tổng hợp:** bảng theo từng **đề nghị tạm ứng** (số đề nghị, ngày, nội dung, số tạm ứng, đã hoàn / quyết toán, còn phải hoàn). Chỉ gồm đề nghị còn số dư; bỏ đề nghị có công nợ bằng 0.
