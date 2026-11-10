@@ -606,7 +606,8 @@ async function init() {
       const html = advMailHtml(d, (o.signers && o.signers.kind) || 'sum', fill(o.body), I18.lang() === 'en');
       const fn = `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}`, att = [{ name: fn + '.xlsx', base64: R.toBuffer(aoaBook(x.sheets)).toString('base64') }];
       if (o.pdf !== false) att.push({ name: fn + '.pdf', base64: Buffer.from(await advPdf(d, o.company, o.signers)).toString('base64') });
-      msgs.push({ key: k, to, cc: o.cc || undefined, subject: fill(o.subject), html, employee: nm, count: d.items.length, amount: d.close, attachments: att });
+      const ccl = [...new Set([...String(o.cc || '').split(/[;,]/), ...String(mailer.getConfig(Q).cc || '').split(/[;,]/)].map(x => x.trim()).filter(x => /@/.test(x) && x.toLowerCase() !== String(to).toLowerCase()))]; // CC = CC nhập khi gửi + CC mặc định trong cấu hình SMTP
+      msgs.push({ key: k, to, cc: ccl.length ? ccl.join(', ') : undefined, subject: fill(o.subject), html, employee: nm, count: d.items.length, amount: d.close, attachments: att });
     }
     const res = await mailer.sendAll(Q, msgs), ok = new Set(res.filter(r => r.ok).map(r => r.to));
     for (const m of msgs) if (ok.has(m.to)) await qa('advSetRecon', [m.key], o.asOf, 'sent', { amount: m.amount, sent: m.to });

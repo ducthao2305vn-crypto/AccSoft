@@ -1,5 +1,6 @@
 // Từ điển giao diện Tiếng Việt → English. I18N_EN: khớp nguyên chuỗi (đã bỏ khoảng trắng đầu/cuối); I18N_PH: cụm từ thay thế trong câu dài (dài trước).
 window.I18N_EN = {
+  'Chờ gửi': 'Pending', 'Đã gửi': 'Sent', 'Kết quả': 'Result', 'Hoàn tất': 'Done', 'CC mỗi thư:': 'CC on each email:', '(CC nhập ở trên + CC mặc định trong cấu hình SMTP)': '(CC entered above + default CC in SMTP settings)',
   'Chưa cấu hình máy chủ gửi mail (SMTP). Mở trang cấu hình ngay?': 'SMTP mail server is not configured. Open the settings now?',
   // Menu, nhóm, trang
   'Tổng quan': 'Overview', 'Công nợ phải thu': 'Receivables', 'Công nợ phải trả': 'Payables', 'Sổ sách & phân tích': 'Ledgers & analysis', 'Kết quả & báo cáo': 'Results & reports', 'Chi phí quản trị': 'Management costs', 'Danh mục & dữ liệu': 'Master data',
