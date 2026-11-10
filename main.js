@@ -439,10 +439,26 @@ async function init() {
       ['Kỳ đối chiếu', `${d.from} → ${d.asOf}`], [], ['Số dư đầu kỳ', f2(d.open)], ['Tạm ứng trong kỳ', f2(d.dr)], ['Hoàn ứng / quyết toán trong kỳ', f2(d.cr)], ['Số dư cuối kỳ (nhân viên còn phải hoàn / quyết toán)', f2(d.close)], [],
       ['Xác nhận của nhân viên:  ☐ Đồng ý số dư trên      ☐ Không đồng ý – số dư theo nhân viên: ................................'], ['Ghi chú: ...........................................................................................'], [],
       ['NGƯỜI TẠM ỨNG', '', 'KẾ TOÁN', '', 'GIÁM ĐỐC TÀI CHÍNH (CFO)'], ['(Ký, ghi rõ họ tên)', '', '(Ký, ghi rõ họ tên)', '', '(Ký, ghi rõ họ tên)'], [], [], [], [nm, '', (sg && sg.acc) || '', '', (sg && sg.cfo) || '']];
-    return { name: nm, sheets: [['Bien ban doi chieu', head], ['Khoan tam ung con treo', d.items.map(x => ({ 'Ngày tạm ứng': x.d, 'Số chứng từ': x.doc, 'Đề nghị tạm ứng': x.ar || '', 'Nội dung': x.ds, 'Số tiền tạm ứng': f2(x.amt), 'Còn phải hoàn / quyết toán': f2(x.left), 'Số ngày': x.age }))],
+    const kind = (sg && sg.kind) || 'sum', AR = advArRows(d, kind), arRows = [];
+    for (const a of AR) { arRows.push({ 'Đề nghị tạm ứng': a.ar, 'Ngày': a.d, 'Số chứng từ': '', 'Nội dung': a.ds, 'Số tạm ứng': f2(a.dr), 'Đã hoàn / quyết toán': f2(a.cr), 'Còn phải hoàn': f2(a.left) });
+      if (kind === 'detail') for (const x of a.L) arRows.push({ 'Đề nghị tạm ứng': '', 'Ngày': x.d, 'Số chứng từ': x.doc, 'Nội dung': x.ds, 'Số tạm ứng': x.dr ? f2(x.dr) : '', 'Đã hoàn / quyết toán': x.cr ? f2(x.cr) : '', 'Còn phải hoàn': '' }); }
+    arRows.push({ 'Đề nghị tạm ứng': 'Tổng cộng', 'Số tạm ứng': f2(AR.reduce((s, a) => s + a.dr, 0)), 'Đã hoàn / quyết toán': f2(AR.reduce((s, a) => s + a.cr, 0)), 'Còn phải hoàn': f2(AR.reduce((s, a) => s + a.left, 0)) });
+    return { name: nm, sheets: [['Bien ban doi chieu', head], [kind === 'detail' ? 'Chi tiet theo de nghi TU' : 'Tong hop theo de nghi TU', arRows],
       ['So chi tiet', d.book.map(x => ({ 'Ngày': x.d, 'Số chứng từ': x.doc, 'TK': x.acc, 'TK đối ứng': x.oacc, 'Đề nghị tạm ứng': x.ar || '', 'Nội dung': x.ds, 'Tạm ứng (Nợ)': f2(x.dr), 'Hoàn ứng (Có)': f2(x.cr), 'Số dư': f2(x.bal) }))]] };
   };
   // Biên bản đối chiếu tạm ứng dạng PDF (A4) – 3 chữ ký: người tạm ứng, kế toán, CFO
+  // Bảng theo đề nghị tạm ứng: 'sum' = tổng hợp, chỉ đề nghị còn số dư; 'detail' = mọi đề nghị (cả số dư 0) kèm từng bút toán
+  const advArRows = (d, kind) => { const A = (d.ars || []).map(a => { const L = (d.arLines || []).filter(x => x.ar === a.ar), first = L.find(x => x.dr > 0) || L[0] || {};
+      return { ar: a.ar, d: a.first, ds: first.ds || '', dr: a.dr, cr: a.cr, left: a.left || 0, L }; });
+    return (kind === 'detail' ? A : A.filter(a => Math.abs(a.left) > 0.005)).sort((a, b) => String(a.d).localeCompare(String(b.d))); };
+  function arTable(d, kind, e, f, dmy) {
+    const R = advArRows(d, kind); if (!R.length) return '<p><i>Không còn đề nghị tạm ứng nào có số dư.</i></p>';
+    const T = k => R.reduce((s, a) => s + a[k], 0);
+    return `<div style="margin-top:10px"><b>${kind === 'detail' ? 'Chi tiết theo đề nghị tạm ứng (gồm đề nghị đã hoàn ứng hết)' : 'Tổng hợp theo đề nghị tạm ứng còn số dư'}</b></div><table><tr><th>Đề nghị tạm ứng</th><th>Ngày</th><th>Nội dung</th><th class=n>Số tạm ứng</th><th class=n>Đã hoàn / quyết toán</th><th class=n>Còn phải hoàn</th></tr>
+      ${R.map(a => `<tr><td><b>${e(a.ar)}</b></td><td>${dmy(a.d)}</td><td>${e(String(a.ds).slice(0, 90))}</td><td class=n>${f(a.dr)}</td><td class=n>${f(a.cr)}</td><td class=n><b>${f(a.left)}</b></td></tr>` +
+        (kind === 'detail' ? a.L.map(x => `<tr style="color:#444"><td style="padding-left:18px">↳ ${e(x.doc)}</td><td>${dmy(x.d)}</td><td>${e(String(x.ds || '').slice(0, 90))}</td><td class=n>${x.dr ? f(x.dr) : ''}</td><td class=n>${x.cr ? f(x.cr) : ''}</td><td></td></tr>`).join('') : '')).join('')}
+      <tr><td colspan=3><b>Tổng cộng</b></td><td class=n><b>${f(T('dr'))}</b></td><td class=n><b>${f(T('cr'))}</b></td><td class=n><b>${f(T('left'))}</b></td></tr></table>`;
+  }
   async function advPdf(d, co, sg = {}) {
     const e = t => String(t ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]), f = v => (+v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), dmy = s => s ? String(s).slice(0, 10).split('-').reverse().join('/') : '';
     const nm = d.staff ? d.staff.name : (d.partners[0] || d.key), st = d.staff || {};
@@ -450,13 +466,12 @@ async function init() {
       table{border-collapse:collapse;width:100%;margin:8px 0}td,th{border:1px solid #888;padding:3px 5px;vertical-align:top;font-size:11.5px}th{background:#f2f2f2}.n{text-align:right;white-space:nowrap}.nb td{border:none;padding:2px 4px}
       .sig{display:flex;justify-content:space-between;margin-top:26px;text-align:center;page-break-inside:avoid}.sig>div{width:32%}.sig b{display:block}.sig i{display:block;font-size:12px;color:#444}.sig .nm{margin-top:70px;font-weight:bold}</style></head><body>
       <div><b>${e(co || '')}</b><br><span class=m>Phòng Tài chính – Kế toán</span></div>
-      <h1>BIÊN BẢN ĐỐI CHIẾU CÔNG NỢ TẠM ỨNG</h1><div class="c m">Kỳ đối chiếu: ${dmy(d.from)} – ${dmy(d.asOf)}</div>
+      <h1>BIÊN BẢN ĐỐI CHIẾU CÔNG NỢ TẠM ỨNG</h1><div class="c m">${sg.kind === 'detail' ? '(Chi tiết)' : '(Tổng hợp)'}</div><div class="c m">Kỳ đối chiếu: ${dmy(d.from)} – ${dmy(d.asOf)}</div>
       <table class=nb style="margin-top:14px"><tr><td style="width:190px">Người tạm ứng:</td><td><b>${e(nm)}</b></td></tr><tr><td>Mã nhân viên:</td><td>${e(st.code || '')}</td></tr>
         <tr><td>Phòng ban / Đơn vị:</td><td>${e([st.dept, st.unit].filter(Boolean).join(' / '))}</td></tr><tr><td>Mã đối tượng công nợ:</td><td>${e(d.partners.join('; '))}</td></tr></table>
       <table><tr><th>Chỉ tiêu</th><th class=n style="width:150px">Số tiền</th></tr><tr><td>Số dư đầu kỳ (${dmy(d.from)})</td><td class=n>${f(d.open)}</td></tr><tr><td>Tạm ứng trong kỳ</td><td class=n>${f(d.dr)}</td></tr>
         <tr><td>Hoàn ứng / quyết toán trong kỳ</td><td class=n>${f(d.cr)}</td></tr><tr><td><b>Số dư cuối kỳ tại ${dmy(d.asOf)} (còn phải hoàn / quyết toán)</b></td><td class=n><b>${f(d.close)}</b></td></tr></table>
-      ${d.items.length ? `<div style="margin-top:10px"><b>Chi tiết các khoản tạm ứng chưa hoàn / quyết toán</b></div><table><tr><th>Ngày</th><th>Chứng từ</th><th>Đề nghị TƯ</th><th>Nội dung</th><th class=n>Số tạm ứng</th><th class=n>Còn lại</th><th class=n>Số ngày</th></tr>
-        ${d.items.map(t => `<tr><td>${dmy(t.d)}</td><td>${e(t.doc)}</td><td>${e(t.ar || '')}</td><td>${e(String(t.ds || '').slice(0, 90))}</td><td class=n>${f(t.amt)}</td><td class=n>${f(t.left)}</td><td class=n>${t.age}</td></tr>`).join('')}</table>` : ''}
+      ${arTable(d, sg.kind, e, f, dmy)}
       <p style="margin-top:12px">Xác nhận của người tạm ứng: &nbsp; ☐ Đồng ý số dư trên &nbsp;&nbsp; ☐ Không đồng ý – số dư theo người tạm ứng: ..............................</p>
       <p>Ghi chú / giải trình: .............................................................................................................................</p>
       <p class=m style="font-size:12px">Đề nghị người tạm ứng kiểm tra, ký xác nhận và gửi lại Phòng Tài chính trong vòng 07 ngày. Quá thời hạn trên không có phản hồi, số dư được coi là đã xác nhận.</p>
@@ -562,7 +577,7 @@ async function init() {
       const x = advSheets(d, o.company, o.signers), nm = x.name, fill = t => String(t || '').replace(/\{name\}/g, nm).replace(/\{balance\}/g, fmt(d.close)).replace(/\{asOf\}/g, d.asOf);
       const html = `<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.6">${esc(fill(o.body)).replace(/\n/g, '<br>')}
         <table style="border-collapse:collapse;margin:12px 0" border="1" cellpadding="6"><tr><td>Số dư đầu kỳ (${esc(d.from)})</td><td align="right">${fmt(d.open)}</td></tr><tr><td>Tạm ứng trong kỳ</td><td align="right">${fmt(d.dr)}</td></tr><tr><td>Hoàn ứng / quyết toán trong kỳ</td><td align="right">${fmt(d.cr)}</td></tr><tr><td><b>Số dư tại ${esc(d.asOf)}</b></td><td align="right"><b>${fmt(d.close)}</b></td></tr></table>
-        ${d.items.length ? `<b>Các khoản tạm ứng chưa hoàn / quyết toán:</b><table style="border-collapse:collapse;font-size:12px" border="1" cellpadding="4"><tr><th>Ngày</th><th>Chứng từ</th><th>Đề nghị TƯ</th><th>Nội dung</th><th>Còn lại</th><th>Số ngày</th></tr>${d.items.slice(0, 50).map(t => `<tr><td>${esc(t.d)}</td><td>${esc(t.doc)}</td><td>${esc(t.ar || '')}</td><td>${esc(String(t.ds || '').slice(0, 120))}</td><td align="right">${fmt(t.left)}</td><td align="right">${t.age}</td></tr>`).join('')}</table>` : ''}
+        ${arTable(d, (o.signers && o.signers.kind) || 'sum', esc, v => (+v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), t => t ? String(t).slice(0, 10).split('-').reverse().join('/') : '')}
         <p>Chi tiết xem file đính kèm. Vui lòng phản hồi xác nhận <b>đồng ý</b> hoặc <b>không đồng ý</b> (kèm số dư theo anh/chị).</p></div>`;
       const fn = `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}`, att = [{ name: fn + '.xlsx', base64: R.toBuffer(aoaBook(x.sheets)).toString('base64') }];
       if (o.pdf !== false) att.push({ name: fn + '.pdf', base64: Buffer.from(await advPdf(d, o.company, o.signers)).toString('base64') });

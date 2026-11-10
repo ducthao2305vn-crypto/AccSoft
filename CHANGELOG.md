@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.93.0 – 10/11/2026
+- **Biên bản đối chiếu tạm ứng có 2 loại** (chọn ở chi tiết nhân viên và trong hộp gửi email; áp dụng cho PDF, Excel, xem trước và nội dung email):
+  - **Tổng hợp:** bảng theo từng **đề nghị tạm ứng** (số đề nghị, ngày, nội dung, số tạm ứng, đã hoàn / quyết toán, còn phải hoàn). Chỉ gồm đề nghị còn số dư; bỏ đề nghị có công nợ bằng 0.
+  - **Chi tiết:** mọi đề nghị tạm ứng, kể cả đề nghị đã hoàn ứng hết (công nợ bằng 0), kèm từng bút toán tạm ứng / hoàn ứng của đề nghị.
+  - Tổng "Còn phải hoàn" khớp số dư cuối kỳ của nhân viên.
+
 ## v4.92.1 – 10/11/2026
 - Công nợ tạm ứng: nút **👁 Xem trước PDF** mở biên bản đối chiếu trong cửa sổ xem PDF của ứng dụng (phóng to / thu nhỏ, in, tải về), không cần lưu file.
   - Có ở màn hình chi tiết nhân viên.
