@@ -666,7 +666,7 @@ async function vReport(){
   $('#tMailLog').innerHTML='<thead><tr><th>Thời gian</th><th>Nhân viên</th><th>Email</th><th class=n>Số lỗi</th><th>Kết quả</th></tr></thead><tbody>'+
     log.slice(0,100).map(x=>`<tr><td class=nw>${esc(x.at)}</td><td>${esc(short(x.employee))}</td><td>${esc(x.to)}</td><td class=n>${x.count}</td><td>${x.status==='ok'?'<span class="badge s-fixed">Đã gửi</span>':'<span class="badge b-H">Lỗi</span> '+esc(x.error)}</td></tr>`).join('')+'</tbody>';
   const c=await api.getSmtp();for(const k of ['host','port','user','from','cc'])$('#s_'+k).value=c[k]||'';$('#s_secure').checked=!!c.secure;$('#s_self').checked=!!c.allowSelfSigned;
-  $('#s_pass').value='';$('#s_pass').placeholder=c.hasPass?'•••••• (để trống = giữ nguyên)':'Mật khẩu / App password';
+  $('#s_pass').value='';$('#s_pass').placeholder=c.hasPass?'•••••• (đã lưu – để trống = giữ nguyên)':'Mật khẩu / App password';
 }
 ['rIntro','rSign','rDeadline','rSev','rGroup'].forEach(id=>{const v=ls.get(id,null);if(v!=null)$('#'+id).value=v;$('#'+id).addEventListener('change',()=>{ls.set(id,$('#'+id).value);if(id==='rSev'||id==='rGroup')vReport()})});
 $('#repPrint').onclick=()=>window.print();$('#repXls').onclick=()=>api.exportReport($('#rSev').value,$('#rGroup').value);
@@ -691,9 +691,24 @@ async function previewMail(u){const p=await api.mailPreview(u,mailOpts());CUR=-1
    <div class="pb"><div class="card"><div class="kv"><div>Đến</div><div>${esc(mailOf(u))}</div><div>Tiêu đề</div><div>${esc(p.subject)}</div><div>Đính kèm</div><div>AccSoft_CanKhacPhuc_${esc(short(u))}.xlsx (${num(p.count)} dòng)</div></div></div>
    <div class="card">${p.html}</div></div>`;
   $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail}
+
+// Ô CC: gõ để tìm nhân viên (tên, mã, phòng ban, email) trong Danh mục nhân viên, bấm để thêm email; nhiều email cách nhau bằng dấu ;
+function emailPicker(el){if(!el||el._ep)return;el._ep=1;el.setAttribute('autocomplete','off');const box=document.createElement('div');
+  box.style.cssText='position:fixed;z-index:9999;background:var(--bg,#fff);border:1px solid #d0d5dd;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:280px;overflow:auto;min-width:340px;display:none;font-size:13px';document.body.appendChild(box);
+  const parts=()=>el.value.split(/[;,]/).map(x=>x.trim()),cur=()=>parts().pop()||'';let T=0,items=[],hi=0;
+  const place=()=>{const r=el.getBoundingClientRect();box.style.left=r.left+'px';box.style.top=(r.bottom+2)+'px';box.style.width=Math.max(r.width,340)+'px'};
+  const draw=()=>{box.innerHTML=items.length?items.map((x,i)=>`<div data-i="${i}" style="padding:6px 10px;cursor:pointer;${i===hi?'background:#FEF0EB':''}"><b>${esc(x.name||'')}</b> <span class=mut>${esc(x.code||'')} · ${esc(x.dept||'')}</span><br><span style="color:#155EEF">${esc(x.email1||x.email2)}</span></div>`).join(''):'<div class=mut style="padding:8px 10px">Không tìm thấy nhân viên có email</div>';box.style.display='block';place()};
+  const pick=x=>{const p=parts();p.pop();const m=x.email1||x.email2;if(!p.includes(m))p.push(m);el.value=p.filter(Boolean).join('; ')+'; ';box.style.display='none';el.focus();el.dispatchEvent(new Event('change'))};
+  const search=async()=>{const q=cur();if(q.length<1){box.style.display='none';return}const r=await aq('staffList',{q});items=(r.rows||[]).filter(x=>(x.email1||x.email2)&&x.status!=='inactive').slice(0,30);hi=0;draw()};
+  el.addEventListener('input',()=>{clearTimeout(T);T=setTimeout(search,200)});el.addEventListener('focus',()=>{if(cur())search()});
+  el.addEventListener('keydown',e=>{if(box.style.display!=='block')return;if(e.key==='ArrowDown'){hi=Math.min(hi+1,items.length-1);draw();e.preventDefault()}else if(e.key==='ArrowUp'){hi=Math.max(hi-1,0);draw();e.preventDefault()}else if(e.key==='Enter'&&items[hi]){pick(items[hi]);e.preventDefault()}else if(e.key==='Escape')box.style.display='none'});
+  box.addEventListener('mousedown',e=>{const d=e.target.closest('[data-i]');if(d){e.preventDefault();pick(items[+d.dataset.i])}});
+  el.addEventListener('blur',()=>setTimeout(()=>box.style.display='none',150));const ob=new MutationObserver(()=>{if(!document.body.contains(el)){box.remove();ob.disconnect()}});ob.observe(document.body,{childList:true,subtree:true});}
+emailPicker($('#s_cc'));
 $('#s_save').onclick=async()=>{const v=k=>$('#s_'+k).value.trim();
   await api.setSmtp({host:v('host'),port:v('port')||'587',user:v('user'),pass:$('#s_pass').value,from:v('from'),cc:v('cc'),secure:$('#s_secure').checked,allowSelfSigned:$('#s_self').checked});
-  $('#smtpMsg').textContent='Đang kiểm tra kết nối…';const r=await api.verifySmtp();$('#smtpMsg').innerHTML=r.ok?'<span class=pos>✓ Kết nối SMTP thành công</span>':'<span class=neg>✕ '+esc(r.error)+'</span>';$('#s_pass').value=''};
+  $('#smtpMsg').textContent='Đang kiểm tra kết nối…';const r=await api.verifySmtp();$('#smtpMsg').innerHTML=r.ok?'<span class=pos>✓ Kết nối SMTP thành công</span>':'<span class=neg>✕ '+esc(smtpHint(r.error))+'</span>';$('#s_pass').value='';{const c=await api.getSmtp();$('#s_pass').placeholder=c.hasPass?'•••••• (đã lưu – để trống = giữ nguyên)':'Mật khẩu / App password'}};
+function smtpHint(e){e=String(e||'');if(/ENOTFOUND|EAI_AGAIN/.test(e))return e+' – không tìm thấy máy chủ này: kiểm tra lại tên máy chủ với IT (Office 365: smtp.office365.com cổng 587, bỏ SSL), hoặc máy đang không vào được mạng nội bộ/VPN.';if(/ETIMEDOUT|ECONNREFUSED|ESOCKET/.test(e))return e+' – không kết nối được cổng này: thử cổng 587 (bỏ SSL) hoặc 465 (chọn SSL); mạng có thể chặn cổng SMTP.';if(/535|auth/i.test(e))return e+' – sai tài khoản / mật khẩu (Office 365 cần App password hoặc bật SMTP AUTH).';return e}
 
 /* ---------- Quản lý dữ liệu ---------- */
 let INFO_VER=null;
@@ -1959,7 +1974,7 @@ function stMail(list){const to=list.filter(x=>x.email1||x.email2),miss=list.leng
       <label style="display:grid;gap:4px">Tiêu đề<input id="smS" value="Thông báo từ phòng Tài chính – {name}"></label>
       <label style="display:grid;gap:4px;margin-top:10px">Nội dung<textarea id="smB" style="min-height:220px">Kính gửi anh/chị {name} ({position} – {dept}),\n\n\n\nTrân trọng,\nPhòng Tài chính</textarea></label>
       <div class="filterrow" style="margin-top:10px"><label>Kế toán ký <input id="amAcc" value="${esc(ls.get('advSigners',{}).acc||'')}" placeholder="Họ tên kế toán" style="width:200px"></label><label>CFO ký <input id="amCfo" value="${esc(ls.get('advSigners',{}).cfo||'')}" placeholder="Họ tên Giám đốc tài chính" style="width:200px"></label>
-        <label>CC <input id="amCc" value="${esc(ls.get('advSigners',{}).cc||'')}" placeholder="email kế toán, CFO…" style="width:240px"></label><label><input type="checkbox" id="amPdf" checked> Đính kèm PDF</label><label>Loại biên bản <select id="amKind"><option value="sum" ${(ls.get('advSigners',{}).kind||'sum')==='sum'?'selected':''}>Tổng hợp (đề nghị còn số dư)</option><option value="detail" ${ls.get('advSigners',{}).kind==='detail'?'selected':''}>Chi tiết (mọi đề nghị + bút toán)</option></select></label></div>
+        <label>CC <input id="amCc" value="${esc(ls.get('advSigners',{}).cc||'')}" placeholder="gõ tên / mã / email nhân viên để tìm…" style="width:240px"></label><label><input type="checkbox" id="amPdf" checked> Đính kèm PDF</label><label>Loại biên bản <select id="amKind"><option value="sum" ${(ls.get('advSigners',{}).kind||'sum')==='sum'?'selected':''}>Tổng hợp (đề nghị còn số dư)</option><option value="detail" ${ls.get('advSigners',{}).kind==='detail'?'selected':''}>Chi tiết (mọi đề nghị + bút toán)</option></select></label></div>
       <div class="hint">Biên bản (Excel + PDF) có 3 chữ ký: <b>Người tạm ứng · Kế toán · Giám đốc tài chính (CFO)</b>.</div>
       <div class="mut" style="font-size:12px;margin-top:8px;max-height:90px;overflow:auto">${to.map(x=>esc(x.name)+' &lt;'+esc(x.email1||x.email2)+'&gt;').join(' · ')}</div>
       <div class="row" style="margin-top:12px"><div style="flex:1"></div><button class="btn primary" id="smGo" ${to.length?'':'disabled'}>✉ Gửi ${num(to.length)} email</button></div></div></div>`;
@@ -2085,6 +2100,7 @@ function advMail(keys,r){const L=keys.map(k=>(r.rows||[]).find(x=>x.key===k)).fi
       <div class="mut" style="font-size:12px;margin-top:8px;max-height:90px;overflow:auto">${to.map(x=>esc(x.name)+' &lt;'+esc(x.email)+'&gt; · '+fmt2(x.close)).join(' · ')}</div>
       <div class="row" style="margin-top:12px"><div style="flex:1"></div><button class="btn" id="amPrev" ${to.length?'':'disabled'}>👁 Xem trước PDF (${esc(to[0]?to[0].name:'')})</button><button class="btn primary" id="amGo" ${to.length?'':'disabled'}>✉ Gửi ${num(to.length)} email</button></div></div></div>`;
   $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
+  emailPicker($('#amCc'));
   $('#amPrev').onclick=async()=>{const sg={acc:$('#amAcc').value.trim(),cfo:$('#amCfo').value.trim(),cc:$('#amCc').value.trim(),kind:$('#amKind').value};ls.set('advSigners',sg);try{await api.advReconPdfPreview(to[0].key,{mode:ADF.mode,asOf:ADF.asOf,from:ADF.from,acc:ADF.acc,company:'VIETTEL TIMOR UNI, LDA (Telemor)',signers:sg})}catch(e){alert(e.message)}};
   $('#amGo').onclick=async()=>{{const c=await api.getSmtp();if(!c||!c.host){if(await ask('Chưa cấu hình máy chủ gửi mail (SMTP). Mở trang cấu hình ngay?')){closeDetail();await go('report');setTimeout(()=>{const h=$('#s_host');if(h){h.scrollIntoView({block:'center'});h.focus()}},300)}return}}if(!await ask(`Gửi đối chiếu tạm ứng tới ${to.length} nhân viên?`))return;const b=$('#amGo');b.disabled=true;b.textContent='Đang gửi…';
     const sg={acc:$('#amAcc').value.trim(),cfo:$('#amCfo').value.trim(),cc:$('#amCc').value.trim(),kind:$('#amKind').value};ls.set('advSigners',sg);

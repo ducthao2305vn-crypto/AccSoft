@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 4.94.3
+- Ô CC (cấu hình SMTP, gửi đối chiếu tạm ứng): gõ tên / mã / phòng ban / email để tìm trong Danh mục nhân viên, chọn bằng chuột hoặc phím ↑↓ Enter; nhiều email cách nhau ";".
+- SMTP: sau khi lưu, ô mật khẩu hiện "đã lưu – để trống = giữ nguyên" (mật khẩu không bị mất, chỉ không hiển thị lại); lỗi kết nối kèm gợi ý (sai tên máy chủ, cổng, mật khẩu).
+- Người gửi (From) chỉ nhập tên (vd. Finance Department) → gửi dạng "Finance Department" <tài khoản>.
+
 ## 4.94.2
 - Tạm ứng: "Xem trước PDF" mở bằng trình đọc PDF mặc định của máy (cửa sổ PDF nội bộ không hiển thị trên một số máy).
 - Gửi đối chiếu tạm ứng: kiểm tra cấu hình SMTP trước khi gửi, chưa có thì hỏi và chuyển tới trang cấu hình; SMTP có timeout kết nối 20 giây, không còn treo "Đang gửi…".
