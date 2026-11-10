@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## v4.92.0 – 10/11/2026
+- **File xuất và email theo ngôn ngữ giao diện:** khi chọn **EN**, mọi file xuất ra đều tự dịch sang tiếng Anh.
+  - Áp dụng cho Excel (mọi báo cáo, biểu mẫu Giám sát tài chính / Đầu tư ra nước ngoài / Kế hoạch năm, CĐPS, biên bản đối chiếu…), Word (xác nhận công nợ 331), PDF (biên bản đối chiếu tạm ứng, báo cáo rủi ro) và email gửi đi (tiêu đề, nội dung, file đính kèm).
+  - Phần được dịch: tiêu đề báo cáo, tên cột, tên sheet, nhãn chỉ tiêu, phần ký.
+  - **Dữ liệu (tên đối tượng, diễn giải, nội dung người dùng nhập) giữ nguyên.**
+  - Mẫu thư đối chiếu tạm ứng mặc định bằng tiếng Anh khi chọn EN.
+  - Từ điển thêm `i18n_en2.js` (~400 mục cho file xuất).
+
 ## v4.91.0 – 10/11/2026
 - **Giao diện tiếng Anh:** nút **VI / EN** trên thanh trên cùng (cạnh nút sáng / tối) chuyển ngôn ngữ; lựa chọn được nhớ.
   - Dịch tự động toàn bộ văn bản hiển thị theo từ điển `i18n_en.js`: menu, tiêu đề và mô tả trang, tab, nút, nhãn ô lọc, tiêu đề cột, thẻ số liệu, hộp thoại, thông báo.

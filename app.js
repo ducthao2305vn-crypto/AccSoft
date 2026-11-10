@@ -26,6 +26,7 @@ const kpi=(cls,icon,lb,v,s)=>`<div class="kpi ${cls}"><div class="ic">${ic(icon)
 const ls={get:(k,d)=>{try{const v=localStorage.getItem('accsoft.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem('accsoft.'+k,JSON.stringify(v))}catch(e){}}};
 /* ---------- Ngôn ngữ giao diện (VI / EN): dịch tự động mọi văn bản hiển thị theo từ điển i18n_en.js ---------- */
 const LANG=ls.get('lang','vi');
+try{window.api&&api.setLang&&api.setLang(LANG)}catch(e){}
 if(LANG==='en'&&window.I18N_EN){const VIRX=/[À-ỹđĐ]/,D=window.I18N_EN,PH=window.I18N_PH||[];document.documentElement.lang='en';
   const tr=(t,ph)=>{const k=t.trim();if(!k||!VIRX.test(k))return t;let r=D[k];if(r==null){const k2=k.replace(/\s*:$/,'');if(D[k2]!=null)r=D[k2]+(k2!==k?':':'');}
     if(r==null){const m=k.match(/^([^\p{L}\d(]+)(.+)$/u);if(m&&D[m[2].trim()]!=null)r=m[1]+D[m[2].trim()];}
@@ -2077,8 +2078,8 @@ async function advDetail(x,focus='all'){CUR=-1;const Dw=$('#drawer');Dw.classLis
 function advMail(keys,r){const L=keys.map(k=>(r.rows||[]).find(x=>x.key===k)).filter(Boolean),to=L.filter(x=>x.email),miss=L.length-to.length;CUR=-1;
   $('#dPane').innerHTML=`<div class="ph"><div><div class="mut" style="font-size:12px">Gửi đối chiếu công nợ tạm ứng tại ${vn(ADF.asOf)}</div><h2 style="font-size:20px">${num(to.length)} nhân viên${miss?` <span class="neg" style="font-size:13px">(${miss} chưa có email / chưa ghép – bỏ qua)</span>`:''}</h2></div><div style="flex:1"></div><button class="btn sm ghost" id="dClose">${ic('x')}Đóng</button></div>
     <div class="pb"><div class="card"><div class="hint" style="margin-bottom:8px">Mỗi người nhận một thư riêng: bảng số dư, danh sách khoản còn treo và <b>biên bản đối chiếu Excel + PDF</b> đính kèm. Biến: {name} {balance} {asOf}. Sau khi gửi, trạng thái chuyển "Đã gửi đối chiếu".</div>
-      <label style="display:grid;gap:4px">Tiêu đề<input id="amS" value="[Telemor] Đối chiếu công nợ tạm ứng đến ngày {asOf} – {name}"></label>
-      <label style="display:grid;gap:4px;margin-top:10px">Nội dung<textarea id="amB" style="min-height:160px">Kính gửi anh/chị {name},\n\nPhòng Tài chính gửi anh/chị số dư tạm ứng đến ngày {asOf} là {balance}. Đề nghị anh/chị kiểm tra, hoàn ứng / quyết toán các khoản còn treo và phản hồi xác nhận số dư.\n\nTrân trọng,\nPhòng Tài chính</textarea></label>
+      <label style="display:grid;gap:4px">Tiêu đề<input id="amS" value="${LANG==='en'?'[Telemor] Advance balance confirmation as of {asOf} – {name}':'[Telemor] Đối chiếu công nợ tạm ứng đến ngày {asOf} – {name}'}"></label>
+      <label style="display:grid;gap:4px;margin-top:10px">Nội dung<textarea id="amB" style="min-height:160px">${LANG==='en'?'Dear {name},\n\nThe Finance Department informs you that your advance balance as of {asOf} is {balance}. Please review, settle the outstanding items and reply to confirm the balance.\n\nBest regards,\nFinance Department':'Kính gửi anh/chị {name},\n\nPhòng Tài chính gửi anh/chị số dư tạm ứng đến ngày {asOf} là {balance}. Đề nghị anh/chị kiểm tra, hoàn ứng / quyết toán các khoản còn treo và phản hồi xác nhận số dư.\n\nTrân trọng,\nPhòng Tài chính'}</textarea></label>
       <div class="mut" style="font-size:12px;margin-top:8px;max-height:90px;overflow:auto">${to.map(x=>esc(x.name)+' &lt;'+esc(x.email)+'&gt; · '+fmt2(x.close)).join(' · ')}</div>
       <div class="row" style="margin-top:12px"><div style="flex:1"></div><button class="btn primary" id="amGo" ${to.length?'':'disabled'}>✉ Gửi ${num(to.length)} email</button></div></div></div>`;
   $('#drawer').classList.remove('hide');$('#dClose').onclick=closeDetail;
