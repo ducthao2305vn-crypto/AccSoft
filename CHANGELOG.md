@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.95.1
+- "Gửi lại" chỉ gửi những người còn lỗi, không gửi trùng người đã nhận.
+
 ## 4.95.0
 - Gửi đối chiếu tạm ứng hàng loạt: chọn nhiều nhân viên trong danh sách → "Gửi đối chiếu qua email" → gửi lần lượt từng người (mỗi người một thư riêng, biên bản riêng), thanh tiến độ và bảng kết quả từng người (Đã gửi / lỗi), gửi lại được người lỗi.
 - CC mỗi thư = CC nhập khi gửi + CC mặc định trong cấu hình SMTP (bỏ trùng, không CC chính người nhận); hiện rõ danh sách CC trước khi gửi.
