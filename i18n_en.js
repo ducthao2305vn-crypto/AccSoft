@@ -1,5 +1,6 @@
 // Từ điển giao diện Tiếng Việt → English. I18N_EN: khớp nguyên chuỗi (đã bỏ khoảng trắng đầu/cuối); I18N_PH: cụm từ thay thế trong câu dài (dài trước).
 window.I18N_EN = {
+  'Chưa cấu hình máy chủ gửi mail (SMTP). Mở trang cấu hình ngay?': 'SMTP mail server is not configured. Open the settings now?',
   // Menu, nhóm, trang
   'Tổng quan': 'Overview', 'Công nợ phải thu': 'Receivables', 'Công nợ phải trả': 'Payables', 'Sổ sách & phân tích': 'Ledgers & analysis', 'Kết quả & báo cáo': 'Results & reports', 'Chi phí quản trị': 'Management costs', 'Danh mục & dữ liệu': 'Master data',
   'Lỗi nhập liệu': 'Entry errors', 'Công nợ & tuổi nợ': 'Debts & aging', 'Phải thu 1388 / 131': 'Receivables 1388 / 131', 'Đối chiếu hóa đơn 138812': 'Invoice reconciliation 138812', 'Tạm ứng 141': 'Advances 141', 'Đối chiếu phải trả 331': 'Payables reconciliation 331',

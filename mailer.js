@@ -23,6 +23,7 @@ function transport(store) {
       host: c.host, port: +c.port || 587, secure: !!c.secure,
       auth: c.user ? { user: c.user, pass: dec(c.pass) } : undefined,
       tls: { rejectUnauthorized: !c.allowSelfSigned },
+      connectionTimeout: 20000, greetingTimeout: 20000, socketTimeout: 60000, // không treo "Đang gửi…" khi máy chủ không phản hồi
     }),
   };
 }

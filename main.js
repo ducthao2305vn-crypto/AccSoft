@@ -572,12 +572,14 @@ async function init() {
   handle('adv:reconPdfPreview', async (_e, key, o) => { const d = await qa('advDetail', key, o), nm = d.staff ? d.staff.name : (d.partners[0] || key);
     const fp = path.join(os.tmpdir(), `AccSoft_XemTruoc_${String(nm).replace(/[^\w]+/g, '_').slice(0, 40)}_${Date.now()}.pdf`);
     fs.writeFileSync(fp, await advPdf(d, o.company, o.signers));
-    const w = new BrowserWindow({ width: 900, height: 1000, parent: win, title: (I18.lang() === 'en' ? 'Preview – ' : 'Xem trước – ') + nm, autoHideMenuBar: true, webPreferences: { plugins: true, sandbox: true } });
-    w.on('closed', () => { try { fs.unlinkSync(fp); } catch { } }); await w.loadFile(fp); return true; });
+    // Mở bằng trình đọc PDF mặc định của máy (cửa sổ PDF nội bộ Electron không hiển thị được trên một số máy); file tạm xoá sau 30 phút / khi thoát
+    const er = await shell.openPath(fp); if (er) throw new Error((I18.lang() === 'en' ? 'Cannot open PDF: ' : 'Không mở được PDF: ') + er);
+    setTimeout(() => { try { fs.unlinkSync(fp); } catch { } }, 30 * 60e3).unref?.(); app.once('will-quit', () => { try { fs.unlinkSync(fp); } catch { } }); return fp; });
   handle('adv:reconPdf', async (_e, key, o) => { const d = await qa('advDetail', key, o), nm = d.staff ? d.staff.name : (d.partners[0] || key);
     const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] }); if (canceled) return null;
     fs.writeFileSync(filePath, await advPdf(d, o.company, o.signers)); shell.openPath(filePath); return filePath; });
   handle('adv:reconMail', async (_e, keys, o) => {
+    if (!mailer.getConfig(Q).host) throw new Error(I18.lang() === 'en' ? 'SMTP mail server is not configured. Go to Report → SMTP mail server to set it up.' : 'Chưa cấu hình máy chủ gửi mail (SMTP). Vào mục Báo cáo → Máy chủ gửi mail (SMTP) để thiết lập.');
     const esc = t => String(t ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]), fmt = v => (+v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }), msgs = [], skip = [];
     for (const k of keys) { const d = await qa('advDetail', k, o), to = d.staff && (d.staff.email1 || d.staff.email2); if (!to) { skip.push(k); continue; }
       const x = advSheets(d, o.company, o.signers), nm = x.name, fill = t => String(t || '').replace(/\{name\}/g, nm).replace(/\{balance\}/g, fmt(d.close)).replace(/\{asOf\}/g, d.asOf);

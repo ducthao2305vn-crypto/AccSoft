@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.94.2
+- Tạm ứng: "Xem trước PDF" mở bằng trình đọc PDF mặc định của máy (cửa sổ PDF nội bộ không hiển thị trên một số máy).
+- Gửi đối chiếu tạm ứng: kiểm tra cấu hình SMTP trước khi gửi, chưa có thì hỏi và chuyển tới trang cấu hình; SMTP có timeout kết nối 20 giây, không còn treo "Đang gửi…".
+
 ## 4.94.1
 - PDF (biên bản đối chiếu tạm ứng, báo cáo rủi ro): dòng tiêu đề bảng lặp lại ở mọi trang khi bảng sang trang, không cắt đôi một dòng; thêm số trang "Trang x / y" (EN: "Page x / y") ở chân trang.
 
