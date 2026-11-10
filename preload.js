@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('api', {
   dmImport: (kind, mode) => ipcRenderer.invoke('dm:import', kind, mode),
   xlsColor: (name, sheet, aoa, opt) => ipcRenderer.invoke('xls:color', name, sheet, aoa, opt),
   faAssetRead: () => ipcRenderer.invoke('fa:assetRead'),
+  advReconPdfPreview: (key, o) => ipcRenderer.invoke('adv:reconPdfPreview', key, o),
   advReconPdf: (key, o) => ipcRenderer.invoke('adv:reconPdf', key, o),
   setLang: l => ipcRenderer.invoke('ui:lang', l),
   gsExport: R => ipcRenderer.invoke('gs:export', R),

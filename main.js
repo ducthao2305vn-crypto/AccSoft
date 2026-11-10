@@ -446,7 +446,7 @@ async function init() {
   async function advPdf(d, co, sg = {}) {
     const e = t => String(t ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]), f = v => (+v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), dmy = s => s ? String(s).slice(0, 10).split('-').reverse().join('/') : '';
     const nm = d.staff ? d.staff.name : (d.partners[0] || d.key), st = d.staff || {};
-    const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:'Times New Roman',serif;font-size:13px;margin:28px 34px;color:#111}h1{text-align:center;font-size:18px;margin:14px 0 2px}.c{text-align:center}.m{color:#444}
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Biên bản đối chiếu công nợ tạm ứng – ${e(String(nm).replace(/^VTL_[A-Z]+_?\d+_/, ''))}</title><style>body{font-family:'Times New Roman',serif;font-size:13px;margin:28px 34px;color:#111}h1{text-align:center;font-size:18px;margin:14px 0 2px}.c{text-align:center}.m{color:#444}
       table{border-collapse:collapse;width:100%;margin:8px 0}td,th{border:1px solid #888;padding:3px 5px;vertical-align:top;font-size:11.5px}th{background:#f2f2f2}.n{text-align:right;white-space:nowrap}.nb td{border:none;padding:2px 4px}
       .sig{display:flex;justify-content:space-between;margin-top:26px;text-align:center;page-break-inside:avoid}.sig>div{width:32%}.sig b{display:block}.sig i{display:block;font-size:12px;color:#444}.sig .nm{margin-top:70px;font-weight:bold}</style></head><body>
       <div><b>${e(co || '')}</b><br><span class=m>Phòng Tài chính – Kế toán</span></div>
@@ -547,6 +547,12 @@ async function init() {
     const sh = [['Tong hop', sum]]; ds.forEach((d, i) => { const x = advSheets(d, o.company, o.signers); sh.push([`${i + 1}_${x.name}`.replace(/[\\/*?:\[\]]/g, '').slice(0, 31), x.sheets[0][1].concat([[], ['KHOẢN CÒN TREO']], [['Ngày', 'Chứng từ', 'Đề nghị TƯ', 'Nội dung', 'Số tiền', 'Còn lại', 'Số ngày']], d.items.map(t => [t.d, t.doc, t.ar || '', t.ds, t.amt, t.left, t.age]))]); });
     return saveXlsx(`DoiChieuTamUng_${ds.length}NV_${o.asOf}.xlsx`, aoaBook(sh));
   });
+  // Xem trước biên bản đối chiếu PDF trong cửa sổ riêng (trình xem PDF tích hợp) – không cần lưu file
+  handle('adv:reconPdfPreview', async (_e, key, o) => { const d = await qa('advDetail', key, o), nm = d.staff ? d.staff.name : (d.partners[0] || key);
+    const fp = path.join(os.tmpdir(), `AccSoft_XemTruoc_${String(nm).replace(/[^\w]+/g, '_').slice(0, 40)}_${Date.now()}.pdf`);
+    fs.writeFileSync(fp, await advPdf(d, o.company, o.signers));
+    const w = new BrowserWindow({ width: 900, height: 1000, parent: win, title: (I18.lang() === 'en' ? 'Preview – ' : 'Xem trước – ') + nm, autoHideMenuBar: true, webPreferences: { plugins: true, sandbox: true } });
+    w.on('closed', () => { try { fs.unlinkSync(fp); } catch { } }); await w.loadFile(fp); return true; });
   handle('adv:reconPdf', async (_e, key, o) => { const d = await qa('advDetail', key, o), nm = d.staff ? d.staff.name : (d.partners[0] || key);
     const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}.pdf`, filters: [{ name: 'PDF', extensions: ['pdf'] }] }); if (canceled) return null;
     fs.writeFileSync(filePath, await advPdf(d, o.company, o.signers)); shell.openPath(filePath); return filePath; });

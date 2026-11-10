@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## v4.92.1 – 10/11/2026
+- Công nợ tạm ứng: nút **👁 Xem trước PDF** mở biên bản đối chiếu trong cửa sổ xem PDF của ứng dụng (phóng to / thu nhỏ, in, tải về), không cần lưu file.
+  - Có ở màn hình chi tiết nhân viên.
+  - Có trong hộp gửi email: xem trước biên bản của người đầu tiên, dùng đúng tên Kế toán / CFO vừa nhập, trước khi gửi hàng loạt.
+
 ## v4.92.0 – 10/11/2026
 - **File xuất và email theo ngôn ngữ giao diện:** khi chọn **EN**, mọi file xuất ra đều tự dịch sang tiếng Anh.
   - Áp dụng cho Excel (mọi báo cáo, biểu mẫu Giám sát tài chính / Đầu tư ra nước ngoài / Kế hoạch năm, CĐPS, biên bản đối chiếu…), Word (xác nhận công nợ 331), PDF (biên bản đối chiếu tạm ứng, báo cáo rủi ro) và email gửi đi (tiêu đề, nội dung, file đính kèm).
