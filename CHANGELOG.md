@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.94.4
+- Sửa lỗi gửi đối chiếu tạm ứng: các ô Kế toán ký / CFO ký / CC / Đính kèm PDF / Loại biên bản bị đặt nhầm sang màn "Gửi email nhân viên" → nút "Xem trước PDF" không làm gì và nút Gửi treo "Đang gửi…". Đã đưa về màn đối chiếu tạm ứng; mọi lỗi đều hiện thông báo, nút được trả lại trạng thái.
+
 ## 4.94.3
 - Ô CC (cấu hình SMTP, gửi đối chiếu tạm ứng): gõ tên / mã / phòng ban / email để tìm trong Danh mục nhân viên, chọn bằng chuột hoặc phím ↑↓ Enter; nhiều email cách nhau ";".
 - SMTP: sau khi lưu, ô mật khẩu hiện "đã lưu – để trống = giữ nguyên" (mật khẩu không bị mất, chỉ không hiển thị lại); lỗi kết nối kèm gợi ý (sai tên máy chủ, cổng, mật khẩu).
