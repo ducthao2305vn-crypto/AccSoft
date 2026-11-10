@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.94.5
+- Email đối chiếu tạm ứng thiết kế lại: khung 760px, thanh tiêu đề có logo Telemor cỡ cố định (không còn phóng to trong Outlook), bảng số dư và bảng đề nghị tạm ứng có kẻ dòng, tô màu tiêu đề, số căn phải; toàn bộ chữ theo ngôn ngữ giao diện (không còn lẫn Việt – Anh); ngày dạng dd/mm/yyyy; tổng cộng cộng từ số đã làm tròn.
+
 ## 4.94.4
 - Sửa lỗi gửi đối chiếu tạm ứng: các ô Kế toán ký / CFO ký / CC / Đính kèm PDF / Loại biên bản bị đặt nhầm sang màn "Gửi email nhân viên" → nút "Xem trước PDF" không làm gì và nút Gửi treo "Đang gửi…". Đã đưa về màn đối chiếu tạm ứng; mọi lỗi đều hiện thông báo, nút được trả lại trạng thái.
 
