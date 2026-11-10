@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## v4.91.0 – 10/11/2026
+- **Giao diện tiếng Anh:** nút **VI / EN** trên thanh trên cùng (cạnh nút sáng / tối) chuyển ngôn ngữ; lựa chọn được nhớ.
+  - Dịch tự động toàn bộ văn bản hiển thị theo từ điển `i18n_en.js`: menu, tiêu đề và mô tả trang, tab, nút, nhãn ô lọc, tiêu đề cột, thẻ số liệu, hộp thoại, thông báo.
+  - Dữ liệu (tên đối tượng, diễn giải, nội dung người dùng nhập) giữ nguyên.
+  - Câu mô tả dài chưa có trong từ điển được dịch theo cụm từ (có thể còn lẫn tiếng Việt) – bổ sung dần vào `i18n_en.js`.
+
 ## v4.90.0 – 09/11/2026
 - **Công nợ tạm ứng – gửi đối chiếu qua email:** mỗi nhân viên còn nợ nhận một thư riêng, đính kèm **biên bản đối chiếu Excel + PDF**.
   - Biên bản gồm thông tin người tạm ứng, số dư đầu kỳ / tạm ứng / hoàn ứng / cuối kỳ, chi tiết khoản còn treo, ô xác nhận đồng ý / không đồng ý.

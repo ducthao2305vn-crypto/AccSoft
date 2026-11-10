@@ -565,3 +565,10 @@ await p.evaluate(()=>window.api.q('stats'));
 - Tồn kho: `OI.m04(from, to, 0)`, gộp theo TK × mặt hàng.
 - Phân loại theo `settings.gs_rules` = `{ar, ap, inv, tax}`, mỗi quy tắc `[tiền tố TK, regex, nhóm]`, dòng khớp đầu tiên được dùng; mặc định ở `DEF`.
 - 7.4: điều chỉnh lưu `settings.gs_adj74[ym]`, tỷ giá lưu `gs_rate74[ym]`.
+
+### Ngôn ngữ giao diện (v4.91, `i18n_en.js`)
+- `LANG = ls.get('lang')`; nút `#uiLang` đổi ngôn ngữ rồi tải lại trang.
+- Khi `LANG === 'en'`, MutationObserver dịch mọi text node và thuộc tính placeholder / title:
+  - khớp nguyên chuỗi theo `I18N_EN` (bỏ dấu ":" cuối hoặc ký hiệu đầu dòng nếu cần);
+  - không khớp thì thay theo cụm `I18N_PH`; riêng ô dữ liệu (`tbody td`, `.clamp`, `textarea`) chỉ khớp nguyên chuỗi.
+- Thêm chuỗi mới: bổ sung vào `I18N_EN`, không cần sửa mã giao diện.
