@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.94.1
+- PDF (biên bản đối chiếu tạm ứng, báo cáo rủi ro): dòng tiêu đề bảng lặp lại ở mọi trang khi bảng sang trang, không cắt đôi một dòng; thêm số trang "Trang x / y" (EN: "Page x / y") ở chân trang.
+
 ## v4.94.0 – 10/11/2026
 - **Logo Telemor trên mọi báo cáo xuất ra:**
   - **Excel:** logo đặt ở góc trên bên phải mỗi sheet, ngay sau cột cuối có dữ liệu nên không che số liệu. Áp dụng cho mọi file .xlsx xuất ra và file Excel đính kèm email. File mẫu dùng để nạp lại (số dư đầu kỳ, danh mục, mẫu gán mã tài sản, GL Journal) không chèn logo.

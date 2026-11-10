@@ -44,4 +44,15 @@ function html(h) {
   const img = `<div class="accsoft-logo" style="text-align:right;margin:0 0 4px"><img src="data:image/png;base64,${png().toString('base64')}" alt="Telemor" style="height:40px"></div>`;
   return /<body[^>]*>/i.test(h) ? h.replace(/(<body[^>]*>)/i, '$1' + img) : img + h;
 }
-module.exports = { xlsx, html, RAW, png };
+// PDF: dòng tiêu đề bảng (<tr> toàn <th> đầu bảng) → <thead> để Chromium lặp lại khi sang trang; không cắt đôi dòng
+function pdfHtml(h) {
+  if (!h) return h;
+  h = String(h).replace(/(<table[^>]*>)\s*(<tr[^>]*>(?:\s*<th\b[^>]*>[\s\S]*?<\/th>)+\s*<\/tr>)/gi, '$1<thead>$2</thead>');
+  const css = '<style>thead{display:table-header-group}tr,img{break-inside:avoid;page-break-inside:avoid}</style>';
+  return /<\/head>/i.test(h) ? h.replace(/<\/head>/i, css + '</head>') : css + h;
+}
+// Tuỳ chọn printToPDF: số trang ở chân trang
+const pdfOpts = (en, o = {}) => ({ pageSize: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>',
+  footerTemplate: `<div style="width:100%;font-size:8px;color:#666;text-align:center;font-family:Arial">${en ? 'Page' : 'Trang'} <span class="pageNumber"></span> / <span class="totalPages"></span></div>`,
+  margins: { marginType: 'custom', top: 0.4, bottom: 0.55, left: 0.4, right: 0.4 }, ...o });
+module.exports = { xlsx, html, pdfHtml, pdfOpts, RAW, png };
