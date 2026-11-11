@@ -132,8 +132,8 @@ async function enrichFiles(files) {
       const name = path.basename(file), mb = (fs.statSync(file).size / 1048576).toFixed(1);
       try {
         const r = await runTask('enrich', { file, name }, `Đang bổ sung thông tin (mã vị trí, biển số xe, mã hàng, kho…) từ ${name} (${mb} MB)`);
-        log.info(`Bổ sung từ ${name}: ${r.rows} dòng, khớp ${r.matched}, cập nhật ${r.updated}, không tìm thấy ${r.notFound}, trùng khoá ${r.ambiguous}, bỏ qua ${r.skipped}`, { file, samples: r.samples });
-        out.push(`✓ ${name}: ${r.rows.toLocaleString('vi')} dòng · khớp ${r.matched.toLocaleString('vi')} · cập nhật ${r.updated.toLocaleString('vi')} bút toán` +
+        log.info(`Bổ sung từ ${name}: ${r.rows} dòng, khớp ${r.matched}, cập nhật ${r.updated}, số tiền / Code Booking ${r.amtUpd || 0}, không tìm thấy ${r.notFound}, trùng khoá ${r.ambiguous}, bỏ qua ${r.skipped}`, { file, samples: r.samples });
+        out.push(`✓ ${name}: ${r.rows.toLocaleString('vi')} dòng · khớp ${r.matched.toLocaleString('vi')} · cập nhật ${r.updated.toLocaleString('vi')} bút toán` + (r.amtUpd ? ` · Source Amount / Code Booking: ${r.amtUpd.toLocaleString('vi')} dòng` : '') +
           (r.notFound ? ` · ${r.notFound.toLocaleString('vi')} dòng không tìm thấy (xem nhật ký)` : '') + (r.ambiguous ? ` · ${r.ambiguous} dòng trùng khoá` : '') + ` · ${Math.round(r.secs)} giây`);
         if (r.notFound) failed = true;
       } catch (e) { failed = true; log.error(`Bổ sung từ ${name} thất bại`, e, { file }); out.push(`✗ ${name}: LỖI – ${firstLine(e.message)}`); }

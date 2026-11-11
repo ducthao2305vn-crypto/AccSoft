@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.14
+- "Bổ sung thông tin cho dữ liệu đã nạp" cập nhật được **Source Amount** và **Code Booking** cho dữ liệu cũ (khớp theo số chứng từ + line + TK Nợ + TK Có + Accounted Amount), đổi số tiền báo cáo theo cài đặt và tự tổng hợp lại sổ – không cần xoá / nạp lại dữ liệu.
+
 ## 4.99.13
 - Nạp thêm cột **Source Amount**, **Accounted Amount** (giữ cả hai) và **Code Booking** từ file ERP.
 - **Mọi báo cáo dùng Source Amount** (mặc định); dòng không có Source Amount dùng Accounted Amount. Đổi được ở Báo cáo → "Số tiền dùng cho báo cáo" (Source / Accounted) → Áp dụng & tổng hợp lại – cập nhật toàn bộ dữ liệu đã nạp và dựng lại sổ tổng hợp. Dữ liệu nạp trước bản này cần nạp lại file ERP để có Source Amount.
