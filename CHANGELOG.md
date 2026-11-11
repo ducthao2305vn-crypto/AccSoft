@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.10
+- Tra cứu bút toán ERP: thêm ô **TK Nợ**, **TK Có** (theo đầu số) và **Đối tượng Nợ**, **Đối tượng Có**; gõ chữ "trống" (hoặc dấu =) ở ô đối tượng để tìm bút toán bỏ trống đối tượng ở vế đó – vd TK Nợ 15611 + Đối tượng Nợ "trống".
+
 ## 4.99.9
 - Đối chiếu 15611 / 14121 khớp Trial balance chi tiết theo đối tượng của ERP: dòng ghi Nợ / Có TK mà để trống đối tượng ở vế đó nay lấy đối tượng ở vế kia của cùng dòng (ERP gán một đối tượng cho mỗi dòng; dòng xuất kho chỉ ghi đối tượng một vế). Trước đây các dòng này thành "(không có đối tượng)" (−5,807.87) và HEAD OFFICE lệch đúng số đó so với Trial balance.
 

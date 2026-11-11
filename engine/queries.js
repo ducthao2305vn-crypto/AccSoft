@@ -547,6 +547,10 @@ function make(db) {
     for (const w of String(o.q || '').trim().split(/\s+/).filter(Boolean)) { const n = +w.replace(/,/g, ''); if (/^-?[\d,]+(\.\d+)?$/.test(w) && Number.isFinite(n)) { W.push('(abs(amount-?)<0.005 OR ' + T.map(c => `${c} LIKE ?`).join(' OR ') + ')'); A.push(n, ...T.map(() => '%' + w + '%')); } else like(T, w); }
     const F = { doc: ['document_no'], desc: ['description'], bp: ['partner_debit', 'partner_credit'], contract: ['contract'], loc: ['location', 'bts_site'], plate: ['plate'], user: ['created_by'], acc: ['acc_debit', 'acc_credit'], inv: ['invoice'], adv: ['advance_request'] };
     for (const k in F) if (String(o[k] || '').trim()) like(F[k], String(o[k]).trim());
+    // Tài khoản Nợ / Có (theo đầu số) và đối tượng Nợ / Có; gõ "trống" (hoặc "=", "blank") = đối tượng để trống
+    const BL = v => /^(\(?trống\)?|blank|empty|=|-)$/i.test(v);
+    for (const [k, c] of [['accDr', 'acc_debit'], ['accCr', 'acc_credit']]) { const v = String(o[k] || '').trim(); if (v) { W.push(`${c} LIKE ?`); A.push(v + '%'); } }
+    for (const [k, c] of [['bpDr', 'partner_debit'], ['bpCr', 'partner_credit']]) { const v = String(o[k] || '').trim(); if (!v) continue; if (BL(v)) W.push(`ifnull(${c},'')=''`); else { W.push(`${c} LIKE ?`); A.push('%' + v + '%'); } }
     if (o.amtMin !== '' && o.amtMin != null && Number.isFinite(+o.amtMin)) { W.push('amount>=?'); A.push(+o.amtMin); }
     if (o.amtMax !== '' && o.amtMax != null && Number.isFinite(+o.amtMax)) { W.push('amount<=?'); A.push(+o.amtMax); }
     if (o.from) { W.push('account_date>=?'); A.push(o.from); } if (o.to) { W.push('account_date<=?'); A.push(o.to + ' 99'); }
