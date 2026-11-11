@@ -50,6 +50,7 @@ contextBridge.exposeInMainWorld('api', {
   grMail: (k, bp, o) => ipcRenderer.invoke('gr:mail', k, bp, o),
   grAssignMail: (k, bps, o) => ipcRenderer.invoke('gr:assignMail', k, bps, o),
   piExport: () => ipcRenderer.invoke('pi:export'),
+  piImportBanks: () => ipcRenderer.invoke('pi:importBanks'),
   piImport: () => ipcRenderer.invoke('pi:import'),
   invImport: mode => ipcRenderer.invoke('inv:import', mode),
   llImport: () => ipcRenderer.invoke('ll:import'),

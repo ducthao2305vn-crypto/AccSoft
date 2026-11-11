@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 4.99.0
+- Danh mục đối tác → **🏦 Nạp TK ngân hàng / ví (ERP)**: nạp file Export_C_BPartner (Code, Name, Account No, Account Name, IsEmoney, Bank Name, SwiftCode). Mã ERP (VTL_HOVEN01268, VTL_HOEMP000412, VTL_VEN_245…) được ghép với mã đối tượng trong sổ theo tiền tố; chưa có trong sổ thì tạo trong danh mục. Một đối tượng nhiều tài khoản; nạp lại chỉ cập nhật theo số tài khoản, không trùng, không xoá tài khoản nhập tay. Tên ngân hàng "BNCTL-BNCTL" rút gọn "BNCTL".
+- Tài khoản ngân hàng có thêm cột **Ví điện tử** (IsEmoney), cột SWIFT / IBAN; xuất / nạp Excel danh mục có cột Ví điện tử.
+- Hồ sơ nhân viên (Danh mục nhân viên → mở nhân viên): thẻ **Tài khoản ngân hàng / ví điện tử** lấy theo các mã đối tượng công nợ đã ghép với nhân viên.
+
 ## 4.98.0
 - **Đối chiếu hàng hoá 15611 / vật tư 14121 theo đối tượng** (Công nợ phải thu → Đối chiếu hàng hoá 15611 / vật tư 14121): số lượng + giá trị theo đối tượng × mặt hàng (trường Product, UoM) – đầu kỳ, nhận (Nợ TK), xuất / trả (Có TK), cuối kỳ theo kỳ Từ – Đến; nhấn đúp xem chi tiết mặt hàng và chứng từ.
 - Biên bản theo đúng mẫu Telemor (Times New Roman, kẻ khung đen, logo): 15611 "CONFIRMATION OF GOODS SHEET" (Đầu kỳ / Nhận / Clear / Cuối kỳ – cột BRANCH · VTL · DIF có công thức), 14121 "PRODUCT LIABILITY BY PARTNER REPORT" (Qty + Amount). Xem trước PDF, xuất PDF / Excel.
