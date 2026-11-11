@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 4.98.0
+- **Đối chiếu hàng hoá 15611 / vật tư 14121 theo đối tượng** (Công nợ phải thu → Đối chiếu hàng hoá 15611 / vật tư 14121): số lượng + giá trị theo đối tượng × mặt hàng (trường Product, UoM) – đầu kỳ, nhận (Nợ TK), xuất / trả (Có TK), cuối kỳ theo kỳ Từ – Đến; nhấn đúp xem chi tiết mặt hàng và chứng từ.
+- Biên bản theo đúng mẫu Telemor (Times New Roman, kẻ khung đen, logo): 15611 "CONFIRMATION OF GOODS SHEET" (Đầu kỳ / Nhận / Clear / Cuối kỳ – cột BRANCH · VTL · DIF có công thức), 14121 "PRODUCT LIABILITY BY PARTNER REPORT" (Qty + Amount). Xem trước PDF, xuất PDF / Excel.
+- Gửi email đối chiếu tới từng đối tượng (PDF + Excel; người nhận theo Danh mục đối tác hoặc email nhân viên đã ghép mã đối tượng), giao việc cho một hoặc nhiều nhân viên (một email kèm PDF + Excel từng đối tượng, hạn hoàn thành), trạng thái Đã gửi / Đã khớp / Chưa khớp theo tháng, lọc theo người phụ trách. Người ký bên VTL cấu hình ở nút ✍ Người ký.
+
 ## 4.97.4
 - Sửa khoản còn treo (Outstanding) trong chi tiết đối chiếu 331: bút toán số âm (điều chỉnh / huỷ, vd Có 331 −283.86, −1,275) trước đây bị coi là khoản phải trả số âm nên không trừ được khoản gốc → hợp đồng số dư 0 vẫn hiện còn treo. Nay bút toán âm được đảo vế (Có âm = Nợ) để khớp với khoản gốc; hợp đồng hết dư không còn khoản treo.
 

@@ -575,3 +575,4 @@ await p.evaluate(()=>window.api.q('stats'));
 
 - Danh mục đối tác (engine/partnerinfo.js, v4.96): ap331_partner (thông tin chung) + pc_contact (nhiều liên hệ, role to/cc/"") + pc_bank. piRecipients(bp) → {to, cc}. Email 331: handle ap:mail (một đối tác / lần, renderer lặp), PDF: apPdfHtml trong main.js.
 - Giao việc 331 (v4.97): bảng ap331_assign(bp, ym, staff…), apAssign/apAssignList; email: handle ap:assignMail (một thư / nhân viên, đính kèm biên bản từng đối tác theo kỳ from–to).
+- Đối chiếu 15611/14121 (v4.98): engine/goodsrec.js (report theo đối tượng × product, gr_assign, gr_status, settings gr_signers), engine/goodsrecx.js (Excel ExcelJS + HTML theo mẫu), handlers gr:preview/export/mail/assignMail; trang grec (vGR).
