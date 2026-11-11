@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.97.1
+- Email giao việc đối chiếu 331 theo ngôn ngữ giao diện: chọn EN thì tiêu đề, nội dung mặc định, bảng đối tác, ghi chú, chân thư đều tiếng Anh (mẫu tiêu đề / nội dung lưu riêng cho từng ngôn ngữ).
+- Giao việc cho **nhiều nhân viên** cùng lúc: chọn nhiều người (bỏ từng người bằng ✕), email gửi tới tất cả; lọc Phụ trách theo từng người vẫn đúng; người chưa có email được cảnh báo, vẫn gửi cho những người còn lại.
+
 ## 4.97.0
 - **Giao việc đối chiếu công nợ 331 cho nhân viên**: tick đối tác → 👤 Giao việc → chọn nhân viên (tìm trong Danh mục nhân viên), hạn hoàn thành, loại file đính kèm (Word / Excel / PDF), CC → nhân viên nhận một email: danh sách đối tác kèm người liên hệ, số dư đầu kỳ / phát sinh / cuối kỳ **theo kỳ Từ ngày – Đến ngày đang chọn**, biên bản từng đối tác đính kèm. Có "Chỉ giao, không gửi email" và "Bỏ giao việc".
 - Danh sách 331: cột Đối chiếu hiện 👤 người phụ trách (✉ = đã gửi email giao việc); lọc **Phụ trách** theo nhân viên / Chưa giao. Giao việc lưu theo tháng của ngày Đến.

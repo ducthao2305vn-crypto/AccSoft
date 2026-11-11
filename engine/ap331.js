@@ -42,7 +42,7 @@ function make(db, all, get, run) {
       .filter(r => r.contracts.length);
     const q = s(o.q).toLowerCase(); if (q) rows = rows.filter(r => (r.bp + ' ' + r.contracts.map(c => c.c).join(' ')).toLowerCase().includes(q));
     if (o.only === 'open') rows = rows.filter(r => r.nOpenC); else if (o.only === 'adv') rows = rows.filter(r => r.adv > 0.004); else if (o.only === 'mixed') rows = rows.filter(r => r.adv > 0.004 && r.pay > 0.004); else if (o.only === 'noc') rows = rows.filter(r => nz(r.noC)); else if (o.only === 'zero') rows = rows.filter(r => !nz(r.close) && r.nOpenC); else if (o.only === 'nonzero') rows = rows.filter(r => nz(r.close)); const stOf = r => (r.st && r.st.status) || ''; if (o.st === 'hideok') rows = rows.filter(r => stOf(r) !== 'ok'); else if (o.st === 'none') rows = rows.filter(r => !stOf(r)); else if (o.st) rows = rows.filter(r => stOf(r) === o.st);
-    if (o.who === '__none') rows = rows.filter(r => !r.asg); else if (o.who) rows = rows.filter(r => r.asg && r.asg.staff === o.who);
+    if (o.who === '__none') rows = rows.filter(r => !r.asg); else if (o.who) rows = rows.filter(r => r.asg && String(r.asg.staff).split(';').includes(o.who)); // một đối tác có thể giao cho nhiều nhân viên (mã cách nhau ;)
     rows.sort((a, b) => Math.abs(b.close) - Math.abs(a.close));
     const t = k => rows.reduce((q, r) => q + r[k], 0);
     return { from, to, ym: to.slice(0, 7), acc: accW(o.acc).w, rows, tot: { open: t('open'), cr: t('cr'), dr: t('dr'), close: t('close'), pay: t('pay'), adv: t('adv') } };
