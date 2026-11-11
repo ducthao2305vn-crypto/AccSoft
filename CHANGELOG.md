@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.8
+- Đối chiếu 15611 / 14121: dòng **Kiểm tra sổ cái** – tổng cuối kỳ theo đối tượng so với số dư sổ cái TK (Nợ − Có) đến ngày; báo lệch và số tiền "không có đối tượng". Nguyên tắc ghi rõ: dòng ghi Nợ TK lấy đối tượng Nợ, dòng ghi Có TK lấy đối tượng Có (chuyển kho giữa hai đối tượng cùng TK được tính cả hai vế).
+- Số lượng âm trên bút toán giữ nguyên dấu (trước đây lấy trị tuyệt đối theo dấu tiền).
+
 ## 4.99.7
 - Đối chiếu 15611 / 14121 – bảng chứng từ hiện bút toán gốc: TK Nợ, TK Có, đối tượng vế kia, người nhập; nhấn đúp một dòng mở **Tra cứu bút toán** theo số chứng từ (xem toàn bộ các dòng của chứng từ). Mặt hàng trùng mã (vd 2 dòng "PK") nay xem chứng từ riêng từng mặt hàng.
 

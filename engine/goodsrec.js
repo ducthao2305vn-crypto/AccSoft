@@ -25,7 +25,7 @@ function make(db, all, get, run) {
     const P = new Map();
     for (const x of L) { const bp = s(x.bp) || NONE, it = split(x.p), k = it.code + '|' + s(x.u);
       const g = P.get(bp) || P.set(bp, { bp, items: new Map() }).get(bp), r = g.items.get(k) || g.items.set(k, { code: it.code, name: it.name, unit: s(x.u), oq: 0, oa: 0, iq: 0, ia: 0, xq: 0, xa: 0 }).get(k);
-      const a = +x.a || 0, q = Math.abs(+x.q || 0) * (a < 0 ? -1 : 1);
+      const a = +x.a || 0, q0 = +x.q || 0, q = q0 < 0 ? q0 : (a < 0 ? -q0 : q0); // SL âm giữ dấu; SL dương + tiền âm (bút toán đảo) = giảm
       if (x.d < from) { const sg = x.side === 'in' ? 1 : -1; r.oq += sg * q; r.oa += sg * a; } else if (x.side === 'in') { r.iq += q; r.ia += a; } else { r.xq += q; r.xa += a; } }
     return [...P.values()].map(g => { const items = [...g.items.values()].map(r => ({ ...r, cq: r.oq + r.iq - r.xq, ca: r.oa + r.ia - r.xa }))
       .filter(r => [r.oq, r.oa, r.iq, r.ia, r.xq, r.xa].some(nz)).sort((a, b) => a.name.localeCompare(b.name));
@@ -43,7 +43,11 @@ function make(db, all, get, run) {
     if (o.st === 'none') rows = rows.filter(r => !r.st); else if (o.st) rows = rows.filter(r => r.st && r.st.status === o.st);
     rows.sort((a, b) => Math.abs(b.tot.ca) - Math.abs(a.tot.ca) || a.bp.localeCompare(b.bp));
     const T = k => rows.reduce((q, r) => q + r.tot[k], 0);
-    return { kind, acc: accOf({ ...o, kind }), from, to, ym, rows, tot: Object.fromEntries(['oq', 'oa', 'iq', 'ia', 'xq', 'xa', 'cq', 'ca'].map(k => [k, T(k)])) };
+    // kiểm tra: tổng cuối kỳ (mọi đối tượng, không lọc) = số dư sổ cái TK (Nợ − Có) đến ngày 'đến'
+    const A = accOf({ ...o, kind }) + '%', all0 = build(legs({ ...o, kind, to }), from), sum0 = k => all0.reduce((q, r) => q + r.tot[k], 0);
+    const glA = get(`SELECT (SELECT ifnull(sum(amount),0) FROM entries WHERE acc_debit LIKE ? AND account_date<=?) - (SELECT ifnull(sum(amount),0) FROM entries WHERE acc_credit LIKE ? AND account_date<=?) b`, A, to, A, to).b;
+    const chk = { gl: glA, rep: sum0('ca'), diff: sum0('ca') - glA, none: (all0.find(r => r.bp === NONE) || { tot: { ca: 0 } }).tot.ca };
+    return { chk, kind, acc: accOf({ ...o, kind }), from, to, ym, rows, tot: Object.fromEntries(['oq', 'oa', 'iq', 'ia', 'xq', 'xa', 'cq', 'ca'].map(k => [k, T(k)])) };
   }
   function detail(bp, o = {}) { const r = report({ ...o, q: '', only: '', who: '', st: '' }); return { ...r, row: r.rows.find(x => x.bp === bp) || null }; }
   // chứng từ của một đối tượng × mặt hàng (xem khi nhấn đúp)
