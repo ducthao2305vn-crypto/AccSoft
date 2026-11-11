@@ -1,14 +1,39 @@
 name: Build & release desktop app
-# Tự phát hành khi version trong package.json chưa có Release tương ứng
+# Mỗi lần push: chỉ build bản THỬ NGHIỆM (Windows), ghi đè vào một pre-release duy nhất tên "test" – không tạo Release mới.
+# Release chính thức: Actions → "Build & release desktop app" → Run workflow → chọn release = true (sau khi đã test xong).
 on:
   push:
     branches: [main, 'claude/**']
     paths: [package.json, CHANGELOG.md, '.github/workflows/build-desktop.yml']
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Phát hành Release chính thức (Windows + Mac + Linux) cho version hiện tại'
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
+  test:
+    if: github.event_name == 'push' || !inputs.release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npm run dist:win -- --publish never
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+      - name: Ghi đè pre-release "test"
+        shell: bash
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          V="$(node -p "require('./package.json').version")"
+          gh release delete test --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
+          awk -v t="## $V" '$0 ~ "^## " {p = index($0, t) == 1} p' CHANGELOG.md > notes.md
+          gh release create test dist/*.exe --prerelease --target "$GITHUB_SHA" --title "AccSoft $V – bản thử nghiệm (chưa phát hành)" --notes-file notes.md --repo "$GITHUB_REPOSITORY"
   check:
+    if: github.event_name == 'workflow_dispatch' && inputs.release
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.v.outputs.tag }}
