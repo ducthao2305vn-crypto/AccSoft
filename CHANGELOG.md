@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 4.96.0
+- **Danh mục đối tác** (Đối chiếu công nợ 331 → 👥 Danh mục đối tác): thông tin chung (tên in biên bản, MST, địa chỉ, điện thoại, website), **nhiều người liên hệ** (họ tên, chức vụ, phòng ban, email, điện thoại, vai trò nhận đối chiếu To / CC / không gửi) và **nhiều tài khoản ngân hàng** (ngân hàng, chi nhánh, số TK, tên TK, loại tiền, SWIFT, mặc định). Tìm kiếm, lọc đối tác chưa có email; xuất / nạp Excel 3 sheet. Người liên hệ cũ (1 người / đối tác) được chuyển sang danh mục mới.
+- **Biên bản đối chiếu 331 dạng PDF** (A4 ngang, logo, số trang): bảng theo hợp đồng – đầu kỳ, phát sinh, cuối kỳ, cột để đối tác ghi số của họ và lý do chênh lệch; MST, địa chỉ, tài khoản ngân hàng mặc định của đối tác; chữ ký hai bên. Nút 👁 Xem PDF / PDF ở danh sách và trong cửa sổ chi tiết.
+- **Gửi email đối chiếu 331**: tick nhiều đối tác → ✉ Gửi email đối chiếu → mỗi đối tác một thư riêng tới người liên hệ To, CC = người CC của đối tác + CC thêm + CC mặc định SMTP; đính kèm PDF + Excel (tuỳ chọn Word); gửi lần lượt có tiến độ, kết quả từng đối tác, gửi lại chỉ đối tác lỗi; đối tác chưa có email có link bổ sung ngay.
+
 ## 4.95.1
 - "Gửi lại" chỉ gửi những người còn lỗi, không gửi trùng người đã nhận.
 

@@ -572,3 +572,5 @@ await p.evaluate(()=>window.api.q('stats'));
   - khớp nguyên chuỗi theo `I18N_EN` (bỏ dấu ":" cuối hoặc ký hiệu đầu dòng nếu cần);
   - không khớp thì thay theo cụm `I18N_PH`; riêng ô dữ liệu (`tbody td`, `.clamp`, `textarea`) chỉ khớp nguyên chuỗi.
 - Thêm chuỗi mới: bổ sung vào `I18N_EN`, không cần sửa mã giao diện.
+
+- Danh mục đối tác (engine/partnerinfo.js, v4.96): ap331_partner (thông tin chung) + pc_contact (nhiều liên hệ, role to/cc/"") + pc_bank. piRecipients(bp) → {to, cc}. Email 331: handle ap:mail (một đối tác / lần, renderer lặp), PDF: apPdfHtml trong main.js.
