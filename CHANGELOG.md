@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.5
+- Excel biên bản 15611 / 14121: in nhiều trang thì dòng tiêu đề bảng lặp lại ở mỗi trang (Print Titles), chân trang có số trang "Page x / y".
+
 ## 4.99.4
 - Rà soát lỗi tách mã / tên đối tượng:
   - Tên đối tác in trên biên bản 331, 15611 / 14121 (Word, Excel, PDF, email) với mã dạng VTL_VEN_069_… trước đây in nguyên cả mã ("VTL_VEN_069_PEDRO XIMENES") – nay chỉ in tên.

@@ -49,6 +49,7 @@ async function xlsx15611(row, rep, sg, co = {}) {
   put(`A${r}`, 'REPRESENTATIVE', { b: 1, al: 'center' }); put(`G${r}`, 'FINANCE STAFF', { b: 1, al: 'center' }); put(`J${r}`, 'CHIEF OF ACCOUNTANT', { b: 1, al: 'center' }); put(`M${r}`, 'VICE GENERAL DIRECTOR', { b: 1, al: 'center' });
   r++; for (const [rg, t] of [[`A${r}:E${r}`, '(Sign, Fullname, Stamp)'], [`G${r}:I${r}`, '(Sign, Fullname)'], [`J${r}:L${r}`, '(Sign, Fullname)'], [`M${r}:P${r}`, '(Sign, Fullname, Stamp)']]) { ws.mergeCells(rg); put(rg.split(':')[0], t, { i: 1, al: 'center', sz: 10 }); }
   ws.views = [{ state: 'frozen', ySplit: 13 }];
+  ws.pageSetup.printTitlesRow = '11:13'; ws.headerFooter.oddFooter = '&CPage &P / &N'; // lặp tiêu đề bảng + số trang khi in
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
 function html15611(row, rep, sg, co = {}) {
@@ -95,6 +96,7 @@ async function xlsx14121(row, rep, sg) {
   r++; for (const [rg, t] of [[`A${r}:C${r}`, 'Prepared by'], [`D${r}:F${r}`, 'Recipient Debt'], [`G${r}:I${r}`, 'Chief of Accountant'], [`J${r}:L${r}`, 'Vice General Director']]) { ws.mergeCells(rg); put(rg.split(':')[0], t, { b: 1, al: 'center' }); }
   r++; for (const [rg, t] of [[`A${r}:C${r}`, '(Sign, Fullname)'], [`D${r}:F${r}`, '(Sign, Fullname)'], [`G${r}:I${r}`, '(Sign, Fullname)'], [`J${r}:L${r}`, '(Sign, Fullname, Stamp)']]) { ws.mergeCells(rg); put(rg.split(':')[0], t, { i: 1, al: 'center', sz: 9 }); }
   ws.views = [{ state: 'frozen', ySplit: 10 }];
+  ws.pageSetup.printTitlesRow = '9:10'; ws.headerFooter.oddFooter = '&CPage &P / &N';
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
 function html14121(row, rep, sg) {
