@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.6
+- Đối chiếu 15611 / 14121: dòng "(không có đối tượng)" (bút toán để trống mã đối tượng) nay xem được chứng từ – trước đây nhấn đúp mặt hàng không ra dòng nào. Cửa sổ chi tiết có nút **📄 Xem tất cả chứng từ** (mọi mặt hàng, kèm cột mặt hàng) để truy bút toán còn tồn tiền.
+
 ## 4.99.5
 - Excel biên bản 15611 / 14121: in nhiều trang thì dòng tiêu đề bảng lặp lại ở mỗi trang (Print Titles), chân trang có số trang "Page x / y".
 

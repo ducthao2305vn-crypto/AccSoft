@@ -7,20 +7,23 @@
 function make(db, all, get, run) {
   db.exec(`CREATE TABLE IF NOT EXISTS gr_assign(kind TEXT, bp TEXT, ym TEXT, staff TEXT, name TEXT, email TEXT, due TEXT, mailed_at TEXT, PRIMARY KEY(kind, bp, ym));
     CREATE TABLE IF NOT EXISTS gr_status(kind TEXT, bp TEXT, ym TEXT, status TEXT, note TEXT, at TEXT, PRIMARY KEY(kind, bp, ym));`);
+  const NONE = '(không có đối tượng)';
   const day = d => String(d || '').slice(0, 10), s = v => String(v ?? '').trim();
   const KIND = { '15611': { acc: '15611' }, '14121': { acc: '14121' } };
   const split = p => { const t = s(p), i = t.indexOf('_'); return i > 0 && i < 24 ? { code: t.slice(0, i), name: t.slice(i + 1) } : { code: t, name: t }; };
   const accOf = o => (s(o.acc).replace(/[^0-9]/g, '') || (KIND[o.kind] || KIND['15611']).acc);
   function legs(o, bps) {
-    const A = accOf(o) + '%', to = day(o.to) || '9999-12-31', B = bps && bps.length ? ` AND bp IN (${bps.map(() => '?').join(',')})` : '';
+    const A = accOf(o) + '%', to = day(o.to) || '9999-12-31', NO = bps && bps.includes(NONE), B0 = (bps || []).filter(b => b !== NONE);
+    // "(không có đối tượng)" = bút toán để trống mã đối tượng
+    const B = bps && bps.length ? ` AND (${[B0.length ? `bp IN (${B0.map(() => '?').join(',')})` : '', NO ? `ifnull(bp,'')=''` : ''].filter(Boolean).join(' OR ')})` : '', bps0 = B0;
     return all(`SELECT * FROM (
       SELECT 'in' side, account_date d, document_no doc, partner_debit bp, product p, uom u, quantity q, amount a, description ds FROM entries WHERE acc_debit LIKE ? AND account_date<=?
-      UNION ALL SELECT 'out', account_date, document_no, partner_credit, product, uom, quantity, amount, description FROM entries WHERE acc_credit LIKE ? AND account_date<=?) WHERE 1${B}`, A, to, A, to, ...(bps || []));
+      UNION ALL SELECT 'out', account_date, document_no, partner_credit, product, uom, quantity, amount, description FROM entries WHERE acc_credit LIKE ? AND account_date<=?) WHERE 1${B}`, A, to, A, to, ...(bps ? bps0 : []));
   }
   const nz = v => Math.abs(v) > 0.004;
   function build(L, from) {
     const P = new Map();
-    for (const x of L) { const bp = s(x.bp) || '(không có đối tượng)', it = split(x.p), k = it.code + '|' + s(x.u);
+    for (const x of L) { const bp = s(x.bp) || NONE, it = split(x.p), k = it.code + '|' + s(x.u);
       const g = P.get(bp) || P.set(bp, { bp, items: new Map() }).get(bp), r = g.items.get(k) || g.items.set(k, { code: it.code, name: it.name, unit: s(x.u), oq: 0, oa: 0, iq: 0, ia: 0, xq: 0, xa: 0 }).get(k);
       const a = +x.a || 0, q = Math.abs(+x.q || 0) * (a < 0 ? -1 : 1);
       if (x.d < from) { const sg = x.side === 'in' ? 1 : -1; r.oq += sg * q; r.oa += sg * a; } else if (x.side === 'in') { r.iq += q; r.ia += a; } else { r.xq += q; r.xa += a; } }
