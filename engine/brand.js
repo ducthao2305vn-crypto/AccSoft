@@ -11,7 +11,7 @@ const colIdx = c => [...c].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) 
 const drawingXml = col => `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:oneCellAnchor><xdr:from><xdr:col>${col}</xdr:col><xdr:colOff>76200</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>38100</xdr:rowOff></xdr:from><xdr:ext cx="${CX}" cy="${CY}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="2" name="Telemor logo"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${CX}" cy="${CY}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>`;
 const RELNS = 'http://schemas.openxmlformats.org/package/2006/relationships';
-function xlsx(buf, name = '') {
+function xlsx(buf, name = '', opt = {}) {
   if (RAW.test(name) || !png().length) return buf;
   try {
     const z = XLSX.CFB.read(buf, { type: 'buffer' }), find = p => XLSX.CFB.find(z, p), get = p => { const f = find(p); return f ? Buffer.from(f.content).toString('utf8') : null; };
@@ -22,7 +22,7 @@ function xlsx(buf, name = '') {
     put('/xl/media/accsoft_logo.png', png()); let n = 0, added = [];
     for (const sp of sheets) {
       let x = get(sp); if (!x || /<drawing\b/.test(x)) continue;
-      const m = /<dimension ref="[A-Z]+\d+:([A-Z]+)\d+"/.exec(x), col = Math.min(m ? colIdx(m[1]) + 1 : 8, 40);
+      const m = /<dimension ref="[A-Z]+\d+:([A-Z]+)\d+"/.exec(x), col = opt.col != null ? opt.col : Math.min(m ? colIdx(m[1]) + 1 : 8, 40); // opt.col: đặt logo trong vùng in (biểu mẫu có chỗ trống đầu trang)
       n++; const dp = `/xl/drawings/accsoft_logo${n}.xml`;
       put(dp, drawingXml(col)); put(`/xl/drawings/_rels/accsoft_logo${n}.xml.rels`, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${RELNS}"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/accsoft_logo.png"/></Relationships>`);
       const rp = sp.replace(/sheet(\d+)\.xml$/, '_rels/sheet$1.xml.rels'), rel = `<Relationship Id="rIdAccLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/accsoft_logo${n}.xml"/>`;
@@ -52,7 +52,7 @@ function pdfHtml(h) {
   return /<\/head>/i.test(h) ? h.replace(/<\/head>/i, css + '</head>') : css + h;
 }
 // Tuỳ chọn printToPDF: số trang ở chân trang
-const pdfOpts = (en, o = {}) => ({ pageSize: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate: '<span></span>',
+const pdfOpts = (en, o = {}) => ({ pageSize: 'A4', printBackground: true, generateTaggedPDF: false, generateDocumentOutline: false, displayHeaderFooter: true, headerTemplate: '<span></span>',
   footerTemplate: `<div style="width:100%;font-size:8px;color:#666;text-align:center;font-family:Arial">${en ? 'Page' : 'Trang'} <span class="pageNumber"></span> / <span class="totalPages"></span></div>`,
   margins: { marginType: 'custom', top: 0.4, bottom: 0.55, left: 0.4, right: 0.4 }, ...o });
 module.exports = { xlsx, html, pdfHtml, pdfOpts, RAW, png };

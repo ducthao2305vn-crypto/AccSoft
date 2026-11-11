@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 4.99.2
+- Đối chiếu 15611 / 14121: danh sách mặc định **thu gọn** – chỉ hiện dòng tổng của từng đối tượng; bấm ▸ để mở / ▾ để đóng mặt hàng của đối tượng đó, nút "Mở tất cả / Thu gọn tất cả"; tick chọn không bị mất khi mở / đóng.
+- Biên bản Excel 15611 / 14121: logo đặt góc trên bên trái trong vùng in (trước đây nằm ngoài bảng); bỏ dòng tên người ký ở cuối (PDF và Excel) – chỉ còn chức danh và ô ký.
+- PDF: tắt cấu trúc tag ẩn – mở PDF bằng Word không còn hiện mã CSS và vỡ bảng.
+
 ## 4.99.1
 - Chủ nhà trạm: số tài khoản / ngân hàng / chủ tài khoản tự lấy từ Danh mục đối tác (file ERP Export_C_BPartner đã nạp) khi chưa nhập tay – đánh dấu ERP, +n nếu có nhiều tài khoản; lọc "chưa có số tài khoản" tính cả tài khoản ERP. Cửa sổ chi tiết chủ nhà có thẻ danh sách tài khoản ngân hàng / ví. Số tài khoản nhập tay vẫn được ưu tiên.
 

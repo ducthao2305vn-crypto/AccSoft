@@ -48,7 +48,6 @@ async function xlsx15611(row, rep, sg, co = {}) {
   r++; ws.mergeCells(`A${r}:E${r}`); ws.mergeCells(`G${r}:I${r}`); ws.mergeCells(`J${r}:L${r}`); ws.mergeCells(`M${r}:P${r}`);
   put(`A${r}`, 'REPRESENTATIVE', { b: 1, al: 'center' }); put(`G${r}`, 'FINANCE STAFF', { b: 1, al: 'center' }); put(`J${r}`, 'CHIEF OF ACCOUNTANT', { b: 1, al: 'center' }); put(`M${r}`, 'VICE GENERAL DIRECTOR', { b: 1, al: 'center' });
   r++; for (const [rg, t] of [[`A${r}:E${r}`, '(Sign, Fullname, Stamp)'], [`G${r}:I${r}`, '(Sign, Fullname)'], [`J${r}:L${r}`, '(Sign, Fullname)'], [`M${r}:P${r}`, '(Sign, Fullname, Stamp)']]) { ws.mergeCells(rg); put(rg.split(':')[0], t, { i: 1, al: 'center', sz: 10 }); }
-  r += 5; for (const [rg, t] of [[`A${r}:E${r}`, co.contact || ''], [`G${r}:I${r}`, sg.staff || ''], [`J${r}:L${r}`, sg.chief || ''], [`M${r}:P${r}`, sg.vgd || '']]) { ws.mergeCells(rg); put(rg.split(':')[0], String(t).replace(/^(Mr|Ms|Mrs)\.\s*/i, ''), { b: 1, al: 'center' }); }
   ws.views = [{ state: 'frozen', ySplit: 13 }];
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
@@ -68,7 +67,7 @@ function html15611(row, rep, sg, co = {}) {
   <div class="dt"><i>Date ${dmy(rep.to)}</i></div>
   <table class="sig"><tr><td style="width:34%"><b>${e(P.toUpperCase())}</b></td><td colspan=3><b>VIETTEL TIMOR UNIPESSOAL LDA</b></td></tr>
   <tr><td><b>REPRESENTATIVE</b><br><i>(Sign, Fullname, Stamp)</i></td><td><b>FINANCE STAFF</b><br><i>(Sign, Fullname)</i></td><td><b>CHIEF OF ACCOUNTANT</b><br><i>(Sign, Fullname)</i></td><td><b>VICE GENERAL DIRECTOR</b><br><i>(Sign, Fullname, Stamp)</i></td></tr>
-  <tr class=sp><td>${e(co.contact || '')}</td><td>${e(sg.staff || '')}</td><td>${e(sg.chief || '')}</td><td>${e(String(sg.vgd || '').replace(/^(Mr|Ms|Mrs)\.\s*/i, ''))}</td></tr></table></body></html>`;
+  <tr class=sp><td></td><td></td><td></td><td></td></tr></table></body></html>`;
 }
 
 // ---------- 14121: PRODUCT LIABILITY BY PARTNER REPORT ----------
@@ -95,7 +94,6 @@ async function xlsx14121(row, rep, sg) {
   const d = new Date(rep.to); let r = tr + 1; ws.mergeCells(`I${r}:L${r}`); put(`I${r}`, `Day ${d.getDate()} month ${d.getMonth() + 1} year ${d.getFullYear()}`, { i: 1, al: 'center' });
   r++; for (const [rg, t] of [[`A${r}:C${r}`, 'Prepared by'], [`D${r}:F${r}`, 'Recipient Debt'], [`G${r}:I${r}`, 'Chief of Accountant'], [`J${r}:L${r}`, 'Vice General Director']]) { ws.mergeCells(rg); put(rg.split(':')[0], t, { b: 1, al: 'center' }); }
   r++; for (const [rg, t] of [[`A${r}:C${r}`, '(Sign, Fullname)'], [`D${r}:F${r}`, '(Sign, Fullname)'], [`G${r}:I${r}`, '(Sign, Fullname)'], [`J${r}:L${r}`, '(Sign, Fullname, Stamp)']]) { ws.mergeCells(rg); put(rg.split(':')[0], t, { i: 1, al: 'center', sz: 9 }); }
-  r += 5; for (const [rg, t] of [[`A${r}:C${r}`, sg.staff], [`D${r}:F${r}`, P], [`G${r}:I${r}`, sg.chief], [`J${r}:L${r}`, sg.vgd]]) { ws.mergeCells(rg); put(rg.split(':')[0], String(t || '').replace(/^(Mr|Ms|Mrs)\.\s*/i, ''), { b: 1, al: 'center' }); }
   ws.views = [{ state: 'frozen', ySplit: 10 }];
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
@@ -112,7 +110,7 @@ function html14121(row, rep, sg) {
   <tr class=t><td colspan=4 class=c>Total</td>${cells(T)}</tr></tbody></table>
   <div class="dt"><i>Day ${d.getDate()} month ${d.getMonth() + 1} year ${d.getFullYear()}</i></div>
   <table class="sig"><tr><td><b>Prepared by</b><br><i>(Sign, Fullname)</i></td><td><b>Recipient Debt</b><br><i>(Sign, Fullname)</i></td><td><b>Chief of Accountant</b><br><i>(Sign, Fullname)</i></td><td><b>Vice General Director</b><br><i>(Sign, Fullname, Stamp)</i></td></tr>
-  <tr class=sp><td>${e(sg.staff || '')}</td><td>${e(P)}</td><td>${e(sg.chief || '')}</td><td>${e(String(sg.vgd || '').replace(/^(Mr|Ms|Mrs)\.\s*/i, ''))}</td></tr></table></body></html>`;
+  <tr class=sp><td></td><td></td><td></td><td></td></tr></table></body></html>`;
 }
 const CSS = `body{font-family:'Times New Roman',Times,serif;font-size:11px;color:#000;margin:0}h1{font-size:17px;text-align:center;margin:4px 0 2px}.sub{text-align:center;margin:1px 0}p{margin:5px 0}.b{font-weight:700}
   table{border-collapse:collapse;width:100%}table.np td{padding:1px 4px 1px 18px}table.g{margin-top:6px}table.g th,table.g td{border:1px solid #000;padding:3px 4px;vertical-align:middle}table.g th{font-weight:700;text-align:center}table.g th.s{font-size:10px}

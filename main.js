@@ -662,7 +662,7 @@ ${R.map((x, i) => `<tr><td style="${td}">${i + 1}</td><td style="${td}"><b>${e(x
   async function grFiles(kind, bp, o) { const r = await grData(kind, bp, o), sg = await qa('grSigners'), co = await grCo(bp), B = GX.build[kind];
     const w = new BrowserWindow({ show: false, width: 1200, height: 1400, webPreferences: { sandbox: true } }); let pdf;
     try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(BRAND.pdfHtml(BRAND.html(B.html(r.row, r, sg, co))))); pdf = Buffer.from(await w.webContents.printToPDF(BRAND.pdfOpts(I18.lang() === 'en', { landscape: kind === '15611' }))); } finally { w.destroy(); }
-    const base = grBase(kind, bp, r); return { r, base, pdf, xlsx: BRAND.xlsx(await B.xlsx(r.row, r, sg, co), base + '.xlsx') }; }
+    const base = grBase(kind, bp, r); return { r, base, pdf, xlsx: BRAND.xlsx(await B.xlsx(r.row, r, sg, co), base + '.xlsx', { col: 0 }) }; }
   handle('gr:preview', async (_e, kind, bp, o) => { const f = await grFiles(kind, bp, o), fp = path.join(os.tmpdir(), `${f.base}_${Date.now()}.pdf`); fs.writeFileSync(fp, f.pdf);
     const er = await shell.openPath(fp); if (er) throw new Error(er); setTimeout(() => { try { fs.unlinkSync(fp); } catch { } }, 30 * 60e3).unref?.(); return fp; });
   handle('gr:export', async (_e, kind, bps, o, kinds) => { let dir = null; if (bps.length > 1) { const d = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'] }); if (d.canceled) return null; dir = d.filePaths[0]; }
