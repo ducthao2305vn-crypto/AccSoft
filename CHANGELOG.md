@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.97.3
+- Tiếng Anh: màn Giao việc, Danh mục đối tác (danh sách + sửa liên hệ / tài khoản), Gửi email đối chiếu 331, các nút Xem PDF / Giao việc / Gửi email / Danh mục đối tác, lọc Phụ trách và thông báo đều dùng chữ song ngữ cố định (không còn lẫn Việt – Anh do dịch từng cụm). Trang Đối chiếu 331: bổ sung bản dịch tiêu đề cột, chỉ tiêu, gợi ý, bộ lọc.
+- Giao việc: tiêu đề / nội dung mặc định theo ngôn ngữ đang chọn (trước đây lấy lại mẫu tiếng Việt đã lưu khi chuyển sang EN).
+
 ## 4.97.2
 - Sửa CC tự động: trước đây mọi email đều tự CC "CC mặc định" trong cấu hình SMTP dù không chọn. Nay chỉ CC khi tick **"Kèm CC mặc định (…)"** ở màn gửi (đối chiếu tạm ứng, gửi đối tác 331, giao việc); mặc định không tick, app nhớ lựa chọn. Dòng "CC mỗi thư" hiện đúng danh sách sẽ CC.
 

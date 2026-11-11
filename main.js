@@ -592,17 +592,17 @@ async function init() {
     const w = new BrowserWindow({ show: false, width: 1100, height: 1400, webPreferences: { sandbox: true } });
     try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(BRAND.pdfHtml(BRAND.html(html)))); return await w.webContents.printToPDF(BRAND.pdfOpts(true, { landscape: true })); } finally { w.destroy(); } }
   const apBase = (bp, d, o) => `DoiChieu331_${String(require('./engine/ap331x').pname(bp, d.info)).replace(/[^\w\-]+/g, '_').replace(/_+/g, '_').slice(0, 50)}_${String(o.to || '').replace(/-/g, '')}`;
-  handle('ap:pdfPreview', async (_e, bp, o) => { const d = await apData(bp, o); if (!d) throw new Error('Không có số liệu đối chiếu cho đối tượng này trong kỳ');
+  handle('ap:pdfPreview', async (_e, bp, o) => { const d = await apData(bp, o); if (!d) throw new Error(I18.lang() === 'en' ? 'No reconciliation data for this partner in the period' : 'Không có số liệu đối chiếu cho đối tượng này trong kỳ');
     const fp = path.join(os.tmpdir(), `${apBase(bp, d, o)}_${Date.now()}.pdf`); fs.writeFileSync(fp, await apPdf(d));
-    const er = await shell.openPath(fp); if (er) throw new Error('Không mở được PDF: ' + er); setTimeout(() => { try { fs.unlinkSync(fp); } catch { } }, 30 * 60e3).unref?.(); return fp; });
-  handle('ap:pdf', async (_e, bp, o) => { const d = await apData(bp, o); if (!d) throw new Error('Không có số liệu');
+    const er = await shell.openPath(fp); if (er) throw new Error((I18.lang() === 'en' ? 'Cannot open PDF: ' : 'Không mở được PDF: ') + er); setTimeout(() => { try { fs.unlinkSync(fp); } catch { } }, 30 * 60e3).unref?.(); return fp; });
+  handle('ap:pdf', async (_e, bp, o) => { const d = await apData(bp, o); if (!d) throw new Error(I18.lang() === 'en' ? 'No data' : 'Không có số liệu');
     const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: apBase(bp, d, o) + '.pdf', filters: [{ name: 'PDF', extensions: ['pdf'] }] }); if (canceled) return null;
     fs.writeFileSync(filePath, await apPdf(d)); shell.openPath(filePath); return filePath; });
   // Gửi email đối chiếu cho MỘT đối tác (giao diện gọi lần lượt từng đối tác): To = liên hệ vai trò To, CC = liên hệ CC + CC nhập + CC mặc định SMTP
   handle('ap:mail', async (_e, bp, o) => {
-    const cfg = mailer.getConfig(Q); if (!cfg.host) throw new Error('Chưa cấu hình máy chủ gửi mail (SMTP). Vào mục Báo cáo → Máy chủ gửi mail (SMTP) để thiết lập.');
-    const rc = await qa('piRecipients', bp); if (!rc.to.length) return { ok: false, skip: true, error: 'Đối tác chưa có email người liên hệ' };
-    const d = await apData(bp, o); if (!d) return { ok: false, skip: true, error: 'Không có số liệu trong kỳ' };
+    const cfg = mailer.getConfig(Q); if (!cfg.host) throw new Error(I18.lang() === 'en' ? 'SMTP mail server is not configured. Go to Report → SMTP mail server to set it up.' : 'Chưa cấu hình máy chủ gửi mail (SMTP). Vào mục Báo cáo → Máy chủ gửi mail (SMTP) để thiết lập.');
+    const rc = await qa('piRecipients', bp); if (!rc.to.length) return { ok: false, skip: true, error: I18.lang() === 'en' ? 'The partner has no contact email' : 'Đối tác chưa có email người liên hệ' };
+    const d = await apData(bp, o); if (!d) return { ok: false, skip: true, error: I18.lang() === 'en' ? 'No data in this period' : 'Không có số liệu trong kỳ' };
     const X = require('./engine/ap331x'), P = X.pname(bp, d.info), r2 = v => Math.round((+v || 0) * 100) / 100, f = v => r2(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), dmy = t => String(t).slice(0, 10).split('-').reverse().join('/');
     const e = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     const fill = t => String(t || '').replace(/\{partner\}/g, P).replace(/\{contact\}/g, rc.names[0] || 'Sir/Madam').replace(/\{asOf\}/g, dmy(d.to)).replace(/\{balance\}/g, f(d.close)).replace(/\{payable\}/g, f(d.pay)).replace(/\{advance\}/g, f(d.adv));
