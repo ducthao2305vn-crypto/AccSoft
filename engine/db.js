@@ -14,7 +14,8 @@ const COLS = [
   ['product', 'product', 'TEXT'], ['uom', 'uom', 'TEXT'], ['loc', 'locator', 'TEXT'], ['locCr', 'locator_credit', 'TEXT'],
   ['distFrom', 'dist_from', 'TEXT'], ['distTo', 'dist_to', 'TEXT'], ['currency', 'currency', 'TEXT'], ['rate', 'rate', 'REAL'], ['rateVnd', 'rate_vnd', 'REAL'],
   ['grpCost', 'group_cost', 'TEXT'], ['services', 'services', 'TEXT'], ['location', 'location', 'TEXT'], ['project', 'project', 'TEXT'], ['period', 'period', 'TEXT'], ['plate', 'plate', 'TEXT'],
-  ['asset', 'asset', 'TEXT'], // v4.88: mã / tên tài sản (cột Asset của file ERP) – báo cáo tài sản & khấu hao
+  ['asset', 'asset', 'TEXT'],
+  ['amtAcc', 'amount_acc', 'REAL'], ['amtSrc', 'amount_src', 'REAL'], ['codeBooking', 'code_booking', 'TEXT'], // v5.0: Accounted Amount, Source Amount, Code Booking (amount = số dùng cho báo cáo theo cài đặt amount_basis) // v4.88: mã / tên tài sản (cột Asset của file ERP) – báo cáo tài sản & khấu hao
 ];
 const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, e.enriched AS _enriched, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
 

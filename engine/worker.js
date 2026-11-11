@@ -9,6 +9,7 @@ const { checkRow, errKey, code, fmt2, RULES_VERSION, setConfig, CFG } = require(
 
 const { db } = open(workerData.dbPath, { light: workerData.task === 'scan' });
 const post = m => parentPort.postMessage(m);
+let BASIS = 'src'; try { BASIS = db.prepare(`SELECT v FROM settings WHERE k='amount_basis'`).get()?.v === 'acc' ? 'acc' : 'src'; } catch { }
 try { setConfig(JSON.parse(db.prepare(`SELECT v FROM settings WHERE k='thresholds'`).get()?.v || '{}')); } catch (e) { /* dùng mặc định */ }
 const BATCH = 5000;
 
@@ -41,7 +42,7 @@ const str = v => { v = cell(v); return v == null ? null : v instanceof Date ? is
 // Cột nguồn (tiêu đề file ERP) -> trường chuẩn hoá. Tiêu đề trùng tên: lấy cột xuất hiện đầu tiên.
 const SRC = {
   line: ['Line No', num], doc: ['Document No', str], date: ['Account Date', isoDate], due: ['Due Date', isoDate],
-  drName: ['Account', str], crName: ['Account credit', str], amt: ['Accounted Amount', num], qty: ['Quantity', num], price: ['Unit Price', num],
+  drName: ['Account', str], crName: ['Account credit', str], amtAcc: ['Accounted Amount', num], amtSrc: ['Source Amount', num], codeBooking: ['Code Booking', str], qty: ['Quantity', num], price: ['Unit Price', num],
   bp: ['Business Partner', str], bpCr: ['Bpartner credit', str], desc: ['Description', str], descP: ['DescriptionParent', str],
   dept: ['Department', str], deptSub: ['Department Sub', str], table: ['Table', str], tcost: ['Type of cost', str],
   trev: ['Type of revenue ERP', str], trev2: ['Type of revenue BCCS', str], inv: ['Invoice', str], adv: ['Advance Request', str],
@@ -53,6 +54,7 @@ const SRC = {
   plate: [['License Plate', 'Lisence plate', 'LicensePlate', 'TOC_LicensePlate', 'Biển số xe', 'Bien so xe', 'Vehicle', 'Vehicles', 'Plate No'], str],
 };
 function headerMap(header) {
+  try { BASIS = db.prepare(`SELECT v FROM settings WHERE k='amount_basis'`).get()?.v === 'acc' ? 'acc' : 'src'; } catch { }
   const idx = {};
   header.forEach((h, i) => { const k = String(h ?? '').trim(); if (k && !(k in idx)) idx[k] = i; });
   if (!('Account' in idx) || !('Accounted Amount' in idx)) return null;
@@ -65,7 +67,7 @@ function normalize(vals, map) {
   const r = {};
   for (const k in map) { const [i, fn] = map[k]; if (Array.isArray(i)) { r[k] = null; for (const j of i) { const v = fn(vals[j]); if (v != null && v !== '') { r[k] = v; break; } } } else r[k] = i == null ? null : fn(vals[i]); }
   r.trev = r.trev || r.trev2; delete r.trev2;
-  r.amt = r.amt ?? 0; r.desc = r.desc ?? ''; r.user = r.user || '(không rõ)';
+  r.amt = (BASIS === 'acc' ? (r.amtAcc ?? r.amtSrc) : (r.amtSrc ?? r.amtAcc)) ?? 0; // số tiền dùng cho báo cáo: Source Amount (mặc định) hoặc Accounted Amount – cài đặt amount_basis r.desc = r.desc ?? ''; r.user = r.user || '(không rõ)';
   r.dr = code(r.drName); r.cr = code(r.crName);
   return r;
 }

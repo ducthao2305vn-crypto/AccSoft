@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 4.99.13
+- Nạp thêm cột **Source Amount**, **Accounted Amount** (giữ cả hai) và **Code Booking** từ file ERP.
+- **Mọi báo cáo dùng Source Amount** (mặc định); dòng không có Source Amount dùng Accounted Amount. Đổi được ở Báo cáo → "Số tiền dùng cho báo cáo" (Source / Accounted) → Áp dụng & tổng hợp lại – cập nhật toàn bộ dữ liệu đã nạp và dựng lại sổ tổng hợp. Dữ liệu nạp trước bản này cần nạp lại file ERP để có Source Amount.
+- Tra cứu bút toán: thêm ô tìm **Code Booking**; bảng kết quả có cột Code Booking, Source Amount, Accounted Amount – tô đỏ dòng hai số tiền khác nhau.
+
 ## 4.99.12
 - Sửa lại quy tắc dòng trống đối tượng cho khớp Trial balance ERP: dòng ghi Nợ TK (Account) mà Business Partner trống, hoặc ghi Có TK (Account credit) mà Bpartner credit trống, được gán **VTL - HEAD OFFICE** (đối tượng của tổ chức) – không lấy đối tượng vế kia như bản 4.99.9 (bản đó đưa nhầm nhân viên / nhà cung cấp vào 15611).
 - Áp dụng cho cả Đối chiếu 15611 / 14121 và Bảng cân đối phát sinh theo đối tượng: trước đây CĐPS theo đối tượng bỏ qua dòng trống nên tổng không khớp sổ cái (lệch −5,807.87 ở 15611); nay khớp sổ cái và HEAD OFFICE = Trial balance ERP.
