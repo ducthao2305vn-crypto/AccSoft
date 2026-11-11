@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.16
+- Biên bản 14121 (PDF và Excel) chuyển sang **khổ ngang** như 15611 – cột tên mặt hàng rộng hơn, ít xuống dòng, nhiều dòng hơn mỗi trang.
+
 ## 4.99.15
 - Bản cho **MacBook**: file .dmg dạng Universal – chạy được trên cả Mac chip Apple (M1/M2/M3/M4) và Mac Intel.
 - Gồm toàn bộ thay đổi từ 4.95 đến 4.99.14: đối chiếu 331 (danh mục đối tác, PDF, email, giao việc), đối chiếu hàng hoá 15611 / vật tư 14121, tài khoản ngân hàng / ví ERP, chủ nhà trạm, tra cứu bút toán theo TK / đối tượng Nợ – Có, Source Amount / Code Booking.

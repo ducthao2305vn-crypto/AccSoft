@@ -73,8 +73,8 @@ function html15611(row, rep, sg, co = {}) {
 
 // ---------- 14121: PRODUCT LIABILITY BY PARTNER REPORT ----------
 async function xlsx14121(row, rep, sg) {
-  const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Report', { pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 } } });
-  ws.columns = [5, 10, 42, 8, 9, 12, 9, 12, 9, 12, 9, 12].map(w => ({ width: w }));
+  const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Report', { pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.3, right: 0.3, top: 0.4, bottom: 0.4, header: 0.2, footer: 0.2 } } });
+  ws.columns = [5, 10, 72, 9, 10, 14, 10, 14, 10, 14, 10, 14].map(w => ({ width: w })); // khổ ngang
   const P = pname(row.bp, row.info), F = (c, o = {}) => { c.font = { name: FONT, size: o.sz || 10, bold: !!o.b, italic: !!o.i }; c.alignment = { horizontal: o.al || 'left', vertical: 'middle', wrapText: !!o.wrap }; if (o.box) c.border = BOX; if (o.nf) c.numFmt = o.nf; };
   const put = (a, v, o) => { const c = ws.getCell(a); c.value = v; F(c, o); return c; };
   put('A4', 'Viettel Timor Unipessoal Lda', { sz: 9 });
@@ -89,7 +89,7 @@ async function xlsx14121(row, rep, sg) {
   ws.mergeCells(`A${head}:D${head}`); put(`A${head}`, P, { b: 1, box: 1 });
   'EFGHIJKL'.split('').forEach((L, i) => { const c = ws.getCell(L + head); c.value = { formula: `${L}${tr}` }; F(c, { b: 1, al: 'right', box: 1, nf: i % 2 ? NA : NQ }); });
   row.items.forEach((it, i) => { const R = ws.getRow(first + i), v = [i + 1, it.code, it.name, it.unit, r0(it.oq), r2(it.oa), r0(it.iq), r2(it.ia), r0(it.xq), r2(it.xa), r0(it.cq), r2(it.ca)];
-    R.height = Math.max(15, 13 * Math.ceil(String(it.name || '').length / 44)); v.forEach((x, k) => { const c = R.getCell(k + 1); c.value = k >= 4 && Math.abs(x) < 1e-9 ? null : x; F(c, { al: k === 2 ? 'left' : k < 4 ? 'center' : 'right', box: 1, wrap: k === 2, nf: k >= 4 ? (k % 2 ? NA : NQ) : undefined }); }); });
+    R.height = Math.max(15, 13 * Math.ceil(String(it.name || '').length / 75)); v.forEach((x, k) => { const c = R.getCell(k + 1); c.value = k >= 4 && Math.abs(x) < 1e-9 ? null : x; F(c, { al: k === 2 ? 'left' : k < 4 ? 'center' : 'right', box: 1, wrap: k === 2, nf: k >= 4 ? (k % 2 ? NA : NQ) : undefined }); }); });
   ws.mergeCells(`A${tr}:D${tr}`); put(`A${tr}`, 'Total', { b: 1, al: 'center', box: 1 });
   'EFGHIJKL'.split('').forEach((L, i) => { const c = ws.getCell(L + tr); c.value = { formula: `SUM(${L}${first}:${L}${Math.max(first, last)})` }; F(c, { b: 1, al: 'right', box: 1, nf: i % 2 ? NA : NQ }); });
   const d = new Date(rep.to); let r = tr + 1; ws.mergeCells(`I${r}:L${r}`); put(`I${r}`, `Day ${d.getDate()} month ${d.getMonth() + 1} year ${d.getFullYear()}`, { i: 1, al: 'center' });
