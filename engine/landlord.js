@@ -8,7 +8,7 @@ const EDIT = [['site', 'Mã nhà trạm'], ['bank_acc', 'Số tài khoản'], ['
 function make(db, all, get, run) {
   db.exec(`CREATE TABLE IF NOT EXISTS landlord(bp TEXT PRIMARY KEY, ${EDIT.map(e => e[0] + ' TEXT').join(', ')}, updated_at TEXT)`);
   const s = v => v == null ? '' : String(v).replace(/\s+/g, ' ').trim();
-  const nameOf = bp => { const t = s(bp), m = t.match(/^(?:[A-Z]{2,4}_)?([A-Z]*VEN_?\d+)[_\-\s]+(.+)$/i); return m ? { vcode: m[1], name: s(m[2].replace(/\(\s*[A-Z0-9 ,\/-]*\)\s*$/i, '')) || s(m[2]) } : { vcode: '', name: t }; };
+  const nameOf = bp => { const t = s(bp), m = t.match(/^((?:[A-Z]{2,4}_)?[A-Z]*VEN_?\d+)[_\-\s]+(.+)$/i); return m ? { vcode: m[1], name: s(m[2].replace(/\(\s*[A-Z0-9 ,\/-]*\)\s*$/i, '')) || s(m[2]) } : { vcode: '', name: t }; };
   const sitesIn = (...xs) => { const out = new Set(); for (const x of xs) for (const m of String(x || '').toUpperCase().matchAll(SITE)) out.add(m[1]); return [...out]; };
   const dmy = t => { const m = String(t).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
   const period = ds => { const m = String(ds || '').match(/(\d{1,2}\/\d{1,2}\/\d{4})\s*(?:-|–|to|đến)\s*(\d{1,2}\/\d{1,2}\/\d{4})/i); return m ? { f: dmy(m[1]), t: dmy(m[2]) } : null; };

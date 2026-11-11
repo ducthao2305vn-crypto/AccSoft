@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.3
+- Chủ nhà trạm: cột Mã NCC hiện đủ mã đối tượng ERP (VTL_HOVEN00556, VTL_VEN_069) – trước đây bị cắt mất tiền tố "VTL_" nên không khớp với mã trong ERP / file Export_C_BPartner.
+
 ## 4.99.2
 - Đối chiếu 15611 / 14121: danh sách mặc định **thu gọn** – chỉ hiện dòng tổng của từng đối tượng; bấm ▸ để mở / ▾ để đóng mặt hàng của đối tượng đó, nút "Mở tất cả / Thu gọn tất cả"; tick chọn không bị mất khi mở / đóng.
 - Biên bản Excel 15611 / 14121: logo đặt góc trên bên trái trong vùng in (trước đây nằm ngoài bảng); bỏ dòng tên người ký ở cuối (PDF và Excel) – chỉ còn chức danh và ô ký.
