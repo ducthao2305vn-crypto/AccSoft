@@ -47,6 +47,9 @@ function make(db, all, get, run) {
     const A = accOf({ ...o, kind }) + '%', all0 = build(legs({ ...o, kind, to }), from), sum0 = k => all0.reduce((q, r) => q + r.tot[k], 0);
     const glA = get(`SELECT (SELECT ifnull(sum(amount),0) FROM entries WHERE acc_debit LIKE ? AND account_date<=?) - (SELECT ifnull(sum(amount),0) FROM entries WHERE acc_credit LIKE ? AND account_date<=?) b`, A, to, A, to).b;
     const chk = { gl: glA, rep: sum0('ca'), diff: sum0('ca') - glA, none: (all0.find(r => r.bp === NONE) || { tot: { ca: 0 } }).tot.ca };
+    // dòng để trống đối tượng ở đúng vế TK (theo file ERP: Account + Business Partner trống / Account credit + Bpartner credit trống)
+    const bl = (side, other) => get(`SELECT count(*) n, ifnull(sum(amount),0) a, ifnull(sum(ifnull(${other},'')<>''),0) nf, ifnull(sum(CASE WHEN ifnull(${other},'')<>'' THEN amount END),0) af FROM entries WHERE acc_${side} LIKE ? AND ifnull(partner_${side},'')='' AND account_date<=?`, A, to);
+    chk.blankDr = bl('debit', 'partner_credit'); chk.blankCr = bl('credit', 'partner_debit');
     return { chk, kind, acc: accOf({ ...o, kind }), from, to, ym, rows, tot: Object.fromEntries(['oq', 'oa', 'iq', 'ia', 'xq', 'xa', 'cq', 'ca'].map(k => [k, T(k)])) };
   }
   function detail(bp, o = {}) { const r = report({ ...o, q: '', only: '', who: '', st: '' }); return { ...r, row: r.rows.find(x => x.bp === bp) || null }; }

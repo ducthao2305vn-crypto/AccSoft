@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.11
+- Đối chiếu 15611 / 14121 – dòng Kiểm tra sổ cái thêm phân tích dòng trống đối tượng theo đúng cột file ERP: "Account + Business Partner trống" và "Account credit + Bpartner credit trống" (số dòng, số tiền, phần đã lấy theo đối tượng vế kia) và chênh lệch Nợ − Có của các dòng trống – để đối chiếu với kiểm tra trên file ERP.
+
 ## 4.99.10
 - Tra cứu bút toán ERP: thêm ô **TK Nợ**, **TK Có** (theo đầu số) và **Đối tượng Nợ**, **Đối tượng Có**; gõ chữ "trống" (hoặc dấu =) ở ô đối tượng để tìm bút toán bỏ trống đối tượng ở vế đó – vd TK Nợ 15611 + Đối tượng Nợ "trống".
 
