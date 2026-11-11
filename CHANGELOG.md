@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.1
+- Chủ nhà trạm: số tài khoản / ngân hàng / chủ tài khoản tự lấy từ Danh mục đối tác (file ERP Export_C_BPartner đã nạp) khi chưa nhập tay – đánh dấu ERP, +n nếu có nhiều tài khoản; lọc "chưa có số tài khoản" tính cả tài khoản ERP. Cửa sổ chi tiết chủ nhà có thẻ danh sách tài khoản ngân hàng / ví. Số tài khoản nhập tay vẫn được ưu tiên.
+
 ## 4.99.0
 - Danh mục đối tác → **🏦 Nạp TK ngân hàng / ví (ERP)**: nạp file Export_C_BPartner (Code, Name, Account No, Account Name, IsEmoney, Bank Name, SwiftCode). Mã ERP (VTL_HOVEN01268, VTL_HOEMP000412, VTL_VEN_245…) được ghép với mã đối tượng trong sổ theo tiền tố; chưa có trong sổ thì tạo trong danh mục. Một đối tượng nhiều tài khoản; nạp lại chỉ cập nhật theo số tài khoản, không trùng, không xoá tài khoản nhập tay. Tên ngân hàng "BNCTL-BNCTL" rút gọn "BNCTL".
 - Tài khoản ngân hàng có thêm cột **Ví điện tử** (IsEmoney), cột SWIFT / IBAN; xuất / nạp Excel danh mục có cột Ví điện tử.
