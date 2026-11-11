@@ -2537,7 +2537,9 @@ function apStBadge(i,prev){const pv=prev&&!i?`<div class=mut style="font-size:10
 
 /* v4.63.0: xác định khoản còn treo theo hợp đồng: (1) thanh toán khớp đúng số tiền, (2) diễn giải tham chiếu (số hoá đơn / chứng từ / mã chung), (3) FIFO */
 let APOPEN=false,APSGO=false;
-function apMatch(lines){const R=new Map(),G=new Map();lines.forEach((x,i)=>{const k=x.c||'';(G.get(k)||G.set(k,[]).get(k)).push(i)});
+function apMatch(L0){const R=new Map(),G=new Map();
+  // bút toán số âm (điều chỉnh / huỷ, vd Có 331 −283.86) = bút toán ngược chiều với số dương → đảo vế để khớp được với khoản gốc
+  const lines=L0.map(x=>(+x.a<0?{...x,side:x.side==='cr'?'dr':'cr',a:-x.a}:x));lines.forEach((x,i)=>{const k=x.c||'';(G.get(k)||G.set(k,[]).get(k)).push(i)});
   const tok=t=>new Set((String(t||'').toUpperCase().match(/[A-Z0-9][A-Z0-9\/\-_.]{4,}/g)||[]).filter(w=>/\d/.test(w)&&w.replace(/\D/g,'').length>=3));
   for(const [c,I] of G){const bal=I.reduce((q,i)=>q+(lines[i].side==='cr'?lines[i].a:-lines[i].a),0),incSide=bal>=0?'cr':'dr';
     const inc=I.filter(i=>lines[i].side===incSide).map(i=>({i,left:lines[i].a})),dec=I.filter(i=>lines[i].side!==incSide).map(i=>({i,left:lines[i].a,how:[]})),cT=tok(c);

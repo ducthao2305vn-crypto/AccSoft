@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.97.4
+- Sửa khoản còn treo (Outstanding) trong chi tiết đối chiếu 331: bút toán số âm (điều chỉnh / huỷ, vd Có 331 −283.86, −1,275) trước đây bị coi là khoản phải trả số âm nên không trừ được khoản gốc → hợp đồng số dư 0 vẫn hiện còn treo. Nay bút toán âm được đảo vế (Có âm = Nợ) để khớp với khoản gốc; hợp đồng hết dư không còn khoản treo.
+
 ## 4.97.3
 - Tiếng Anh: màn Giao việc, Danh mục đối tác (danh sách + sửa liên hệ / tài khoản), Gửi email đối chiếu 331, các nút Xem PDF / Giao việc / Gửi email / Danh mục đối tác, lọc Phụ trách và thông báo đều dùng chữ song ngữ cố định (không còn lẫn Việt – Anh do dịch từng cụm). Trang Đối chiếu 331: bổ sung bản dịch tiêu đề cột, chỉ tiêu, gợi ý, bộ lọc.
 - Giao việc: tiêu đề / nội dung mặc định theo ngôn ngữ đang chọn (trước đây lấy lại mẫu tiếng Việt đã lưu khi chuyển sang EN).
