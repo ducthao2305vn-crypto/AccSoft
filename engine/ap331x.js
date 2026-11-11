@@ -9,7 +9,7 @@ const longDate = d => { const [y, m, dd] = String(d).slice(0, 10).split('-').map
 const ord = n => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
 const letterDate = (d = new Date()) => `${MON[d.getMonth()]} ${ord(d.getDate())}, ${d.getFullYear()}`;
 const dmy = d => { const [y, m, dd] = String(d).slice(0, 10).split('-'); return `${dd}/${m}/${y}`; };
-const pname = (bp, info) => (info && info.name) || String(bp || '').replace(/^[A-Za-z]+_[A-Za-z]*\d+_?/, '') || bp;
+const pname = (bp, info) => (info && info.name) || String(bp || '').replace(/^[A-Za-z]+_[A-Za-z]*_?\d+_?/, '') || bp;
 
 // ---------- Excel ----------
 function buildXlsx(d, company = 'VIETTEL TIMOR UNIP LDA') {

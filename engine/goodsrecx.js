@@ -5,7 +5,7 @@ const ExcelJS = require('exceljs');
 const r2 = v => Math.round((+v || 0) * 100) / 100, r0 = v => Math.round((+v || 0) * 10000) / 10000;
 const dmy = d => { const [y, m, dd] = String(d).slice(0, 10).split('-'); return `${dd}/${m}/${y}`; };
 const MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const pname = (bp, info) => (info && info.name) || String(bp || '').replace(/^[A-Za-z]+_[A-Za-z]*\d+_?/, '') || bp;
+const pname = (bp, info) => (info && info.name) || String(bp || '').replace(/^[A-Za-z]+_[A-Za-z]*_?\d+_?/, '') || bp;
 const FONT = 'Times New Roman', THIN = { style: 'thin', color: { argb: 'FF000000' } }, BOX = { top: THIN, left: THIN, bottom: THIN, right: THIN };
 const NQ = '_-* #,##0_-;\\-* #,##0_-;_-* "-"??_-;_-@_-', NA = '_-* #,##0.00_-;\\-* #,##0.00_-;_-* "-"??_-;_-@_-';
 const ACCNAME = { '14121': 'Advances in rescuring information materials', '15611': 'Trading goods' };

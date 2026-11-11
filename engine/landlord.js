@@ -52,7 +52,8 @@ function make(db, all, get, run) {
     const C = { bp: col(/đối tượng|partner|vendor code|mã ncc|supplier code/), name: col(/^tên|name|chủ nhà|landlord/), site: col(/mã (nhà )?trạm|site|bts/), bank_acc: col(/số tài khoản|account no|account number|^account$|bank account|^stk$/), bank_name: col(/ngân hàng|^bank$|bank name/),
       acc_holder: col(/chủ tài khoản|account name|holder/), phone: col(/điện thoại|phone|sđt|mobile/), address: col(/địa chỉ|address|vị trí/), contract_end: col(/hết hạn|expir|end date/), rent_month: col(/giá thuê|rent|monthly/), note: col(/ghi chú|note/) };
     if (C.bank_acc < 0) throw new Error('Thiếu cột số tài khoản');
-    const R = scan({}).rows, byVc = new Map(R.map(r => [r.vcode.toUpperCase(), r])), byBp = new Map(R.map(r => [r.bp.toUpperCase(), r])), bySite = new Map(), byName = new Map();
+    // byVc: mã đầy đủ VTL_HOVEN… và dạng ngắn HOVEN… (file nạp có thể ghi thiếu tiền tố)
+    const R = scan({}).rows, byVc = new Map(R.flatMap(r => { const v = r.vcode.toUpperCase(), sh = (v.match(/[A-Z]*VEN_?\d+$/) || [''])[0]; return [[v, r], ...(sh && sh !== v ? [[sh, r]] : [])]; })), byBp = new Map(R.map(r => [r.bp.toUpperCase(), r])), bySite = new Map(), byName = new Map();
     for (const r of R) { for (const t of r.sitesAuto) bySite.set(t, r); byName.set(r.name.toLowerCase(), r); }
     let n = 0, miss = [];
     for (const row of aoa.slice(h + 1)) { const g = k => C[k] >= 0 ? s(row[C[k]]) : ''; if (!g('bank_acc') && !g('phone')) continue;
