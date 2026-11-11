@@ -38,7 +38,7 @@ async function sendAll(store, msgs) {
   for (const m of msgs) {
     try {
       const info = await t.sendMail({
-        from: fromOf(c), to: m.to, cc: m.cc || c.cc || undefined, subject: m.subject, html: m.html,
+        from: fromOf(c), to: m.to, cc: m.cc || undefined, // CC mặc định trong cấu hình chỉ thêm khi người dùng tick "Kèm CC mặc định" ở màn gửi subject: m.subject, html: m.html,
         attachments: (m.attachments || (m.attachment ? [m.attachment] : [])).map(x => ({ filename: x.name, content: Buffer.from(x.base64, 'base64'), ...(x.cid ? { cid: x.cid } : {}) })),
       });
       store.logMail(m.employee, m.to, m.subject, m.count, 'ok', info.messageId || '');

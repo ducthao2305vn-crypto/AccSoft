@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.97.2
+- Sửa CC tự động: trước đây mọi email đều tự CC "CC mặc định" trong cấu hình SMTP dù không chọn. Nay chỉ CC khi tick **"Kèm CC mặc định (…)"** ở màn gửi (đối chiếu tạm ứng, gửi đối tác 331, giao việc); mặc định không tick, app nhớ lựa chọn. Dòng "CC mỗi thư" hiện đúng danh sách sẽ CC.
+
 ## 4.97.1
 - Email giao việc đối chiếu 331 theo ngôn ngữ giao diện: chọn EN thì tiêu đề, nội dung mặc định, bảng đối tác, ghi chú, chân thư đều tiếng Anh (mẫu tiêu đề / nội dung lưu riêng cho từng ngôn ngữ).
 - Giao việc cho **nhiều nhân viên** cùng lúc: chọn nhiều người (bỏ từng người bằng ✕), email gửi tới tất cả; lọc Phụ trách theo từng người vẫn đúng; người chưa có email được cảnh báo, vẫn gửi cho những người còn lại.

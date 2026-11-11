@@ -606,7 +606,7 @@ async function init() {
     const X = require('./engine/ap331x'), P = X.pname(bp, d.info), r2 = v => Math.round((+v || 0) * 100) / 100, f = v => r2(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), dmy = t => String(t).slice(0, 10).split('-').reverse().join('/');
     const e = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     const fill = t => String(t || '').replace(/\{partner\}/g, P).replace(/\{contact\}/g, rc.names[0] || 'Sir/Madam').replace(/\{asOf\}/g, dmy(d.to)).replace(/\{balance\}/g, f(d.close)).replace(/\{payable\}/g, f(d.pay)).replace(/\{advance\}/g, f(d.adv));
-    const toL = rc.to.map(x => x.toLowerCase()), cc = [...new Set([...rc.cc, ...String(o.cc || '').split(/[;,]/), ...String(cfg.cc || '').split(/[;,]/)].map(x => x.trim()).filter(x => /@/.test(x) && !toL.includes(x.toLowerCase())))];
+    const toL = rc.to.map(x => x.toLowerCase()), cc = [...new Set([...rc.cc, ...String(o.cc || '').split(/[;,]/), ...String(o.defCc ? cfg.cc || '' : '').split(/[;,]/)].map(x => x.trim()).filter(x => /@/.test(x) && !toL.includes(x.toLowerCase())))];
     const OR = '#FA4700', td = 'padding:7px 9px;border-bottom:1px solid #EAECF0;font-size:13px', th = 'padding:7px 9px;background:#FEF0EB;color:#B93815;font-size:12px;text-align:left;border-bottom:2px solid ' + OR, n = ';text-align:right;white-space:nowrap';
     const C = d.contracts.filter(c => Math.abs(c.close) > 0.004);
     const html = `<div style="background:#F2F4F7;padding:24px 0;font-family:Segoe UI,Arial,sans-serif"><table role="presentation" width="760" align="center" cellpadding="0" cellspacing="0" style="width:760px;max-width:100%;background:#fff;border-radius:8px">
@@ -646,7 +646,7 @@ ${R.map((x, i) => `<tr><td style="${td}">${i + 1}</td><td style="${td}"><b>${e(x
 <tr><td colspan="3" style="${td};font-weight:700;background:#F9FAFB">${T('Tổng cộng', 'Total')}</td>${['open', 'cr', 'dr', 'close'].map(k => `<td style="${td}${n};font-weight:700;background:#F9FAFB${k === 'close' ? ';color:' + OR : ''}">${f(R.reduce((q, x) => q + r2(x.d[k]), 0))}</td>`).join('')}</tr></table></td></tr>
 <tr><td style="padding:10px 28px 20px;font-size:13px;line-height:1.6;color:#344054">${T('Đính kèm biên bản đối chiếu từng đối tác', 'Attached: confirmation for each partner')} (${kinds.map(k => ({ docx: 'Word', xlsx: 'Excel', pdf: 'PDF' })[k]).join(', ')}) – ${T('số liệu phát sinh theo kỳ', 'figures for the period')} ${dmy(o.from)} – ${dmy(o.to)}. ${T('Sau khi gửi đối tác và nhận phản hồi, cập nhật trạng thái <b>Đã khớp / Chưa khớp</b> trên AccSoft.', 'After sending to the partners and receiving their replies, update the status <b>Matched / Not matched</b> in AccSoft.')}</td></tr>
 <tr><td style="padding:12px 28px;background:#F9FAFB;font-size:11px;color:#98A2B3;border-top:1px solid #EAECF0">${T('Phòng Tài chính – Telemor · gửi từ AccSoft', 'Finance Department – Telemor · sent from AccSoft')}</td></tr></table></div>`;
-    const cc = [...new Set([...String(o.cc || '').split(/[;,]/), ...String(cfg.cc || '').split(/[;,]/)].map(x => x.trim()).filter(x => /@/.test(x) && !emails.map(y => y.toLowerCase()).includes(x.toLowerCase())))];
+    const cc = [...new Set([...String(o.cc || '').split(/[;,]/), ...String(o.defCc ? cfg.cc || '' : '').split(/[;,]/)].map(x => x.trim()).filter(x => /@/.test(x) && !emails.map(y => y.toLowerCase()).includes(x.toLowerCase())))];
     const subj = String(o.subject || '').replace(/\{name\}/g, o.name || '').replace(/\{n\}/g, R.length).replace(/\{from\}/g, dmy(o.from)).replace(/\{to\}/g, dmy(o.to)).replace(/\{due\}/g, dmy(o.due));
     const res = (await mailer.sendAll(Q, [{ to: emails.join(', '), cc: cc.length ? cc.join(', ') : undefined, subject: subj, html, employee: o.staff, count: R.length, attachments: att }]))[0];
     if (res.ok) await qa('apAssign', R.map(x => x.bp), { ...o, mailed: true });
@@ -698,7 +698,7 @@ ${R.map((x, i) => `<tr><td style="${td}">${i + 1}</td><td style="${td}"><b>${e(x
       const html = advMailHtml(d, (o.signers && o.signers.kind) || 'sum', fill(o.body), I18.lang() === 'en');
       const fn = `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}`, att = [{ name: fn + '.xlsx', base64: R.toBuffer(aoaBook(x.sheets)).toString('base64') }];
       if (o.pdf !== false) att.push({ name: fn + '.pdf', base64: Buffer.from(await advPdf(d, o.company, o.signers)).toString('base64') });
-      const ccl = [...new Set([...String(o.cc || '').split(/[;,]/), ...String(mailer.getConfig(Q).cc || '').split(/[;,]/)].map(x => x.trim()).filter(x => /@/.test(x) && x.toLowerCase() !== String(to).toLowerCase()))]; // CC = CC nhập khi gửi + CC mặc định trong cấu hình SMTP
+      const ccl = [...new Set([...String(o.cc || '').split(/[;,]/), ...String(o.defCc ? mailer.getConfig(Q).cc || '' : '').split(/[;,]/)].map(x => x.trim()).filter(x => /@/.test(x) && x.toLowerCase() !== String(to).toLowerCase()))]; // CC = CC nhập khi gửi + CC mặc định trong cấu hình SMTP
       msgs.push({ key: k, to, cc: ccl.length ? ccl.join(', ') : undefined, subject: fill(o.subject), html, employee: nm, count: d.items.length, amount: d.close, attachments: att });
     }
     const res = await mailer.sendAll(Q, msgs), ok = new Set(res.filter(r => r.ok).map(r => r.to));
