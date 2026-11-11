@@ -1,7 +1,7 @@
 {
   "name": "accsoft",
   "productName": "AccSoft",
-  "version": "4.99.14",
+  "version": "4.99.15",
   "description": "Phân tích sổ hạch toán ERP: lỗi nhập liệu, tuổi nợ, kết quả kinh doanh",
   "main": "main.js",
   "author": "AccSoft",
@@ -45,7 +45,12 @@
     },
     "mac": {
       "target": [
-        "dmg"
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
       ],
       "category": "public.app-category.finance",
       "artifactName": "AccSoft-${version}-mac.${ext}"

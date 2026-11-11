@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.15
+- Bản cho **MacBook**: file .dmg dạng Universal – chạy được trên cả Mac chip Apple (M1/M2/M3/M4) và Mac Intel.
+- Gồm toàn bộ thay đổi từ 4.95 đến 4.99.14: đối chiếu 331 (danh mục đối tác, PDF, email, giao việc), đối chiếu hàng hoá 15611 / vật tư 14121, tài khoản ngân hàng / ví ERP, chủ nhà trạm, tra cứu bút toán theo TK / đối tượng Nợ – Có, Source Amount / Code Booking.
+
 ## 4.99.14
 - "Bổ sung thông tin cho dữ liệu đã nạp" cập nhật được **Source Amount** và **Code Booking** cho dữ liệu cũ (khớp theo số chứng từ + line + TK Nợ + TK Có + Accounted Amount), đổi số tiền báo cáo theo cài đặt và tự tổng hợp lại sổ – không cần xoá / nạp lại dữ liệu.
 
