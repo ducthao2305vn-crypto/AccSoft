@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.7
+- Đối chiếu 15611 / 14121 – bảng chứng từ hiện bút toán gốc: TK Nợ, TK Có, đối tượng vế kia, người nhập; nhấn đúp một dòng mở **Tra cứu bút toán** theo số chứng từ (xem toàn bộ các dòng của chứng từ). Mặt hàng trùng mã (vd 2 dòng "PK") nay xem chứng từ riêng từng mặt hàng.
+
 ## 4.99.6
 - Đối chiếu 15611 / 14121: dòng "(không có đối tượng)" (bút toán để trống mã đối tượng) nay xem được chứng từ – trước đây nhấn đúp mặt hàng không ra dòng nào. Cửa sổ chi tiết có nút **📄 Xem tất cả chứng từ** (mọi mặt hàng, kèm cột mặt hàng) để truy bút toán còn tồn tiền.
 

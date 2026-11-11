@@ -17,8 +17,8 @@ function make(db, all, get, run) {
     // "(không có đối tượng)" = bút toán để trống mã đối tượng
     const B = bps && bps.length ? ` AND (${[B0.length ? `bp IN (${B0.map(() => '?').join(',')})` : '', NO ? `ifnull(bp,'')=''` : ''].filter(Boolean).join(' OR ')})` : '', bps0 = B0;
     return all(`SELECT * FROM (
-      SELECT 'in' side, account_date d, document_no doc, partner_debit bp, product p, uom u, quantity q, amount a, description ds FROM entries WHERE acc_debit LIKE ? AND account_date<=?
-      UNION ALL SELECT 'out', account_date, document_no, partner_credit, product, uom, quantity, amount, description FROM entries WHERE acc_credit LIKE ? AND account_date<=?) WHERE 1${B}`, A, to, A, to, ...(bps ? bps0 : []));
+      SELECT 'in' side, account_date d, document_no doc, partner_debit bp, product p, uom u, quantity q, amount a, description ds, id, acc_debit dr, acc_credit cr, partner_credit obp, created_by usr FROM entries WHERE acc_debit LIKE ? AND account_date<=?
+      UNION ALL SELECT 'out', account_date, document_no, partner_credit, product, uom, quantity, amount, description, id, acc_debit, acc_credit, partner_debit, created_by FROM entries WHERE acc_credit LIKE ? AND account_date<=?) WHERE 1${B}`, A, to, A, to, ...(bps ? bps0 : []));
   }
   const nz = v => Math.abs(v) > 0.004;
   function build(L, from) {
@@ -47,7 +47,7 @@ function make(db, all, get, run) {
   }
   function detail(bp, o = {}) { const r = report({ ...o, q: '', only: '', who: '', st: '' }); return { ...r, row: r.rows.find(x => x.bp === bp) || null }; }
   // chứng từ của một đối tượng × mặt hàng (xem khi nhấn đúp)
-  function lines(bp, code, o = {}) { const to = day(o.to), from = day(o.from); return legs({ ...o, to }, [bp]).filter(x => !code || split(x.p).code === code).map(x => ({ ...x, inP: x.d >= from })).sort((a, b) => a.d.localeCompare(b.d)); }
+  function lines(bp, code, o = {}, name = '') { const to = day(o.to), from = day(o.from); return legs({ ...o, to }, [bp]).filter(x => !code || (split(x.p).code === code && (!name || split(x.p).name === name))).map(x => ({ ...x, inP: x.d >= from })).sort((a, b) => a.d.localeCompare(b.d)); }
   function assign(kind, bps, o = {}) { const ym = day(o.to).slice(0, 7);
     for (const bp of [].concat(bps || [])) { if (!o.staff) run(`DELETE FROM gr_assign WHERE kind=? AND bp=? AND ym=?`, kind, bp, ym);
       else run(`INSERT OR REPLACE INTO gr_assign(kind, bp, ym, staff, name, email, due, mailed_at) VALUES(?,?,?,?,?,?,?,?)`, kind, bp, ym, s(o.staff), s(o.name), s(o.email), s(o.due), o.mailed ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null); }
