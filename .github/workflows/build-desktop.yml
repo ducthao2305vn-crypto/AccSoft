@@ -91,3 +91,9 @@ jobs:
           name: AccSoft ${{ needs.check.outputs.tag }}
           body_path: notes.md
           files: out/*
+      - name: Xoá Release cũ, giữ 5 bản chính thức mới nhất (giữ tag git, không đụng bản "test")
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --exclude-pre-releases --exclude-drafts --json tagName,createdAt \
+            --jq 'sort_by(.createdAt) | reverse | .[5:] | .[].tagName' | grep -vx test | while read -r t; do
+            echo "Xoá release $t"; gh release delete "$t" --yes --repo "$GITHUB_REPOSITORY" || true; done
