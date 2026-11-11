@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.9
+- Đối chiếu 15611 / 14121 khớp Trial balance chi tiết theo đối tượng của ERP: dòng ghi Nợ / Có TK mà để trống đối tượng ở vế đó nay lấy đối tượng ở vế kia của cùng dòng (ERP gán một đối tượng cho mỗi dòng; dòng xuất kho chỉ ghi đối tượng một vế). Trước đây các dòng này thành "(không có đối tượng)" (−5,807.87) và HEAD OFFICE lệch đúng số đó so với Trial balance.
+
 ## 4.99.8
 - Đối chiếu 15611 / 14121: dòng **Kiểm tra sổ cái** – tổng cuối kỳ theo đối tượng so với số dư sổ cái TK (Nợ − Có) đến ngày; báo lệch và số tiền "không có đối tượng". Nguyên tắc ghi rõ: dòng ghi Nợ TK lấy đối tượng Nợ, dòng ghi Có TK lấy đối tượng Có (chuyển kho giữa hai đối tượng cùng TK được tính cả hai vế).
 - Số lượng âm trên bút toán giữ nguyên dấu (trước đây lấy trị tuyệt đối theo dấu tiền).
