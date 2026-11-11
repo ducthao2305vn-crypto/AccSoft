@@ -195,12 +195,15 @@ function make(db, all, get, okYm) {
 
   // Bảng cân đối phát sinh theo đối tượng công nợ (dữ liệu gốc): TK Nợ ↔ đối tượng Nợ, TK Có ↔ đối tượng Có.
   // from/to: tháng YYYY-MM; accs: tiền tố TK (rỗng = mọi TK có đối tượng); kinds: nhóm danh mục; company: mã công ty nội bộ / 'G:1:…' / 'G:2:…'; q: tìm đối tượng
+  // Đối tượng mặc định cho dòng để trống đối tượng – ERP gán vào đối tượng của tổ chức (VTL - HEAD OFFICE) trên Trial balance
+  function defaultBp() { const v = (get(`SELECT v FROM settings WHERE k='erp_default_bp'`) || {}).v; if (v) return v;
+    const r = get(`SELECT p FROM (SELECT partner_debit p FROM entries WHERE partner_debit LIKE '%HEAD OFFICE%' UNION ALL SELECT partner_credit FROM entries WHERE partner_credit LIKE '%HEAD OFFICE%') GROUP BY p ORDER BY count(*) DESC LIMIT 1`); return r ? r.p : ''; }
   function partnerTB(from, to, accs = [], kinds = [], company = '', q = '', withEmpty = false) {
     const f = okYm(from) || '0000-00', t = okYm(to) || '9999-12', pres = [].concat(accs || []).map(x => String(x).replace(/[^0-9A-Za-z]/g, '')).filter(Boolean);
     const W = c => pres.length ? ' AND (' + pres.map(x => `${c} LIKE '${x}%'`).join(' OR ') + ')' : '';
-    const { map } = kindMap(), m = new Map(), Q = String(q || '').trim().toLowerCase();
+    const { map } = kindMap(), m = new Map(), Q = String(q || '').trim().toLowerCase(), DEF = defaultBp();
     for (const [col, pcol, nm, sg] of [['acc_debit', 'partner_debit', 'acc_debit_name', 1], ['acc_credit', 'partner_credit', 'acc_credit_name', -1]])
-      for (const r of all(`SELECT ${col} a, max(${nm}) n, ifnull(${pcol},'') p, CASE WHEN ym<? THEN 0 ELSE 1 END k, sum(amount) v FROM entries WHERE ym<=?${W(col)}${withEmpty ? '' : ` AND ${pcol} IS NOT NULL AND ${pcol}<>''`} GROUP BY 1,3,4`, f, t)) {
+      for (const r of all(`SELECT ${col} a, max(${nm}) n, coalesce(nullif(${pcol},''), ?) p, CASE WHEN ym<? THEN 0 ELSE 1 END k, sum(amount) v FROM entries WHERE ym<=?${W(col)} GROUP BY 1,3,4`, DEF, f, t)) { // dòng trống đối tượng → đối tượng mặc định (như Trial balance ERP)
         const c = map.get(r.p);
         if (kinds && kinds.length && !(c && kinds.includes(c.kind))) continue;
         if (company && !(c && ['NB', 'TT'].includes(c.kind) && coMatch(coKey(c, r.p), company))) continue;

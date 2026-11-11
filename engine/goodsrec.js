@@ -2,12 +2,15 @@
 // Đối chiếu hàng hoá / vật tư theo đối tượng × mặt hàng:
 //  - 15611 (hàng hoá tại chi nhánh / cửa hàng) – mẫu "CONFIRMATION OF GOODS SHEET" (số lượng: Đầu kỳ / Nhận / Xuất-thanh lý / Cuối kỳ, cột BRANCH – VTL – DIF)
 //  - 14121 (vật tư tạm ứng cho nhân viên / đối tượng) – mẫu "PRODUCT LIABILITY BY PARTNER REPORT" (số lượng + giá trị)
-// Đối tượng = partner vế tài khoản (Nợ → nhập / nhận, Có → xuất / trả); vế đó để trống thì lấy đối tượng vế kia – như Trial balance ERP (mỗi dòng bút toán một đối tượng; dòng xuất kho M_InOut chỉ ghi đối tượng một vế). Mặt hàng = trường product ("MÃ_Tên"), đơn vị = uom.
+// Đối tượng = partner vế tài khoản (Nợ → nhập / nhận, Có → xuất / trả); vế đó để trống thì gán đối tượng mặc định của tổ chức (VTL - HEAD OFFICE) – như Trial balance ERP. Mặt hàng = trường product ("MÃ_Tên"), đơn vị = uom.
 // Bút toán số âm (điều chỉnh) giữ nguyên dấu tiền; số lượng mang dấu theo tiền.
 function make(db, all, get, run) {
   db.exec(`CREATE TABLE IF NOT EXISTS gr_assign(kind TEXT, bp TEXT, ym TEXT, staff TEXT, name TEXT, email TEXT, due TEXT, mailed_at TEXT, PRIMARY KEY(kind, bp, ym));
     CREATE TABLE IF NOT EXISTS gr_status(kind TEXT, bp TEXT, ym TEXT, status TEXT, note TEXT, at TEXT, PRIMARY KEY(kind, bp, ym));`);
   const NONE = '(không có đối tượng)';
+  // dòng trống đối tượng → đối tượng mặc định (VTL - HEAD OFFICE) như Trial balance ERP; cài đặt erp_default_bp để đổi
+  let _def = null; const DEF = () => { if (_def != null) return _def; const v = (get(`SELECT v FROM settings WHERE k='erp_default_bp'`) || {}).v; if (v) return (_def = v);
+    const r = get(`SELECT p FROM (SELECT partner_debit p FROM entries WHERE partner_debit LIKE '%HEAD OFFICE%' UNION ALL SELECT partner_credit FROM entries WHERE partner_credit LIKE '%HEAD OFFICE%') GROUP BY p ORDER BY count(*) DESC LIMIT 1`); return (_def = r ? r.p : ''); };
   const day = d => String(d || '').slice(0, 10), s = v => String(v ?? '').trim();
   const KIND = { '15611': { acc: '15611' }, '14121': { acc: '14121' } };
   const split = p => { const t = s(p), i = t.indexOf('_'); return i > 0 && i < 24 ? { code: t.slice(0, i), name: t.slice(i + 1) } : { code: t, name: t }; };
@@ -17,8 +20,8 @@ function make(db, all, get, run) {
     // "(không có đối tượng)" = bút toán để trống mã đối tượng
     const B = bps && bps.length ? ` AND (${[B0.length ? `bp IN (${B0.map(() => '?').join(',')})` : '', NO ? `ifnull(bp,'')=''` : ''].filter(Boolean).join(' OR ')})` : '', bps0 = B0;
     return all(`SELECT * FROM (
-      SELECT 'in' side, account_date d, document_no doc, coalesce(nullif(partner_debit,''), partner_credit) bp, product p, uom u, quantity q, amount a, description ds, id, acc_debit dr, acc_credit cr, partner_credit obp, created_by usr FROM entries WHERE acc_debit LIKE ? AND account_date<=?
-      UNION ALL SELECT 'out', account_date, document_no, coalesce(nullif(partner_credit,''), partner_debit), product, uom, quantity, amount, description, id, acc_debit, acc_credit, partner_debit, created_by FROM entries WHERE acc_credit LIKE ? AND account_date<=?) WHERE 1${B}`, A, to, A, to, ...(bps ? bps0 : []));
+      SELECT 'in' side, account_date d, document_no doc, coalesce(nullif(partner_debit,''), ?) bp, product p, uom u, quantity q, amount a, description ds, id, acc_debit dr, acc_credit cr, partner_credit obp, created_by usr FROM entries WHERE acc_debit LIKE ? AND account_date<=?
+      UNION ALL SELECT 'out', account_date, document_no, coalesce(nullif(partner_credit,''), ?), product, uom, quantity, amount, description, id, acc_debit, acc_credit, partner_debit, created_by FROM entries WHERE acc_credit LIKE ? AND account_date<=?) WHERE 1${B}`, DEF(), A, to, DEF(), A, to, ...(bps ? bps0 : []));
   }
   const nz = v => Math.abs(v) > 0.004;
   function build(L, from) {
@@ -32,7 +35,7 @@ function make(db, all, get, run) {
       const t = k => items.reduce((q, r) => q + r[k], 0);
       return { bp: g.bp, items, tot: Object.fromEntries(['oq', 'oa', 'iq', 'ia', 'xq', 'xa', 'cq', 'ca'].map(k => [k, t(k)])) }; }).filter(g => g.items.length);
   }
-  function report(o = {}) {
+  function report(o = {}) { _def = null;
     const to = day(o.to) || new Date().toISOString().slice(0, 10), from = day(o.from) || to.slice(0, 7) + '-01', kind = KIND[o.kind] ? o.kind : '15611', ym = to.slice(0, 7);
     let rows = build(legs({ ...o, kind, to }), from);
     const info = new Map(all(`SELECT * FROM ap331_partner`).map(r => [r.bp, r])), ASG = new Map(all(`SELECT * FROM gr_assign WHERE kind=? AND ym=?`, kind, ym).map(r => [r.bp, r])), ST = new Map(all(`SELECT * FROM gr_status WHERE kind=? AND ym=?`, kind, ym).map(r => [r.bp, r]));

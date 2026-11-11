@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.12
+- Sửa lại quy tắc dòng trống đối tượng cho khớp Trial balance ERP: dòng ghi Nợ TK (Account) mà Business Partner trống, hoặc ghi Có TK (Account credit) mà Bpartner credit trống, được gán **VTL - HEAD OFFICE** (đối tượng của tổ chức) – không lấy đối tượng vế kia như bản 4.99.9 (bản đó đưa nhầm nhân viên / nhà cung cấp vào 15611).
+- Áp dụng cho cả Đối chiếu 15611 / 14121 và Bảng cân đối phát sinh theo đối tượng: trước đây CĐPS theo đối tượng bỏ qua dòng trống nên tổng không khớp sổ cái (lệch −5,807.87 ở 15611); nay khớp sổ cái và HEAD OFFICE = Trial balance ERP.
+
 ## 4.99.11
 - Đối chiếu 15611 / 14121 – dòng Kiểm tra sổ cái thêm phân tích dòng trống đối tượng theo đúng cột file ERP: "Account + Business Partner trống" và "Account credit + Bpartner credit trống" (số dòng, số tiền, phần đã lấy theo đối tượng vế kia) và chênh lệch Nợ − Có của các dòng trống – để đối chiếu với kiểm tra trên file ERP.
 
