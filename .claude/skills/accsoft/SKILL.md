@@ -574,3 +574,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Thêm chuỗi mới: bổ sung vào `I18N_EN`, không cần sửa mã giao diện.
 
 - Danh mục đối tác (engine/partnerinfo.js, v4.96): ap331_partner (thông tin chung) + pc_contact (nhiều liên hệ, role to/cc/"") + pc_bank. piRecipients(bp) → {to, cc}. Email 331: handle ap:mail (một đối tác / lần, renderer lặp), PDF: apPdfHtml trong main.js.
+- Giao việc 331 (v4.97): bảng ap331_assign(bp, ym, staff…), apAssign/apAssignList; email: handle ap:assignMail (một thư / nhân viên, đính kèm biên bản từng đối tác theo kỳ from–to).

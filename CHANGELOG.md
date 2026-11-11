@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.97.0
+- **Giao việc đối chiếu công nợ 331 cho nhân viên**: tick đối tác → 👤 Giao việc → chọn nhân viên (tìm trong Danh mục nhân viên), hạn hoàn thành, loại file đính kèm (Word / Excel / PDF), CC → nhân viên nhận một email: danh sách đối tác kèm người liên hệ, số dư đầu kỳ / phát sinh / cuối kỳ **theo kỳ Từ ngày – Đến ngày đang chọn**, biên bản từng đối tác đính kèm. Có "Chỉ giao, không gửi email" và "Bỏ giao việc".
+- Danh sách 331: cột Đối chiếu hiện 👤 người phụ trách (✉ = đã gửi email giao việc); lọc **Phụ trách** theo nhân viên / Chưa giao. Giao việc lưu theo tháng của ngày Đến.
+
 ## 4.96.0
 - **Danh mục đối tác** (Đối chiếu công nợ 331 → 👥 Danh mục đối tác): thông tin chung (tên in biên bản, MST, địa chỉ, điện thoại, website), **nhiều người liên hệ** (họ tên, chức vụ, phòng ban, email, điện thoại, vai trò nhận đối chiếu To / CC / không gửi) và **nhiều tài khoản ngân hàng** (ngân hàng, chi nhánh, số TK, tên TK, loại tiền, SWIFT, mặc định). Tìm kiếm, lọc đối tác chưa có email; xuất / nạp Excel 3 sheet. Người liên hệ cũ (1 người / đối tác) được chuyển sang danh mục mới.
 - **Biên bản đối chiếu 331 dạng PDF** (A4 ngang, logo, số trang): bảng theo hợp đồng – đầu kỳ, phát sinh, cuối kỳ, cột để đối tác ghi số của họ và lý do chênh lệch; MST, địa chỉ, tài khoản ngân hàng mặc định của đối tác; chữ ký hai bên. Nút 👁 Xem PDF / PDF ở danh sách và trong cửa sổ chi tiết.

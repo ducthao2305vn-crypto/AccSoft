@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('api', {
   apPdfPreview: (bp, o) => ipcRenderer.invoke('ap:pdfPreview', bp, o),
   apPdf: (bp, o) => ipcRenderer.invoke('ap:pdf', bp, o),
   apMail: (bp, o) => ipcRenderer.invoke('ap:mail', bp, o),
+  apAssignMail: (bps, o) => ipcRenderer.invoke('ap:assignMail', bps, o),
   piExport: () => ipcRenderer.invoke('pi:export'),
   piImport: () => ipcRenderer.invoke('pi:import'),
   invImport: mode => ipcRenderer.invoke('inv:import', mode),
