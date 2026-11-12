@@ -547,7 +547,8 @@ function make(db) {
   const amountBasis = () => { const v = (get(`SELECT v FROM settings WHERE k='amount_basis'`) || {}).v; const n = get(`SELECT count(*) n FROM entries WHERE amount_src IS NOT NULL OR amount_acc IS NOT NULL`).n, t = get(`SELECT count(*) n FROM entries`).n, d = get(`SELECT count(*) n FROM entries WHERE amount_src IS NOT NULL AND amount_acc IS NOT NULL AND abs(amount_src-amount_acc)>0.005`).n; return { basis: v === 'acc' ? 'acc' : 'src', withBoth: n, total: t, diff: d }; };
   function setAmountBasis(b) { b = b === 'acc' ? 'acc' : 'src'; db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('amount_basis', ?)`).run(b);
     const r = db.prepare(b === 'acc' ? `UPDATE entries SET amount=coalesce(amount_acc, amount_src, amount) WHERE amount_acc IS NOT NULL OR amount_src IS NOT NULL` : `UPDATE entries SET amount=coalesce(amount_src, amount_acc, amount) WHERE amount_acc IS NOT NULL OR amount_src IS NOT NULL`).run();
-    require('./db').rebuildAgg(db); return { ...amountBasis(), changed: r.changes }; }
+    require('./db').rebuildAgg(db); if (r.changes) db.exec(`UPDATE months SET analyzed_ver=NULL`); // số tiền đổi → cần phân tích lại các quy tắc rà soát
+    return { ...amountBasis(), changed: r.changes }; }
   function entrySearch(o = {}) {
     const W = [], A = [], like = (cols, v) => { W.push('(' + cols.map(c => `${c} LIKE ?`).join(' OR ') + ')'); cols.forEach(() => A.push('%' + v + '%')); };
     const T = ['document_no', 'description', 'partner_debit', 'partner_credit', 'contract', 'location', 'plate', 'created_by', 'invoice', 'advance_request', 'bts_site', 'project', 'department', 'acc_debit', 'acc_credit'];

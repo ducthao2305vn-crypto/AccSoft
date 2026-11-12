@@ -158,7 +158,7 @@ function make(all, okYm, INC, plRange, run) {
     '22': 'Tiền thu thanh lý, nhượng bán TSCĐ và tài sản dài hạn khác', '23': 'Tiền chi cho vay, mua công cụ nợ của đơn vị khác', '24': 'Tiền thu hồi cho vay, bán lại công cụ nợ', '25': 'Tiền chi đầu tư góp vốn vào đơn vị khác',
     '26': 'Tiền thu hồi đầu tư góp vốn vào đơn vị khác', '27': 'Tiền thu lãi cho vay, cổ tức và lợi nhuận được chia', '31': 'Tiền thu từ phát hành cổ phiếu, nhận vốn góp', '32': 'Tiền trả lại vốn góp, mua lại cổ phiếu',
     '33': 'Tiền thu từ đi vay', '34': 'Tiền trả nợ gốc vay', '35': 'Tiền trả nợ gốc thuê tài chính', '36': 'Cổ tức, lợi nhuận đã trả cho chủ sở hữu', '61': 'Ảnh hưởng của thay đổi tỷ giá' };
-  const sigOf = r => 'c:' + [r.doc, r.d, r.dr, r.cr, Math.round((+r.a || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
+  const sigOf = r => 'c:' + [r.doc, r.d, r.dr, r.cr, Math.round((+(r.aa ?? r.a) || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
   const CASHW = `((acc_debit>='111' AND acc_debit<'114') OR (acc_credit>='111' AND acc_credit<'114'))`;
   const rngP = (from, to) => [okYm(from) || '0000-00', okYm(to) || '9999-12'];
   const adjRows = (from, to) => { try { return all(`SELECT * FROM cf_adj WHERE ym>=? AND ym<=?`, ...rngP(from, to)); } catch { return []; } };
@@ -174,7 +174,7 @@ function make(all, okYm, INC, plRange, run) {
   // Danh sách bút toán thu/chi tiền (để xem, rà soát và điều chỉnh dòng tiền)
   function cfRows(from, to, code = '', which = 'after', limit = 30000) {
     const adj = new Map(adjRows(from, to).map(a => [a.sig, a])), out = [];
-    for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, cashflow cf, type_of_cost t, department dep
+    for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, coalesce(amount_acc, amount) aa, partner_debit bp, partner_credit bpCr, description ds, created_by u, cashflow cf, type_of_cost t, department dep
         FROM entries WHERE ym>=? AND ym<=? AND ${CASHW} AND amount<>0 ORDER BY account_date, id`, ...rngP(from, to))) {
       if (CASH(r.dr) && CASH(r.cr)) continue; const inflow = CASH(r.dr), sig = sigOf(r), before = baseCode(r.dr, r.cr, r.cf), auto = autoCode(r.dr, r.cr), ad = adj.get(sig), after = ad ? ad.code : before;
       if (code && (which === 'before' ? before : after) !== code) continue;
@@ -255,7 +255,7 @@ function make(all, okYm, INC, plRange, run) {
     const M = a => pres.some(p => String(a || '').startsWith(p)), tb = trial(spec.from, spec.to, 0);
     const accounts = spec.bp != null ? [] : tb.rows.filter(r => M(r.a)).map(r => ({ a: r.a, n: r.n, ob: r.obDr - r.obCr, dr: r.dr, cr: r.cr, cb: r.bal }));
     const like = c => '(' + pres.map(p => `${c} LIKE '${p.replace(/'/g, '')}%'`).join(' OR ') + ')';
-    const rows = all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t, department dep, cashflow cf
+    const rows = all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, coalesce(amount_acc, amount) aa, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t, department dep, cashflow cf
       FROM entries WHERE ym>=? AND ym<=? AND (${like('acc_debit')} OR ${like('acc_credit')})${spec.bp != null ? ` AND (ifnull(partner_debit,'')=? OR ifnull(partner_credit,'')=?)` : ''}${(spec.tc || []).length ? ` AND (${spec.tc.map(() => `type_of_cost LIKE ? ESCAPE '\\'`).join(' OR ')})` : ''}${(spec.tr || []).length ? ` AND type_of_revenue IN (${spec.tr.map(() => '?').join(',')})` : ''}${spec.pl ? ` AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%'` : ''} ORDER BY account_date, id LIMIT 50001`, f, t, ...(spec.bp != null ? [String(spec.bp), String(spec.bp)] : []), ...(spec.tc || []).map(c => String(c).replace(/[\\%_]/g, m => '\\' + m) + '\\_%'), ...(spec.tr || []))
       .map(r => { const md = M(r.dr) && (spec.bp == null || (r.bp || '') === spec.bp), mc = M(r.cr) && (spec.bp == null || (r.bpCr || '') === spec.bp); if (!md && !mc) return null; return { ...r, side: md && mc ? 'Nợ & Có' : md ? 'Nợ' : 'Có', v: (md ? r.a : 0) - (mc ? r.a : 0), acc: md ? r.dr : r.cr, accName: md ? r.drName : r.crName, ctr: md ? r.cr : r.dr, ctrName: md ? r.crName : r.drName, bpS: md ? r.bp : r.bpCr }; }).filter(Boolean);
     return { accounts, rows: rows.slice(0, 50000), total: rows.length, truncated: rows.length > 50000 };

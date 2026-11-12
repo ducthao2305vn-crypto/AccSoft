@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.19
+- Rà soát Source Amount: các điều chỉnh đã lưu (đổi hợp đồng 331, mã tài sản / trường dữ liệu, điều chỉnh mã dòng tiền B03, gán / loại giao dịch nội bộ) nhận diện bút toán theo "chữ ký" gồm số tiền – nay chữ ký luôn dùng Accounted Amount nên không bị mất khi số tiền báo cáo đổi sang Source Amount hoặc nạp lại dữ liệu.
+- Đổi "Số tiền dùng cho báo cáo" đánh dấu các tháng cần phân tích lại (quy tắc rà soát lỗi tính theo số tiền mới).
+
 ## 4.99.18
 - **Báo cáo Chi phí trả trước 242** (Kết quả & báo cáo → Chi phí trả trước 242): còn lại chưa phân bổ của 24211 / 24218 / 24228 (sửa được danh sách TK) đến ngày, theo TK × hợp đồng (không HĐ: đối tượng × khoản mục) – khớp sổ cái từng TK.
   - Kỳ phân bổ lấy từ Distribution From/To hoặc đọc diễn giải ("from 01/08/2026 - 31/07/2027", "Distribution 06 months from …"); tính còn lại theo lịch, số tháng còn lại, lần phân bổ gần nhất.

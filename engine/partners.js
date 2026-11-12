@@ -60,11 +60,11 @@ function make(db, all, get, okYm) {
     if (!ps.length) return { rows: [], map };
     const f = okYm(from), t = okYm(to), R = (f ? ` AND ym>='${f}'` : '') + (t ? ` AND ym<='${t}'` : ''), out = new Map();
     for (let i = 0; i < ps.length; i += 400) { const c = ps.slice(i, i + 400), ph = c.map(() => '?').join(',');
-      for (const side of ['debit', 'credit']) for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t
+      for (const side of ['debit', 'credit']) for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, coalesce(amount_acc, amount) aa, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t
           FROM entries WHERE partner_${side} IN (${ph})${R} AND amount<>0 AND NOT (acc_debit=acc_credit AND ifnull(partner_debit,'')=ifnull(partner_credit,''))`, ...c)) out.set(r.id, r); }
     try { const docs = [...new Set(all(`SELECT doc FROM ig_adj WHERE action='move'`).map(x => x.doc).filter(Boolean))];
       for (let i = 0; i < docs.length; i += 400) { const c = docs.slice(i, i + 400);
-        for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t
+        for (const r of all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, coalesce(amount_acc, amount) aa, partner_debit bp, partner_credit bpCr, description ds, created_by u, type_of_cost t
           FROM entries WHERE document_no IN (${c.map(() => '?').join(',')})${R} AND amount<>0`, ...c)) if (!out.has(r.id)) out.set(r.id, r); } } catch { }
     return { rows: [...out.values()], map };
   }
@@ -87,7 +87,7 @@ function make(db, all, get, okYm) {
   // Đối tượng nội bộ của bút toán: nếu cả hai phía đều là đối tượng nội bộ thì lấy phía TK công nợ (13x, 14x, 33x, 34x, 35x), không thì phía Có
   const DEBT = a => A(a, '13', '14', '33', '34', '35');
   // Điều chỉnh của người dùng: loại bút toán / chứng từ khỏi nội bộ, hoặc gán lại sang công ty nội bộ khác (khi nhân viên chọn sai đối tượng)
-  const sigRow = r => 'r:' + [r.doc, r.d, r.dr, r.cr, Math.round(r.a * 100), r.bp || '', r.bpCr || ''].join('|'), sigDoc = r => 'd:' + r.doc;
+  const sigRow = r => 'r:' + [r.doc, r.d, r.dr, r.cr, Math.round((r.aa ?? r.a) * 100), r.bp || '', r.bpCr || ''].join('|'), sigDoc = r => 'd:' + r.doc;
   const adjMap = () => { try { return new Map(all(`SELECT * FROM ig_adj`).map(x => [x.sig, x])); } catch { return new Map(); } };
   const adjOf = (adj, r) => adj.get(sigRow(r)) || adj.get(sigDoc(r));
   function coIndex(map, kinds) { const m = new Map(); for (const [p, c] of map) if (kinds.includes(c.kind)) { const k = coKey(c, p); if (!m.has(k)) m.set(k, [p, c]); } return m; }
@@ -236,7 +236,7 @@ function make(db, all, get, okYm) {
   // Các dòng của một chứng từ (để gán thêm vào nội bộ khi nhân viên chọn nhầm đối tượng ngoài)
   function docLines(doc, withTT = false) {
     const kinds = withTT ? ['NB', 'TT'] : ['NB'], { map } = kindMap(), adj = adjMap(), pick = picker(map, kinds, adj);
-    return all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, description ds, created_by u FROM entries WHERE document_no=? ORDER BY line_no, id LIMIT 2000`, String(doc || '').trim())
+    return all(`SELECT id, ym, account_date d, document_no doc, acc_debit dr, acc_credit cr, acc_debit_name drName, acc_credit_name crName, amount a, coalesce(amount_acc, amount) aa, partner_debit bp, partner_credit bpCr, description ds, created_by u FROM entries WHERE document_no=? ORDER BY line_no, id LIMIT 2000`, String(doc || '').trim())
       .map(r => { const [p, c] = pick(r), a = adjOf(adj, r); return { ...r, cat: category(r), company: c ? coName(c, p) : '', coKey: c ? coKey(c, p) : '', sig: sigRow(r), adj: a ? (a.action === 'out' ? 'Đã loại' : 'Gán lại → ' + a.to_key) : '' }; });
   }
 

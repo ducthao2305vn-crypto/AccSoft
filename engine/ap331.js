@@ -2,7 +2,7 @@
 // Đối chiếu công nợ phải trả 331 theo đối tượng × hợp đồng.
 // Số dư = Có 331 − Nợ 331 (dương = còn phải trả; âm = ứng trước cho nhà cung cấp – vd TK 3311 trả trước theo hợp đồng).
 // Hợp đồng dùng giá trị sau điều chỉnh (field_adj field 'contract' – cùng bảng với mô-đun Điều chỉnh dữ liệu).
-const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+r.a || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
+const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+(r.aa ?? r.a) || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
 
 function make(db, all, get, run) {
   db.exec(`CREATE TABLE IF NOT EXISTS ap331_partner(bp TEXT PRIMARY KEY, name TEXT, contact TEXT, email TEXT, tel TEXT, updated_at TEXT)`);
@@ -17,11 +17,11 @@ function make(db, all, get, run) {
   function legs(o = {}, bps) {
     const A = accW(o.acc), to = day(o.to) || '9999-12-31', B = bps && bps.length ? ` AND bp IN (${bps.map(() => '?').join(',')})` : '';
     return all(`SELECT * FROM (
-        SELECT e.id, 'dr' side, e.account_date d, e.document_no doc, e.acc_debit acc, e.acc_credit oacc, e.partner_debit bp, e.amount a, e.description ds, e.created_by u, e.contract c0,
+        SELECT e.id, 'dr' side, e.account_date d, e.document_no doc, e.acc_debit acc, e.acc_credit oacc, e.partner_debit bp, e.amount a, coalesce(e.amount_acc, e.amount) aa, e.description ds, e.created_by u, e.contract c0,
           coalesce((SELECT f.value FROM field_adj f WHERE f.id=e.id AND f.field='contract'), e.contract) c, e.acc_debit dr, e.acc_credit cr, e.partner_debit bpDr, e.partner_credit bpCr, e.invoice inv
         FROM entries e WHERE e.acc_debit LIKE ? AND e.account_date<=?
         UNION ALL
-        SELECT e.id, 'cr', e.account_date, e.document_no, e.acc_credit, e.acc_debit, e.partner_credit, e.amount, e.description, e.created_by, e.contract,
+        SELECT e.id, 'cr', e.account_date, e.document_no, e.acc_credit, e.acc_debit, e.partner_credit, e.amount, coalesce(e.amount_acc, e.amount), e.description, e.created_by, e.contract,
           coalesce((SELECT f.value FROM field_adj f WHERE f.id=e.id AND f.field='contract'), e.contract), e.acc_debit, e.acc_credit, e.partner_debit, e.partner_credit, e.invoice
         FROM entries e WHERE e.acc_credit LIKE ? AND e.account_date<=?) WHERE 1${B} ORDER BY d, id`, A.l, to, A.l, to, ...(bps || []));
   }
@@ -58,7 +58,7 @@ function make(db, all, get, run) {
   }
   // Điều chỉnh hợp đồng của bút toán (theo id) – lưu ở field_adj 'contract'; value '' = trả về hợp đồng gốc
   function setContract(ids, value, note = '') { let n = 0; const v = s(value);
-    for (const id of [].concat(ids || [])) { const e = get(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, partner_debit bp, partner_credit bpCr, contract FROM entries WHERE id=?`, +id); if (!e) continue;
+    for (const id of [].concat(ids || [])) { const e = get(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, coalesce(amount_acc, amount) aa, partner_debit bp, partner_credit bpCr, contract FROM entries WHERE id=?`, +id); if (!e) continue;
       if (!v || v === s(e.contract)) run(`DELETE FROM field_adj WHERE id=? AND field='contract'`, e.id);
       else run(`INSERT OR REPLACE INTO field_adj(id, field, value, orig, sig, doc, d, ym, note, updated_at) VALUES(?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`, e.id, 'contract', v, e.contract, sigOf(e), e.doc, e.d, String(e.d || '').slice(0, 7), note || 'Đối chiếu 331');
       n++; }

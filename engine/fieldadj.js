@@ -2,7 +2,7 @@
 // Điều chỉnh các trường quản trị của bút toán (không sửa dữ liệu gốc): Hợp đồng, Mã vị trí (Location), Biển số xe, Loại dòng tiền.
 // Hợp đồng / vị trí / biển số lưu ở bảng field_adj (theo id bút toán + chữ ký nội dung); dòng tiền dùng chung bảng cf_adj của B03.
 const FIELDS = { contract: { col: 'contract', name: 'Hợp đồng' }, location: { col: 'location', name: 'Mã vị trí (Location)' }, plate: { col: 'plate', name: 'Biển số xe' }, dept: { col: 'department_sub', name: 'Phòng ban (Department Sub)' }, ar: { col: 'advance_request', name: 'Đề nghị tạm ứng (Advance Request)' }, cf: { col: 'cashflow', name: 'Loại dòng tiền' }, asset: { col: 'asset', name: 'Mã tài sản (Asset)' } };
-const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+r.a || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
+const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+(r.aa ?? r.a) || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
 
 function make(db, all, run, okYm, FIN) {
   const CASH = a => /^11[123]/.test(a || '');
@@ -21,7 +21,7 @@ function make(db, all, run, okYm, FIN) {
     if (o.adjOnly) w.push(`(EXISTS (SELECT 1 FROM field_adj x WHERE x.id=e.id) OR EXISTS (SELECT 1 FROM cf_adj c WHERE c.doc=e.document_no AND c.d=e.account_date AND c.dr=e.acc_debit AND c.cr=e.acc_credit))`);
     if (!w.length) w.push('1');
     const lim = Math.min(+o.limit || 5000, 20000);
-    const rows = all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount a, e.partner_debit bp, e.partner_credit bpCr,
+    const rows = all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount a, coalesce(e.amount_acc, e.amount) aa, e.partner_debit bp, e.partner_credit bpCr,
         e.description ds, e.created_by u, e.contract, e.location, e.plate, e.department_sub dept, e.cashflow cf, e.asset FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.id LIMIT ${lim + 1}`, ...a);
     const ids = rows.map(r => r.id), adj = new Map();
     for (let i = 0; i < ids.length; i += 500) { const c = ids.slice(i, i + 500); for (const x of all(`SELECT * FROM field_adj WHERE id IN (${c.map(() => '?').join(',')})`, ...c)) adj.set(x.id + '|' + x.field, x); }
@@ -54,7 +54,7 @@ function make(db, all, run, okYm, FIN) {
     for (const k of [].concat(keys || [])) { if (k.field === 'cf') n += FIN.cfAdjRemove(['c:' + k.sig]).n; else n += run(`DELETE FROM field_adj WHERE id=? AND field=?`, k.id, k.field).changes; }
     return { n }; }
   function list() {
-    const a = all(`SELECT f.*, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.description ds FROM field_adj f LEFT JOIN entries e ON e.id=f.id ORDER BY f.updated_at DESC LIMIT 20000`);
+    const a = all(`SELECT f.*, e.acc_debit dr, e.acc_credit cr, e.amount a, coalesce(e.amount_acc, e.amount) aa, e.partner_debit bp, e.partner_credit bpCr, e.description ds FROM field_adj f LEFT JOIN entries e ON e.id=f.id ORDER BY f.updated_at DESC LIMIT 20000`);
     const c = (FIN.cfAdjList ? FIN.cfAdjList() : []).map(x => ({ id: null, field: 'cf', value: x.code, orig: x.cf, sig: String(x.sig || '').replace(/^c:/, ''), doc: x.doc, d: x.d, ym: x.ym, note: x.note, updated_at: x.updated_at, dr: x.dr, cr: x.cr, a: x.a, bp: x.bp, bpCr: x.bpCr }));
     return a.concat(c).sort((x, y) => String(y.updated_at).localeCompare(String(x.updated_at)));
   }
@@ -62,7 +62,7 @@ function make(db, all, run, okYm, FIN) {
   function rebind() { let n = 0;
     for (const x of all(`SELECT f.rowid r, f.sig, f.field FROM field_adj f LEFT JOIN entries e ON e.id=f.id WHERE e.id IS NULL`)) {
       const [doc, d, dr, cr, cents, bp, bpCr] = String(x.sig).split('|');
-      const e = all(`SELECT id FROM entries WHERE document_no=? AND account_date=? AND acc_debit=? AND acc_credit=? AND round(amount*100)=? AND ifnull(partner_debit,'')=? AND ifnull(partner_credit,'')=? LIMIT 1`, doc, d, dr, cr, +cents, bp, bpCr)[0];
+      const e = all(`SELECT id FROM entries WHERE document_no=? AND account_date=? AND acc_debit=? AND acc_credit=? AND round(coalesce(amount_acc,amount)*100)=? AND ifnull(partner_debit,'')=? AND ifnull(partner_credit,'')=? LIMIT 1`, doc, d, dr, cr, +cents, bp, bpCr)[0];
       if (e) { try { run(`UPDATE field_adj SET id=? WHERE rowid=?`, e.id, x.r); n++; } catch { } } }
     return { n }; }
   // Mọi hợp đồng của một đối tượng (cả hai phía Nợ / Có, gồm hợp đồng đã điều chỉnh) – để chọn khi đổi hợp đồng, tránh gõ sai
@@ -79,7 +79,7 @@ function make(db, all, run, okYm, FIN) {
     if (f) { w.push('e.ym>=?'); a.push(f); } if (t) { w.push('e.ym<=?'); a.push(t); }
     w.push('(' + pres.map(() => '(e.acc_debit LIKE ? OR e.acc_credit LIKE ?)').join(' OR ') + ')'); for (const p of pres) a.push(p + '%', p + '%');
     if (!o.all) w.push(`nullif(coalesce((SELECT x.value FROM field_adj x WHERE x.id=e.id AND x.field='asset'), e.asset),'') IS NULL`);
-    return all(`SELECT e.document_no doc, e.line_no line, e.account_date d, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.description ds,
+    return all(`SELECT e.document_no doc, e.line_no line, e.account_date d, e.acc_debit dr, e.acc_credit cr, e.amount a, coalesce(e.amount_acc, e.amount) aa, e.partner_debit bp, e.partner_credit bpCr, e.description ds,
       coalesce((SELECT x.value FROM field_adj x WHERE x.id=e.id AND x.field='asset'), e.asset) asset FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.document_no, e.line_no LIMIT 100000`, ...a);
   }
   // Nạp mã tài sản từ Excel: mỗi dòng {doc (bắt buộc), line, date, acc, amt, asset (bắt buộc), note} → gán cho mọi bút toán khớp
@@ -92,7 +92,7 @@ function make(db, all, run, okYm, FIN) {
       if (r.acc) { w.push('(acc_debit LIKE ? OR acc_credit LIKE ?)'); a.push(String(r.acc).trim() + '%', String(r.acc).trim() + '%'); }
       if (r.amt != null && r.amt !== '' && !isNaN(+r.amt)) { w.push('abs(amount-?)<0.005'); a.push(+r.amt); }
       if (/^\d{4}-\d{2}-\d{2}$/.test(String(r.date || '').slice(0, 10))) { w.push('account_date=?'); a.push(String(r.date).slice(0, 10)); }
-      let hit = all(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, partner_debit bp, partner_credit bpCr, asset FROM entries WHERE ${w.join(' AND ')}`, ...a);
+      let hit = all(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, coalesce(amount_acc, amount) aa, partner_debit bp, partner_credit bpCr, asset FROM entries WHERE ${w.join(' AND ')}`, ...a);
       if (mode === 'fill') { const done = new Set(all(`SELECT id FROM field_adj WHERE field='asset' AND id IN (${hit.map(() => '?').join(',') || 'NULL'})`, ...hit.map(h => h.id)).map(x => x.id)); hit = hit.filter(h => !h.asset && !done.has(h.id)); }
       if (!hit.length) { if (miss.length < 30) miss.push(`${doc}${r.line != null && r.line !== '' ? ' line ' + r.line : ''}${r.acc ? ' TK ' + r.acc : ''}${r.amt ? ' · ' + r.amt : ''}`); continue; }
       if (hit.length > 1 && multi.length < 10 && (r.line == null || r.line === '')) multi.push(`${doc}: ${hit.length} dòng`);
