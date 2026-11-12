@@ -10,7 +10,7 @@ function make(db, all, get, run) {
   const s = v => String(v ?? '').trim(), day = d => s(d).slice(0, 10), J = v => { try { return JSON.parse(v || '[]'); } catch { return []; } };
   const whtRate = () => { const v = (get(`SELECT v FROM settings WHERE k='wht_rental'`) || {}).v; return v == null || v === '' ? 10 : +v; }; // thuế WHT cho thuê (%), giá HĐ trước thuế
   const isWht = x => /^333/.test(s(x.oacc)) || /\bWHT\b|withholding/i.test(s(x.ds));
-  const defRate = () => +((get(`SELECT v FROM settings WHERE k='ifrs16_rate'`) || {}).v || 8);
+  const defRate = () => +((get(`SELECT v FROM settings WHERE k='ifrs16_rate'`) || {}).v || 9.0175);
   const isoD = v => { if (v == null || v === '') return ''; if (v instanceof Date) { const d = new Date(v.getTime() + 12 * 36e5 - v.getTimezoneOffset() * 6e4); return d.toISOString().slice(0, 10); } /* ngày Excel = 0h giờ máy (Timor UTC+9) → lấy ngày theo giờ máy */ const t = s(v); let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
     m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; if (/^\d{5}$/.test(t)) return new Date(Math.round((+t - 25569) * 864e5)).toISOString().slice(0, 10); return ''; };
   const months = (f, t) => f && t ? Math.max(1, (+t.slice(0, 4) - +f.slice(0, 4)) * 12 + (+t.slice(5, 7) - +f.slice(5, 7)) + 1) : 0;
@@ -90,17 +90,22 @@ function make(db, all, get, run) {
   // ---- IFRS 16 ----
   function ifrs16(id, o = {}) {
     const r = row(get(`SELECT * FROM site_contract WHERE id=?`, +id) || {}); if (!r.id || r.rent == null || !r.from_d || !r.to_d) return { r, err: 'Thiếu giá thuê / thời hạn' };
-    const rate = (r.rate != null ? +r.rate : +o.rate || defRate()) / 100, i = rate / 12, n = months(r.from_d, r.to_d), term = Math.max(1, +r.term || 1), asOf = day(o.asOf) || new Date().toISOString().slice(0, 10);
-    const W = whtRate() / 100, gross = r.rent, pay = k => (k % term === 0 ? gross * Math.min(term, n - k) : 0); // IFRS 16 tính trên tiền thuê không gồm thuế WHT (WHT tách cột riêng) // trả trước đầu mỗi kỳ thanh toán
-    let L0 = 0; for (let k = 0; k < n; k++) L0 += pay(k) / Math.pow(1 + i, k);
-    const rou = L0, dep = rou / n, sch = []; let liab = L0, nbv = rou;
-    const ym0 = r.from_d.slice(0, 7);
-    for (let k = 0; k < n; k++) { const ym = P.ymsOf(ym0 + '-01', '9999-12-01')[k] || ''; const p = pay(k), open = liab; liab -= p; const int = liab * i; liab += int; nbv -= dep;
-      sch.push({ k: k + 1, ym, open, pay: p, wht: p * W / (1 - W), int, close: liab, dep, nbv: Math.max(0, nbv), rent: gross, rentWht: gross * W / (1 - W) }); }
+    // Theo mẫu "IFRS16_Viettel_Timor": tháng đầu = 1/tháng bắt đầu, tháng cuối = tháng kết thúc; số tháng = DATEDIF (+1 nếu khác tháng);
+    // kỳ đầu trả trước (Down payment = kỳ TT × giá) → ROU; các kỳ sau trả ở tháng thứ 1+k·kỳ TT; nợ thuê đầu mỗi tháng = XNPV(lãi năm, các khoản trả còn lại, theo ngày thực / 365);
+    // lãi = khoản trả − giảm nợ; khấu hao ROU đều theo số tháng. Tiền thuê không gồm WHT (WHT tách cột).
+    const rate = (r.rate != null ? +r.rate : +o.rate || defRate()) / 100, term = Math.max(1, +r.term || 1), asOf = day(o.asOf) || new Date().toISOString().slice(0, 10);
+    const W = whtRate() / 100, gross = r.rent, f = r.from_d, t = r.to_d, ym0 = f.slice(0, 7), ymE = t.slice(0, 7);
+    const dd = (+t.slice(0, 4) - +f.slice(0, 4)) * 12 + (+t.slice(5, 7) - +f.slice(5, 7)) - (+t.slice(8, 10) < +f.slice(8, 10) ? 1 : 0), n = Math.max(1, f.slice(5, 7) === t.slice(5, 7) ? dd : dd + 1);
+    const YM = P.ymsOf(ym0 + '-01', ymE + '-01'), N = YM.length, down = term * gross, C = YM.map((ym, k) => (k > 0 && k % term === 0 && Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1) < Date.parse(t) ? term * gross : 0));
+    const T = YM.map(ym => Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1) / 864e5), xnpv = k => { let v = 0; for (let j = k; j < N; j++) if (C[j]) v += C[j] / Math.pow(1 + rate, (T[j] - T[k]) / 365); return v; };
+    const F = YM.map((_, k) => xnpv(k)); F.push(0);
+    const L0 = F[0], rou = L0 + down, dep = rou / n, sch = []; let nbv = rou;
+    for (let k = 0; k < N; k++) { const red = F[k] - F[k + 1], int = C[k] - red, d = k < n ? Math.min(dep, nbv) : 0; nbv -= d;
+      sch.push({ k: k + 1, ym: YM[k], date: YM[k] + '-01', open: F[k], pay: C[k] + (k === 0 ? down : 0), down: k === 0 ? down : 0, lp: C[k], pv: F[k], red, wht: (C[k] + (k === 0 ? down : 0)) * W / (1 - W), int, close: F[k + 1], rouOpen: nbv + d, dep: d, nbv: Math.max(0, nbv), rent: gross, rentWht: gross * W / (1 - W) }); }
     const cur = asOf.slice(0, 7), y = asOf.slice(0, 4), past = sch.filter(x => x.ym <= cur), at = past[past.length - 1] || { close: L0, nbv: rou };
     const next12 = sch.filter(x => x.ym > cur).slice(0, 12), curPart = next12.reduce((q, x) => q + x.pay - x.int, 0);
     const ytd = past.filter(x => x.ym.startsWith(y)), short = n <= 12;
-    return { r, rate: rate * 100, n, term, L0, rou, dep, sch, asOf, short,
+    return { r, rate: rate * 100, n, term, L0, rou, down, dep, sch, asOf, short,
       at: { liab: Math.max(0, past.length ? at.close : L0), nbv: past.length ? at.nbv : rou, liabCur: Math.max(0, Math.min(curPart, past.length ? at.close : L0)), liab0: 0, intYtd: ytd.reduce((q, x) => q + x.int, 0), depYtd: ytd.reduce((q, x) => q + x.dep, 0), rentYtd: ytd.length * gross } };
   }
   // Bảng cuối năm: phân bổ Nợ 627 / 641 / 642… – Có 24211 trong năm của từng HĐ, tách tiền thuê (ghi âm khi áp dụng IFRS 16) và thuế WHT (giữ lại),
@@ -155,6 +160,40 @@ function make(db, all, get, run) {
     out.sort((a, b) => b.overdue - a.overdue || a.payFrom.localeCompare(b.payFrom) || String(a.site).localeCompare(String(b.site)));
     return { ym: m, ahead, lim, rows: out, tot: { n: out.length, rent: out.reduce((q, x) => q + (x.rent || 0), 0), wht: out.reduce((q, x) => q + (x.wht || 0), 0), overdue: out.filter(x => x.status === 'overdue').length } };
   }
+  // Xuất theo mẫu "IFRS16_Viettel_Timor": mỗi loại (Office / Warehouse / Showroom / BTS) một sheet, mỗi HĐ (trạm / vị trí) một khối cột
+  // [Month, Date, Lease payments, Other payments, Present Value, Liability Balance, Reduction, ROU Balance, Depreciation, (trống)], cột trái = cộng các khối; sheet "List contract" tổng hợp.
+  const TYPES = [['01. Office', /office|văn phòng|van phong/i], ['02. Warehouse', /warehouse|kho/i], ['03. Showroom', /showroom|shop|super ?market|cửa hàng/i], ['04. BTS', /./]];
+  const typeOf = r => TYPES.find(([, re]) => re.test(s(r.tcost) + ' ' + s(r.name)))[0];
+  const D = ym => new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1)), r2 = v => Math.round((+v || 0) * 100) / 100;
+  function blockOf(x) { const r = x.r, M = new Map(x.sch.map(z => [z.ym, z]));
+    const head = [['Contract data', '', '', '', '', '', '', '', ''], ['Name', '', 'Value'], ['Contract', '', r.code], ['Site / location', '', r.site], ['Start date', '', D(x.sch[0].ym)], ['End date', '', r.to_d ? new Date(Date.parse(r.to_d)) : ''], ['Payment term', '', x.term],
+      ['Contract term in months', '', x.n], ['Down payment for the lease', '', r2(x.down)], ['Lease payment per month', '', r.rent], ['Service payment per month', '', 0], ['Discount rate', '', x.rate / 100], ['ROU', '', r2(x.rou)]];
+    return { head, at: ym => { const z = M.get(ym); return z ? [z.k, D(ym), r2(z.lp + z.down * 0), 0, r2(z.pv), r2(z.pv), r2(z.red), r2(z.rouOpen), r2(z.dep)] : ['', D(ym), 0, 0, 0, 0, 0, 0, 0]; } }; }
+  function ifrsBook(o = {}) {
+    const all0 = list(o).map(r => ({ r, x: ifrs16(r.id, o) })).filter(q => !q.x.err && !(o.noShort && q.x.short) && (o.allYears || !q.r.to_d || q.r.to_d >= (day(o.asOf) || '0000').slice(0, 4) + '-01-01')), out = [], W = 10, HDR = ['Month', 'Date', 'Lease payments', 'Other payments', 'Present Value', 'Lease Liability – Balance', 'Lease Liability – Reduction', 'Right of Use Asset – Balance', 'Right of Use Asset – Depreciation'];
+    const list0 = [['Contract No', 'Site / location', 'Type of cost', 'File', 'Payment Term', 'From Date', 'To Date', 'Monthly Fee', 'Months', 'Discount rate', 'Down payment', 'Initial liability (PV)', 'ROU', 'Depreciation / month', 'Liability at ' + day(o.asOf), 'ROU NBV at ' + day(o.asOf), 'Interest YTD', 'Depreciation YTD', 'Liability nil', 'ROU nil']];
+    for (const [tn] of TYPES) { const G = all0.filter(q => typeOf(q.r) === tn); if (!G.length) continue;
+      const yms = [...new Set(G.flatMap(q => q.x.sch.map(z => z.ym)))].sort(), axis = P.ymsOf(yms[0] + '-01', yms[yms.length - 1] + '-01'), B = G.map(q => blockOf(q.x)), off = 11;
+      const rows = []; const put = (ri, ci, v) => { (rows[ri] = rows[ri] || [])[ci] = v; };
+      put(0, 1, 'Lessee contracts – ' + tn + ' (IFRS 16)'); put(1, 1, 'Discount rate'); put(1, 3, (G[0].x.rate) / 100); put(2, 1, 'As of'); put(2, 3, day(o.asOf));
+      B.forEach((b, i) => { const c = off + i * W; b.head.forEach((h, k) => h.forEach((v, j) => put(4 + k, c + j, v))); });
+      const H0 = 19; put(H0 - 1, 1, 'Calculation (total of all contracts in this sheet)'); ['Month', 'Date', 'Lease payments', 'Other payments', 'Present Value', 'Liability Balance', 'Liability Reduction', 'ROU Balance', 'ROU Depreciation', 'Interest'].forEach((h, j) => put(H0, 1 + j, h));
+      B.forEach((b, i) => HDR.forEach((h, j) => put(H0, off + i * W + j, h)));
+      axis.forEach((ym, k) => { const ri = H0 + 1 + k, sum = Array(9).fill(0); B.forEach((b, i) => { const v = b.at(ym); v.forEach((q, j) => put(ri, off + i * W + j, q)); for (let j = 2; j < 9; j++) sum[j] += +v[j] || 0; });
+        put(ri, 1, k + 1); put(ri, 2, D(ym)); for (let j = 2; j < 9; j++) put(ri, 1 + j, r2(sum[j])); put(ri, 10, r2(sum[2] - sum[6])); });
+      for (let i = 0; i < rows.length; i++) rows[i] = Array.from(rows[i] || [], v => v ?? '');
+      out.push([tn, rows]);
+      for (const q of G) { const x = q.x, at = x.at, S = x.sch, lp = S.reduce((a, z, k) => z.lp > 0 ? k : a, 0), zl = (S.slice(lp).find(z => Math.abs(z.close) < 0.01) || S[S.length - 1]).ym;
+        list0.push([q.r.code, q.r.site, q.r.tcost, tn, x.term, q.r.from_d, q.r.to_d, q.r.rent, x.n, x.rate / 100, r2(x.down), r2(x.L0), r2(x.rou), r2(x.dep), r2(at.liab), r2(at.nbv), r2(at.intYtd), r2(at.depYtd), zl, S[S.length - 1].ym]); } }
+    out.unshift(['List contract', list0]); out.unshift(['Interest rate', [['Period', 'Rate'], ['Average', defRate() / 100]]]);
+    return out;
+  }
+  function ifrsOne(id, o = {}) { const x = ifrs16(id, o); if (x.err) return x; const b = blockOf(x), rows = [...b.head.map(h => h.slice()), [], ['Calculation'],
+      ['Month', 'Date', 'Lease payments', 'Other payments', 'Present Value', 'Lease Liability – Balance', 'Lease Liability – Reduction', 'Right of Use Asset – Balance', 'Right of Use Asset – Depreciation', 'Interest', 'WHT (separate)'],
+      ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', '']];
+    for (const z of x.sch) { const v = b.at(z.ym); rows.push([...v, r2(z.int), r2(z.wht)]); }
+    const T = k => r2(x.sch.reduce((q, z) => q + (z[k] || 0), 0)); rows.push(['Total', '', T('lp'), 0, '', '', T('red'), '', T('dep'), T('int'), T('wht')]);
+    return { sheets: [[String(x.r.site || x.r.code).slice(0, 31), rows]], x }; }
   function ifrs16All(o = {}) { return list(o).map(r => { const x = ifrs16(r.id, o); if (x.err) return { r, err: x.err };
     // tháng nợ thuê về 0 (sau lần trả cuối, không còn kỳ trả nào) và tháng ROU khấu hao hết; số dư 31/12 từng năm
     const S = x.sch, lastPay = S.reduce((q, z, k) => z.pay > 0 ? k : q, 0), zl = (S.slice(lastPay).find(z => Math.abs(z.close) < 0.01) || S[S.length - 1] || {}).ym || '', zr = (S[S.length - 1] || {}).ym || '';
@@ -162,6 +201,6 @@ function make(db, all, get, run) {
     return { r, n: x.n, rate: x.rate, L0: x.L0, short: x.short, ...x.at, zeroLiab: zl, zeroRou: zr, yr }; }); }
   const setWht = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('wht_rental', ?)`, String(+v || 0)); return whtRate(); };
   const setRate = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('ifrs16_rate', ?)`, String(+v || 8)); return defRate(); };
-  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd, due, payMark };
+  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd, due, payMark, ifrsBook, ifrsOne };
 }
 module.exports = { make };
