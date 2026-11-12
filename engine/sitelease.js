@@ -11,10 +11,14 @@ function make(db, all, get, run) {
   const whtRate = () => { const v = (get(`SELECT v FROM settings WHERE k='wht_rental'`) || {}).v; return v == null || v === '' ? 10 : +v; }; // thuế WHT cho thuê (%), giá HĐ trước thuế
   const isWht = x => /^333/.test(s(x.oacc)) || /\bWHT\b|withholding/i.test(s(x.ds));
   const defRate = () => +((get(`SELECT v FROM settings WHERE k='ifrs16_rate'`) || {}).v || 8);
-  const isoD = v => { if (v == null || v === '') return ''; if (v instanceof Date) return v.toISOString().slice(0, 10); const t = s(v); let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  const isoD = v => { if (v == null || v === '') return ''; if (v instanceof Date) { const d = new Date(v.getTime() + 12 * 36e5 - v.getTimezoneOffset() * 6e4); return d.toISOString().slice(0, 10); } /* ngày Excel = 0h giờ máy (Timor UTC+9) → lấy ngày theo giờ máy */ const t = s(v); let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
     m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; if (/^\d{5}$/.test(t)) return new Date(Math.round((+t - 25569) * 864e5)).toISOString().slice(0, 10); return ''; };
   const months = (f, t) => f && t ? Math.max(1, (+t.slice(0, 4) - +f.slice(0, 4)) * 12 + (+t.slice(5, 7) - +f.slice(5, 7)) + 1) : 0;
   const row = r => ({ ...r, erp: J(r.erp) });
+  // sửa một lần: bản trước nạp Excel ở máy UTC+9 làm ngày lùi 1 ngày (01/11 → 31/10). Ngày bắt đầu = ngày cuối tháng → cộng 1 ngày cho cả từ / đến.
+  try { if (!get(`SELECT v FROM settings WHERE k='sl_tzfix'`)) { const nx = d => { const x = new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10) + 1)); return x.toISOString().slice(0, 10); };
+    for (const r of all(`SELECT id, from_d, to_d FROM site_contract WHERE from_d<>''`)) if (nx(r.from_d).slice(8, 10) === '01') run(`UPDATE site_contract SET from_d=?, to_d=? WHERE id=?`, nx(r.from_d), r.to_d ? nx(r.to_d) : r.to_d, r.id);
+    run(`INSERT OR REPLACE INTO settings(k, v) VALUES('sl_tzfix', '1')`); } } catch { }
   // ---- danh mục ----
   function list(o = {}) { const q = s(o.q).toLowerCase(); let R = all(`SELECT * FROM site_contract ORDER BY site, from_d`).map(row);
     if (q) R = R.filter(r => [r.code, r.name, r.site, r.tcost, r.bp, r.note].join(' ').toLowerCase().includes(q)); return R; }
@@ -116,7 +120,7 @@ function make(db, all, get, run) {
   // Đề xuất kỳ thanh toán tiếp theo = từ tháng sau "đã trả đến" (hoặc đầu HĐ) dài đúng điều khoản (term), không vượt ngày hết hạn; số tiền thuê (trước thuế) + WHT.
   function due(o = {}) {
     const m = s(o.ym) || new Date().toISOString().slice(0, 7), ahead = Math.max(0, +o.ahead || 0), lim = P.ymsOf(m + '-01', '9999-12-01')[ahead] || m, W = whtRate() / 100;
-    const asOf = (() => { const d = new Date(+lim.slice(0, 4), +lim.slice(5, 7), 0); return d.toISOString().slice(0, 10); })();
+    const asOf = lim + '-' + String(new Date(Date.UTC(+lim.slice(0, 4), +lim.slice(5, 7), 0)).getUTCDate()).padStart(2, '0');
     const R = reconcile({ ...o, asOf }), info = new Map(all(`SELECT * FROM ap331_partner`).map(r => [r.bp, r]));
     let bank = new Map(), ll = new Map(); try { for (const b of all(`SELECT * FROM pc_bank ORDER BY is_default DESC, id`)) if (!bank.has(b.bp)) bank.set(b.bp, b); } catch { } try { ll = new Map(all(`SELECT * FROM landlord`).map(r => [r.bp, r])); } catch { } const ct = new Map(); try { for (const c of all(`SELECT * FROM pc_contact ORDER BY id`)) if (!ct.has(c.bp)) ct.set(c.bp, c); } catch { }
     // số dư 24211 theo cột Contract đến cuối tháng trước kỳ xem (Nợ − Có)
@@ -130,7 +134,8 @@ function make(db, all, get, run) {
       const D0 = (get(`SELECT min(ym) m FROM entries WHERE ym IS NOT NULL`) || {}).m || '2016-01', f0 = r.from_d ? r.from_d.slice(0, 7) : m, startYm = f0 > D0 ? f0 : D0, cov = r.coveredTo || '', next = cov ? P.ymsOf(cov + '-01', '9999-12-01')[1] : startYm;
       const term = Math.max(1, +r.term || 1), endYm = renew ? '9999-12' : r.to_d ? r.to_d.slice(0, 7) : '9999-12', md = (a, b) => (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7));
       // kỳ đến hạn theo lịch HĐ: tháng bắt đầu HĐ, cứ mỗi "term" tháng một lần; chỉ lấy kỳ rơi vào [kỳ xem .. nhìn trước]
-      const win = P.ymsOf(m + '-01', lim + '-01'), sched = renew ? renew : r.from_d ? win.find(x => x >= f0 && x <= endYm && md(f0, x) % term === 0) : (next >= m && next <= lim ? next : null);
+      const fA = r.from_d && +r.from_d.slice(8, 10) >= 16 ? P.ymsOf(f0 + '-01', '9999-12-01')[1] : f0; // HĐ bắt đầu cuối tháng (vd 30/04) → kỳ tính từ tháng sau
+      const win = P.ymsOf(m + '-01', lim + '-01'), sched = renew ? renew : cov ? (next >= m && next <= lim ? next : null) : r.from_d ? win.find(x => x >= fA && x <= endYm && md(fA, x) % term === 0) : (next >= m && next <= lim ? next : null);
       let M, back = false;
       if (sched) { M = P.ymsOf(sched + '-01', '9999-12-01').slice(0, term).filter(x => x <= endYm); if (cov && cov >= M[M.length - 1]) continue; } // đã trả trước cho kỳ này
       else if (o.backlog && next < m) { back = true; M = P.ymsOf(next + '-01', '9999-12-01').slice(0, term).filter(x => x <= endYm); }

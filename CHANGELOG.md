@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.29
+- Hợp đồng thuê trạm: sửa lỗi nạp Excel ở máy giờ Timor (UTC+9) làm ngày lùi 1 ngày (01/11/2021 → 31/10/2021); tự sửa một lần dữ liệu đã nạp (ngày bắt đầu là ngày cuối tháng → +1 ngày cả từ / đến).
+- Cần thanh toán: kỳ đến hạn ưu tiên theo "đã trả đến" thực tế (+1 tháng) nếu có; không có thì theo lịch HĐ (HĐ bắt đầu sau ngày 15 → tính từ tháng sau).
+
 ## 4.99.28
 - Cần thanh toán: HĐ vừa hết hạn mà kỳ kế tiếp rơi vào kỳ xem (và trạm chưa có HĐ mới) vẫn hiện, đánh dấu "HĐ đã hết hạn – cần gia hạn", số tiền dự kiến cùng giá / cùng kỳ TT (vd DI0009 hết hạn 31/10/2026 → kỳ 11/2026–10/2027).
 
