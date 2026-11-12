@@ -475,11 +475,14 @@ tr.lgCur td{outline:2px solid #FA4700;outline-offset:-2px;background:#FFF6F2!imp
       <div class="row" style="margin:14px 0 12px">
         <span id="errCount" class="mut"></span><div class="sp"></div>
         <button class="btn sm ghost" id="fReset"><svg class="icon"><use href="#i-x"/></svg>Xoá bộ lọc</button>
-        <select class="input" id="bulkSt" style="width:auto"><option value="">Đổi trạng thái các dòng đang lọc…</option><option value="open">→ Chưa xử lý</option><option value="doing">→ Đang xử lý</option><option value="fixed">→ Đã khắc phục</option><option value="ignore">→ Không phải lỗi</option></select>
+        <select class="input" id="bulkSt" style="width:auto"><option value="">Đổi trạng thái (dòng đã tick, nếu không tick = tất cả đang lọc)…</option><option value="open">→ Chưa xử lý</option><option value="doing">→ Đang xử lý</option><option value="fixed">→ Đã khắc phục</option><option value="ignore">→ Không phải lỗi</option></select>
+        <input class="input" id="bulkNote" placeholder="Lý do / ghi chú (vd: Phí ngân hàng – không cần hợp đồng)" style="width:280px">
+        <button class="btn sm" id="excAdd" title="Lưu bộ lọc hiện tại thành quy tắc ngoại lệ: cảnh báo khớp (kể cả phát sinh ở các lần nạp sau) tự chuyển trạng thái đã chọn">⭐ Lưu thành ngoại lệ</button>
         <button class="btn sm" id="expErr"><svg class="icon"><use href="#i-download"/></svg>Xuất Excel</button>
       </div>
       <div class="tbl"><table id="tErr"></table></div>
       <div class="pager" id="pgErr"></div>
+      <div id="excCard" style="margin-top:14px"></div>
     </div>
     <div class="card hide" id="goneCard"><div class="card-h"><h3>Đã được sửa trong ERP</h3><span class="hint">cảnh báo đã có trạng thái/ghi chú nhưng dữ liệu nạp lại không còn lỗi</span></div><div class="tbl"><table id="tGone"></table></div></div>
     <div class="card"><div class="card-h"><h3>Các quy tắc kiểm tra</h3></div><div class="tbl"><table id="tRules"></table></div></div>

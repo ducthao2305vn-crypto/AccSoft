@@ -181,7 +181,7 @@ async function vOverview(){
 let FIL={},SORT={k:'sev',d:1},OFF=0,VIEW=[],CUR=-1,TOTAL=0;const LIM=200;
 function readFil(){const v=id=>$(id).value;return {group:FIL.group||'',status:FIL.status||'',sev:v('#fSev'),rule:v('#fRule'),user:v('#fUser'),month:v('#fMonth'),dept:v('#fDept'),acc:v('#fAcc').trim(),min:v('#fMin'),max:v('#fMax'),text:v('#fText').trim()}}
 function fillSel(id,items,label,cur){$(id).innerHTML=`<option value="">${label}</option>`+items.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join('');$(id).value=cur||''}
-async function vErrors(keep){
+async function vErrors(keep){excDraw().catch(()=>{});
   renderReviewBar('#rvErr');
   const f=await aq('errorFacets');
   if(!keep){
@@ -219,8 +219,8 @@ async function loadErrTable(){
   }else{
     const r=await aq('errors',FIL,SORT,OFF,LIM);TOTAL=r.total;VIEW=r.rows;
     $('#errCount').innerHTML=`<b>${num(r.total)}</b> cảnh báo phù hợp bộ lọc`;
-    $('#tErr').innerHTML='<thead><tr>'+H('sev','Mức')+H('st','Trạng thái')+H('rule','Loại lỗi')+'<th>Chi tiết</th>'+H('date','Ngày')+H('doc','Chứng từ')+'<th>Nợ</th><th>Có</th>'+H('amt','Số tiền','n')+'<th>Diễn giải</th>'+H('user','Người nhập')+'<th>Ghi chú</th></tr></thead><tbody>'+
-     r.rows.map((e,i)=>`<tr class="click r${e.sev} ${e.status==='fixed'||e.status==='ignore'?'done':''}" data-i="${i}"><td><span class="badge b-${e.sev}">${SEVL[e.sev]}</span></td><td><span class="badge s-${e.status}">${META.status[e.status]}</span></td>
+    $('#tErr').innerHTML='<thead><tr><th style="width:26px"><input type=checkbox id="ckAll" title="Chọn cả trang"></th>'+H('sev','Mức')+H('st','Trạng thái')+H('rule','Loại lỗi')+'<th>Chi tiết</th>'+H('date','Ngày')+H('doc','Chứng từ')+'<th>Nợ</th><th>Có</th>'+H('amt','Số tiền','n')+'<th>Diễn giải</th>'+H('user','Người nhập')+'<th>Ghi chú</th></tr></thead><tbody>'+
+     r.rows.map((e,i)=>`<tr class="click r${e.sev} ${e.status==='fixed'||e.status==='ignore'?'done':''}" data-i="${i}"><td><input type=checkbox class="ckE" value="${esc(e.key)}"></td><td><span class="badge b-${e.sev}">${SEVL[e.sev]}</span></td><td><span class="badge s-${e.status}">${META.status[e.status]}</span></td>
       <td class=nw><b>${esc(RULE[e.k]?.n)}</b></td><td><div class="clamp s" title="${esc(e.msg)}">${esc(e.msg)}</div></td><td class=nw>${vn(e.date)}</td><td class=nw>${esc(e.doc)}</td><td>${esc(e.dr)}</td><td>${esc(e.cr)}</td><td class=n>${fmt2(e.amt)}</td>
       <td><div class=clamp title="${esc(e.desc)}">${esc(e.desc)}</div></td><td class=nw>${esc(short(e.user))}</td><td title="${esc(e.note||'')}">${e.note?esc(e.note.slice(0,40)):''}</td></tr>`).join('')+'</tbody>';
   }
@@ -233,12 +233,24 @@ $('#fReset').onclick=()=>{FIL={group:FIL.group};OFF=0;vErrors()};
 $('#grpTabs').onclick=e=>{const b=e.target.closest('[data-g]');if(!b)return;FIL.group=b.dataset.g;FIL.rule='';OFF=0;vErrors()};
 $('#stTabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.gone){$('#goneCard').scrollIntoView({behavior:'smooth'});return}FIL.status=b.dataset.st;OFF=0;vErrors(true)};
 $('#pgErr').onclick=e=>{const b=e.target.closest('[data-pg]');if(!b)return;OFF=Math.max(0,OFF+ +b.dataset.pg*LIM);loadErrTable();$('#content').scrollTop=0};
-$('#tErr').onclick=e=>{const th=e.target.closest('th[data-s]');if(th){SORT=SORT.k===th.dataset.s?{k:SORT.k,d:-SORT.d}:{k:th.dataset.s,d:1};OFF=0;return loadErrTable()}
+$('#tErr').addEventListener('change',e=>{if(e.target.id==='ckAll')$('#tErr').querySelectorAll('.ckE').forEach(c=>c.checked=e.target.checked);const n=$('#tErr').querySelectorAll('.ckE:checked').length;$('#errCount').dataset.sel=n;const b=$('#bulkSt');if(b)b.options[0].text=n?`Đổi trạng thái ${n} dòng đã tick…`:'Đổi trạng thái (dòng đã tick, nếu không tick = tất cả đang lọc)…'});
+$('#tErr').onclick=e=>{if(e.target.matches('input[type=checkbox]'))return;const th=e.target.closest('th[data-s]');if(th){SORT=SORT.k===th.dataset.s?{k:SORT.k,d:-SORT.d}:{k:th.dataset.s,d:1};OFF=0;return loadErrTable()}
   const tr=e.target.closest('tr.click');if(!tr)return;if(tr.dataset.eid)showDetail(null,+tr.dataset.eid);else showDetail(+tr.dataset.i)};
 $('#expErr').onclick=()=>api.exportErrors(readFil(),SORT);
-$('#bulkSt').onchange=async e=>{const st=e.target.value;e.target.value='';if(!st)return;
-  if(!await ask(`Đặt trạng thái "${META.status[st]}" cho ${num(TOTAL)} cảnh báo đang lọc?`))return;
-  await aq('setStatusWhere',readFil(),st);vErrors(true);refreshSide()};
+$('#bulkSt').onchange=async e=>{const st=e.target.value;e.target.value='';if(!st)return;const note=$('#bulkNote').value.trim(),K=[...$('#tErr').querySelectorAll('.ckE:checked')].map(c=>c.value);
+  if((st==='ignore'||st==='fixed')&&!note&&!await ask('Chưa nhập lý do – vẫn đổi trạng thái? (nên ghi lý do để kiểm toán / người duyệt hiểu vì sao không phải lỗi)'))return;
+  if(K.length){if(!await ask(`Đặt trạng thái "${META.status[st]}" cho ${num(K.length)} dòng đã tick?`))return;await aq('setStatusKeys',K,st,note)}
+  else{if(!await ask(`Đặt trạng thái "${META.status[st]}" cho ${num(TOTAL)} cảnh báo đang lọc?`))return;await aq('setStatusWhere',readFil(),st,note)}
+  $('#bulkNote').value='';vErrors(true);refreshSide()};
+$('#excAdd').onclick=async()=>{const f=readFil();if(!f.rule&&!f.acc&&!f.text)return alert('Lọc trước ít nhất theo Loại lỗi / Tài khoản / Từ khoá (ví dụ: Loại lỗi = "Phải trả 3311 thiếu hợp đồng", Từ khoá = "bank charge"), rồi bấm Lưu thành ngoại lệ.');
+  const desc=[f.rule&&('Loại lỗi: '+(RULE[f.rule]?.n||f.rule)),f.acc&&('TK '+f.acc),f.text&&('chứa "'+f.text+'"'),f.user&&('người nhập '+f.user),f.dept&&('bộ phận '+f.dept),f.min&&('≥ '+f.min),f.max&&('≤ '+f.max)].filter(Boolean).join(' · ');
+  const name=prompt('Tên quy tắc ngoại lệ:\n'+desc,f.text||RULE[f.rule]?.n||'Ngoại lệ');if(!name)return;const note=prompt('Lý do không phải lỗi (ghi vào từng cảnh báo):',$('#bulkNote').value||'');if(note==null)return;
+  const x=await aq('excSave',{name,filter:f,status:'ignore',note});alert(`Đã lưu ngoại lệ "${x.name}" – chuyển ${num(x.applied)} cảnh báo sang "Không phải lỗi". Các lần nạp / rà soát sau tự áp dụng.`);vErrors(true);refreshSide()};
+async function excDraw(){const L=await aq('excList'),C=$('#excCard');if(!C)return;if(!L.length){C.innerHTML='';return}
+  C.innerHTML=`<div class="card"><div class="card-h"><h3>⭐ Quy tắc ngoại lệ (${L.length})</h3><span class=hint>Tự áp dụng sau mỗi lần nạp / rà soát cho cảnh báo "Chưa xử lý" khớp bộ lọc</span><span style="flex:1"></span><button class="btn sm" id="excRun">Áp dụng lại tất cả</button></div>
+   <div class="tbl"><table><thead><tr><th>Tên</th><th>Bộ lọc</th><th>Trạng thái gán</th><th>Lý do</th><th class=n>Đang áp dụng</th><th>Ngày tạo</th><th></th></tr></thead><tbody>${L.map(x=>`<tr><td><b>${esc(x.name)}</b></td><td style="font-size:12px">${esc([x.filter.rule&&(RULE[x.filter.rule]?.n||x.filter.rule),x.filter.acc&&('TK '+x.filter.acc),x.filter.text&&('"'+x.filter.text+'"'),x.filter.user,x.filter.dept,x.filter.min&&('≥ '+x.filter.min),x.filter.max&&('≤ '+x.filter.max)].filter(Boolean).join(' · '))}</td><td>${esc(META.status[x.status]||x.status)}</td><td style="font-size:12px">${esc(x.note||'')}</td><td class=n>${num(x.now)}</td><td class=nw>${esc(x.at||'')}</td><td><button class="btn sm ghost excDel" data-id="${x.id}">Xoá</button></td></tr>`).join('')}</tbody></table></div><div class=hint>Xoá ngoại lệ không tự mở lại các cảnh báo đã gán – lọc theo ghi chú "[Ngoại lệ: tên]" rồi đổi trạng thái nếu cần.</div></div>`;
+  $('#excRun').onclick=async()=>{const n=await aq('excApply');alert('Đã áp dụng cho '+num(n)+' cảnh báo');vErrors(true);refreshSide()};
+  C.querySelectorAll('.excDel').forEach(b=>b.onclick=async()=>{if(!await ask('Xoá quy tắc ngoại lệ này?'))return;await aq('excRemove',+b.dataset.id);excDraw()})}
 
 const FIELDS=[['doc','Chứng từ'],['line','Line No'],['date','Ngày hạch toán'],['due','Hạn thanh toán'],['drName','TK Nợ'],['crName','TK Có'],['amt','Số tiền'],['qty','Số lượng'],['price','Đơn giá'],
   ['bp','Đối tượng Nợ'],['bpCr','Đối tượng Có'],['desc','Diễn giải'],['descP','Diễn giải chứng từ'],['dept','Bộ phận'],['deptSub','Bộ phận con'],['tcost','Khoản mục chi phí'],['trev','Loại doanh thu'],
