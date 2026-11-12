@@ -15,6 +15,14 @@ const isRev=a=>/^(511|512|515|711)/.test(a), isExp=a=>/^(6|8)/.test(a)&&!/^911/.
 const isAuto=r=>/Depreciation|Distribution|CIP/i.test(r.table||''); // bút toán hệ thống tự sinh
 const isInv=a=>/^15[1-8]/.test(a)&&!/^154/.test(a); // hàng tồn kho (trừ 154 SXKD dở dang)
 const isCash=a=>/^(111|112)/.test(a), isPartner=a=>/^(131|136|1388|141|244|331|336|3388|344)/.test(a);
+// dòng tiền: mã ERP "0102_…" → chỉ tiêu B03 (01xx → 0x, 02xx → 2x, 03xx → 3x; 04xx = chuyển tiền nội bộ) – cùng logic báo cáo B03 (engine/fin.js)
+const CASH3=a=>/^11[123]/.test(a||''), isCashLine=r=>(CASH3(r.dr)||CASH3(r.cr))&&!(CASH3(r.dr)&&CASH3(r.cr))&&!isOB(r);
+const cfCode=cf=>{const m=/^0([1-4])(\d{2})/.exec(String(cf||''));if(!m)return null;if(m[1]==='4')return 'TR';const n=String(+m[2]);return m[1]==='1'?'0'+n:m[1]+n};
+const CF_IN=[['31',/^411/],['33',/^34[13]/],['24',/^128|^1288/],['26',/^22[128]/],['22',/^711|^211|^213|^217/],['27',/^515/],['01',/^511|^131|^3331|^3387|^512/],['06',/./]];
+const CF_OUT=[['21',/^21[1-7]|^241/],['23',/^128/],['25',/^22[128]/],['32',/^411|^419/],['34',/^341|^343/],['36',/^421/],['03',/^334/],['04',/^635|^3351/],['05',/^3334|^821/],['02',/^331|^15[1-8]|^611|^62[1-7]|^632|^64[12]|^133|^242|^335/],['07',/./]];
+const cfCls=(a,T)=>T.find(([,rx])=>rx.test(a||''))[0];
+const CF_REC=new Set(['01','06','22','24','26','27','31','33']),CF_PAY=new Set(['02','03','04','05','07','21','23','25','32','34','35','36']);
+const CF_ERP={'01':'0101','02':'0102','03':'0103','04':'0104','05':'0105','06':'0106','07':'0107','21':'0201','22':'0202','23':'0203','24':'0204','25':'0205','26':'0206','27':'0207','31':'0301','32':'0302','33':'0303','34':'0304','36':'0306'};
 const MONTHS={jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,may:5,jun:6,june:6,jul:7,july:7,aug:8,august:8,sep:9,sept:9,september:9,oct:10,october:10,nov:11,november:11,dec:12,december:12};
 function periodsInText(t){ // trả về danh sách {y,m} được nhắc tới trong diễn giải
   const out=[];t=String(t);
@@ -61,6 +69,17 @@ const RULES=[
   f:r=>r.date&&r.date.getDay()===0&&new Date(r.date.getFullYear(),r.date.getMonth()+1,0).getDate()!==r.date.getDate()&&'Chủ nhật'},
  {k:'CASH_ROUND',s:'L',n:'Chi tiền mặt số tròn lớn',d:'Chi/thu tiền mặt-ngân hàng số tròn ≥ 10.000 – rủi ro tạm ứng/thanh toán không chứng từ.',
   f:r=>(isCash(r.cr)||isCash(r.dr))&&Math.abs(r.amt)>=CFG.cashRound&&r.amt%1000===0&&`${fmt(r.amt)}`},
+ // ---- Dòng tiền (Cashflow activities) trên bút toán thu / chi tiền ----
+ {k:'CF_MISSING',s:'L',n:'Thu / chi tiền thiếu loại dòng tiền',d:'Bút toán Nợ hoặc Có TK tiền (111, 112, 113) – không phải chuyển tiền nội bộ giữa các TK tiền – nhưng không chọn Cashflow activities. Báo cáo lưu chuyển tiền tệ phải tự đoán theo TK đối ứng.',
+  f:r=>isCashLine(r)&&!r._cfAdj&&!String(r.cf||'').trim()&&`${CASH3(r.dr)?'Thu':'Chi'} tiền, đối ứng ${CASH3(r.dr)?r.cr:r.dr} – thiếu Cashflow`},
+ {k:'CF_WRONG',s:'M',n:'Chọn sai loại dòng tiền',d:'Loại dòng tiền (Cashflow activities) không khớp bản chất bút toán: mã THU nhưng bút toán CHI tiền (hoặc ngược lại), mã chuyển tiền nội bộ (04xx) cho khoản thu/chi với bên ngoài, hoặc TK đối ứng xác định rõ loại dòng tiền (334 → 0103 trả lương, 3334 → 0105 thuế TNDN, 211/213/241 → 0201 mua TSCĐ, 128 → 0203/0204, 22x → 0205/0206, 515 → 0207, 411 → 0301/0302, 341 → 0303/0304, 421 → 0306, 131/511 → 0101…) mà chọn mã khác.',
+  f:r=>{if(!isCashLine(r)||r._cfAdj)return false;const cf=String(r.cf||'').trim();if(!cf)return false;const e=cfCode(cf);if(!e)return false;const rec=CASH3(r.dr),acc=rec?r.cr:r.dr,neg=r.amt<0;
+   if(e==='TR')return `Chọn ${cf.slice(0,40)} (chuyển tiền nội bộ) nhưng đối ứng ${acc} không phải TK tiền`;
+   if(!neg&&rec&&CF_PAY.has(e))return `Thu tiền (Nợ ${r.dr}) nhưng chọn mã CHI ${cf.slice(0,45)}`;
+   if(!neg&&!rec&&CF_REC.has(e))return `Chi tiền (Có ${r.cr}) nhưng chọn mã THU ${cf.slice(0,45)}`;
+   const au=rec?cfCls(acc,CF_IN):cfCls(acc,CF_OUT);if(['06','07','02'].includes(au))return false;
+   const ok={'01':['01','06'],'21':['21'],'03':['03'],'24':['24','06'],'23':['23','07'],'27':['27','06'],'22':['22','06']}[au]||[au];
+   return !ok.includes(e)&&`Chọn ${cf.slice(0,45)} nhưng TK đối ứng ${acc} → nên mã ${CF_ERP[au]||au}`}},
  // ---- Thiếu trường bắt buộc theo nghiệp vụ ----
  {k:'AP3311_NO_CONTRACT',s:'M',n:'Phải trả 3311 thiếu hợp đồng',d:'Dòng ghi TK 3311 (phải trả nhà cung cấp) nhưng không chọn trường Contract – không đối chiếu được công nợ, thanh toán theo hợp đồng.',
   f:r=>(/^3311/.test(r.dr)||/^3311/.test(r.cr))&&!String(r.contract||'').trim()&&'Thiếu Contract'},
@@ -103,6 +122,8 @@ const RULES=[
   f:r=>(r._schema>=2||r._enriched)&&(isInv(r.dr)||isInv(r.cr))&&!r.product&&`TK ${isInv(r.dr)?r.dr:r.cr} không có Product`},
 ];
 const FIX={
+ CF_MISSING:'Chọn Cashflow activities cho bút toán thu / chi tiền (hoặc điều chỉnh ở Điều chỉnh dữ liệu → Loại dòng tiền).',
+ CF_WRONG:'Chọn lại Cashflow activities đúng bản chất (thu / chi, TK đối ứng) – hoặc điều chỉnh ở Điều chỉnh dữ liệu → Loại dòng tiền.',
  AP3311_NO_CONTRACT:'Bổ sung trường Contract (số hợp đồng / PO) trên dòng 3311 – nhất là bút toán ghi nhận công nợ và thanh toán.',
  RENT_NO_SITE:'Chọn BTS Site (mã trạm) hoặc Location cho dòng chi phí / trả trước thuê vị trí.',
  ASSET_NO_CODE:'Gắn mã tài sản (Asset) khi ghi tăng / giảm nguyên giá và khi tập hợp XDCB 241.',
@@ -195,5 +216,5 @@ const AUDIT_WHY={
 const GROUP=Object.fromEntries(ALL_RULES.map(r=>[r.k,AUDIT_WHY[r.k]?'audit':'staff']));
 const GROUPS={staff:'Sai sót nhân viên',audit:'Sai sót dễ bị kiểm toán'};
 const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||'',g:GROUP[k],why:AUDIT_WHY[k]||''})),status:ST,groups:GROUPS});
-const RULES_VERSION=15; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
+const RULES_VERSION=16; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
 module.exports={CFG,CFG_DEFAULT,setConfig,GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};

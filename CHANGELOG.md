@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.47
+- Báo cáo & thông báo: nhấn một loại lỗi (hoặc người nhập) → mở danh sách bút toán của loại lỗi đó theo tháng đang chọn (tab Chưa xử lý).
+- Quy tắc mới: **Chọn sai loại dòng tiền** (mã THU cho bút toán chi tiền và ngược lại; mã 04xx chuyển nội bộ cho thu/chi bên ngoài; TK đối ứng xác định rõ loại dòng tiền – 334 → 0103, 3334 → 0105, 211/213/241 → 0201, 128 → 0203/0204, 22x → 0205/0206, 515 → 0207, 411/341/421 → 03xx, 131/511 → 0101 – mà chọn mã khác) và **Thu / chi tiền thiếu loại dòng tiền**; bút toán đã điều chỉnh loại dòng tiền (Điều chỉnh dữ liệu) không báo lỗi và lỗi cũ tự chuyển Đã khắc phục. Tự rà soát lại (quy tắc v16).
+
 ## 4.99.46
 - Báo cáo & thông báo: chọn **Tháng** (hoặc cả kỳ) – số liệu theo loại lỗi / người nhập, danh sách nhân viên cần khắc phục, email, Excel đều theo tháng chọn; lỗi đã đánh "Không phải lỗi" / "Đã khắc phục" không còn tính vào "Còn phải khắc phục".
 - Bảng **Chi tiết còn phải khắc phục theo nhân viên**: chứng từ (bấm mở chi tiết), ngày, lỗi, Nợ/Có, số tiền, khoản mục, diễn giải, hướng khắc phục, trạng thái; ô lọc; xuất Excel mỗi nhân viên 1 sheet + sheet tổng hợp (số lỗi, mức cao, số chứng từ, loại lỗi nhiều nhất) để thông báo và đánh giá.

@@ -557,7 +557,10 @@ function make(db) {
       for (const x of all(`SELECT er.err_key key, er.rule, er.doc, a.value v FROM field_adj a JOIN errors er ON er.entry_id=a.id WHERE a.field=? AND ifnull(a.value,'')<>'' AND er.rule IN (${rules.map(() => '?').join(',')}) AND coalesce(er.st,'open') IN ('open','doing')${w}`, f, ...rules, ...(ids || [])))
         L.push({ key: x.key, rule: x.rule, doc: x.doc, status: 'fixed', note: `Đã điều chỉnh ${ADJ_NAME[f]}: ${x.v}` }); }
     return L.length ? setReviews(L) : 0; }
-  const faSetMark = (items, field, value, note) => { const r = FA.set(items, field, value, note); try { if (ADJ_RULES[field]) r.fixed = markAdjFixed([].concat(items || []).map(x => +x.id).filter(Boolean)); } catch { } return r; };
+  const faSetMark = (items, field, value, note) => { const r = FA.set(items, field, value, note);
+    try { if (ADJ_RULES[field]) r.fixed = markAdjFixed([].concat(items || []).map(x => +x.id).filter(Boolean));
+      else if (field === 'cf' && String(value || '').trim()) { const ids = [].concat(items || []).map(x => +x.id).filter(Boolean);
+        if (ids.length) { const L = all(`SELECT err_key key, rule, doc FROM errors WHERE entry_id IN (${ids.map(() => '?').join(',')}) AND rule IN ('CF_WRONG','CF_MISSING') AND coalesce(st,'open') IN ('open','doing')`, ...ids).map(x => ({ ...x, status: 'fixed', note: 'Đã điều chỉnh loại dòng tiền: ' + value })); r.fixed = L.length ? setReviews(L) : 0; } } } catch { } return r; };
   const faAssetImportMark = (...a) => { const r = FA.assetImport(...a); try { r.fixed = markAdjFixed(null); } catch { } return r; };
   // Dòng huỷ trích cho các khoản đã chọn: đảo các dòng trích (Có 335) theo đúng TK, đối tượng, khoản mục; phân bổ số còn treo từ dòng trích mới nhất trở về trước
   // Dòng trích trước của một kỳ dịch vụ (làm mẫu lập trích kỳ mới) + đánh dấu khoản đã có trích ở kỳ đích

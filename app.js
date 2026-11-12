@@ -684,7 +684,7 @@ async function vReport(){
   $('#repKpi').innerHTML=kpi('','alert','Cảnh báo phát hiện',num(n),`👤 nhân viên ${num(gsum('staff'))} · 🔍 kiểm toán ${num(gsum('audit'))}`)+kpi('green','check','Đã kiểm tra xong',num(done),pct(done/n))+kpi('green','check','Đã khắc phục',num(sum('fixed')))
     +kpi('','file','Còn phải khắc phục',num(sum('open')+sum('doing')))+kpi('red','alert','Lỗi mức cao',num(sum('high')),'tổng phát hiện');
   const cross=(rows,label,name)=>`<thead><tr><th>${label}</th><th class=n>Tổng</th><th class=n>Cao</th><th class=n>Chưa XL</th><th class=n>Đang XL</th><th class=n>Đã sửa</th><th class=n>Không lỗi</th><th class=n>Hoàn thành</th></tr></thead><tbody>`+
-    rows.map(r=>{const p=(r.fixed+r.ignore)/r.n;return `<tr><td>${esc(name(r.k))}</td><td class=n>${num(r.n)}</td><td class="n ${r.high?'neg':''}">${r.high||''}</td><td class=n>${num(r.open)}</td><td class=n>${num(r.doing)}</td><td class="n pos">${num(r.fixed)}</td><td class=n>${num(r.ignore)}</td>
+    rows.map(r=>{const p=(r.fixed+r.ignore)/r.n;return `<tr class="click" data-${label==='Loại lỗi'?'rk':'ru'}="${esc(r.k)}" title="Nhấn để xem chi tiết các bút toán" style="cursor:pointer"><td>${esc(name(r.k))}</td><td class=n>${num(r.n)}</td><td class="n ${r.high?'neg':''}">${r.high||''}</td><td class=n>${num(r.open)}</td><td class=n>${num(r.doing)}</td><td class="n pos">${num(r.fixed)}</td><td class=n>${num(r.ignore)}</td>
       <td class=n><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><div style="width:60px;height:6px;border-radius:9px;background:var(--gray-200)"><div style="width:${p*100}%;height:100%;border-radius:9px;background:var(--brand-500)"></div></div><b>${pct(p)}</b></div></td></tr>`}).join('')+'</tbody>';
   $('#tRepRule').innerHTML=cross([...rep.byRule].sort((a,b)=>(RULE[a.k]?.g||'').localeCompare(RULE[b.k]?.g||'')*-1||b.n-a.n),'Loại lỗi',k=>`${RULE[k]?.n||k} ·${RULE[k]?.g==='audit'?' 🔍':' 👤'}`);$('#tRepUser').innerHTML=cross(rep.byUser,'Người nhập',short);
   const emails=await Promise.all(todo.map(t=>MAILTO[t.u]!=null?MAILTO[t.u]:api.emailOf(t.u)));
@@ -700,7 +700,10 @@ async function vReport(){
   $('#s_pass').value='';$('#s_pass').placeholder=c.hasPass?'•••••• (đã lưu – để trống = giữ nguyên)':'Mật khẩu / App password';
 }
 ['rIntro','rSign','rDeadline','rSev','rGroup'].forEach(id=>{const v=ls.get(id,null);if(v!=null)$('#'+id).value=v;$('#'+id).addEventListener('change',()=>{ls.set(id,$('#'+id).value);if(id==='rSev'||id==='rGroup')vReport()})});$('#rMonth').addEventListener('change',()=>vReport());
-$('#repPrint').onclick=()=>window.print();$('#repXls').onclick=()=>api.exportReport($('#rSev').value,$('#rGroup').value,$('#rMonth').value);
+$('#repPrint').onclick=()=>window.print();
+// nhấn một loại lỗi / người nhập trong báo cáo → mở danh sách bút toán của loại lỗi đó (theo tháng đang chọn, ưu tiên còn phải khắc phục)
+['#tRepRule','#tRepUser'].forEach(id=>$(id).addEventListener('click',e=>{const tr=e.target.closest('tr[data-rk],tr[data-ru]');if(!tr)return;
+  FIL={group:'',status:'open',rule:tr.dataset.rk||'',user:tr.dataset.ru||'',month:$('#rMonth').value||'',sev:$('#rSev').value==='H'?'H':''};OFF=0;go('errors')}));$('#repXls').onclick=()=>api.exportReport($('#rSev').value,$('#rGroup').value,$('#rMonth').value);
 $('#tTodo').onchange=e=>{if(e.target.id==='mAllEmp')$$('.empChk').forEach(c=>c.checked=e.target.checked);
   if(e.target.classList.contains('empMail')){MAILTO[e.target.dataset.u]=e.target.value.trim();ls.set('mailto',MAILTO)}};
 $('#tTodo').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.prev)previewMail(b.dataset.prev);if(b.dataset.xls)api.exportEmployee(b.dataset.xls,$('#rSev').value,$('#rGroup').value,$('#rMonth').value)};

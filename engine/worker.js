@@ -233,7 +233,9 @@ function scanRange({ lo, hi, sc }) { // chạy trong luồng phụ
     // giá trị đã điều chỉnh (Điều chỉnh dữ liệu – field_adj) thay cho giá trị gốc khi rà soát
     let ADJ = new Map(); try { for (const x of db.prepare(`SELECT id, field, value FROM field_adj WHERE id>=? AND id<=?`).all(rows[0].id, rows.at(-1).id)) (ADJ.get(x.id) || ADJ.set(x.id, {}).get(x.id))[x.field] = x.value; } catch { }
     const AF = { contract: 'contract', location: 'location', plate: 'plate', asset: 'asset', dept: 'deptSub' };
+    let CFA = new Set(); try { CFA = new Set(db.prepare(`SELECT doc||'|'||d||'|'||dr||'|'||cr k FROM cf_adj`).all().map(x => x.k)); } catch { }
     for (const raw of rows) { const r = rowFromDb(raw), ad = ADJ.get(raw.id); if (ad) for (const f in ad) if (AF[f] && ad[f] != null && ad[f] !== '') r[AF[f]] = ad[f];
+      if (CFA.size && CFA.has([r.doc, raw.date ?? '', r.dr, r.cr].join('|'))) r._cfAdj = true; // đã điều chỉnh loại dòng tiền
       // khoá phụ theo Accounted Amount: giữ trạng thái xử lý đã lưu trước khi đổi cơ sở số tiền (Source / Accounted)
       const alt = r.amtAcc != null && Math.abs(r.amtAcc - r.amt) > 0.004 ? { ...r, amt: r.amtAcc } : null;
       for (const e of checkRow(r)) out.push([raw.id, e.k, e.s, e.msg, errKey(e.k, r), raw.ym, r.user, raw._dept ?? null, r.doc ?? null, alt ? errKey(e.k, alt) : null]); }
