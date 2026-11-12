@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.46
+- Báo cáo & thông báo: chọn **Tháng** (hoặc cả kỳ) – số liệu theo loại lỗi / người nhập, danh sách nhân viên cần khắc phục, email, Excel đều theo tháng chọn; lỗi đã đánh "Không phải lỗi" / "Đã khắc phục" không còn tính vào "Còn phải khắc phục".
+- Bảng **Chi tiết còn phải khắc phục theo nhân viên**: chứng từ (bấm mở chi tiết), ngày, lỗi, Nợ/Có, số tiền, khoản mục, diễn giải, hướng khắc phục, trạng thái; ô lọc; xuất Excel mỗi nhân viên 1 sheet + sheet tổng hợp (số lỗi, mức cao, số chứng từ, loại lỗi nhiều nhất) để thông báo và đánh giá.
+
 ## 4.99.45
 - Lỗi nhập liệu: **lọc liên hoàn** – danh sách Khoản mục (kèm số cảnh báo), Người nhập, Tháng, Bộ phận, Loại lỗi chỉ gồm giá trị còn cảnh báo theo các bộ lọc khác đang chọn (VD chọn "Chi phí xe thiếu biển số" → chỉ hiện các khoản mục có lỗi này).
 

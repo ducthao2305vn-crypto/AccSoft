@@ -603,6 +603,7 @@ tr.lgCur td{outline:2px solid #FA4700;outline-offset:-2px;background:#FFF6F2!imp
       <div class="card-h"><div><h3>Lỗi cần khắc phục & gửi thông báo</h3><div class="hint">Mỗi nhân viên nhận một email liệt kê lỗi, hướng dẫn chỉnh sửa và file Excel đính kèm.</div></div></div>
       <div class="filters" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
         <label class="field">Nhóm lỗi<select class="input" id="rGroup"><option value="">Tất cả các nhóm</option><option value="staff">Sai sót nhân viên</option><option value="audit">Sai sót dễ bị kiểm toán</option></select></label>
+        <label class="field">Tháng<select class="input" id="rMonth"><option value="">Cả kỳ rà soát</option></select></label>
         <label class="field">Mức độ<select class="input" id="rSev"><option value="L">Tất cả mức</option><option value="M">Trung bình trở lên</option><option value="H">Chỉ mức cao</option></select></label>
         <label class="field">Hạn khắc phục<input class="input" type="date" id="rDeadline"></label>
         <label class="check" style="align-self:end;padding-bottom:10px"><input type="checkbox" id="rMark" checked>Sau khi gửi, chuyển "Chưa xử lý" → "Đang xử lý"</label>
@@ -615,6 +616,7 @@ Bộ phận Kế toán – Kiểm soát nội bộ</textarea></label>
       <div class="row" style="margin-bottom:14px"><button class="btn primary" id="mSend"><svg class="icon"><use href="#i-send"/></svg>Gửi email cho nhân viên đã chọn</button>
         <button class="btn" id="mTest">Gửi thử cho tôi</button><span id="mailState" class="mut"></span></div>
       <div class="tbl"><table id="tTodo"></table></div>
+      <div class="card" style="margin-top:14px"><div class="card-h"><h3>Chi tiết còn phải khắc phục theo nhân viên</h3><span class="hint">Chưa xử lý + đang xử lý · theo tháng / nhóm / mức đang chọn · bấm số chứng từ để mở chi tiết</span><span style="flex:1"></span><input class="input" id="tdQ" placeholder="Lọc nhân viên / chứng từ / nội dung…" style="width:240px"><button class="btn sm" id="tdXls">Xuất Excel chi tiết (mỗi nhân viên 1 sheet)</button></div><div class="tbl" style="max-height:520px"><table id="tTodoDet"></table></div></div>
     </div>
     <div class="grid g2 noprint">
       <div class="card"><div class="card-h"><h3>Máy chủ gửi mail (SMTP)</h3></div>

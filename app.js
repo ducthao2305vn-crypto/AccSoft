@@ -660,13 +660,26 @@ $('#tPLY').ondblclick=e=>{const td=e.target.closest('td[data-y]'),tr=e.target.cl
   openLedger(tr.dataset.n,`Năm ${y.y} (${r.from.slice(5)}–${r.to.slice(5)})`,{kind:'pl',key:tr.dataset.key,from:r.from,to:r.to},PLNAT(tr.dataset.key))};
 
 /* ---------- Báo cáo & thông báo ---------- */
+let TODO_DET=[];
+function todoDetDraw(det){if(det)TODO_DET=det;const q=($('#tdQ').value||'').toLowerCase(),R=TODO_DET.filter(e=>!q||[e.user,e.doc,e.desc,e.msg,RULE[e.k]?.n,e.tcost].join(' ').toLowerCase().includes(q));let u0=null,out='';
+  for(const e of R){if(e.user!==u0){u0=e.user;const n=R.filter(x=>x.user===u0).length;out+=`<tr style="background:#F2F4F7;font-weight:700"><td colspan=9>👤 ${esc(short(e.user))} <span class=mut style="font-weight:400">${esc(e.user)}</span> · ${num(n)} lỗi · ${num(new Set(R.filter(x=>x.user===u0).map(x=>x.doc)).size)} chứng từ</td></tr>`}
+    out+=`<tr><td><span class="badge b-${e.sev}">${SEVL[e.sev]}</span></td><td class=nw><a href="#" class="tdDoc" data-eid="${e.eid}"><b>${esc(e.doc)}</b></a><div class=mut style="font-size:11px">${vn(e.date)} · line ${esc(e.line??'')}</div></td><td><b>${esc(RULE[e.k]?.n||e.k)}</b><div style="font-size:12px">${esc(e.msg)}</div></td><td style="font-size:12px">${esc(e.dr)} / ${esc(e.cr)}</td><td class=n>${fmt2(e.amt)}</td><td style="font-size:12px;max-width:200px">${esc(e.tcost||'')}</td><td style="font-size:12px;max-width:320px">${esc(e.desc||'')}</td><td style="font-size:12px;max-width:260px;color:#B54708">${esc(META.rules.find(r=>r.k===e.k)?.fix||'')}</td><td><span class="badge s-${e.status}">${META.status[e.status]}</span></td></tr>`}
+  $('#tTodoDet').innerHTML='<thead><tr><th>Mức</th><th>Chứng từ</th><th>Lỗi</th><th>Nợ / Có</th><th class=n>Số tiền</th><th>Khoản mục</th><th>Nội dung (diễn giải)</th><th>Cần khắc phục</th><th>Trạng thái</th></tr></thead><tbody>'+(out||'<tr><td colspan=9 class=mut style="text-align:center;padding:20px">Không còn lỗi cần khắc phục 🎉</td></tr>')+'</tbody>'+(TODO_DET.length>=5000?'<tfoot><tr><td colspan=9 class=mut>Hiển thị 5.000 dòng đầu – xuất Excel để xem đầy đủ</td></tr></tfoot>':'');
+  $('#tTodoDet').querySelectorAll('.tdDoc').forEach(a=>a.onclick=ev=>{ev.preventDefault();showDetail(null,+a.dataset.eid)})}
+$('#tdQ')&&($('#tdQ').oninput=deb(()=>todoDetDraw()));
+$('#tdXls')&&($('#tdXls').onclick=async()=>{const all=await aq('todoDetail',$('#rSev').value,$('#rGroup').value,$('#rMonth').value,200000),by=new Map();for(const e of all)(by.get(e.user)||by.set(e.user,[]).get(e.user)).push(e);
+  const row=e=>({'Nhân viên':short(e.user),'Mức':SEVL[e.sev],'Loại lỗi':RULE[e.k]?.n||e.k,'Chi tiết':e.msg,'Ngày HT':e.date,'Chứng từ':e.doc,'Line':e.line,'TK Nợ':e.dr,'TK Có':e.cr,'Số tiền':e.amt,'Khoản mục':e.tcost||'','Đối tượng':e.bp||e.bpCr||'','Diễn giải':e.desc,'Cần khắc phục':META.rules.find(r=>r.k===e.k)?.fix||'','Trạng thái':META.status[e.status],'Ghi chú':e.note||''});
+  const sum=[...by].map(([u,L])=>({'Nhân viên':short(u),'Tài khoản người nhập':u,'Số lỗi':L.length,'Mức cao':L.filter(e=>e.sev==='H').length,'Số chứng từ':new Set(L.map(e=>e.doc)).size,'Loại lỗi nhiều nhất':(()=>{const c={};for(const e of L)c[e.k]=(c[e.k]||0)+1;const k=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];return k?(RULE[k[0]]?.n||k[0])+' ('+k[1]+')':''})()}));
+  try{await api.xlsxSheets(`AccSoft_ConPhaiKhacPhuc${$('#rMonth').value?'_'+$('#rMonth').value:''}.xlsx`,[['Tong hop',sum],...[...by].map(([u,L])=>[short(u).replace(/[\\/*?:\[\]]/g,' ').slice(0,31),L.map(row)])])}catch(err){alert(err.message)}});
 let MAILTO=ls.get('mailto',{});
-const mailOpts=(test=false)=>({group:$('#rGroup').value,minSev:$('#rSev').value,deadline:$('#rDeadline').value,intro:$('#rIntro').value,sign:$('#rSign').value,mark:$('#rMark').checked,test});
+const mailOpts=(test=false)=>({month:$('#rMonth').value,group:$('#rGroup').value,minSev:$('#rSev').value,deadline:$('#rDeadline').value,intro:$('#rIntro').value,sign:$('#rSign').value,mark:$('#rMark').checked,test});
 async function vReport(){
   renderReviewBar('#rvRep');
-  const [rep,todo,log]=await Promise.all([aq('report'),aq('todo',$('#rSev').value,$('#rGroup').value),aq('mailLog')]);
+  const RM=$('#rMonth').value,[rep,todo,log,det]=await Promise.all([aq('report',{month:RM}),aq('todo',$('#rSev').value,$('#rGroup').value,RM),aq('mailLog'),aq('todoDetail',$('#rSev').value,$('#rGroup').value,RM,5000)]);
+  {const cur=RM;$('#rMonth').innerHTML='<option value="">Cả kỳ rà soát</option>'+rep.months.slice().reverse().map(m=>`<option value="${m}">${m}</option>`).join('');$('#rMonth').value=cur}
+  todoDetDraw(det);
   const sum=k=>rep.byRule.reduce((a,r)=>a+r[k],0),n=sum('n'),done=sum('fixed')+sum('ignore');
-  $('#repPeriod').textContent=`Kỳ dữ liệu ${rep.months[0]||''} → ${rep.months.at(-1)||''} · Lập ngày ${new Date().toLocaleDateString('vi')}`;
+  $('#repPeriod').textContent=`${RM?'Tháng '+RM:'Kỳ dữ liệu '+(rep.months[0]||'')+' → '+(rep.months.at(-1)||'')} · Lập ngày ${new Date().toLocaleDateString('vi')}`;
   const gsum=g=>rep.byRule.filter(r=>RULE[r.k]?.g===g).reduce((s,r)=>s+r.n,0);
   $('#repKpi').innerHTML=kpi('','alert','Cảnh báo phát hiện',num(n),`👤 nhân viên ${num(gsum('staff'))} · 🔍 kiểm toán ${num(gsum('audit'))}`)+kpi('green','check','Đã kiểm tra xong',num(done),pct(done/n))+kpi('green','check','Đã khắc phục',num(sum('fixed')))
     +kpi('','file','Còn phải khắc phục',num(sum('open')+sum('doing')))+kpi('red','alert','Lỗi mức cao',num(sum('high')),'tổng phát hiện');
@@ -686,11 +699,11 @@ async function vReport(){
   const c=await api.getSmtp();for(const k of ['host','port','user','from','cc'])$('#s_'+k).value=c[k]||'';$('#s_secure').checked=!!c.secure;$('#s_self').checked=!!c.allowSelfSigned;
   $('#s_pass').value='';$('#s_pass').placeholder=c.hasPass?'•••••• (đã lưu – để trống = giữ nguyên)':'Mật khẩu / App password';
 }
-['rIntro','rSign','rDeadline','rSev','rGroup'].forEach(id=>{const v=ls.get(id,null);if(v!=null)$('#'+id).value=v;$('#'+id).addEventListener('change',()=>{ls.set(id,$('#'+id).value);if(id==='rSev'||id==='rGroup')vReport()})});
-$('#repPrint').onclick=()=>window.print();$('#repXls').onclick=()=>api.exportReport($('#rSev').value,$('#rGroup').value);
+['rIntro','rSign','rDeadline','rSev','rGroup'].forEach(id=>{const v=ls.get(id,null);if(v!=null)$('#'+id).value=v;$('#'+id).addEventListener('change',()=>{ls.set(id,$('#'+id).value);if(id==='rSev'||id==='rGroup')vReport()})});$('#rMonth').addEventListener('change',()=>vReport());
+$('#repPrint').onclick=()=>window.print();$('#repXls').onclick=()=>api.exportReport($('#rSev').value,$('#rGroup').value,$('#rMonth').value);
 $('#tTodo').onchange=e=>{if(e.target.id==='mAllEmp')$$('.empChk').forEach(c=>c.checked=e.target.checked);
   if(e.target.classList.contains('empMail')){MAILTO[e.target.dataset.u]=e.target.value.trim();ls.set('mailto',MAILTO)}};
-$('#tTodo').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.prev)previewMail(b.dataset.prev);if(b.dataset.xls)api.exportEmployee(b.dataset.xls,$('#rSev').value,$('#rGroup').value)};
+$('#tTodo').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.prev)previewMail(b.dataset.prev);if(b.dataset.xls)api.exportEmployee(b.dataset.xls,$('#rSev').value,$('#rGroup').value,$('#rMonth').value)};
 const mailOf=u=>($$('.empMail').find(x=>x.dataset.u===u)?.value||'').trim();
 async function sendMails(test){
   let list=$$('.empChk:checked').map(c=>({user:c.dataset.u,to:mailOf(c.dataset.u)}));if(!list.length)return alert('Chưa chọn nhân viên nào.');
