@@ -577,3 +577,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Giao việc 331 (v4.97): bảng ap331_assign(bp, ym, staff…), apAssign/apAssignList; email: handle ap:assignMail (một thư / nhân viên, đính kèm biên bản từng đối tác theo kỳ from–to).
 - Đối chiếu 15611/14121 (v4.98): engine/goodsrec.js (report theo đối tượng × product, gr_assign, gr_status, settings gr_signers), engine/goodsrecx.js (Excel ExcelJS + HTML theo mẫu), handlers gr:preview/export/mail/assignMail; trang grec (vGR).
 - Dòng tiền thanh toán (v4.99.17): engine/payflow.js (Có 111/112/113, phân nhóm theo TK Nợ + partners_cat.kind, chủ nhà trạm = Nợ 24211/Có 331), trang payf (vPF, pfDetail).
+- Chi phí trả trước 242 (v4.99.18): engine/prepaid242.js (khoản = TK × hợp đồng, kỳ từ dist_from/to hoặc diễn giải, trạng thái expired/never/over/slow/fast/noperiod), trang p242 (vP2, p2Lines).

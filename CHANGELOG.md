@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## 4.99.18
+- **Báo cáo Chi phí trả trước 242** (Kết quả & báo cáo → Chi phí trả trước 242): còn lại chưa phân bổ của 24211 / 24218 / 24228 (sửa được danh sách TK) đến ngày, theo TK × hợp đồng (không HĐ: đối tượng × khoản mục) – khớp sổ cái từng TK.
+  - Kỳ phân bổ lấy từ Distribution From/To hoặc đọc diễn giải ("from 01/08/2026 - 31/07/2027", "Distribution 06 months from …"); tính còn lại theo lịch, số tháng còn lại, lần phân bổ gần nhất.
+  - Tình trạng: hết kỳ phân bổ nhưng còn dư, chưa phân bổ lần nào, phân bổ vượt (hoặc thiếu số dư đầu kỳ), chậm / nhanh hơn lịch, không xác định được kỳ.
+  - Tổng hợp theo khoản mục, theo trạm (mã trạm DI0148, AL0003… đọc từ hợp đồng / đối tượng / diễn giải), theo tài khoản; nhấn đúp xem chứng từ; xuất Excel 3 sheet.
+
 ## 4.99.17
 - **Báo cáo Dòng tiền thanh toán** (Kết quả & báo cáo → Dòng tiền thanh toán): mọi bút toán ghi Có tiền 111 / 112 / 113 (bỏ chuyển tiền giữa quỹ, ngân hàng), chia theo tháng / quý / năm:
   1. Thanh toán quốc tế – đối tượng nhóm Đối tác quốc tế, Roaming;
