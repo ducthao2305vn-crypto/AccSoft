@@ -119,8 +119,11 @@ function make(db) {
       for (const r of rows) r.date = d.get(r.doc) || null; }
     return { total, rows };
   }
-  function errorFacets() {
+  function errorFacets(f = {}) {
     const base = `FROM err_sum s ${SW()}`;
+    // số lỗi theo loại: theo đúng trạng thái / tháng / người nhập / bộ phận / mức đang lọc (không lọc theo chính loại lỗi)
+    const fw = [], fa = []; if (f.status) { fw.push('s.st=?'); fa.push(f.status); } if (f.month) { fw.push('s.ym=?'); fa.push(f.month); } if (f.user) { fw.push('s.u=?'); fa.push(f.user); } if (f.dept) { fw.push('s.dept=?'); fa.push(f.dept); } if (f.sev) { fw.push('s.sev=?'); fa.push(f.sev); }
+    const rb = base + (fw.length ? ' AND ' + fw.join(' AND ') : '');
     const sc = Object.fromEntries(Object.keys(ST).map(k => [k, 0]));
     for (const r of all(`SELECT s.st s, sum(s.n) n ${base} GROUP BY 1`)) sc[r.s] = r.n;
     const P = reviewPeriod();
@@ -130,7 +133,7 @@ function make(db) {
     });
     return {
       status: sc, gone,
-      rules: all(`SELECT s.rule k, sum(s.n) n ${base} GROUP BY 1 ORDER BY n DESC`),
+      rules: all(`SELECT s.rule k, sum(s.n) n ${rb} GROUP BY 1 HAVING sum(s.n)>0 ORDER BY n DESC`, ...fa),
       users: all(`SELECT DISTINCT s.u u ${base} AND s.u<>'' ORDER BY 1`).map(r => r.u),
       months: all(`SELECT DISTINCT s.ym m ${base} ORDER BY 1`).map(r => r.m),
       depts: all(`SELECT DISTINCT s.dept d ${base} AND s.dept<>'' ORDER BY 1`).map(r => r.d),

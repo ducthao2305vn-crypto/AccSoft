@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.43
+- Lỗi nhập liệu: danh sách "Loại lỗi" đếm theo đúng trạng thái (Chưa xử lý / Đang xử lý / …), tháng, người nhập, bộ phận, mức đang lọc; loại đã xử lý hết không còn hiện trong tab Chưa xử lý. Nhãn "Đổi trạng thái N dòng đã tick" tự đặt lại khi tải lại bảng.
+
 ## 4.99.42
 - Lỗi nhập liệu: **tick chọn từng dòng** (hoặc cả trang) để đổi trạng thái hàng loạt; ô **lý do / ghi chú** ghi vào mọi cảnh báo được đổi (nhắc khi đánh "Không phải lỗi" mà chưa có lý do).
 - **Quy tắc ngoại lệ**: lưu bộ lọc hiện tại (loại lỗi, TK, từ khoá, người nhập, bộ phận, khoảng tiền) + lý do → cảnh báo khớp chuyển "Không phải lỗi" ngay và tự áp dụng sau mỗi lần nạp / rà soát; bảng quản lý ngoại lệ (số cảnh báo đang áp dụng, áp dụng lại, xoá).

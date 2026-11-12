@@ -181,11 +181,13 @@ async function vOverview(){
 let FIL={},SORT={k:'sev',d:1},OFF=0,VIEW=[],CUR=-1,TOTAL=0;const LIM=200;
 function readFil(){const v=id=>$(id).value;return {group:FIL.group||'',status:FIL.status||'',sev:v('#fSev'),rule:v('#fRule'),user:v('#fUser'),month:v('#fMonth'),dept:v('#fDept'),acc:v('#fAcc').trim(),min:v('#fMin'),max:v('#fMax'),text:v('#fText').trim()}}
 function fillSel(id,items,label,cur){$(id).innerHTML=`<option value="">${label}</option>`+items.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join('');$(id).value=cur||''}
+// danh sách loại lỗi kèm số lượng theo trạng thái / tháng / người / bộ phận / mức đang lọc; loại không còn cảnh báo thì ẩn
+function cxRuleSel(f){const L=f.rules.filter(r=>!FIL.group||RULE[r.k]?.g===FIL.group).map(r=>[r.k,`${RULE[r.k]?.n||r.k} (${num(r.n)})`]);if(FIL.rule&&!L.some(x=>x[0]===FIL.rule))L.unshift([FIL.rule,`${RULE[FIL.rule]?.n||FIL.rule} (0)`]);fillSel('#fRule',L,'Tất cả loại lỗi',FIL.rule)}
 async function vErrors(keep){excDraw().catch(()=>{});
   renderReviewBar('#rvErr');
-  const f=await aq('errorFacets');
+  const f=await aq('errorFacets',{status:FIL.status||'',month:FIL.month||'',user:FIL.user||'',dept:FIL.dept||'',sev:FIL.sev||''});
+  cxRuleSel(f);
   if(!keep){
-    fillSel('#fRule',f.rules.filter(r=>!FIL.group||RULE[r.k]?.g===FIL.group).map(r=>[r.k,`${RULE[r.k]?.n||r.k} (${num(r.n)})`]),'Tất cả loại lỗi',FIL.rule);
     fillSel('#fUser',f.users.map(u=>[u,short(u)]),'Tất cả người nhập',FIL.user);
     fillSel('#fMonth',f.months.map(m=>[m,m]),'Tất cả tháng',FIL.month);
     fillSel('#fDept',f.depts.map(d=>[d,d]),'Tất cả bộ phận',FIL.dept);
@@ -217,7 +219,7 @@ async function loadErrTable(){
     $('#tErr').innerHTML='<thead><tr><th>Chứng từ</th><th>Ngày</th><th class=n>Cảnh báo</th><th class=n>Mức cao</th><th class=n>Chưa xử lý</th><th>Các loại lỗi</th><th>Người nhập</th></tr></thead><tbody>'+
       r.rows.map(g=>`<tr class="click r${g.high?'H':'M'}" data-eid="${g.eid}"><td><b>${esc(g.doc)}</b></td><td class=nw>${vn(g.date)}</td><td class=n>${g.n}</td><td class="n ${g.high?'neg':''}">${g.high||''}</td><td class=n>${g.open||'<span class=pos>✓</span>'}</td><td>${esc(String(g.rules).split(',').map(k=>RULE[k]?.n||k).join(' · '))}</td><td>${esc(short(g.user))}</td></tr>`).join('')+'</tbody>';
   }else{
-    const r=await aq('errors',FIL,SORT,OFF,LIM);TOTAL=r.total;VIEW=r.rows;
+    const r=await aq('errors',FIL,SORT,OFF,LIM);TOTAL=r.total;VIEW=r.rows;if($('#bulkSt'))$('#bulkSt').options[0].text='Đổi trạng thái (dòng đã tick, nếu không tick = tất cả đang lọc)…';
     $('#errCount').innerHTML=`<b>${num(r.total)}</b> cảnh báo phù hợp bộ lọc`;
     $('#tErr').innerHTML='<thead><tr><th style="width:26px"><input type=checkbox id="ckAll" title="Chọn cả trang"></th>'+H('sev','Mức')+H('st','Trạng thái')+H('rule','Loại lỗi')+'<th>Chi tiết</th>'+H('date','Ngày')+H('doc','Chứng từ')+'<th>Nợ</th><th>Có</th>'+H('amt','Số tiền','n')+'<th>Diễn giải</th>'+H('user','Người nhập')+'<th>Ghi chú</th></tr></thead><tbody>'+
      r.rows.map((e,i)=>`<tr class="click r${e.sev} ${e.status==='fixed'||e.status==='ignore'?'done':''}" data-i="${i}"><td><input type=checkbox class="ckE" value="${esc(e.key)}"></td><td><span class="badge b-${e.sev}">${SEVL[e.sev]}</span></td><td><span class="badge s-${e.status}">${META.status[e.status]}</span></td>
@@ -227,7 +229,7 @@ async function loadErrTable(){
   const pages=Math.max(1,Math.ceil(TOTAL/LIM)),p=Math.floor(OFF/LIM)+1;
   $('#pgErr').innerHTML=`Trang <b>${p}</b> / ${num(pages)}<button class="btn sm" data-pg="-1" ${p<=1?'disabled':''}>‹ Trước</button><button class="btn sm" data-pg="1" ${p>=pages?'disabled':''}>Sau ›</button>`;
 }
-let tmr;const refilter=()=>{clearTimeout(tmr);tmr=setTimeout(()=>{OFF=0;FIL=readFil();loadErrTable()},250)};
+let tmr;const refilter=()=>{clearTimeout(tmr);tmr=setTimeout(async()=>{OFF=0;FIL=readFil();loadErrTable();try{cxRuleSel(await aq('errorFacets',{status:FIL.status||'',month:FIL.month||'',user:FIL.user||'',dept:FIL.dept||'',sev:FIL.sev||''}))}catch(e){}},250)};
 ['#fSev','#fRule','#fUser','#fMonth','#fDept','#fGroup'].forEach(s=>$(s).onchange=refilter);['#fAcc','#fMin','#fMax','#fText'].forEach(s=>$(s).oninput=deb(refilter));
 $('#fReset').onclick=()=>{FIL={group:FIL.group};OFF=0;vErrors()};
 $('#grpTabs').onclick=e=>{const b=e.target.closest('[data-g]');if(!b)return;FIL.group=b.dataset.g;FIL.rule='';OFF=0;vErrors()};
