@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.36
+- Module mới **Theo dõi đầu tư** (nhóm Kết quả & báo cáo): nạp file mẫu DAUTU; 3 nhóm đầu tư thông thường / tổng trạm / tần số; cây hạng mục tổng → chi tiết nhiều cấp (thêm chi tiết lần đầu tự tách phần "Chưa phân bổ chi tiết"); ngân sách 3 năm, đã thực hiện; kế hoạch & THỰC HIỆN theo tháng cho mua sắm, thanh toán, lên tài sản – sửa trực tiếp trên bảng; chưa lên TS, trạng thái gợi ý; cảnh báo vượt ngân sách, thanh toán / lên TS trước mua sắm, chậm tiến độ, trạng thái mâu thuẫn; dòng tổng như mẫu (gồm / chưa gồm tần số, tổng trạm, thông thường, tần số); biểu đồ luỹ kế KH vs TH kèm sổ cái tăng TSCĐ; chuyển phần chưa lên TS sang năm sau; xuất Excel đúng bố cục.
+
 ## 4.99.35
 - Cuối năm IFRS 16: bộ bút toán đầy đủ để 24211 của HĐ về 0 – (1) số dư đầu năm ROU / Nợ thuê / 24211 / chênh lệch 421, (2) HĐ mới: PV + kỳ trả trước đầu vào ROU, (3) các kỳ thanh toán: Nợ Nợ thuê / Có 24211, (4) ghi âm phân bổ: Nợ 24211 / Có 627…, (5) khấu hao, (6) lãi; cột 24211 còn lại; cảnh báo HĐ có khấu hao IFRS nhưng không thấy phân bổ 24211 (thiếu map → tính chi phí 2 lần). Tăng tốc (1 lần quét số dư 24211).
 
