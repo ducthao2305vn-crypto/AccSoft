@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.35
+- Cuối năm IFRS 16: bộ bút toán đầy đủ để 24211 của HĐ về 0 – (1) số dư đầu năm ROU / Nợ thuê / 24211 / chênh lệch 421, (2) HĐ mới: PV + kỳ trả trước đầu vào ROU, (3) các kỳ thanh toán: Nợ Nợ thuê / Có 24211, (4) ghi âm phân bổ: Nợ 24211 / Có 627…, (5) khấu hao, (6) lãi; cột 24211 còn lại; cảnh báo HĐ có khấu hao IFRS nhưng không thấy phân bổ 24211 (thiếu map → tính chi phí 2 lần). Tăng tốc (1 lần quét số dư 24211).
+
 ## 4.99.34
 - Đầu tư ra nước ngoài: bỏ chọn file mẫu – nút **Xuất báo cáo Word (Phụ lục 01)** xuất thẳng theo mẫu dựng sẵn (dựng từ báo cáo 6TĐN của đơn vị, bỏ số liệu cũ) cho kỳ đang chọn: tiêu đề / ngày / cột năm tự đổi theo kỳ (Quý I, 6TĐN, 9TĐN, Năm…); điền bảng tình hình tài chính, bảng KQ SXKD, đoạn tổng tài sản, TSCĐ, nợ phải trả, phải thu, tồn kho, VCSH, doanh thu – LNST; phần còn lại bôi vàng "[Đơn vị bổ sung]".
 

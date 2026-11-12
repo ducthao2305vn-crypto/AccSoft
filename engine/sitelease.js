@@ -115,15 +115,30 @@ function make(db, all, get, run) {
     for (let i = 0; i < allErp.length; i += 400) { const ch = allErp.slice(i, i + 400);
       for (const x of all(`SELECT contract c, acc_debit dr, acc_credit cr, amount a, description ds FROM entries WHERE contract IN (${ch.map(() => '?').join(',')}) AND acc_credit LIKE '242%' AND account_date>=? AND account_date<=?`, ...ch, y + '-01-01', asOf))
         (L.get(x.c) || L.set(x.c, []).get(x.c)).push(x); }
+    // số dư 24211 theo Contract tại 1/1 và tại ngày xem (một lần quét)
+    const B0 = new Map(), B1 = new Map();
+    for (const x of all(`SELECT contract c, sum(CASE WHEN account_date<? THEN (CASE WHEN acc_debit LIKE '24211%' THEN amount ELSE 0 END) - (CASE WHEN acc_credit LIKE '24211%' THEN amount ELSE 0 END) ELSE 0 END) o, sum((CASE WHEN acc_debit LIKE '24211%' THEN amount ELSE 0 END) - (CASE WHEN acc_credit LIKE '24211%' THEN amount ELSE 0 END)) cl FROM entries WHERE (acc_debit LIKE '24211%' OR acc_credit LIKE '24211%') AND account_date<=? AND ifnull(contract,'')<>'' GROUP BY contract`, y + '-01-01', asOf)) { B0.set(x.c, x.o); B1.set(x.c, x.cl); }
     const out = [];
     for (const r of R) { const X = r.erp.flatMap(c => L.get(c) || []), by = new Map();
       for (const x of X) { const acc = s(x.dr), g = by.get(acc) || by.set(acc, { acc, cr: s(x.cr), rent: 0, wht: 0, n: 0 }).get(acc); g.n++; if (isWht({ oacc: '', ds: x.ds })) g.wht += x.a; else g.rent += x.a; }
       const f = ifrs16(r.id, { asOf }), dep = f.err ? 0 : f.at.depYtd, int = f.err ? 0 : f.at.intYtd, rows = [...by.values()];
       if (!rows.length && !dep) continue;
       const rent = rows.reduce((q, g) => q + g.rent, 0), wht = rows.reduce((q, g) => q + g.wht, 0);
-      out.push({ id: r.id, site: r.site, code: r.code, tcost: r.tcost, accs: rows, rent, wht, dep, int, short: !f.err && f.short, err: f.err || '', liab: f.err ? 0 : f.at.liab, nbv: f.err ? 0 : f.at.nbv, diff: dep + int - rent });
+      // bộ bút toán IFRS 16 cả năm (lớp điều chỉnh trên sổ VAS) – sau các bút toán này 24211 của HĐ về ~0:
+      //  (1) số dư đầu năm: Nợ ROU (NBV 1/1) / Có Nợ thuê (1/1) / Có 24211 (số dư VAS 1/1) / chênh lệch → 421
+      //  (2) HĐ bắt đầu trong năm: Nợ ROU / Có Nợ thuê (PV ban đầu); Nợ ROU / Có 24211 (kỳ trả trước đầu tiên)
+      //  (3) các kỳ thanh toán trong năm (VAS: Nợ 24211 / Có 331): Nợ Nợ thuê / Có 24211
+      //  (4) ghi âm phân bổ tiền thuê: Nợ 24211 / Có 627…  (5) khấu hao ROU: Nợ 627… / Có hao mòn ROU  (6) lãi thuê: Nợ 635 / Có Nợ thuê
+      let o1 = { liab: 0, nbv: 0 }, init = 0, down = 0, pays = 0;
+      if (!f.err && !f.short) { const S = f.sch, py = S.filter(z => z.ym < y + '-01'), inY = S.filter(z => z.ym >= y + '-01' && z.ym <= asOf.slice(0, 7));
+        if (py.length) o1 = { liab: Math.max(0, py[py.length - 1].close), nbv: py[py.length - 1].nbv }; else if (inY.length) { init = f.L0; down = f.down; }
+        pays = inY.reduce((q, z) => q + z.lp, 0); }
+      const b242o = r.erp.reduce((q, c) => q + (B0.get(c) || 0), 0), b242c = r.erp.reduce((q, c) => q + (B1.get(c) || 0), 0);
+      const ifrs = !f.err && !f.short, re421 = ifrs ? o1.nbv - o1.liab - b242o : 0, left = ifrs ? b242c + rent - (b242o) - pays - down : 0;
+      out.push({ id: r.id, site: r.site, code: r.code, tcost: r.tcost, accs: rows, rent, wht, dep, int, short: !f.err && f.short, err: f.err || '', liab: f.err ? 0 : f.at.liab, nbv: f.err ? 0 : f.at.nbv, diff: dep + int - rent,
+        liab0: o1.liab, nbv0: o1.nbv, b242o, b242c, init, down, pays, re421, left, noAmo: ifrs && dep > 0 && Math.abs(rent) < 0.005 });
     }
-    return { asOf, year: y, rows: out, tot: ['rent', 'wht', 'dep', 'int', 'diff', 'liab', 'nbv'].reduce((o2, k) => (o2[k] = out.filter(x => !x.short).reduce((q, x) => q + x[k], 0), o2), {}) };
+    return { asOf, year: y, rows: out, tot: ['rent', 'wht', 'dep', 'int', 'diff', 'liab', 'nbv', 'liab0', 'nbv0', 'b242o', 'init', 'down', 'pays', 're421', 'left'].reduce((o2, k) => (o2[k] = out.filter(x => !x.short).reduce((q, x) => q + x[k], 0), o2), {}) };
   }
   // Trạm cần thanh toán tại kỳ m (YYYY-MM) + số tháng nhìn trước: HĐ còn hiệu lực mà kỳ trả trước đã ghi nhận (Nợ 242) chưa phủ tới tháng đó.
   // Đề xuất kỳ thanh toán tiếp theo = từ tháng sau "đã trả đến" (hoặc đầu HĐ) dài đúng điều khoản (term), không vượt ngày hết hạn; số tiền thuê (trước thuế) + WHT.
