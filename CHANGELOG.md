@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.40
+- Lỗi nhập liệu – thêm quy tắc thiếu trường bắt buộc: **3311 thiếu Contract**; **chi phí / trả trước thuê vị trí thiếu BTS Site / Location**; **211/213/241 thiếu mã tài sản** (chỉ kiểm khi file có cột Asset hoặc đã nạp file bổ sung); **chi phí xe (xăng dầu, sửa chữa…) thiếu biển số** (chỉ kiểm khi có cột biển số); **công nợ thiếu đối tượng** mở rộng 131, 136, 1388, 141, 244, 331, 336, 3388, 344 và kiểm đúng vế Nợ / Có. Tự rà soát lại dữ liệu cũ (bộ quy tắc v14).
+
 ## 4.99.39
 - Theo dõi đầu tư: **gắn mã tài sản** (cột Asset) vào hạng mục – số thực hiện tự động từ sổ: lên TS (Nợ 211/213), giá trị thực hiện (Nợ 241), thanh toán (Nợ 331/Có 11x nếu có mã); tab Gắn mã tài sản: danh sách mã có phát sinh, gợi ý theo từ khoá, gắn / bỏ gắn; hỗ trợ tiền tố "TS-VT-*".
 - **Gói thầu / HĐ nhà thầu**: nhà thầu, giá trị HĐ, tạm ứng, QĐ phê duyệt; cảnh báo thanh toán vượt giá trị HĐ, HĐ vượt ngân sách, còn tạm ứng khi đã lên TS hết; cột tiết kiệm đấu thầu.

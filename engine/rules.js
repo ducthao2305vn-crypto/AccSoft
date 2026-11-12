@@ -14,7 +14,7 @@ const isOB=r=>r.table==='OPENING_BALANCE'; // dòng số dư đầu kỳ: không
 const isRev=a=>/^(511|512|515|711)/.test(a), isExp=a=>/^(6|8)/.test(a)&&!/^911/.test(a);
 const isAuto=r=>/Depreciation|Distribution|CIP/i.test(r.table||''); // bút toán hệ thống tự sinh
 const isInv=a=>/^15[1-8]/.test(a)&&!/^154/.test(a); // hàng tồn kho (trừ 154 SXKD dở dang)
-const isCash=a=>/^(111|112)/.test(a), isPartner=a=>/^(131|331|141|136|336)/.test(a);
+const isCash=a=>/^(111|112)/.test(a), isPartner=a=>/^(131|136|1388|141|244|331|336|3388|344)/.test(a);
 const MONTHS={jan:1,january:1,feb:2,february:2,mar:3,march:3,apr:4,april:4,may:5,jun:6,june:6,jul:7,july:7,aug:8,august:8,sep:9,sept:9,september:9,oct:10,october:10,nov:11,november:11,dec:12,december:12};
 function periodsInText(t){ // trả về danh sách {y,m} được nhắc tới trong diễn giải
   const out=[];t=String(t);
@@ -53,14 +53,24 @@ const RULES=[
  {k:'CUTOFF',s:'M',n:'Sai kỳ (cut-off)',d:'Diễn giải nêu kỳ phát sinh cách kỳ hạch toán từ 2 tháng trở lên (chi phí/doanh thu kỳ trước ghi kỳ này). Loại trừ phân bổ 242/khấu hao.',
   f:r=>{if(!(isExp(r.dr)||isRev(r.cr))||/^(24|214)/.test(r.cr)||!r.date)return false;const p=periodsInText(r.desc);if(!p.length)return false;
    const first=Math.max(...p.map(x=>x.y*12+x.m)),cur=r.date.getFullYear()*12+r.date.getMonth()+1;return cur-first>=2&&`Diễn giải kỳ ${(first-1)%12+1}/${Math.floor((first-1)/12)}, hạch toán ${ym(r.date)}`}},
- {k:'PARTNER_MISSING',s:'H',n:'Công nợ thiếu đối tượng',d:'Dòng ghi TK công nợ (131/331/141/136/336) nhưng không có đối tượng tương ứng.',
-  f:r=>(isPartner(r.dr)&&!r.bp)||(isPartner(r.cr)&&!(r.bpCr||r.bp))?'Thiếu Business Partner':false},
+ {k:'PARTNER_MISSING',s:'H',n:'Công nợ thiếu đối tượng',d:'Dòng ghi TK phải thu / phải trả (131, 136, 1388, 141, 244, 331, 336, 3388, 344) nhưng không có đối tượng (Business Partner) ở đúng vế – không theo dõi, đối chiếu được công nợ.',
+  f:r=>isPartner(r.dr)&&!String(r.bp||'').trim()?`Nợ ${r.dr} thiếu Business Partner`:isPartner(r.cr)&&!String(r.bpCr||'').trim()&&!String(r.bp||'').trim()?`Có ${r.cr} thiếu Bpartner credit`:false},
  {k:'DUE_BEFORE_DOC',s:'L',n:'Hạn thanh toán trước ngày hạch toán',d:'Due Date sớm hơn Account Date quá 30 ngày – hạch toán chậm hoặc nhập sai hạn.',
   f:r=>r.due&&r.date&&(r.date-r.due)/864e5>CFG.dueBefore&&`Hạn ${r.due.toLocaleDateString('vi')} – HT ${r.date.toLocaleDateString('vi')}`},
  {k:'WEEKEND',s:'L',n:'Hạch toán ngày nghỉ',d:'Ngày hạch toán là Chủ nhật (trừ cuối tháng).',
   f:r=>r.date&&r.date.getDay()===0&&new Date(r.date.getFullYear(),r.date.getMonth()+1,0).getDate()!==r.date.getDate()&&'Chủ nhật'},
  {k:'CASH_ROUND',s:'L',n:'Chi tiền mặt số tròn lớn',d:'Chi/thu tiền mặt-ngân hàng số tròn ≥ 10.000 – rủi ro tạm ứng/thanh toán không chứng từ.',
   f:r=>(isCash(r.cr)||isCash(r.dr))&&Math.abs(r.amt)>=CFG.cashRound&&r.amt%1000===0&&`${fmt(r.amt)}`},
+ // ---- Thiếu trường bắt buộc theo nghiệp vụ ----
+ {k:'AP3311_NO_CONTRACT',s:'M',n:'Phải trả 3311 thiếu hợp đồng',d:'Dòng ghi TK 3311 (phải trả nhà cung cấp) nhưng không chọn trường Contract – không đối chiếu được công nợ, thanh toán theo hợp đồng.',
+  f:r=>(/^3311/.test(r.dr)||/^3311/.test(r.cr))&&!String(r.contract||'').trim()&&'Thiếu Contract'},
+ {k:'RENT_NO_SITE',s:'M',n:'Chi phí thuê vị trí thiếu mã vị trí',d:'Chi phí / trả trước thuê vị trí (thuê trạm BTS, phòng máy, mặt bằng, văn phòng, kho, cửa hàng) nhưng không có mã vị trí (BTS Site / Location) – không phân bổ chi phí theo trạm, không đối chiếu hợp đồng thuê.',
+  f:r=>{if(!(isExp(r.dr)||/^242/.test(r.dr)))return false;const t=String(r.tcost||'');if(!/rental|thuê|lease|cell site|machine room/i.test(t))return false;return !String(r.bts||'').trim()&&!String(r.location||'').trim()&&'Thiếu BTS Site / Location'}},
+ {k:'ASSET_NO_CODE',s:'M',n:'Hạch toán tài sản thiếu mã tài sản',d:'Dòng ghi Nợ/Có TK nguyên giá 211, 213 hoặc Nợ XDCB 241 nhưng không có mã tài sản (Asset) – không theo dõi được từng tài sản, khấu hao và đầu tư. Chỉ kiểm khi file có cột Asset (hoặc đã nạp file bổ sung).',
+  f:r=>{if(isAuto(r))return false;if(!(/^21[13]/.test(r.dr)||/^21[13]/.test(r.cr)||/^241/.test(r.dr)))return false;if(!(r._enriched==1||/asset|tài sản/i.test(String(r._schema||''))))return false;return !String(r.asset||'').trim()&&'Thiếu mã tài sản'}},
+ {k:'VEHICLE_NO_PLATE',s:'M',n:'Chi phí xe thiếu biển số',d:'Chi phí liên quan đến xe (xăng dầu, sửa chữa, bảo dưỡng, bảo hiểm, đăng kiểm xe…) nhưng không ghi biển số xe – không quản lý được chi phí theo từng xe. Chỉ kiểm khi file có cột biển số (hoặc đã nạp file bổ sung).',
+  f:r=>{if(!isExp(r.dr))return false;const t=String(r.tcost||'')+' '+String(r.desc||'');if(!/\b(vehicle|vehicles|car|cars|motorbike|motorcycle|fuel|petrol|gasoline|diesel|xăng|dầu diesel|xe|ô tô|oto|xe máy)\b/i.test(t))return false;
+   if(!(r._enriched==1||/plate|biển số|bien so|vehicle/i.test(String(r._schema||''))))return false;return !String(r.plate||'').trim()&&'Thiếu biển số xe'}},
  // ---- Bổ sung v2.3: rà soát nâng cao ----
  {k:'FUTURE_DATE',s:'H',n:'Ngày hạch toán ở tương lai',d:'Ngày hạch toán sau ngày hiện tại – nhập sai năm/tháng hoặc ghi sổ trước khi nghiệp vụ phát sinh.',
   f:r=>r.date&&r.date-Date.now()>864e5&&`Ngày ${r.date.toLocaleDateString('vi')}`},
@@ -93,6 +103,10 @@ const RULES=[
   f:r=>(r._schema>=2||r._enriched)&&(isInv(r.dr)||isInv(r.cr))&&!r.product&&`TK ${isInv(r.dr)?r.dr:r.cr} không có Product`},
 ];
 const FIX={
+ AP3311_NO_CONTRACT:'Bổ sung trường Contract (số hợp đồng / PO) trên dòng 3311 – nhất là bút toán ghi nhận công nợ và thanh toán.',
+ RENT_NO_SITE:'Chọn BTS Site (mã trạm) hoặc Location cho dòng chi phí / trả trước thuê vị trí.',
+ ASSET_NO_CODE:'Gắn mã tài sản (Asset) khi ghi tăng / giảm nguyên giá và khi tập hợp XDCB 241.',
+ VEHICLE_NO_PLATE:'Ghi biển số xe (License Plate) cho chi phí xăng dầu, sửa chữa, bảo dưỡng xe.',
  FUTURE_DATE:'Sửa ngày hạch toán theo ngày chứng từ; nếu nghiệp vụ chưa phát sinh thì huỷ bút toán.',
  DESC_GENERIC:'Viết lại diễn giải: nội dung cụ thể + đối tượng + kỳ + số hợp đồng/chứng từ tham chiếu.',
  PARTNER_NETTING:'Kiểm tra biên bản bù trừ/chuyển nợ có chữ ký các bên; nếu chọn nhầm đối tượng thì sửa lại Business Partner / Bpartner credit.',
@@ -181,5 +195,5 @@ const AUDIT_WHY={
 const GROUP=Object.fromEntries(ALL_RULES.map(r=>[r.k,AUDIT_WHY[r.k]?'audit':'staff']));
 const GROUPS={staff:'Sai sót nhân viên',audit:'Sai sót dễ bị kiểm toán'};
 const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||'',g:GROUP[k],why:AUDIT_WHY[k]||''})),status:ST,groups:GROUPS});
-const RULES_VERSION=13; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
+const RULES_VERSION=14; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
 module.exports={CFG,CFG_DEFAULT,setConfig,GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};
