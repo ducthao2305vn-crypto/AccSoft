@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.26
+- Cần thanh toán: chỉ hiện trạm có kỳ thanh toán **theo lịch HĐ** (tháng bắt đầu + mỗi kỳ TT) rơi đúng kỳ xem và chưa ghi nhận trả cho kỳ đó. Kỳ tồn đọng tháng trước chỉ hiện khi tick "Kèm kỳ tồn đọng"; trạm có kỳ trước chưa ghi nhận được cảnh báo.
+
 ## 4.99.25
 - Cần thanh toán: bảng tổng hợp **theo ngân hàng** (số trạm, quá hạn, tiền thuê, WHT, tổng, %); nhấn ngân hàng để lọc chi tiết. Excel thêm sheet theo ngân hàng và thông tin chủ nhà (ngân hàng, chi nhánh, số TK, tên TK, SWIFT, tiền tệ, ví, SĐT, người liên hệ, email, địa chỉ, ghi chú).
 
