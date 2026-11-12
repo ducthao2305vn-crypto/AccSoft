@@ -119,6 +119,8 @@ function make(db, all, get, run) {
     const asOf = (() => { const d = new Date(+lim.slice(0, 4), +lim.slice(5, 7), 0); return d.toISOString().slice(0, 10); })();
     const R = reconcile({ ...o, asOf }), info = new Map(all(`SELECT * FROM ap331_partner`).map(r => [r.bp, r]));
     let bank = new Map(), ll = new Map(); try { for (const b of all(`SELECT * FROM pc_bank ORDER BY is_default DESC, id`)) if (!bank.has(b.bp)) bank.set(b.bp, b); } catch { } try { ll = new Map(all(`SELECT * FROM landlord`).map(r => [r.bp, r])); } catch { } const ct = new Map(); try { for (const c of all(`SELECT * FROM pc_contact ORDER BY id`)) if (!ct.has(c.bp)) ct.set(c.bp, c); } catch { }
+    // số dư 24211 theo cột Contract đến cuối tháng trước kỳ xem (Nợ − Có)
+    const prevEnd = m + '-00', B242 = new Map(all(`SELECT contract c, sum(CASE WHEN acc_debit LIKE '24211%' THEN amount ELSE 0 END) - sum(CASE WHEN acc_credit LIKE '24211%' THEN amount ELSE 0 END) b FROM entries WHERE (acc_debit LIKE '24211%' OR acc_credit LIKE '24211%') AND account_date<? AND ifnull(contract,'')<>'' GROUP BY contract`, m + '-01').map(x => [x.c, x.b]));
     const out = [];
     for (const r of R) {
       if (r.to_d && r.to_d.slice(0, 7) < m) continue; if (r.from_d && r.from_d.slice(0, 7) > lim) continue;
@@ -132,9 +134,10 @@ function make(db, all, get, run) {
       else continue;
       const gap = !back && (!cov ? f0 < M[0] && !!r.from_d : P.ymsOf(cov + '-01', '9999-12-01')[1] < M[0]);
       const overdue = back ? P.ymsOf(next + '-01', m + '-01').filter(x => x < m).length : 0, rent = r.rent != null ? r.rent * M.length : null, wht = rent != null ? rent * W / (1 - W) : null;
+      const bal242 = r.erp.reduce((q, c) => q + (B242.get(c) || 0), 0), balMonths = r.rent ? bal242 / (r.rent / (1 - W)) : null;
       const bp = r.bp || '', l = ll.get(bp) || {}, b = bank.get(bp) || null, nm = (info.get(bp) || {}).name || String(bp).replace(/^[A-Za-z]+_[A-Za-z]*_?\d+_?/, '');
       out.push({ id: r.id, site: r.site, code: r.code, tcost: r.tcost, bp, landlord: nm, phone: l.phone || '', bank: b ? `${b.bank || ''} ${b.acc_no || ''}`.trim() : (l.bank_acc ? `${l.bank_name || ''} ${l.bank_acc}`.trim() : ''), accName: b ? b.acc_name || '' : l.acc_holder || '', bankName: (b ? b.bank : l.bank_name) || '', accNo: (b ? b.acc_no : l.bank_acc) || '', branch: b ? b.branch || '' : '', swift: b ? b.swift || '' : '', ccy: b ? b.currency || '' : '', emoney: b ? !!b.emoney : false, address: l.address || '', email: (ct.get(bp) || {}).email || '', contact: (ct.get(bp) || {}).name || '', phone2: (ct.get(bp) || {}).phone || '', llNote: l.note || '',
-        rentM: r.rent, rentNote: r.rent_note, term, from: r.from_d, to: r.to_d, paidTo: cov, payFrom: M[0] || next, payTo: M[M.length - 1] || next, months: M.length, rent, wht, total: rent != null ? rent + wht : null, overdue, status: back ? (!cov ? 'nodata' : 'overdue') : M[0] === m ? 'due' : 'soon', gap, expiring: r.to_d && r.to_d.slice(0, 7) <= lim, nomap: !r.erp.length });
+        rentM: r.rent, rentNote: r.rent_note, term, from: r.from_d, to: r.to_d, paidTo: cov, payFrom: M[0] || next, payTo: M[M.length - 1] || next, months: M.length, rent, wht, total: rent != null ? rent + wht : null, overdue, status: back ? (!cov ? 'nodata' : 'overdue') : M[0] === m ? 'due' : 'soon', gap, bal242, balMonths, susPaid: bal242 > 0.5 && (r.rent ? balMonths >= 0.5 : true), expiring: r.to_d && r.to_d.slice(0, 7) <= lim, nomap: !r.erp.length });
     }
     out.sort((a, b) => b.overdue - a.overdue || a.payFrom.localeCompare(b.payFrom) || String(a.site).localeCompare(String(b.site)));
     return { ym: m, ahead, lim, rows: out, tot: { n: out.length, rent: out.reduce((q, x) => q + (x.rent || 0), 0), wht: out.reduce((q, x) => q + (x.wht || 0), 0), overdue: out.filter(x => x.status === 'overdue').length } };

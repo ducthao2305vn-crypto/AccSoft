@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.27
+- Cần thanh toán: cột **Dư 24211 cuối tháng trước** (theo hợp đồng ERP đã map, ≈ số tháng tiền thuê) – còn dư thì cảnh báo "nghi đã trả" (chủ nhà đổi kỳ TT chưa cập nhật HĐ); lọc "Còn dư 24211" / "Thực sự cần trả"; cột kỳ thanh toán (từ – đến); Excel thêm các cột này.
+
 ## 4.99.26
 - Cần thanh toán: chỉ hiện trạm có kỳ thanh toán **theo lịch HĐ** (tháng bắt đầu + mỗi kỳ TT) rơi đúng kỳ xem và chưa ghi nhận trả cho kỳ đó. Kỳ tồn đọng tháng trước chỉ hiện khi tick "Kèm kỳ tồn đọng"; trạm có kỳ trước chưa ghi nhận được cảnh báo.
 
