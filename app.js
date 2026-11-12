@@ -182,16 +182,20 @@ let FIL={},SORT={k:'sev',d:1},OFF=0,VIEW=[],CUR=-1,TOTAL=0;const LIM=200;
 function readFil(){const v=id=>$(id).value;return {group:FIL.group||'',status:FIL.status||'',sev:v('#fSev'),rule:v('#fRule'),user:v('#fUser'),month:v('#fMonth'),dept:v('#fDept'),acc:v('#fAcc').trim(),tcost:(v=>v==='(trống)'?'__none':v)(v('#fTcost').trim()),min:v('#fMin'),max:v('#fMax'),text:v('#fText').trim()}}
 function fillSel(id,items,label,cur){$(id).innerHTML=`<option value="">${label}</option>`+items.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join('');$(id).value=cur||''}
 // danh sách loại lỗi kèm số lượng theo trạng thái / tháng / người / bộ phận / mức đang lọc; loại không còn cảnh báo thì ẩn
+// khoản mục / người nhập / tháng / bộ phận chỉ hiện giá trị còn cảnh báo theo các bộ lọc đang chọn
+async function errCascade(f){try{fillSel('#fUser',f.users.map(u=>[u,short(u)]),'Tất cả người nhập',FIL.user);fillSel('#fMonth',f.months.map(m=>[m,m]),'Tất cả tháng',FIL.month);fillSel('#fDept',f.depts.map(d=>[d,d]),'Tất cả bộ phận',FIL.dept);
+  const L=await aq('tcostFacet',FIL);$('#dlTcost').innerHTML=L.map(x=>`<option value="${esc(x.t||'(trống)')}">${x.n!=null?num(x.n)+' cảnh báo':''}</option>`).join('');
+  $('#fTcost').placeholder=L.length&&L[0].n!=null?`Khoản mục (${L.length} khoản mục có cảnh báo)`:'Khoản mục (Type of cost) – gõ mã / tên, hoặc (trống)'}catch(e){}}
 function cxRuleSel(f){const L=f.rules.filter(r=>!FIL.group||RULE[r.k]?.g===FIL.group).map(r=>[r.k,`${RULE[r.k]?.n||r.k} (${num(r.n)})`]);if(FIL.rule&&!L.some(x=>x[0]===FIL.rule))L.unshift([FIL.rule,`${RULE[FIL.rule]?.n||FIL.rule} (0)`]);fillSel('#fRule',L,'Tất cả loại lỗi',FIL.rule)}
 async function vErrors(keep){excDraw().catch(()=>{});
   renderReviewBar('#rvErr');
-  const f=await aq('errorFacets',{status:FIL.status||'',month:FIL.month||'',user:FIL.user||'',dept:FIL.dept||'',sev:FIL.sev||''});
-  cxRuleSel(f);
+  const f=await aq('errorFacets',{status:FIL.status||'',month:FIL.month||'',user:FIL.user||'',dept:FIL.dept||'',sev:FIL.sev||'',rule:FIL.rule||''});
+  cxRuleSel(f);errCascade(f);
   if(!keep){
     fillSel('#fUser',f.users.map(u=>[u,short(u)]),'Tất cả người nhập',FIL.user);
     fillSel('#fMonth',f.months.map(m=>[m,m]),'Tất cả tháng',FIL.month);
     fillSel('#fDept',f.depts.map(d=>[d,d]),'Tất cả bộ phận',FIL.dept);
-    for(const [k,id] of [['sev','#fSev'],['acc','#fAcc'],['tcost','#fTcost'],['min','#fMin'],['max','#fMax'],['text','#fText']])$(id).value=FIL[k]||'';if(FIL.tcost==='__none')$('#fTcost').value='(trống)';if(!$('#dlTcost').children.length)aq('tcostList').then(L=>{$('#dlTcost').innerHTML='<option value="(trống)">'+L.map(t=>`<option value="${esc(t)}">`).join('')}).catch(()=>{});
+    for(const [k,id] of [['sev','#fSev'],['acc','#fAcc'],['tcost','#fTcost'],['min','#fMin'],['max','#fMax'],['text','#fText']])$(id).value=FIL[k]||'';if(FIL.tcost==='__none')$('#fTcost').value='(trống)';
   }
   FIL=readFil();
   const all=Object.values(f.status).reduce((a,b)=>a+b,0);
@@ -229,7 +233,7 @@ async function loadErrTable(){
   const pages=Math.max(1,Math.ceil(TOTAL/LIM)),p=Math.floor(OFF/LIM)+1;
   $('#pgErr').innerHTML=`Trang <b>${p}</b> / ${num(pages)}<button class="btn sm" data-pg="-1" ${p<=1?'disabled':''}>‹ Trước</button><button class="btn sm" data-pg="1" ${p>=pages?'disabled':''}>Sau ›</button>`;
 }
-let tmr;const refilter=()=>{clearTimeout(tmr);tmr=setTimeout(async()=>{OFF=0;FIL=readFil();loadErrTable();try{cxRuleSel(await aq('errorFacets',{status:FIL.status||'',month:FIL.month||'',user:FIL.user||'',dept:FIL.dept||'',sev:FIL.sev||''}))}catch(e){}},250)};
+let tmr;const refilter=()=>{clearTimeout(tmr);tmr=setTimeout(async()=>{OFF=0;FIL=readFil();loadErrTable();try{const ff=await aq('errorFacets',{status:FIL.status||'',month:FIL.month||'',user:FIL.user||'',dept:FIL.dept||'',sev:FIL.sev||'',rule:FIL.rule||''});cxRuleSel(ff);errCascade(ff)}catch(e){}},250)};
 ['#fSev','#fRule','#fUser','#fMonth','#fDept','#fGroup'].forEach(s=>$(s).onchange=refilter);['#fAcc','#fTcost','#fMin','#fMax','#fText'].forEach(s=>$(s).oninput=deb(refilter));
 $('#fReset').onclick=()=>{FIL={group:FIL.group};OFF=0;vErrors()};
 $('#grpTabs').onclick=e=>{const b=e.target.closest('[data-g]');if(!b)return;FIL.group=b.dataset.g;FIL.rule='';OFF=0;vErrors()};

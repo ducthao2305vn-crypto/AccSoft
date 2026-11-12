@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.45
+- Lỗi nhập liệu: **lọc liên hoàn** – danh sách Khoản mục (kèm số cảnh báo), Người nhập, Tháng, Bộ phận, Loại lỗi chỉ gồm giá trị còn cảnh báo theo các bộ lọc khác đang chọn (VD chọn "Chi phí xe thiếu biển số" → chỉ hiện các khoản mục có lỗi này).
+
 ## 4.99.44
 - Lỗi nhập liệu: cột **Khoản mục (Type of cost)** trong bảng cảnh báo (TK chi phí 6xx/8xx để trống hiện "(trống)" màu đỏ); ô lọc theo khoản mục (gợi ý danh sách, chọn "(trống)" để lọc dòng thiếu); Excel xuất thêm cột khoản mục.
 
