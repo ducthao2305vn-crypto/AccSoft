@@ -83,21 +83,38 @@ function make(db, all, get, run) {
   function ifrs16(id, o = {}) {
     const r = row(get(`SELECT * FROM site_contract WHERE id=?`, +id) || {}); if (!r.id || r.rent == null || !r.from_d || !r.to_d) return { r, err: 'Thiếu giá thuê / thời hạn' };
     const rate = (r.rate != null ? +r.rate : +o.rate || defRate()) / 100, i = rate / 12, n = months(r.from_d, r.to_d), term = Math.max(1, +r.term || 1), asOf = day(o.asOf) || new Date().toISOString().slice(0, 10);
-    const gross = r.rent / (1 - whtRate() / 100), pay = k => (k % term === 0 ? gross * Math.min(term, n - k) : 0); // tiền thuê gồm WHT công ty chịu // trả trước đầu mỗi kỳ thanh toán
+    const W = whtRate() / 100, gross = r.rent, pay = k => (k % term === 0 ? gross * Math.min(term, n - k) : 0); // IFRS 16 tính trên tiền thuê không gồm thuế WHT (WHT tách cột riêng) // trả trước đầu mỗi kỳ thanh toán
     let L0 = 0; for (let k = 0; k < n; k++) L0 += pay(k) / Math.pow(1 + i, k);
     const rou = L0, dep = rou / n, sch = []; let liab = L0, nbv = rou;
     const ym0 = r.from_d.slice(0, 7);
     for (let k = 0; k < n; k++) { const ym = P.ymsOf(ym0 + '-01', '9999-12-01')[k] || ''; const p = pay(k), open = liab; liab -= p; const int = liab * i; liab += int; nbv -= dep;
-      sch.push({ k: k + 1, ym, open, pay: p, int, close: liab, dep, nbv: Math.max(0, nbv), rent: gross }); }
+      sch.push({ k: k + 1, ym, open, pay: p, wht: p * W / (1 - W), int, close: liab, dep, nbv: Math.max(0, nbv), rent: gross, rentWht: gross * W / (1 - W) }); }
     const cur = asOf.slice(0, 7), y = asOf.slice(0, 4), past = sch.filter(x => x.ym <= cur), at = past[past.length - 1] || { close: L0, nbv: rou };
     const next12 = sch.filter(x => x.ym > cur).slice(0, 12), curPart = next12.reduce((q, x) => q + x.pay - x.int, 0);
     const ytd = past.filter(x => x.ym.startsWith(y)), short = n <= 12;
     return { r, rate: rate * 100, n, term, L0, rou, dep, sch, asOf, short,
       at: { liab: Math.max(0, past.length ? at.close : L0), nbv: past.length ? at.nbv : rou, liabCur: Math.max(0, Math.min(curPart, past.length ? at.close : L0)), liab0: 0, intYtd: ytd.reduce((q, x) => q + x.int, 0), depYtd: ytd.reduce((q, x) => q + x.dep, 0), rentYtd: ytd.length * gross } };
   }
+  // Bảng cuối năm: phân bổ Nợ 627 / 641 / 642… – Có 24211 trong năm của từng HĐ, tách tiền thuê (ghi âm khi áp dụng IFRS 16) và thuế WHT (giữ lại),
+  // kèm khấu hao ROU, lãi thuê IFRS 16 cùng kỳ (01/01 → ngày xem) để lập bút toán.
+  function yearEnd(o = {}) {
+    const asOf = day(o.asOf) || new Date().toISOString().slice(0, 10), y = asOf.slice(0, 4), R = list(o), allErp = [...new Set(R.flatMap(r => r.erp))], L = new Map();
+    for (let i = 0; i < allErp.length; i += 400) { const ch = allErp.slice(i, i + 400);
+      for (const x of all(`SELECT contract c, acc_debit dr, acc_credit cr, amount a, description ds FROM entries WHERE contract IN (${ch.map(() => '?').join(',')}) AND acc_credit LIKE '242%' AND account_date>=? AND account_date<=?`, ...ch, y + '-01-01', asOf))
+        (L.get(x.c) || L.set(x.c, []).get(x.c)).push(x); }
+    const out = [];
+    for (const r of R) { const X = r.erp.flatMap(c => L.get(c) || []), by = new Map();
+      for (const x of X) { const acc = s(x.dr), g = by.get(acc) || by.set(acc, { acc, cr: s(x.cr), rent: 0, wht: 0, n: 0 }).get(acc); g.n++; if (isWht({ oacc: '', ds: x.ds })) g.wht += x.a; else g.rent += x.a; }
+      const f = ifrs16(r.id, { asOf }), dep = f.err ? 0 : f.at.depYtd, int = f.err ? 0 : f.at.intYtd, rows = [...by.values()];
+      if (!rows.length && !dep) continue;
+      const rent = rows.reduce((q, g) => q + g.rent, 0), wht = rows.reduce((q, g) => q + g.wht, 0);
+      out.push({ id: r.id, site: r.site, code: r.code, tcost: r.tcost, accs: rows, rent, wht, dep, int, short: !f.err && f.short, err: f.err || '', liab: f.err ? 0 : f.at.liab, nbv: f.err ? 0 : f.at.nbv, diff: dep + int - rent });
+    }
+    return { asOf, year: y, rows: out, tot: ['rent', 'wht', 'dep', 'int', 'diff', 'liab', 'nbv'].reduce((o2, k) => (o2[k] = out.filter(x => !x.short).reduce((q, x) => q + x[k], 0), o2), {}) };
+  }
   function ifrs16All(o = {}) { return list(o).map(r => { const x = ifrs16(r.id, o); return x.err ? { r, err: x.err } : { r, n: x.n, rate: x.rate, L0: x.L0, short: x.short, ...x.at }; }); }
   const setWht = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('wht_rental', ?)`, String(+v || 0)); return whtRate(); };
   const setRate = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('ifrs16_rate', ?)`, String(+v || 8)); return defRate(); };
-  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht };
+  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd };
 }
 module.exports = { make };

@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.22
+- IFRS 16 tính trên **tiền thuê không gồm thuế WHT**; lịch chi tiết thêm cột "Thuế WHT (tách riêng)".
+- Thẻ mới **Cuối năm: ghi âm & IFRS 16** (Hợp đồng thuê trạm): từng hợp đồng – phân bổ Nợ 627 / 641 / 642… – Có 24211 trong năm (01/01 → ngày xem) tách **tiền thuê** (số ghi âm khi chạy IFRS 16) và **thuế WHT** (giữ lại, nhận diện theo diễn giải "WHT"), theo từng TK chi phí; khấu hao ROU, lãi thuê IFRS 16 cùng kỳ, chênh lệch chi phí, nợ thuê và ROU cuối kỳ. HĐ ngắn hạn ≤ 12 tháng không ghi âm. Xuất Excel kèm sheet **bút toán đề xuất** (ghi âm Nợ 627/641/642 – Có 24211; khấu hao ROU; lãi thuê Nợ 635).
+
 ## 4.99.21
 - Hợp đồng thuê trạm – giá trong hợp đồng là **giá trước thuế** (số chủ nhà nhận); công ty chịu **thuế khấu trừ tại nguồn (WHT) cho thuê 10%** (sửa được ở ô "Thuế WHT cho thuê (%)"):
   - Đối chiếu: tách mỗi đợt trả trước 242 thành tiền thuê (Có 331) và thuế WHT (Có 333 hoặc diễn giải "WHT"); tiền thuê so với giá × số tháng, WHT so với 10% × giá gồm thuế (= giá × số tháng ÷ 0.9 × 10%) – báo riêng "Thanh toán sai số tiền", "Thiếu thuế WHT 10%", "Thuế WHT sai số tiền". Tiền ước tính tháng chưa thanh toán tính theo giá gồm thuế.
