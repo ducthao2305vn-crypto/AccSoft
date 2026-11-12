@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.28
+- Cần thanh toán: HĐ vừa hết hạn mà kỳ kế tiếp rơi vào kỳ xem (và trạm chưa có HĐ mới) vẫn hiện, đánh dấu "HĐ đã hết hạn – cần gia hạn", số tiền dự kiến cùng giá / cùng kỳ TT (vd DI0009 hết hạn 31/10/2026 → kỳ 11/2026–10/2027).
+
 ## 4.99.27
 - Cần thanh toán: cột **Dư 24211 cuối tháng trước** (theo hợp đồng ERP đã map, ≈ số tháng tiền thuê) – còn dư thì cảnh báo "nghi đã trả" (chủ nhà đổi kỳ TT chưa cập nhật HĐ); lọc "Còn dư 24211" / "Thực sự cần trả"; cột kỳ thanh toán (từ – đến); Excel thêm các cột này.
 

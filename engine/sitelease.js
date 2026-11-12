@@ -123,11 +123,14 @@ function make(db, all, get, run) {
     const prevEnd = m + '-00', B242 = new Map(all(`SELECT contract c, sum(CASE WHEN acc_debit LIKE '24211%' THEN amount ELSE 0 END) - sum(CASE WHEN acc_credit LIKE '24211%' THEN amount ELSE 0 END) b FROM entries WHERE (acc_debit LIKE '24211%' OR acc_credit LIKE '24211%') AND account_date<? AND ifnull(contract,'')<>'' GROUP BY contract`, m + '-01').map(x => [x.c, x.b]));
     const out = [];
     for (const r of R) {
-      if (r.to_d && r.to_d.slice(0, 7) < m) continue; if (r.from_d && r.from_d.slice(0, 7) > lim) continue;
+      // HĐ đã hết hạn: nếu kỳ kế tiếp sau ngày hết hạn rơi vào kỳ xem và trạm chưa có HĐ mới phủ kỳ này → cần gia hạn + thanh toán (dự kiến cùng giá, cùng kỳ TT)
+      let renew = false;
+      if (r.to_d && r.to_d.slice(0, 7) < m) { const nx = P.ymsOf(r.to_d.slice(0, 7) + '-01', '9999-12-01')[1];
+        if (!(nx >= m && nx <= lim) || R.some(z => z !== r && z.site === r.site && z.from_d && z.from_d.slice(0, 7) <= nx && (!z.to_d || z.to_d.slice(0, 7) >= nx))) continue; renew = nx; } if (r.from_d && r.from_d.slice(0, 7) > lim) continue;
       const D0 = (get(`SELECT min(ym) m FROM entries WHERE ym IS NOT NULL`) || {}).m || '2016-01', f0 = r.from_d ? r.from_d.slice(0, 7) : m, startYm = f0 > D0 ? f0 : D0, cov = r.coveredTo || '', next = cov ? P.ymsOf(cov + '-01', '9999-12-01')[1] : startYm;
-      const term = Math.max(1, +r.term || 1), endYm = r.to_d ? r.to_d.slice(0, 7) : '9999-12', md = (a, b) => (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7));
+      const term = Math.max(1, +r.term || 1), endYm = renew ? '9999-12' : r.to_d ? r.to_d.slice(0, 7) : '9999-12', md = (a, b) => (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7));
       // kỳ đến hạn theo lịch HĐ: tháng bắt đầu HĐ, cứ mỗi "term" tháng một lần; chỉ lấy kỳ rơi vào [kỳ xem .. nhìn trước]
-      const win = P.ymsOf(m + '-01', lim + '-01'), sched = r.from_d ? win.find(x => x >= f0 && x <= endYm && md(f0, x) % term === 0) : (next >= m && next <= lim ? next : null);
+      const win = P.ymsOf(m + '-01', lim + '-01'), sched = renew ? renew : r.from_d ? win.find(x => x >= f0 && x <= endYm && md(f0, x) % term === 0) : (next >= m && next <= lim ? next : null);
       let M, back = false;
       if (sched) { M = P.ymsOf(sched + '-01', '9999-12-01').slice(0, term).filter(x => x <= endYm); if (cov && cov >= M[M.length - 1]) continue; } // đã trả trước cho kỳ này
       else if (o.backlog && next < m) { back = true; M = P.ymsOf(next + '-01', '9999-12-01').slice(0, term).filter(x => x <= endYm); }
@@ -137,7 +140,7 @@ function make(db, all, get, run) {
       const bal242 = r.erp.reduce((q, c) => q + (B242.get(c) || 0), 0), balMonths = r.rent ? bal242 / (r.rent / (1 - W)) : null;
       const bp = r.bp || '', l = ll.get(bp) || {}, b = bank.get(bp) || null, nm = (info.get(bp) || {}).name || String(bp).replace(/^[A-Za-z]+_[A-Za-z]*_?\d+_?/, '');
       out.push({ id: r.id, site: r.site, code: r.code, tcost: r.tcost, bp, landlord: nm, phone: l.phone || '', bank: b ? `${b.bank || ''} ${b.acc_no || ''}`.trim() : (l.bank_acc ? `${l.bank_name || ''} ${l.bank_acc}`.trim() : ''), accName: b ? b.acc_name || '' : l.acc_holder || '', bankName: (b ? b.bank : l.bank_name) || '', accNo: (b ? b.acc_no : l.bank_acc) || '', branch: b ? b.branch || '' : '', swift: b ? b.swift || '' : '', ccy: b ? b.currency || '' : '', emoney: b ? !!b.emoney : false, address: l.address || '', email: (ct.get(bp) || {}).email || '', contact: (ct.get(bp) || {}).name || '', phone2: (ct.get(bp) || {}).phone || '', llNote: l.note || '',
-        rentM: r.rent, rentNote: r.rent_note, term, from: r.from_d, to: r.to_d, paidTo: cov, payFrom: M[0] || next, payTo: M[M.length - 1] || next, months: M.length, rent, wht, total: rent != null ? rent + wht : null, overdue, status: back ? (!cov ? 'nodata' : 'overdue') : M[0] === m ? 'due' : 'soon', gap, bal242, balMonths, susPaid: bal242 > 0.5 && (r.rent ? balMonths >= 0.5 : true), expiring: r.to_d && r.to_d.slice(0, 7) <= lim, nomap: !r.erp.length });
+        rentM: r.rent, rentNote: r.rent_note, term, from: r.from_d, to: r.to_d, paidTo: cov, payFrom: M[0] || next, payTo: M[M.length - 1] || next, months: M.length, rent, wht, total: rent != null ? rent + wht : null, overdue, status: back ? (!cov ? 'nodata' : 'overdue') : M[0] === m ? 'due' : 'soon', gap: gap && !renew, renew: !!renew, bal242, balMonths, susPaid: bal242 > 0.5 && (r.rent ? balMonths >= 0.5 : true), expiring: r.to_d && r.to_d.slice(0, 7) <= lim, nomap: !r.erp.length });
     }
     out.sort((a, b) => b.overdue - a.overdue || a.payFrom.localeCompare(b.payFrom) || String(a.site).localeCompare(String(b.site)));
     return { ym: m, ahead, lim, rows: out, tot: { n: out.length, rent: out.reduce((q, x) => q + (x.rent || 0), 0), wht: out.reduce((q, x) => q + (x.wht || 0), 0), overdue: out.filter(x => x.status === 'overdue').length } };
