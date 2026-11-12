@@ -1,5 +1,14 @@
 # Lịch sử phiên bản
 
+## 4.99.39
+- Theo dõi đầu tư: **gắn mã tài sản** (cột Asset) vào hạng mục – số thực hiện tự động từ sổ: lên TS (Nợ 211/213), giá trị thực hiện (Nợ 241), thanh toán (Nợ 331/Có 11x nếu có mã); tab Gắn mã tài sản: danh sách mã có phát sinh, gợi ý theo từ khoá, gắn / bỏ gắn; hỗ trợ tiền tố "TS-VT-*".
+- **Gói thầu / HĐ nhà thầu**: nhà thầu, giá trị HĐ, tạm ứng, QĐ phê duyệt; cảnh báo thanh toán vượt giá trị HĐ, HĐ vượt ngân sách, còn tạm ứng khi đã lên TS hết; cột tiết kiệm đấu thầu.
+- **Phiên bản kế hoạch**: chốt KH được duyệt / điều chỉnh, so sánh ngân sách hiện tại với phiên bản.
+- **XDCB 241 tồn đọng** theo mã tài sản (không phát sinh ≥ 3/6/9/12 tháng).
+- **Hạn mức ủy quyền**: gói vượt hạn mức chưa có QĐ phê duyệt → cảnh báo.
+- **Báo cáo theo bộ phận chủ trì** + xuất Excel từng bộ phận để gửi cập nhật.
+- **Chỉ số kiểm soát**: tỷ lệ giải ngân, tỷ lệ lên TS, đầu tư thực hiện / doanh thu thuần (KPI ≤ 20%, đặt được), tiết kiệm đấu thầu.
+
 ## 4.99.38
 - Hợp đồng thuê trạm: tab **Ghép mã ERP** – HĐ chưa ghép / có thể thiếu mã (gia hạn, đổi chủ, HĐ cũ), gợi ý mã ERP có phát sinh 242 kèm điểm & lý do (trùng mã HĐ, phần đầu mã, mã trạm trong mã / diễn giải, cùng đối tượng); chọn gợi ý mạnh ≥ 5 điểm, áp dụng hàng loạt (chỉ thêm, không xoá); danh sách mã ERP 242 chưa thuộc HĐ nào kèm HĐ gợi ý, ghép 1 chạm.
 - Ghi nhận nguyên tắc: mọi tính toán dùng Source Amount.

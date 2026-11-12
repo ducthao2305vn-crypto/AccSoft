@@ -587,3 +587,7 @@ await p.evaluate(()=>window.api.q('stats'));
 
 ## Hợp đồng thuê trạm – ghép mã ERP
 - Tab "Ghép mã ERP": `mapReview` chấm điểm mã ERP (cột Contract có phát sinh 242) chưa thuộc HĐ nào: trùng mã HĐ +5, trùng phần đầu mã HĐ +4, chứa mã HĐ +3, mã trạm trong mã ERP +3, mã trạm trong diễn giải +2, cùng đối tượng +2; `addMap` chỉ THÊM mã.
+
+## Theo dõi đầu tư (engine/capex.js, trang `capex`)
+- `cx_item` cây hạng mục (parent), nhóm normal/station/freq; tháng proc/pay/ast (+ _a thực hiện); `acodes` = mã tài sản (cột Asset, `*` = tiền tố) → số TH tự động: Nợ 211/213 (lên TS), Nợ 241 (cip_a), Nợ 331/Có 11x có mã (pay_a). Gói thầu: vendor, cval, adv, appr; hạn mức `cx_limit`, KPI `cx_kpi_inv`.
+- `cx_ver` phiên bản kế hoạch (snapshot); `cipAging` 241 tồn đọng theo mã TS; `kpis`; `deptReport`.
