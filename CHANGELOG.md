@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.41
+- Sửa: trạng thái xử lý lỗi bị mất sau khi đổi cơ sở số tiền sang Source Amount (khoá lỗi chứa số tiền) – khi rà soát lại, trạng thái đã lưu theo khoá cũ (Accounted) được chuyển sang khoá mới; tự rà soát lại một lần (quy tắc v15).
+- Sửa: điều chỉnh Hợp đồng / Mã vị trí / Biển số / Mã tài sản ở Điều chỉnh dữ liệu không làm lỗi "thiếu trường" thay đổi – nay lỗi tương ứng tự chuyển "Đã khắc phục" (ghi chú giá trị đã điều chỉnh) và khi rà soát lại, quy tắc dùng giá trị đã điều chỉnh.
+
 ## 4.99.40
 - Lỗi nhập liệu – thêm quy tắc thiếu trường bắt buộc: **3311 thiếu Contract**; **chi phí / trả trước thuê vị trí thiếu BTS Site / Location**; **211/213/241 thiếu mã tài sản** (chỉ kiểm khi file có cột Asset hoặc đã nạp file bổ sung); **chi phí xe (xăng dầu, sửa chữa…) thiếu biển số** (chỉ kiểm khi có cột biển số); **công nợ thiếu đối tượng** mở rộng 131, 136, 1388, 141, 244, 331, 336, 3388, 344 và kiểm đúng vế Nợ / Có. Tự rà soát lại dữ liệu cũ (bộ quy tắc v14).
 

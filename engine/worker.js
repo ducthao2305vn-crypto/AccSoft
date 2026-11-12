@@ -230,7 +230,13 @@ function scanRange({ lo, hi, sc }) { // chạy trong luồng phụ
   for (;;) {
     const rows = page.all(last, hi); if (!rows.length) break;
     const out = [];
-    for (const raw of rows) { const r = rowFromDb(raw); for (const e of checkRow(r)) out.push([raw.id, e.k, e.s, e.msg, errKey(e.k, r), raw.ym, r.user, raw._dept ?? null, r.doc ?? null]); }
+    // giá trị đã điều chỉnh (Điều chỉnh dữ liệu – field_adj) thay cho giá trị gốc khi rà soát
+    let ADJ = new Map(); try { for (const x of db.prepare(`SELECT id, field, value FROM field_adj WHERE id>=? AND id<=?`).all(rows[0].id, rows.at(-1).id)) (ADJ.get(x.id) || ADJ.set(x.id, {}).get(x.id))[x.field] = x.value; } catch { }
+    const AF = { contract: 'contract', location: 'location', plate: 'plate', asset: 'asset', dept: 'deptSub' };
+    for (const raw of rows) { const r = rowFromDb(raw), ad = ADJ.get(raw.id); if (ad) for (const f in ad) if (AF[f] && ad[f] != null && ad[f] !== '') r[AF[f]] = ad[f];
+      // khoá phụ theo Accounted Amount: giữ trạng thái xử lý đã lưu trước khi đổi cơ sở số tiền (Source / Accounted)
+      const alt = r.amtAcc != null && Math.abs(r.amtAcc - r.amt) > 0.004 ? { ...r, amt: r.amtAcc } : null;
+      for (const e of checkRow(r)) out.push([raw.id, e.k, e.s, e.msg, errKey(e.k, r), raw.ym, r.user, raw._dept ?? null, r.doc ?? null, alt ? errKey(e.k, alt) : null]); }
     last = rows.at(-1).id; n += rows.length; post({ type: 'errs', list: out, n: rows.length });
   }
   return { n };
@@ -249,7 +255,10 @@ async function analyze({ from = '', to = '' } = {}) {
   const ids = db.prepare(`SELECT min(e.id) lo, max(e.id) hi FROM entries e WHERE 1${sc}`).get();
   const K = total < 50000 ? 1 : Math.max(1, Math.min(6, os.cpus().length - 1));
   let done = 0;
-  const write = list => { db.exec('BEGIN'); for (const x of list) insErrFull.run(...x, rv.get(x[4]) || 'open'); db.exec('COMMIT'); };
+  const mv = db.prepare(`UPDATE OR IGNORE reviews SET err_key=? WHERE err_key=?`);
+  const write = list => { db.exec('BEGIN'); for (const x of list) { const alt = x.pop(); let st = rv.get(x[4]);
+      if (!st && alt && rv.has(alt)) { st = rv.get(alt); mv.run(x[4], alt); rv.set(x[4], st); rv.delete(alt); } // chuyển trạng thái đã lưu sang khoá mới
+      insErrFull.run(...x, st || 'open'); } db.exec('COMMIT'); };
   if (ids.lo != null) {
     const step = Math.ceil((ids.hi - ids.lo + 1) / K), parts = [];
     for (let k = 0; k < K; k++) parts.push({ lo: ids.lo - 1 + k * step, hi: Math.min(ids.hi, ids.lo - 1 + (k + 1) * step), sc });

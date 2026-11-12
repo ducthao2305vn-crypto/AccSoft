@@ -195,5 +195,5 @@ const AUDIT_WHY={
 const GROUP=Object.fromEntries(ALL_RULES.map(r=>[r.k,AUDIT_WHY[r.k]?'audit':'staff']));
 const GROUPS={staff:'Sai sót nhân viên',audit:'Sai sót dễ bị kiểm toán'};
 const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||'',g:GROUP[k],why:AUDIT_WHY[k]||''})),status:ST,groups:GROUPS});
-const RULES_VERSION=14; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
+const RULES_VERSION=15; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
 module.exports={CFG,CFG_DEFAULT,setConfig,GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};
