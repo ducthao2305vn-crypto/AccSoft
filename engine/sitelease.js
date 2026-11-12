@@ -8,6 +8,8 @@ function make(db, all, get, run) {
     CREATE INDEX IF NOT EXISTS ix_sc_site ON site_contract(site);`);
   const P = require('./prepaid242').make(db, all);
   const s = v => String(v ?? '').trim(), day = d => s(d).slice(0, 10), J = v => { try { return JSON.parse(v || '[]'); } catch { return []; } };
+  const whtRate = () => { const v = (get(`SELECT v FROM settings WHERE k='wht_rental'`) || {}).v; return v == null || v === '' ? 10 : +v; }; // thuế WHT cho thuê (%), giá HĐ trước thuế
+  const isWht = x => /^333/.test(s(x.oacc)) || /\bWHT\b|withholding/i.test(s(x.ds));
   const defRate = () => +((get(`SELECT v FROM settings WHERE k='ifrs16_rate'`) || {}).v || 8);
   const isoD = v => { if (v == null || v === '') return ''; if (v instanceof Date) return v.toISOString().slice(0, 10); const t = s(v); let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
     m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; if (/^\d{5}$/.test(t)) return new Date(Math.round((+t - 25569) * 864e5)).toISOString().slice(0, 10); return ''; };
@@ -57,17 +59,20 @@ function make(db, all, get, run) {
         (L.get(x.c) || L.set(x.c, []).get(x.c)).push(x); }
     return R.map(r => {
       const X = r.erp.flatMap(c => L.get(c) || []), lines = [], paid = X.filter(x => s(x.dr).startsWith('331')).reduce((q, x) => q + x.a, 0);
-      for (const x of X) { if (s(x.dr).startsWith('242')) lines.push({ side: 'dr', d: x.d, ym: s(x.d).slice(0, 7), a: x.a, ds: x.ds }); else if (s(x.cr).startsWith('242')) lines.push({ side: 'cr', d: x.d, ym: s(x.d).slice(0, 7), a: x.a, ds: x.ds }); }
+      for (const x of X) { if (s(x.dr).startsWith('242')) lines.push({ side: 'dr', d: x.d, ym: s(x.d).slice(0, 7), a: x.a, ds: x.ds, oacc: s(x.cr) }); else if (s(x.cr).startsWith('242')) lines.push({ side: 'cr', d: x.d, ym: s(x.d).slice(0, 7), a: x.a, ds: x.ds }); }
       const up = lines.filter(x => x.side === 'dr').reduce((q, x) => q + x.a, 0), amo = lines.filter(x => x.side === 'cr').reduce((q, x) => q + x.a, 0);
       // đợt trả trước theo kỳ diễn giải
-      const B = new Map(); for (const x of lines) if (x.side === 'dr') { const p = P.period(x.ds); if (!p) continue; const k = p.f + '|' + p.t; const b = B.get(k) || B.set(k, { f: p.f, t: p.t, a: 0 }).get(k); b.a += x.a; }
-      const iss = [], cov = new Set(), start = r.from_d ? (r.from_d.slice(0, 7) > D0 ? r.from_d.slice(0, 7) : D0) : null, end = r.to_d ? r.to_d.slice(0, 7) : cur;
+      const B = new Map(); for (const x of lines) if (x.side === 'dr') { const p = P.period(x.ds); if (!p) continue; const k = p.f + '|' + p.t; const b = B.get(k) || B.set(k, { f: p.f, t: p.t, a: 0, net: 0, wht: 0 }).get(k); b.a += x.a; if (isWht(x)) b.wht += x.a; else b.net += x.a; }
+      const W = whtRate() / 100, iss = [], cov = new Set(), start = r.from_d ? (r.from_d.slice(0, 7) > D0 ? r.from_d.slice(0, 7) : D0) : null, end = r.to_d ? r.to_d.slice(0, 7) : cur;
       for (const b of B.values()) { const M = P.ymsOf(b.f, b.t); M.forEach(m => cov.add(m)); const exp = r.rent != null ? r.rent * M.length : null;
-        if (exp != null && Math.abs(b.a - exp) > Math.max(1, exp * 0.02) && Math.abs(b.a - exp / 0.9) > Math.max(1, exp * 0.02)) iss.push({ k: 'payamt', label: 'Thanh toán sai số tiền', msg: `Kỳ ${b.f.slice(0, 7)}→${b.t.slice(0, 7)}: ghi nhận ${b.a.toFixed(2)} ≠ giá ${r.rent} × ${M.length} tháng = ${exp.toFixed(2)} (gross thuế 10%: ${(exp / 0.9).toFixed(2)})`, a: b.a - exp });
+        // Giá HĐ là giá trước thuế (số chủ nhà nhận); công ty chịu thuế khấu trừ tại nguồn (WHT) cho thuê 10% → ghi nhận 242 = giá × số tháng ÷ (1 − 10%), gồm phần trả chủ nhà (Có 331) + phần WHT (Có 333 / diễn giải "WHT")
+        if (exp != null) { const expW = exp * W / (1 - W), tol = x => Math.max(1, x * 0.02);
+          if (Math.abs(b.net - exp) > tol(exp)) iss.push({ k: 'payamt', label: 'Thanh toán sai số tiền', msg: `Kỳ ${b.f.slice(0, 7)}→${b.t.slice(0, 7)}: tiền thuê ghi nhận ${b.net.toFixed(2)} ≠ giá ${r.rent} × ${M.length} tháng = ${exp.toFixed(2)}`, a: b.net - exp });
+          if (W > 0 && Math.abs(b.wht - expW) > tol(expW)) iss.push({ k: 'wht', label: b.wht < 0.005 ? 'Thiếu thuế WHT 10%' : 'Thuế WHT sai số tiền', msg: `Kỳ ${b.f.slice(0, 7)}→${b.t.slice(0, 7)}: WHT ghi nhận ${b.wht.toFixed(2)} ≠ ${(W * 100).toFixed(0)}% × ${(exp + expW).toFixed(2)} (giá gồm thuế) = ${expW.toFixed(2)}`, a: b.wht - expW }); }
         if ((r.from_d && b.f < r.from_d.slice(0, 7) + '-01') || (r.to_d && b.t > r.to_d)) iss.push({ k: 'payout', label: 'Kỳ thanh toán ngoài thời hạn HĐ', msg: `Kỳ ${b.f}→${b.t} ngoài HĐ ${r.from_d}→${r.to_d}` });
         if (r.term && M.length !== +r.term && M.length > 1) iss.push({ k: 'payterm', label: 'Kỳ thanh toán khác điều khoản', msg: `Kỳ ${b.f.slice(0, 7)}→${b.t.slice(0, 7)} = ${M.length} tháng, điều khoản ${r.term} tháng` }); }
       const due = start && start <= cur ? P.ymsOf(start + '-01', (end < cur ? end : cur) + '-01') : [], miss = due.filter(m => !cov.has(m));
-      if (miss.length) iss.push({ k: 'unpaid', label: 'Chưa thanh toán / chưa ghi nhận trả trước', msg: `${miss.length} tháng: ${miss.slice(0, 8).join(', ')}${miss.length > 8 ? '…' : ''}`, a: r.rent != null ? r.rent * miss.length : null, months: miss });
+      if (miss.length) iss.push({ k: 'unpaid', label: 'Chưa thanh toán / chưa ghi nhận trả trước', msg: `${miss.length} tháng: ${miss.slice(0, 8).join(', ')}${miss.length > 8 ? '…' : ''}`, a: r.rent != null ? r.rent * miss.length / (1 - W) : null, months: miss });
       if (!r.erp.length) iss.push({ k: 'nomap', label: 'Chưa map với hạch toán', msg: 'Chưa tìm thấy hợp đồng ERP tương ứng – map tay trong danh mục' });
       for (const z of P.analyze(lines, asOf)) iss.push({ k: 'amo_' + z.k, label: z.label, msg: `${z.n} lần · ${z.msg}`, months: z.months });
       const active = (!r.from_d || r.from_d <= asOf) && (!r.to_d || r.to_d >= asOf.slice(0, 8) + '01');
@@ -78,20 +83,21 @@ function make(db, all, get, run) {
   function ifrs16(id, o = {}) {
     const r = row(get(`SELECT * FROM site_contract WHERE id=?`, +id) || {}); if (!r.id || r.rent == null || !r.from_d || !r.to_d) return { r, err: 'Thiếu giá thuê / thời hạn' };
     const rate = (r.rate != null ? +r.rate : +o.rate || defRate()) / 100, i = rate / 12, n = months(r.from_d, r.to_d), term = Math.max(1, +r.term || 1), asOf = day(o.asOf) || new Date().toISOString().slice(0, 10);
-    const pay = k => (k % term === 0 ? r.rent * Math.min(term, n - k) : 0); // trả trước đầu mỗi kỳ thanh toán
+    const gross = r.rent / (1 - whtRate() / 100), pay = k => (k % term === 0 ? gross * Math.min(term, n - k) : 0); // tiền thuê gồm WHT công ty chịu // trả trước đầu mỗi kỳ thanh toán
     let L0 = 0; for (let k = 0; k < n; k++) L0 += pay(k) / Math.pow(1 + i, k);
     const rou = L0, dep = rou / n, sch = []; let liab = L0, nbv = rou;
     const ym0 = r.from_d.slice(0, 7);
     for (let k = 0; k < n; k++) { const ym = P.ymsOf(ym0 + '-01', '9999-12-01')[k] || ''; const p = pay(k), open = liab; liab -= p; const int = liab * i; liab += int; nbv -= dep;
-      sch.push({ k: k + 1, ym, open, pay: p, int, close: liab, dep, nbv: Math.max(0, nbv), rent: r.rent }); }
+      sch.push({ k: k + 1, ym, open, pay: p, int, close: liab, dep, nbv: Math.max(0, nbv), rent: gross }); }
     const cur = asOf.slice(0, 7), y = asOf.slice(0, 4), past = sch.filter(x => x.ym <= cur), at = past[past.length - 1] || { close: L0, nbv: rou };
     const next12 = sch.filter(x => x.ym > cur).slice(0, 12), curPart = next12.reduce((q, x) => q + x.pay - x.int, 0);
     const ytd = past.filter(x => x.ym.startsWith(y)), short = n <= 12;
     return { r, rate: rate * 100, n, term, L0, rou, dep, sch, asOf, short,
-      at: { liab: Math.max(0, past.length ? at.close : L0), nbv: past.length ? at.nbv : rou, liabCur: Math.max(0, Math.min(curPart, past.length ? at.close : L0)), liab0: 0, intYtd: ytd.reduce((q, x) => q + x.int, 0), depYtd: ytd.reduce((q, x) => q + x.dep, 0), rentYtd: ytd.length * r.rent } };
+      at: { liab: Math.max(0, past.length ? at.close : L0), nbv: past.length ? at.nbv : rou, liabCur: Math.max(0, Math.min(curPart, past.length ? at.close : L0)), liab0: 0, intYtd: ytd.reduce((q, x) => q + x.int, 0), depYtd: ytd.reduce((q, x) => q + x.dep, 0), rentYtd: ytd.length * gross } };
   }
   function ifrs16All(o = {}) { return list(o).map(r => { const x = ifrs16(r.id, o); return x.err ? { r, err: x.err } : { r, n: x.n, rate: x.rate, L0: x.L0, short: x.short, ...x.at }; }); }
+  const setWht = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('wht_rental', ?)`, String(+v || 0)); return whtRate(); };
   const setRate = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('ifrs16_rate', ?)`, String(+v || 8)); return defRate(); };
-  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate };
+  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht };
 }
 module.exports = { make };

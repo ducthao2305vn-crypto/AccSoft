@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 4.99.21
+- Hợp đồng thuê trạm – giá trong hợp đồng là **giá trước thuế** (số chủ nhà nhận); công ty chịu **thuế khấu trừ tại nguồn (WHT) cho thuê 10%** (sửa được ở ô "Thuế WHT cho thuê (%)"):
+  - Đối chiếu: tách mỗi đợt trả trước 242 thành tiền thuê (Có 331) và thuế WHT (Có 333 hoặc diễn giải "WHT"); tiền thuê so với giá × số tháng, WHT so với 10% × giá gồm thuế (= giá × số tháng ÷ 0.9 × 10%) – báo riêng "Thanh toán sai số tiền", "Thiếu thuế WHT 10%", "Thuế WHT sai số tiền". Tiền ước tính tháng chưa thanh toán tính theo giá gồm thuế.
+  - IFRS 16: khoản thanh toán thuê = giá ÷ (1 − 10%) (gồm WHT công ty chịu) cho nợ thuê, ROU và so sánh tiền thuê.
+
 ## 4.99.20
 - **Chi phí trả trước 242 – phát hiện sai sót phân bổ** theo từng đợt trả trước (kỳ ghi trên diễn giải dòng Nợ 242): book sai kỳ (phân bổ tháng ngoài kỳ), chậm / thiếu phân bổ, dồn kỳ (một tháng = k lần mức tháng), số tiền phân bổ sai, diễn giải ghi kỳ khác kỳ phân bổ, phân bổ vượt. Cột "Sai sót phân bổ", lọc "Có sai sót", chi tiết từng loại kèm các tháng.
 - **Module Hợp đồng thuê trạm** (Công nợ phải trả → Hợp đồng thuê trạm):
