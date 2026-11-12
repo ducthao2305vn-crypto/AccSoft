@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.34
+- Đầu tư ra nước ngoài: bỏ chọn file mẫu – nút **Xuất báo cáo Word (Phụ lục 01)** xuất thẳng theo mẫu dựng sẵn (dựng từ báo cáo 6TĐN của đơn vị, bỏ số liệu cũ) cho kỳ đang chọn: tiêu đề / ngày / cột năm tự đổi theo kỳ (Quý I, 6TĐN, 9TĐN, Năm…); điền bảng tình hình tài chính, bảng KQ SXKD, đoạn tổng tài sản, TSCĐ, nợ phải trả, phải thu, tồn kho, VCSH, doanh thu – LNST; phần còn lại bôi vàng "[Đơn vị bổ sung]".
+
 ## 4.99.33
 - Đầu tư ra nước ngoài: nút **Điền báo cáo Word (Phụ lục 01)** – chọn file Word báo cáo của đơn vị, AccSoft điền bảng tình hình tài chính (cuối kỳ / đầu năm / %), bảng KQ SXKD (TH 2 năm trước, năm trước, năm nay + %), đoạn tổng tài sản và TSCĐ (tăng trong kỳ, nguyên giá, hao mòn, GTCL); giữ nguyên định dạng; bôi vàng nội dung đơn vị bổ sung (thuê bao, kế hoạch, vốn đầu tư / thu hồi, đầu tư mua sắm, nhân sự, thuế NSNN, ví điện tử, lời văn đánh giá).
 

@@ -553,12 +553,11 @@ async function init() {
     const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `AccSoft_DauTuNuocNgoai_${R.from}_${R.to}.xlsx`, filters: [{ name: 'Excel', extensions: ['xlsx'] }] }); if (canceled) return null;
     fs.writeFileSync(filePath, await require('./engine/oinvx').build(R, o || {})); shell.showItemInFolder(filePath); return filePath;
   });
-  // Điền báo cáo Word "Phụ lục 01" (mẫu của đơn vị): chọn file mẫu .docx → điền số liệu kỳ đang lập + bôi vàng nội dung đơn vị bổ sung
+  // Xuất báo cáo Word "Phụ lục 01 – Báo cáo tình hình tài chính dự án ĐTRNN" theo mẫu dựng sẵn (vendor/oinv_pl01.docx) cho kỳ đang lập
   handle('oi:word', async (_e, R) => {
-    const op = await dialog.showOpenDialog(win, { title: 'Chọn file Word báo cáo (Phụ lục 01) làm mẫu', filters: [{ name: 'Word', extensions: ['docx'] }], properties: ['openFile'] }); if (op.canceled || !op.filePaths[0]) return null;
-    const out = require('./engine/oinvdoc').fill(fs.readFileSync(op.filePaths[0]), R, {});
-    const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: path.join(path.dirname(op.filePaths[0]), path.basename(op.filePaths[0], '.docx') + `_AccSoft_${R.to}.docx`), filters: [{ name: 'Word', extensions: ['docx'] }] }); if (canceled) return null;
-    fs.writeFileSync(filePath, out.buf); shell.showItemInFolder(filePath); return { file: filePath, log: out.log };
+    const D = require('./engine/oinvdoc'), K = D.periodLbl(R.from, R.to);
+    const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `BC_tinh_hinh_tai_chinh_DTRNN_${K.S.replace(/[^\w]+/g, '_')}.docx`, filters: [{ name: 'Word', extensions: ['docx'] }] }); if (canceled) return null;
+    fs.writeFileSync(filePath, D.build(fs.readFileSync(path.join(__dirname, 'vendor', 'oinv_pl01.docx')), R)); shell.showItemInFolder(filePath); return { file: filePath };
   });
   handle('oi:import06', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(win, { filters: [{ name: 'Excel', extensions: ['xlsx', 'xlsm'] }], properties: ['openFile'] }); if (canceled || !filePaths[0]) return null;
