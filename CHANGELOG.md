@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.23
+- Hợp đồng thuê trạm – thẻ **Cần thanh toán**: tại kỳ đang xem (tháng của "Đến ngày", có thể nhìn trước 1–6 tháng) liệt kê các trạm có HĐ còn hiệu lực mà kỳ trả trước đã ghi nhận (Nợ 242, kỳ trên diễn giải) chưa phủ tới: chủ nhà, mã đối tượng, tài khoản ngân hàng / SĐT (Danh mục đối tác, Chủ nhà trạm), đã trả đến tháng nào, kỳ cần trả đề xuất (đúng điều khoản thanh toán, không vượt ngày hết hạn), tiền thuê trước thuế + WHT + tổng, số tháng quá hạn, cảnh báo HĐ sắp hết hạn / chưa map. Tình trạng: quá hạn, đến hạn tháng này, sắp đến hạn, chưa thấy ghi nhận trả trước. Xuất Excel.
+
 ## 4.99.22
 - IFRS 16 tính trên **tiền thuê không gồm thuế WHT**; lịch chi tiết thêm cột "Thuế WHT (tách riêng)".
 - Thẻ mới **Cuối năm: ghi âm & IFRS 16** (Hợp đồng thuê trạm): từng hợp đồng – phân bổ Nợ 627 / 641 / 642… – Có 24211 trong năm (01/01 → ngày xem) tách **tiền thuê** (số ghi âm khi chạy IFRS 16) và **thuế WHT** (giữ lại, nhận diện theo diễn giải "WHT"), theo từng TK chi phí; khấu hao ROU, lãi thuê IFRS 16 cùng kỳ, chênh lệch chi phí, nợ thuê và ROU cuối kỳ. HĐ ngắn hạn ≤ 12 tháng không ghi âm. Xuất Excel kèm sheet **bút toán đề xuất** (ghi âm Nợ 627/641/642 – Có 24211; khấu hao ROU; lãi thuê Nợ 635).

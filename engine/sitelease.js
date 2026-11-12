@@ -112,9 +112,30 @@ function make(db, all, get, run) {
     }
     return { asOf, year: y, rows: out, tot: ['rent', 'wht', 'dep', 'int', 'diff', 'liab', 'nbv'].reduce((o2, k) => (o2[k] = out.filter(x => !x.short).reduce((q, x) => q + x[k], 0), o2), {}) };
   }
+  // Trạm cần thanh toán tại kỳ m (YYYY-MM) + số tháng nhìn trước: HĐ còn hiệu lực mà kỳ trả trước đã ghi nhận (Nợ 242) chưa phủ tới tháng đó.
+  // Đề xuất kỳ thanh toán tiếp theo = từ tháng sau "đã trả đến" (hoặc đầu HĐ) dài đúng điều khoản (term), không vượt ngày hết hạn; số tiền thuê (trước thuế) + WHT.
+  function due(o = {}) {
+    const m = s(o.ym) || new Date().toISOString().slice(0, 7), ahead = Math.max(0, +o.ahead || 0), lim = P.ymsOf(m + '-01', '9999-12-01')[ahead] || m, W = whtRate() / 100;
+    const asOf = (() => { const d = new Date(+lim.slice(0, 4), +lim.slice(5, 7), 0); return d.toISOString().slice(0, 10); })();
+    const R = reconcile({ ...o, asOf }), info = new Map(all(`SELECT * FROM ap331_partner`).map(r => [r.bp, r]));
+    let bank = new Map(), ll = new Map(); try { for (const b of all(`SELECT * FROM pc_bank ORDER BY is_default DESC, id`)) if (!bank.has(b.bp)) bank.set(b.bp, b); } catch { } try { ll = new Map(all(`SELECT * FROM landlord`).map(r => [r.bp, r])); } catch { }
+    const out = [];
+    for (const r of R) {
+      if (r.to_d && r.to_d.slice(0, 7) < m) continue; if (r.from_d && r.from_d.slice(0, 7) > lim) continue;
+      const D0 = (get(`SELECT min(ym) m FROM entries WHERE ym IS NOT NULL`) || {}).m || '2016-01', f0 = r.from_d ? r.from_d.slice(0, 7) : m, startYm = f0 > D0 ? f0 : D0, cov = r.coveredTo || '', next = cov ? P.ymsOf(cov + '-01', '9999-12-01')[1] : startYm;
+      if (next > lim) continue; // đã trả trước phủ hết kỳ xem
+      const term = Math.max(1, +r.term || 1), endYm = r.to_d ? r.to_d.slice(0, 7) : '9999-12', M = P.ymsOf(next + '-01', '9999-12-01').slice(0, term).filter(x => x <= endYm);
+      const overdue = P.ymsOf(next + '-01', m + '-01').filter(x => x < m).length, rent = r.rent != null ? r.rent * M.length : null, wht = rent != null ? rent * W / (1 - W) : null;
+      const bp = r.bp || '', l = ll.get(bp) || {}, b = bank.get(bp) || null, nm = (info.get(bp) || {}).name || String(bp).replace(/^[A-Za-z]+_[A-Za-z]*_?\d+_?/, '');
+      out.push({ id: r.id, site: r.site, code: r.code, tcost: r.tcost, bp, landlord: nm, phone: l.phone || '', bank: b ? `${b.bank || ''} ${b.acc_no || ''}`.trim() : (l.bank_acc ? `${l.bank_name || ''} ${l.bank_acc}`.trim() : ''), accName: b ? b.acc_name || '' : l.acc_holder || '',
+        rentM: r.rent, rentNote: r.rent_note, term, from: r.from_d, to: r.to_d, paidTo: cov, payFrom: M[0] || next, payTo: M[M.length - 1] || next, months: M.length, rent, wht, total: rent != null ? rent + wht : null, overdue, status: !cov && f0 < m ? 'nodata' : overdue > 0 ? 'overdue' : next === m ? 'due' : 'soon', expiring: r.to_d && r.to_d.slice(0, 7) <= lim, nomap: !r.erp.length });
+    }
+    out.sort((a, b) => b.overdue - a.overdue || a.payFrom.localeCompare(b.payFrom) || String(a.site).localeCompare(String(b.site)));
+    return { ym: m, ahead, lim, rows: out, tot: { n: out.length, rent: out.reduce((q, x) => q + (x.rent || 0), 0), wht: out.reduce((q, x) => q + (x.wht || 0), 0), overdue: out.filter(x => x.status === 'overdue').length } };
+  }
   function ifrs16All(o = {}) { return list(o).map(r => { const x = ifrs16(r.id, o); return x.err ? { r, err: x.err } : { r, n: x.n, rate: x.rate, L0: x.L0, short: x.short, ...x.at }; }); }
   const setWht = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('wht_rental', ?)`, String(+v || 0)); return whtRate(); };
   const setRate = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('ifrs16_rate', ?)`, String(+v || 8)); return defRate(); };
-  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd };
+  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd, due };
 }
 module.exports = { make };
