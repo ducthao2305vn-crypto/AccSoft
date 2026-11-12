@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.30
+- Cần thanh toán: theo dõi tiến độ trình ký – tick dòng (hoặc chọn hết) → "Đã trình ký" / "Đã chuyển tiền" / "Bỏ đánh dấu"; lưu theo HĐ × kỳ thanh toán; lọc Chưa trình / Đã trình / Đã chuyển kèm số đếm; hiện tổng tiền các dòng đang chọn; Excel thêm cột Tiến độ.
+
 ## 4.99.29
 - Hợp đồng thuê trạm: sửa lỗi nạp Excel ở máy giờ Timor (UTC+9) làm ngày lùi 1 ngày (01/11/2021 → 31/10/2021); tự sửa một lần dữ liệu đã nạp (ngày bắt đầu là ngày cuối tháng → +1 ngày cả từ / đến).
 - Cần thanh toán: kỳ đến hạn ưu tiên theo "đã trả đến" thực tế (+1 tháng) nếu có; không có thì theo lịch HĐ (HĐ bắt đầu sau ngày 15 → tính từ tháng sau).

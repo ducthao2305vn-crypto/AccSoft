@@ -15,6 +15,10 @@ function make(db, all, get, run) {
     m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; if (/^\d{5}$/.test(t)) return new Date(Math.round((+t - 25569) * 864e5)).toISOString().slice(0, 10); return ''; };
   const months = (f, t) => f && t ? Math.max(1, (+t.slice(0, 4) - +f.slice(0, 4)) * 12 + (+t.slice(5, 7) - +f.slice(5, 7)) + 1) : 0;
   const row = r => ({ ...r, erp: J(r.erp) });
+  db.exec(`CREATE TABLE IF NOT EXISTS sl_pay(cid INTEGER, ym TEXT, status TEXT, note TEXT, at TEXT, PRIMARY KEY(cid, ym))`);
+  // đánh dấu tiến độ thanh toán một kỳ (HĐ × tháng bắt đầu kỳ): sub = đã trình ký, paid = đã chuyển tiền; status rỗng = bỏ đánh dấu
+  function payMark(items, status, note) { for (const x of [].concat(items || [])) { if (!s(status)) run(`DELETE FROM sl_pay WHERE cid=? AND ym=?`, +x.id, s(x.ym));
+      else run(`INSERT OR REPLACE INTO sl_pay(cid, ym, status, note, at) VALUES(?,?,?,?,datetime('now','localtime'))`, +x.id, s(x.ym), s(status), s(note ?? (get(`SELECT note FROM sl_pay WHERE cid=? AND ym=?`, +x.id, s(x.ym)) || {}).note)); } return true; }
   // sửa một lần: bản trước nạp Excel ở máy UTC+9 làm ngày lùi 1 ngày (01/11 → 31/10). Ngày bắt đầu = ngày cuối tháng → cộng 1 ngày cho cả từ / đến.
   try { if (!get(`SELECT v FROM settings WHERE k='sl_tzfix'`)) { const nx = d => { const x = new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10) + 1)); return x.toISOString().slice(0, 10); };
     for (const r of all(`SELECT id, from_d, to_d FROM site_contract WHERE from_d<>''`)) if (nx(r.from_d).slice(8, 10) === '01') run(`UPDATE site_contract SET from_d=?, to_d=? WHERE id=?`, nx(r.from_d), r.to_d ? nx(r.to_d) : r.to_d, r.id);
@@ -147,12 +151,13 @@ function make(db, all, get, run) {
       out.push({ id: r.id, site: r.site, code: r.code, tcost: r.tcost, bp, landlord: nm, phone: l.phone || '', bank: b ? `${b.bank || ''} ${b.acc_no || ''}`.trim() : (l.bank_acc ? `${l.bank_name || ''} ${l.bank_acc}`.trim() : ''), accName: b ? b.acc_name || '' : l.acc_holder || '', bankName: (b ? b.bank : l.bank_name) || '', accNo: (b ? b.acc_no : l.bank_acc) || '', branch: b ? b.branch || '' : '', swift: b ? b.swift || '' : '', ccy: b ? b.currency || '' : '', emoney: b ? !!b.emoney : false, address: l.address || '', email: (ct.get(bp) || {}).email || '', contact: (ct.get(bp) || {}).name || '', phone2: (ct.get(bp) || {}).phone || '', llNote: l.note || '',
         rentM: r.rent, rentNote: r.rent_note, term, from: r.from_d, to: r.to_d, paidTo: cov, payFrom: M[0] || next, payTo: M[M.length - 1] || next, months: M.length, rent, wht, total: rent != null ? rent + wht : null, overdue, status: back ? (!cov ? 'nodata' : 'overdue') : M[0] === m ? 'due' : 'soon', gap: gap && !renew, renew: !!renew, bal242, balMonths, susPaid: bal242 > 0.5 && (r.rent ? balMonths >= 0.5 : true), expiring: r.to_d && r.to_d.slice(0, 7) <= lim, nomap: !r.erp.length });
     }
+    const PM = new Map(all(`SELECT * FROM sl_pay`).map(x => [x.cid + '|' + x.ym, x])); for (const x of out) x.pay = PM.get(x.id + '|' + x.payFrom) || null;
     out.sort((a, b) => b.overdue - a.overdue || a.payFrom.localeCompare(b.payFrom) || String(a.site).localeCompare(String(b.site)));
     return { ym: m, ahead, lim, rows: out, tot: { n: out.length, rent: out.reduce((q, x) => q + (x.rent || 0), 0), wht: out.reduce((q, x) => q + (x.wht || 0), 0), overdue: out.filter(x => x.status === 'overdue').length } };
   }
   function ifrs16All(o = {}) { return list(o).map(r => { const x = ifrs16(r.id, o); return x.err ? { r, err: x.err } : { r, n: x.n, rate: x.rate, L0: x.L0, short: x.short, ...x.at }; }); }
   const setWht = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('wht_rental', ?)`, String(+v || 0)); return whtRate(); };
   const setRate = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('ifrs16_rate', ?)`, String(+v || 8)); return defRate(); };
-  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd, due };
+  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd, due, payMark };
 }
 module.exports = { make };
