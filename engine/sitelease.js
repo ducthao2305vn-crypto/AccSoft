@@ -58,6 +58,31 @@ function make(db, all, get, run) {
       if (!hit.length && /^[A-Z]{2}\d{4}[A-Z]?$/.test(site)) hit = E.filter(e => new RegExp('\\b' + site + '\\b').test(s(e.c).toUpperCase())); // mã trạm BTS
       if (hit.length) { run(`UPDATE site_contract SET erp=?, bp=coalesce(nullif(bp,''), ?) WHERE id=?`, JSON.stringify(hit.map(e => e.c)), hit[0].p || '', r.id); n++; } }
     return { n }; }
+  // Rà soát ghép mã: HĐ chưa map / có hợp đồng ERP (cột Contract, có phát sinh 242 / 331) chưa thuộc HĐ nào nhưng khớp mã HĐ, mã trạm (trong mã hoặc diễn giải) hoặc cùng đối tượng.
+  function mapReview(o = {}) {
+    const E = all(`SELECT contract c, max(coalesce(nullif(partner_credit,''), partner_debit)) p, count(*) n, min(account_date) f, max(account_date) t, sum(CASE WHEN acc_debit LIKE '242%' THEN amount ELSE 0 END) a242, max(description) d
+      FROM entries WHERE ifnull(contract,'')<>'' AND (acc_debit LIKE '242%' OR acc_credit LIKE '242%') GROUP BY contract`);
+    const R = list(o), used = new Map(); for (const r of R) for (const c of r.erp) used.set(c, r);
+    const free = E.filter(e => !used.has(e.c)), U = x => s(x).toUpperCase(), y = (day(o.asOf) || new Date().toISOString()).slice(0, 4);
+    const score = (r, e) => { const C = U(e.c), D = U(e.d), code = U(r.code), site = U(r.site), W = []; let k = 0;
+      if (code && (C === code || C.startsWith(code + '_') || C.startsWith(code + ' '))) { k += 5; W.push('trùng mã HĐ'); } else if (code.length >= 6 && C.includes(code)) { k += 3; W.push('chứa mã HĐ'); } else { const c0 = C.split('_')[0].trim(); if (c0.length >= 8 && (code.startsWith(c0) || c0.startsWith(code))) { k += 4; W.push('trùng phần đầu mã HĐ'); } }
+      if (site.length >= 4) { const re = new RegExp('(^|[^A-Z0-9])' + site.replace(/[^A-Z0-9]/g, '') + '([^A-Z0-9]|$)'); if (re.test(C)) { k += 3; W.push('mã trạm trong mã HĐ ERP'); } else if (re.test(D)) { k += 2; W.push('mã trạm trong diễn giải'); } }
+      if (r.bp && U(e.p) === U(r.bp)) { k += 2; W.push('cùng đối tượng'); }
+      return { k, why: W.join(', ') }; };
+    const rows = [];
+    for (const r of R) { const C = free.map(e => ({ ...e, ...score(r, e) })).filter(e => e.k >= 3 || (!r.erp.length && e.k >= 2)).sort((a, b) => b.k - a.k || b.n - a.n).slice(0, 8);
+      const issue = !r.erp.length ? 'nomap' : C.length ? 'more' : ''; if (!issue && !o.all) continue;
+      rows.push({ id: r.id, site: r.site, code: r.code, bp: r.bp, from: r.from_d, to: r.to_d, erp: r.erp, issue, cands: C }); }
+    // hợp đồng ERP có phát sinh 242 nhưng chưa thuộc HĐ nào → gợi ý HĐ phù hợp nhất
+    const orphan = free.map(e => { let best = null; for (const r of R) { const x = score(r, e); if (x.k >= 2 && (!best || x.k > best.k)) best = { id: r.id, site: r.site, code: r.code, ...x }; } return { ...e, best }; })
+      .sort((a, b) => (b.best ? b.best.k : 0) - (a.best ? a.best.k : 0) || b.n - a.n);
+    return { rows, orphan, tot: { contracts: R.length, nomap: R.filter(r => !r.erp.length).length, free: free.length, erp: E.length } };
+  }
+  // thêm (không thay) giá trị ERP vào HĐ; items = [{id, add:[...]}]
+  function addMap(items) { let n = 0; for (const it of [].concat(items || [])) { const r = get(`SELECT erp, bp FROM site_contract WHERE id=?`, +it.id); if (!r) continue;
+      const cur = J(r.erp), add = [].concat(it.add || []).map(s).filter(c => c && !cur.includes(c)); if (!add.length) continue;
+      run(`UPDATE site_contract SET erp=?, bp=coalesce(nullif(bp,''), ?) WHERE id=?`, JSON.stringify([...cur, ...add]), s(it.bp || ''), +it.id); n += add.length; }
+    return { n }; }
   const setMap = (id, erp) => { run(`UPDATE site_contract SET erp=? WHERE id=?`, JSON.stringify([].concat(erp || []).map(s).filter(Boolean)), +id); return true; };
   // ---- đối chiếu 242 / thanh toán ----
   function reconcile(o = {}) {
@@ -216,6 +241,6 @@ function make(db, all, get, run) {
     return { r, n: x.n, rate: x.rate, L0: x.L0, short: x.short, ...x.at, zeroLiab: zl, zeroRou: zr, yr }; }); }
   const setWht = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('wht_rental', ?)`, String(+v || 0)); return whtRate(); };
   const setRate = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('ifrs16_rate', ?)`, String(+v || 8)); return defRate(); };
-  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd, due, payMark, ifrsBook, ifrsOne };
+  return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd, due, payMark, mapReview, addMap, ifrsBook, ifrsOne };
 }
 module.exports = { make };

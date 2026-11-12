@@ -579,3 +579,11 @@ await p.evaluate(()=>window.api.q('stats'));
 - Dòng tiền thanh toán (v4.99.17): engine/payflow.js (Có 111/112/113, phân nhóm theo TK Nợ + partners_cat.kind, chủ nhà trạm = Nợ 24211/Có 331), trang payf (vPF, pfDetail).
 - Chi phí trả trước 242 (v4.99.18): engine/prepaid242.js (khoản = TK × hợp đồng, kỳ từ dist_from/to hoặc diễn giải, trạng thái expired/never/over/slow/fast/noperiod), trang p242 (vP2, p2Lines).
 - Hợp đồng thuê trạm (v4.99.20): engine/sitelease.js (site_contract; autoMap; reconcile dùng prepaid242.analyze/period; ifrs16), trang slease (vSL, slEdit, slIfrs); prepaid242.analyze = sai sót phân bổ theo đợt.
+
+## Nguyên tắc số tiền (bắt buộc, nhất quán)
+- MỌI số tính toán / báo cáo / IFRS / đối chiếu / đầu tư dùng cột `amount` = **Source Amount** (cài đặt `amount_basis` mặc định `'src'`). Không viết SQL tính toán trên `amount_acc`.
+- `amount_acc` (Accounted) chỉ dùng làm khoá nhận diện ổn định (chữ ký điều chỉnh sigOf / sigRow: `coalesce(amount_acc, amount)`) và để hiển thị song song.
+- Module mới phải đọc `amount`; nếu cần đối chiếu Accounted thì chỉ hiển thị, không cộng vào báo cáo.
+
+## Hợp đồng thuê trạm – ghép mã ERP
+- Tab "Ghép mã ERP": `mapReview` chấm điểm mã ERP (cột Contract có phát sinh 242) chưa thuộc HĐ nào: trùng mã HĐ +5, trùng phần đầu mã HĐ +4, chứa mã HĐ +3, mã trạm trong mã ERP +3, mã trạm trong diễn giải +2, cùng đối tượng +2; `addMap` chỉ THÊM mã.

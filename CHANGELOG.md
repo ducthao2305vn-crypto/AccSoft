@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.38
+- Hợp đồng thuê trạm: tab **Ghép mã ERP** – HĐ chưa ghép / có thể thiếu mã (gia hạn, đổi chủ, HĐ cũ), gợi ý mã ERP có phát sinh 242 kèm điểm & lý do (trùng mã HĐ, phần đầu mã, mã trạm trong mã / diễn giải, cùng đối tượng); chọn gợi ý mạnh ≥ 5 điểm, áp dụng hàng loạt (chỉ thêm, không xoá); danh sách mã ERP 242 chưa thuộc HĐ nào kèm HĐ gợi ý, ghép 1 chạm.
+- Ghi nhận nguyên tắc: mọi tính toán dùng Source Amount.
+
 ## 4.99.37
 - Sửa lệch 1 ngày khi nạp Excel ở máy giờ Timor (UTC+9) cho danh sách nhân viên, hóa đơn 1388 và chủ nhà trạm (ngày hết hạn HĐ trước đây có thể bị ghi thành chuỗi "Thu Oct 31 …").
 - Theo dõi đầu tư: khi tách chi tiết lần đầu, xoá số cũ của hạng mục tổng (đã chuyển xuống "Chưa phân bổ chi tiết") – tránh số cũ hiện lại khi xoá hết chi tiết.
