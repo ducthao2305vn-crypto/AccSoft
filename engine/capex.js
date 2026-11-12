@@ -74,7 +74,8 @@ function make(db, all, get, run) {
       // hạng mục tổng lần đầu được chi tiết: chuyển số liệu đang có của nó sang chi tiết "(Chưa phân bổ chi tiết)" để không mất kế hoạch
       if (!r.id && !get(`SELECT 1 x FROM cx_item WHERE parent=?`, p.id) && (NUM.some(k => n(p[k])) || ARR.some(k => arr(p[k]).some(x => x)))) {
         run(`INSERT INTO cx_item(year, parent, grp, stt, name, dept, b0, b1, b2, done, proc, pay, ast, proc_a, pay_a, ast_a, atype, status, note, sort, upd) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`,
-          p.year, p.id, p.grp, '', '(Chưa phân bổ chi tiết)', p.dept, n(p.b0), n(p.b1), n(p.b2), n(p.done), p.proc, p.pay, p.ast, p.proc_a, p.pay_a, p.ast_a, p.atype, p.status, 'Phần còn lại của hạng mục tổng – giảm dần khi thêm chi tiết', 999999); } } }
+          p.year, p.id, p.grp, '', '(Chưa phân bổ chi tiết)', p.dept, n(p.b0), n(p.b1), n(p.b2), n(p.done), p.proc, p.pay, p.ast, p.proc_a, p.pay_a, p.ast_a, p.atype, p.status, 'Phần còn lại của hạng mục tổng – giảm dần khi thêm chi tiết', 999999);
+        run(`UPDATE cx_item SET ${NUM.map(k => k + '=0').join(', ')}, ${ARR.map(k => k + "='[]'").join(', ')} WHERE id=?`, p.id); } } } // số của hạng mục tổng đã chuyển xuống chi tiết
     const K = Object.keys(v);
     if (r.id) run(`UPDATE cx_item SET ${K.map(k => k + '=?').join(', ')}, upd=datetime('now','localtime') WHERE id=?`, ...K.map(k => v[k]), +r.id);
     else { run(`INSERT INTO cx_item(${K.join(', ')}, upd) VALUES(${K.map(() => '?').join(', ')}, datetime('now','localtime'))`, ...K.map(k => v[k])); r.id = get(`SELECT max(id) id FROM cx_item`).id; if (v.sort == null) run(`UPDATE cx_item SET sort=id*10 WHERE id=?`, r.id); }

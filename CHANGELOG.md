@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.37
+- Sửa lệch 1 ngày khi nạp Excel ở máy giờ Timor (UTC+9) cho danh sách nhân viên, hóa đơn 1388 và chủ nhà trạm (ngày hết hạn HĐ trước đây có thể bị ghi thành chuỗi "Thu Oct 31 …").
+- Theo dõi đầu tư: khi tách chi tiết lần đầu, xoá số cũ của hạng mục tổng (đã chuyển xuống "Chưa phân bổ chi tiết") – tránh số cũ hiện lại khi xoá hết chi tiết.
+
 ## 4.99.36
 - Module mới **Theo dõi đầu tư** (nhóm Kết quả & báo cáo): nạp file mẫu DAUTU; 3 nhóm đầu tư thông thường / tổng trạm / tần số; cây hạng mục tổng → chi tiết nhiều cấp (thêm chi tiết lần đầu tự tách phần "Chưa phân bổ chi tiết"); ngân sách 3 năm, đã thực hiện; kế hoạch & THỰC HIỆN theo tháng cho mua sắm, thanh toán, lên tài sản – sửa trực tiếp trên bảng; chưa lên TS, trạng thái gợi ý; cảnh báo vượt ngân sách, thanh toán / lên TS trước mua sắm, chậm tiến độ, trạng thái mâu thuẫn; dòng tổng như mẫu (gồm / chưa gồm tần số, tổng trạm, thông thường, tần số); biểu đồ luỹ kế KH vs TH kèm sổ cái tăng TSCĐ; chuyển phần chưa lên TS sang năm sau; xuất Excel đúng bố cục.
 

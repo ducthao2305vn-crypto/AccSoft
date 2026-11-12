@@ -13,7 +13,7 @@ function make(db, all, get, run) {
   const s = v => v == null ? '' : String(v).replace(/\s+/g, ' ').trim();
   const xd = v => { // ngày: Date / số Excel / chuỗi → YYYY-MM-DD
     if (v == null || v === '') return '';
-    if (v instanceof Date && !isNaN(v)) return v.toISOString().slice(0, 10);
+    if (v instanceof Date && !isNaN(v)) return new Date(v.getTime() + 12 * 36e5 - v.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
     if (typeof v === 'number' && v > 1000 && v < 80000) return new Date(Math.round((v - 25569) * 864e5)).toISOString().slice(0, 10);
     const t = s(v), m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/); if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
     return /^\d{4}-\d{2}-\d{2}/.test(t) ? t.slice(0, 10) : t;

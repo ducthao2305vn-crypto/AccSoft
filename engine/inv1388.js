@@ -14,7 +14,7 @@ function make(db, all, get, run) {
   try { db.exec(`UPDATE inv_issue SET kind='cuoc' WHERE kind IS NULL`); } catch { }
   const s = v => v == null ? '' : String(v).replace(/\s+/g, ' ').trim(), num = v => { if (typeof v === 'number') return Number.isFinite(v) ? v : 0; let t = String(v || '').replace(/[\s\u00a0,]/g, '').replace(/[\u2212\u2012\u2013\u2014]/g, '-'), neg = false;
     if (/^\(.*\)$/.test(t)) { neg = true; t = t.slice(1, -1); } if (/-$/.test(t)) { neg = true; t = t.slice(0, -1); } const n = +t; return Number.isFinite(n) ? (neg ? -Math.abs(n) : n) : 0; };
-  const dmy = v => { if (v instanceof Date && !isNaN(v)) return v.toISOString().slice(0, 10); if (typeof v === 'number' && v > 20000) return new Date(Math.round((v - 25569) * 864e5)).toISOString().slice(0, 10);
+  const dmy = v => { if (v instanceof Date && !isNaN(v)) return new Date(v.getTime() + 12 * 36e5 - v.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); if (typeof v === 'number' && v > 20000) return new Date(Math.round((v - 25569) * 864e5)).toISOString().slice(0, 10);
     const m = s(v).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : s(v).slice(0, 10); };
   const ymOf = v => { const t = s(v), m = t.match(/^(\d{4})[_\-\/.](\d{1,2})$/); return m ? `${m[1]}-${m[2].padStart(2, '0')}` : ''; };
 
