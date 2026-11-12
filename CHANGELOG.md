@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.31
+- IFRS 16: cột **Nợ thuê về 0** (tháng sau lần trả cuối), **ROU về 0** (hết HĐ), **Còn (năm)**; bảng **Lộ trình về 0** – số dư nợ thuê / ROU tại 31/12 từng năm và số HĐ còn số dư; Excel thêm 2 cột về 0.
+
 ## 4.99.30
 - Cần thanh toán: theo dõi tiến độ trình ký – tick dòng (hoặc chọn hết) → "Đã trình ký" / "Đã chuyển tiền" / "Bỏ đánh dấu"; lưu theo HĐ × kỳ thanh toán; lọc Chưa trình / Đã trình / Đã chuyển kèm số đếm; hiện tổng tiền các dòng đang chọn; Excel thêm cột Tiến độ.
 

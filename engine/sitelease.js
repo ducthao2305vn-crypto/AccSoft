@@ -155,7 +155,11 @@ function make(db, all, get, run) {
     out.sort((a, b) => b.overdue - a.overdue || a.payFrom.localeCompare(b.payFrom) || String(a.site).localeCompare(String(b.site)));
     return { ym: m, ahead, lim, rows: out, tot: { n: out.length, rent: out.reduce((q, x) => q + (x.rent || 0), 0), wht: out.reduce((q, x) => q + (x.wht || 0), 0), overdue: out.filter(x => x.status === 'overdue').length } };
   }
-  function ifrs16All(o = {}) { return list(o).map(r => { const x = ifrs16(r.id, o); return x.err ? { r, err: x.err } : { r, n: x.n, rate: x.rate, L0: x.L0, short: x.short, ...x.at }; }); }
+  function ifrs16All(o = {}) { return list(o).map(r => { const x = ifrs16(r.id, o); if (x.err) return { r, err: x.err };
+    // tháng nợ thuê về 0 (sau lần trả cuối, không còn kỳ trả nào) và tháng ROU khấu hao hết; số dư 31/12 từng năm
+    const S = x.sch, lastPay = S.reduce((q, z, k) => z.pay > 0 ? k : q, 0), zl = (S.slice(lastPay).find(z => Math.abs(z.close) < 0.01) || S[S.length - 1] || {}).ym || '', zr = (S[S.length - 1] || {}).ym || '';
+    const yr = {}; for (const z of S) if (z.ym.endsWith('-12') || z === S[S.length - 1]) yr[z.ym.slice(0, 4)] = { liab: Math.max(0, z.close), nbv: z.nbv };
+    return { r, n: x.n, rate: x.rate, L0: x.L0, short: x.short, ...x.at, zeroLiab: zl, zeroRou: zr, yr }; }); }
   const setWht = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('wht_rental', ?)`, String(+v || 0)); return whtRate(); };
   const setRate = v => { run(`INSERT OR REPLACE INTO settings(k, v) VALUES('ifrs16_rate', ?)`, String(+v || 8)); return defRate(); };
   return { list, save, remove, importAoa, exportAoa, candidates, autoMap, setMap, reconcile, ifrs16, ifrs16All, defRate, setRate, whtRate, setWht, yearEnd, due, payMark };
