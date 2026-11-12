@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.49
+- Điều chỉnh dữ liệu: nút **Ẩn / Hiện tìm kiếm** (nhớ trạng thái); **Lọc trong kết quả** theo TK Nợ, TK Có, Đối tượng – danh sách chỉ gồm giá trị có trong kết quả tìm (VD chỉ bút toán thu/chi tiền) và lọc liên hoàn, kèm số dòng; danh sách giá trị mới (Hợp đồng, vị trí, biển số, mã TS) chỉ gồm giá trị có trong kết quả (giá trị khác: Nhập thủ công).
+
 ## 4.99.48
 - Lỗi nhập liệu: lỗi dòng tiền hiện cột **Dòng tiền đang ghi nhận**; Excel thêm cột dòng tiền.
 - Điều chỉnh dữ liệu (rà soát thủ công dòng tiền): cột dòng tiền hiện mã đang ghi nhận, ⚠ dòng nghi chọn sai và **gợi ý mã đúng** theo TK đối ứng; lọc "Chỉ dòng nghi chọn sai dòng tiền"; nút **Sửa theo gợi ý** (mỗi dòng theo gợi ý riêng); tick **Ghi nhận lỗi nhân viên** → tạo lỗi "Chọn sai loại dòng tiền (rà soát thủ công)" cho người nhập (trạng thái Đã khắc phục, ghi mã cũ → mã đúng), tính vào báo cáo / đánh giá nhân viên và giữ lại sau mỗi lần phân tích.
