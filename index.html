@@ -293,6 +293,12 @@ section:not(.hide){animation:pgIn .28s var(--ease)}
 .hidetg:hover{color:var(--brand-600);border-color:var(--brand-300);background:var(--brand-25)}
 .hidetg.on{border-style:solid;color:var(--brand-700);background:var(--brand-50);border-color:var(--brand-200)}
 .uihid{display:none!important}
+/* thu gọn thẻ: chỉ giữ dòng tiêu đề */
+.cardtg{border:none;background:transparent;color:var(--gray-500);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px;margin-left:6px;flex:none}
+.cardtg:hover{background:var(--brand-50);color:var(--brand-700)}
+.card.ccol>*:not([data-chead]):not(.hidetg){display:none!important}
+.card.ccol{padding-top:10px;padding-bottom:10px}
+.card.ccol>[data-chead]{margin-bottom:0!important}
 .uitools{display:flex;gap:2px}.uitools .btn{font-size:16px;padding:6px 9px}
 .brand{position:relative}
 .uimini{position:absolute;right:10px;top:22px;width:26px;height:26px;border-radius:8px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-500);cursor:pointer;font-size:16px;line-height:1;transition:all .2s}
@@ -428,6 +434,7 @@ tr.lgCur td{outline:2px solid #FA4700;outline-offset:-2px;background:#FFF6F2!imp
 </aside>
 <div class="main">
   <div class="topbar"><div><h1 id="pTitle">Tổng quan</h1><div class="sub" id="pSub"></div></div><div class="sp"></div>
+    <button class="btn ghost sm" id="btnColAll" title="Thu gọn / mở tất cả các thẻ của trang này (mỗi thẻ có nút ▾ / ▸ ở tiêu đề)">⇕ Thu gọn thẻ</button>
     <button class="btn light" id="btnFind" title="Tra cứu bút toán ERP (Ctrl+K): số chứng từ, nội dung, số tiền, đối tượng, hợp đồng, vị trí, biển số, người nhập…">🔎 Tra cứu bút toán</button>
     <button class="btn light" id="btnAnalyze" title="Chạy các quy tắc rà soát cho kỳ rà soát đang chọn"><svg class="icon"><use href="#i-refresh"/></svg>Phân tích dữ liệu<span class="count hide" id="anPending" style="margin-left:4px"></span></button>
     <button class="btn primary" id="btnImport"><svg class="icon"><use href="#i-upload"/></svg>Nạp dữ liệu</button></div>

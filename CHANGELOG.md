@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.50
+- Giao diện: **mọi thẻ có tiêu đề** trên tất cả các trang có nút ▾ / ▸ ở tiêu đề để thu gọn (chỉ giữ dòng tiêu đề) / mở; ghi nhớ theo trang + tên thẻ. Nút **⇕ Thu gọn thẻ** trên thanh tiêu đề thu gọn / mở tất cả thẻ của trang đang xem. Giữ các nút ẩn thẻ số liệu, banner, mô tả sẵn có.
+
 ## 4.99.49
 - Điều chỉnh dữ liệu: nút **Ẩn / Hiện tìm kiếm** (nhớ trạng thái); **Lọc trong kết quả** theo TK Nợ, TK Có, Đối tượng – danh sách chỉ gồm giá trị có trong kết quả tìm (VD chỉ bút toán thu/chi tiền) và lọc liên hoàn, kèm số dòng; danh sách giá trị mới (Hợp đồng, vị trí, biển số, mã TS) chỉ gồm giá trị có trong kết quả (giá trị khác: Nhập thủ công).
 

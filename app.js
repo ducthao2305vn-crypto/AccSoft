@@ -1823,7 +1823,16 @@ window.alert=msg=>{const s=String(msg??'');uiModal(s,{kind:/lỗi|error|không|c
     b.onclick=()=>{H[k]=!H[k];save();set(H[k])};el.parentNode.insertBefore(b,el);set(!!H[k])};
   const scan=r=>{if(!r.querySelectorAll)return;
     r.querySelectorAll('.kpis').forEach(el=>mk(el,'thẻ số liệu'));r.querySelectorAll('.hero').forEach(el=>mk(el,'banner'));
-    r.querySelectorAll('.subbar + .hint, .card > .hint').forEach(el=>{if(el.textContent.length>80)mk(el,'mô tả')})};
+    r.querySelectorAll('.subbar + .hint, .card > .hint').forEach(el=>{if(el.textContent.length>80)mk(el,'mô tả')});
+    // mỗi thẻ có tiêu đề → nút thu gọn / mở (nhớ theo trang + tiêu đề thẻ)
+    r.querySelectorAll('.card').forEach(card=>{if(card.dataset.ck)return;const h=card.querySelector(':scope > .card-h, :scope > .subbar, :scope > h3, :scope > h4, :scope > .ph, :scope > .row:first-child');if(!h)return;
+      const t=(h.querySelector('h3,h4,b,.crumb')||h).textContent.replace(/\s+/g,' ').trim().slice(0,50);if(!t)return;card.dataset.ck='1';h.dataset.chead='1';
+      const sec=card.closest('section,#drawer'),k='card_'+(sec?sec.id:'x')+'_'+t,b=document.createElement('button');b.className='cardtg';b.type='button';b.title='Thu gọn / mở thẻ';
+      const set=c=>{card.classList.toggle('ccol',c);b.textContent=c?'▸':'▾'};b.onclick=e=>{e.stopPropagation();H[k]=!H[k];save();set(H[k])};
+      if(h.matches('h3,h4'))h.appendChild(b);else{const hh=h.querySelector('h3,h4,h2');if(hh)hh.appendChild(b);else{const tt=h.querySelector('.crumb,b');(tt||h).insertAdjacentElement(tt?'afterend':'beforeend',b)}}set(!!H[k])})};
+  // thu gọn / mở tất cả thẻ của trang đang xem
+  const ba=document.getElementById('btnColAll');if(ba)ba.onclick=()=>{const sec=[...document.querySelectorAll('.main section')].find(x=>!x.classList.contains('hide'));if(!sec)return;
+    const C=[...sec.querySelectorAll('.card[data-ck]')];const col=!C.every(c=>c.classList.contains('ccol'));for(const c of C){const t=c.querySelector('[data-chead]');const tb=c.querySelector('.cardtg');if(tb&&c.classList.contains('ccol')!==col)tb.click()}};
   let T=0;new MutationObserver(()=>{clearTimeout(T);T=setTimeout(()=>scan(document.body),80)}).observe(document.body,{childList:true,subtree:true});scan(document.body)})();
 
 /* ===== v4.34: Dự báo báo cáo tài chính (B02 + B01) – nhiều mô hình ===== */
