@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.24
+- Hợp đồng thuê trạm: thẻ **Sắp hết hạn** – đã hết hạn (12 tháng gần đây), hết hạn ≤ 3 tháng, 3–6 tháng; lọc nhóm, nhấn đúp sửa, xuất Excel.
+
 ## 4.99.23
 - Hợp đồng thuê trạm – thẻ **Cần thanh toán**: tại kỳ đang xem (tháng của "Đến ngày", có thể nhìn trước 1–6 tháng) liệt kê các trạm có HĐ còn hiệu lực mà kỳ trả trước đã ghi nhận (Nợ 242, kỳ trên diễn giải) chưa phủ tới: chủ nhà, mã đối tượng, tài khoản ngân hàng / SĐT (Danh mục đối tác, Chủ nhà trạm), đã trả đến tháng nào, kỳ cần trả đề xuất (đúng điều khoản thanh toán, không vượt ngày hết hạn), tiền thuê trước thuế + WHT + tổng, số tháng quá hạn, cảnh báo HĐ sắp hết hạn / chưa map. Tình trạng: quá hạn, đến hạn tháng này, sắp đến hạn, chưa thấy ghi nhận trả trước. Xuất Excel.
 
