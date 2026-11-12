@@ -578,3 +578,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Đối chiếu 15611/14121 (v4.98): engine/goodsrec.js (report theo đối tượng × product, gr_assign, gr_status, settings gr_signers), engine/goodsrecx.js (Excel ExcelJS + HTML theo mẫu), handlers gr:preview/export/mail/assignMail; trang grec (vGR).
 - Dòng tiền thanh toán (v4.99.17): engine/payflow.js (Có 111/112/113, phân nhóm theo TK Nợ + partners_cat.kind, chủ nhà trạm = Nợ 24211/Có 331), trang payf (vPF, pfDetail).
 - Chi phí trả trước 242 (v4.99.18): engine/prepaid242.js (khoản = TK × hợp đồng, kỳ từ dist_from/to hoặc diễn giải, trạng thái expired/never/over/slow/fast/noperiod), trang p242 (vP2, p2Lines).
+- Hợp đồng thuê trạm (v4.99.20): engine/sitelease.js (site_contract; autoMap; reconcile dùng prepaid242.analyze/period; ifrs16), trang slease (vSL, slEdit, slIfrs); prepaid242.analyze = sai sót phân bổ theo đợt.

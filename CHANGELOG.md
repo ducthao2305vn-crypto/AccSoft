@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## 4.99.20
+- **Chi phí trả trước 242 – phát hiện sai sót phân bổ** theo từng đợt trả trước (kỳ ghi trên diễn giải dòng Nợ 242): book sai kỳ (phân bổ tháng ngoài kỳ), chậm / thiếu phân bổ, dồn kỳ (một tháng = k lần mức tháng), số tiền phân bổ sai, diễn giải ghi kỳ khác kỳ phân bổ, phân bổ vượt. Cột "Sai sót phân bổ", lọc "Có sai sót", chi tiết từng loại kèm các tháng.
+- **Module Hợp đồng thuê trạm** (Công nợ phải trả → Hợp đồng thuê trạm):
+  - Danh mục hợp đồng theo mẫu List contract (mã HĐ, kỳ thanh toán, từ – đến, giá / tháng, khoản mục, mã vị trí); nạp Excel (cập nhật / thêm, giữ mapping), thêm / sửa / xoá, xuất Excel.
+  - Map với hạch toán: tự map theo mã hợp đồng ("Mã_Tên" trong cột Contract ERP) hoặc mã trạm; sửa tay – tick gợi ý hoặc thêm giá trị Contract.
+  - Đối chiếu thanh toán & 242: tháng chưa thanh toán / chưa ghi nhận trả trước, thanh toán sai số tiền (so giá × số tháng, cho phép gross-up thuế 10%), kỳ thanh toán khác điều khoản / ngoài thời hạn HĐ, sai sót phân bổ 242, chưa map.
+  - IFRS 16: nợ thuê (PV các khoản trả trước theo kỳ thanh toán, lãi suất mặc định sửa được, từng HĐ có thể đặt riêng), ROU, khấu hao, lãi; số dư đến ngày, phần ngắn hạn, lãi + khấu hao năm so với tiền thuê; miễn trừ HĐ ≤ 12 tháng; lịch chi tiết từng HĐ và xuất Excel.
+
 ## 4.99.19
 - Rà soát Source Amount: các điều chỉnh đã lưu (đổi hợp đồng 331, mã tài sản / trường dữ liệu, điều chỉnh mã dòng tiền B03, gán / loại giao dịch nội bộ) nhận diện bút toán theo "chữ ký" gồm số tiền – nay chữ ký luôn dùng Accounted Amount nên không bị mất khi số tiền báo cáo đổi sang Source Amount hoặc nạp lại dữ liệu.
 - Đổi "Số tiền dùng cho báo cáo" đánh dấu các tháng cần phân tích lại (quy tắc rà soát lỗi tính theo số tiền mới).
