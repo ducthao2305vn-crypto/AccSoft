@@ -2,6 +2,7 @@
 // Điều chỉnh các trường quản trị của bút toán (không sửa dữ liệu gốc): Hợp đồng, Mã vị trí (Location), Biển số xe, Loại dòng tiền.
 // Hợp đồng / vị trí / biển số lưu ở bảng field_adj (theo id bút toán + chữ ký nội dung); dòng tiền dùng chung bảng cf_adj của B03.
 const FIELDS = { contract: { col: 'contract', name: 'Hợp đồng' }, location: { col: 'location', name: 'Mã vị trí (Location)' }, plate: { col: 'plate', name: 'Biển số xe' }, dept: { col: 'department_sub', name: 'Phòng ban (Department Sub)' }, ar: { col: 'advance_request', name: 'Đề nghị tạm ứng (Advance Request)' }, cf: { col: 'cashflow', name: 'Loại dòng tiền' }, asset: { col: 'asset', name: 'Mã tài sản (Asset)' } };
+const RS = require('./rules');
 const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+(r.aa ?? r.a) || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
 
 function make(db, all, run, okYm, FIN) {
@@ -29,7 +30,7 @@ function make(db, all, run, okYm, FIN) {
     const CFN = (FIN.cfRows ? null : null), out = rows.slice(0, lim).map(r => {
       const o2 = { ...r, sig: sigOf(r), cash: CASH(r.dr) !== CASH(r.cr) };
       for (const k of ['contract', 'location', 'plate', 'dept', 'asset']) { const x = adj.get(r.id + '|' + k); o2[k + 'New'] = x ? x.value : null; o2[k + 'Note'] = x ? x.note : ''; }
-      const c = cfa.get('c:' + o2.sig); o2.cfNew = c ? c.code : null; o2.cfNote = c ? c.note : '';
+      const c = cfa.get('c:' + o2.sig); o2.cfNew = c ? c.code : null; o2.cfNote = c ? c.note : ''; if (o2.cash) { const g = RS.cfSuggest(o2.dr, o2.cr), e = RS.cfCode(o2.cf); o2.cfSug = g.b03; o2.cfCur = e; o2.cfBad = !!(e && (e === 'TR' || (g.fixed && e !== g.b03) || (CASH(o2.dr) && ['02','03','04','05','07','21','23','25','32','34','35','36'].includes(e)) || (!CASH(o2.dr) && ['01','06','22','24','26','27','31','33'].includes(e)))); }
       return o2;
     });
     return { total: rows.length > lim ? lim + '+' : rows.length, rows: out, truncated: rows.length > lim };

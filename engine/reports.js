@@ -13,7 +13,7 @@ const emailOf = u => String(u || '').split(/[_\s]/).find(x => /^[\w.+-]+@[\w-]+(
 
 const errRow = e => ({
   'Nhóm': GROUPS[GROUP[e.k]], 'Mức': SEV[e.sev], 'Trạng thái': ST[e.status], 'Loại lỗi': RULE[e.k]?.n, 'Chi tiết': e.msg, 'Cần chỉnh sửa': FIX[e.k] || '',
-  'Ngày HT': vnDate(e.date), 'Chứng từ': e.doc, 'Line': e.line, 'TK Nợ': e.drName, 'TK Có': e.crName, 'Khoản mục (Type of cost)': e.tcost || '', 'Số tiền': e.amt,
+  'Ngày HT': vnDate(e.date), 'Chứng từ': e.doc, 'Line': e.line, 'TK Nợ': e.drName, 'TK Có': e.crName, 'Khoản mục (Type of cost)': e.tcost || '', 'Dòng tiền ghi nhận': e.cf || '', 'Số tiền': e.amt,
   'Diễn giải': e.desc, 'Bộ phận': e.dept, 'Người nhập': e.user, 'Ghi chú kiểm soát': e.note || '', 'Cập nhật': e.at || '',
 });
 function book(sheets) {

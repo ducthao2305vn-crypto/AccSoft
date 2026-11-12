@@ -122,6 +122,7 @@ const RULES=[
   f:r=>(r._schema>=2||r._enriched)&&(isInv(r.dr)||isInv(r.cr))&&!r.product&&`TK ${isInv(r.dr)?r.dr:r.cr} không có Product`},
 ];
 const FIX={
+ CF_MANUAL:'Đã được kế toán điều chỉnh lại loại dòng tiền – nhân viên lưu ý chọn đúng Cashflow activities theo TK đối ứng ở các lần sau.',
  CF_MISSING:'Chọn Cashflow activities cho bút toán thu / chi tiền (hoặc điều chỉnh ở Điều chỉnh dữ liệu → Loại dòng tiền).',
  CF_WRONG:'Chọn lại Cashflow activities đúng bản chất (thu / chi, TK đối ứng) – hoặc điều chỉnh ở Điều chỉnh dữ liệu → Loại dòng tiền.',
  AP3311_NO_CONTRACT:'Bổ sung trường Contract (số hợp đồng / PO) trên dòng 3311 – nhất là bút toán ghi nhận công nợ và thanh toán.',
@@ -170,6 +171,7 @@ const FIX={
 };
 // Quy tắc cần nhìn toàn bộ dữ liệu – được tính bằng SQL trong engine/setrules.js
 const SET_RULES=[
+ {k:'CF_MANUAL',s:'M',n:'Chọn sai loại dòng tiền (rà soát thủ công)',d:'Kế toán rà soát và điều chỉnh lại loại dòng tiền (Cashflow activities) của bút toán thu / chi tiền – ghi nhận là lỗi của người nhập để đánh giá. Lỗi được tạo khi điều chỉnh dòng tiền ở Điều chỉnh dữ liệu (tick "Ghi nhận lỗi nhân viên").'},
  {k:'INV_NEGATIVE',s:'H',n:'Xuất kho vượt tồn (âm kho)',d:'Giá trị luỹ kế theo mặt hàng bị âm tại thời điểm xuất – xuất quá số đã nhập. Chỉ xét mặt hàng có chứng từ đầu tiên trong dữ liệu là phiếu nhập từ ngoài kho có số lượng (tránh báo nhầm hàng tồn từ trước kỳ).'},
  {k:'DOC_MULTI_MONTH',s:'M',n:'Chứng từ trải nhiều kỳ',d:'Các dòng của cùng một số chứng từ có ngày hạch toán thuộc các tháng khác nhau.'},
  {k:'SPLIT_PAYMENT',s:'M',n:'Nghi chia nhỏ khoản chi',d:'Cùng đối tượng nhận tiền có từ 3 chứng từ chi tiền mặt/ngân hàng khác nhau trở lên trong cùng một ngày.'},
@@ -217,4 +219,4 @@ const GROUP=Object.fromEntries(ALL_RULES.map(r=>[r.k,AUDIT_WHY[r.k]?'audit':'sta
 const GROUPS={staff:'Sai sót nhân viên',audit:'Sai sót dễ bị kiểm toán'};
 const meta=()=>({rules:ALL_RULES.map(({k,s,n,d})=>({k,s,n,d,fix:FIX[k]||'',g:GROUP[k],why:AUDIT_WHY[k]||''})),status:ST,groups:GROUPS});
 const RULES_VERSION=16; // tăng khi thay đổi quy tắc để ứng dụng tự kiểm tra lại dữ liệu cũ
-module.exports={CFG,CFG_DEFAULT,setConfig,GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};
+module.exports={cfSuggest:(dr,cr)=>{const rec=CASH3(dr),au=rec?cfCls(cr,CF_IN):cfCls(dr,CF_OUT);return {b03:au,erp:CF_ERP[au]||'',fixed:!['06','07','02'].includes(au)}},cfCode,CFG,CFG_DEFAULT,setConfig,GROUP,GROUPS,RULES_VERSION,RULES,SET_RULES,ALL_RULES,FIX,ST,checkRow,errKey,meta,isExp,isRev,code,fmt2};

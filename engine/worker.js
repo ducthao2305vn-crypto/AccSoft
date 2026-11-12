@@ -219,6 +219,9 @@ function setRules(scope = {}) {
     for (const r of db.prepare(`SELECT ${SELR}, g.n FROM entries e JOIN (SELECT substr(acc_debit,1,3) a, substr(acc_credit,1,3) b, count(*) n FROM entries
         GROUP BY 1,2 HAVING count(*)<=2) g ON g.a=substr(e.acc_debit,1,3) AND g.b=substr(e.acc_credit,1,3) WHERE 1${S('e.')}`).all())
       insErr.run(r.id, 'RARE_PAIR', 'L', `Nợ ${r.dr.slice(0, 3)} / Có ${r.cr.slice(0, 3)} chỉ có ${r.n} lần`, keyOf('RARE_PAIR', r));
+  // lỗi ghi nhận thủ công khi rà soát (VD chọn sai dòng tiền) – giữ lại sau mỗi lần phân tích
+  try { const has = db.prepare(`SELECT 1 x FROM errors WHERE err_key=?`);
+    for (const m of db.prepare(`SELECT m.* FROM err_manual m JOIN entries e ON e.id=m.entry_id WHERE 1${S('e.')}`).all()) if (!has.get(m.err_key)) insErr.run(m.entry_id, m.rule, m.sev, m.msg, m.err_key); } catch { }
   db.exec('COMMIT');
 }
 

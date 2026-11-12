@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.48
+- Lỗi nhập liệu: lỗi dòng tiền hiện cột **Dòng tiền đang ghi nhận**; Excel thêm cột dòng tiền.
+- Điều chỉnh dữ liệu (rà soát thủ công dòng tiền): cột dòng tiền hiện mã đang ghi nhận, ⚠ dòng nghi chọn sai và **gợi ý mã đúng** theo TK đối ứng; lọc "Chỉ dòng nghi chọn sai dòng tiền"; nút **Sửa theo gợi ý** (mỗi dòng theo gợi ý riêng); tick **Ghi nhận lỗi nhân viên** → tạo lỗi "Chọn sai loại dòng tiền (rà soát thủ công)" cho người nhập (trạng thái Đã khắc phục, ghi mã cũ → mã đúng), tính vào báo cáo / đánh giá nhân viên và giữ lại sau mỗi lần phân tích.
+
 ## 4.99.47
 - Báo cáo & thông báo: nhấn một loại lỗi (hoặc người nhập) → mở danh sách bút toán của loại lỗi đó theo tháng đang chọn (tab Chưa xử lý).
 - Quy tắc mới: **Chọn sai loại dòng tiền** (mã THU cho bút toán chi tiền và ngược lại; mã 04xx chuyển nội bộ cho thu/chi bên ngoài; TK đối ứng xác định rõ loại dòng tiền – 334 → 0103, 3334 → 0105, 211/213/241 → 0201, 128 → 0203/0204, 22x → 0205/0206, 515 → 0207, 411/341/421 → 03xx, 131/511 → 0101 – mà chọn mã khác) và **Thu / chi tiền thiếu loại dòng tiền**; bút toán đã điều chỉnh loại dòng tiền (Điều chỉnh dữ liệu) không báo lỗi và lỗi cũ tự chuyển Đã khắc phục. Tự rà soát lại (quy tắc v16).
