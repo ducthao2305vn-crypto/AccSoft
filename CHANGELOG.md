@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.25
+- Cần thanh toán: bảng tổng hợp **theo ngân hàng** (số trạm, quá hạn, tiền thuê, WHT, tổng, %); nhấn ngân hàng để lọc chi tiết. Excel thêm sheet theo ngân hàng và thông tin chủ nhà (ngân hàng, chi nhánh, số TK, tên TK, SWIFT, tiền tệ, ví, SĐT, người liên hệ, email, địa chỉ, ghi chú).
+
 ## 4.99.24
 - Hợp đồng thuê trạm: thẻ **Sắp hết hạn** – đã hết hạn (12 tháng gần đây), hết hạn ≤ 3 tháng, 3–6 tháng; lọc nhóm, nhấn đúp sửa, xuất Excel.
 

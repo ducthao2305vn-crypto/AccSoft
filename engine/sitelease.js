@@ -118,7 +118,7 @@ function make(db, all, get, run) {
     const m = s(o.ym) || new Date().toISOString().slice(0, 7), ahead = Math.max(0, +o.ahead || 0), lim = P.ymsOf(m + '-01', '9999-12-01')[ahead] || m, W = whtRate() / 100;
     const asOf = (() => { const d = new Date(+lim.slice(0, 4), +lim.slice(5, 7), 0); return d.toISOString().slice(0, 10); })();
     const R = reconcile({ ...o, asOf }), info = new Map(all(`SELECT * FROM ap331_partner`).map(r => [r.bp, r]));
-    let bank = new Map(), ll = new Map(); try { for (const b of all(`SELECT * FROM pc_bank ORDER BY is_default DESC, id`)) if (!bank.has(b.bp)) bank.set(b.bp, b); } catch { } try { ll = new Map(all(`SELECT * FROM landlord`).map(r => [r.bp, r])); } catch { }
+    let bank = new Map(), ll = new Map(); try { for (const b of all(`SELECT * FROM pc_bank ORDER BY is_default DESC, id`)) if (!bank.has(b.bp)) bank.set(b.bp, b); } catch { } try { ll = new Map(all(`SELECT * FROM landlord`).map(r => [r.bp, r])); } catch { } const ct = new Map(); try { for (const c of all(`SELECT * FROM pc_contact ORDER BY id`)) if (!ct.has(c.bp)) ct.set(c.bp, c); } catch { }
     const out = [];
     for (const r of R) {
       if (r.to_d && r.to_d.slice(0, 7) < m) continue; if (r.from_d && r.from_d.slice(0, 7) > lim) continue;
@@ -127,7 +127,7 @@ function make(db, all, get, run) {
       const term = Math.max(1, +r.term || 1), endYm = r.to_d ? r.to_d.slice(0, 7) : '9999-12', M = P.ymsOf(next + '-01', '9999-12-01').slice(0, term).filter(x => x <= endYm);
       const overdue = P.ymsOf(next + '-01', m + '-01').filter(x => x < m).length, rent = r.rent != null ? r.rent * M.length : null, wht = rent != null ? rent * W / (1 - W) : null;
       const bp = r.bp || '', l = ll.get(bp) || {}, b = bank.get(bp) || null, nm = (info.get(bp) || {}).name || String(bp).replace(/^[A-Za-z]+_[A-Za-z]*_?\d+_?/, '');
-      out.push({ id: r.id, site: r.site, code: r.code, tcost: r.tcost, bp, landlord: nm, phone: l.phone || '', bank: b ? `${b.bank || ''} ${b.acc_no || ''}`.trim() : (l.bank_acc ? `${l.bank_name || ''} ${l.bank_acc}`.trim() : ''), accName: b ? b.acc_name || '' : l.acc_holder || '',
+      out.push({ id: r.id, site: r.site, code: r.code, tcost: r.tcost, bp, landlord: nm, phone: l.phone || '', bank: b ? `${b.bank || ''} ${b.acc_no || ''}`.trim() : (l.bank_acc ? `${l.bank_name || ''} ${l.bank_acc}`.trim() : ''), accName: b ? b.acc_name || '' : l.acc_holder || '', bankName: (b ? b.bank : l.bank_name) || '', accNo: (b ? b.acc_no : l.bank_acc) || '', branch: b ? b.branch || '' : '', swift: b ? b.swift || '' : '', ccy: b ? b.currency || '' : '', emoney: b ? !!b.emoney : false, address: l.address || '', email: (ct.get(bp) || {}).email || '', contact: (ct.get(bp) || {}).name || '', phone2: (ct.get(bp) || {}).phone || '', llNote: l.note || '',
         rentM: r.rent, rentNote: r.rent_note, term, from: r.from_d, to: r.to_d, paidTo: cov, payFrom: M[0] || next, payTo: M[M.length - 1] || next, months: M.length, rent, wht, total: rent != null ? rent + wht : null, overdue, status: !cov && f0 < m ? 'nodata' : overdue > 0 ? 'overdue' : next === m ? 'due' : 'soon', expiring: r.to_d && r.to_d.slice(0, 7) <= lim, nomap: !r.erp.length });
     }
     out.sort((a, b) => b.overdue - a.overdue || a.payFrom.localeCompare(b.payFrom) || String(a.site).localeCompare(String(b.site)));
