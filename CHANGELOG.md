@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.44
+- Lỗi nhập liệu: cột **Khoản mục (Type of cost)** trong bảng cảnh báo (TK chi phí 6xx/8xx để trống hiện "(trống)" màu đỏ); ô lọc theo khoản mục (gợi ý danh sách, chọn "(trống)" để lọc dòng thiếu); Excel xuất thêm cột khoản mục.
+
 ## 4.99.43
 - Lỗi nhập liệu: danh sách "Loại lỗi" đếm theo đúng trạng thái (Chưa xử lý / Đang xử lý / …), tháng, người nhập, bộ phận, mức đang lọc; loại đã xử lý hết không còn hiện trong tab Chưa xử lý. Nhãn "Đổi trạng thái N dòng đã tick" tự đặt lại khi tải lại bảng.
 
