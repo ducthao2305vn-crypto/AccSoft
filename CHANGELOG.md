@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.33
+- Đầu tư ra nước ngoài: nút **Điền báo cáo Word (Phụ lục 01)** – chọn file Word báo cáo của đơn vị, AccSoft điền bảng tình hình tài chính (cuối kỳ / đầu năm / %), bảng KQ SXKD (TH 2 năm trước, năm trước, năm nay + %), đoạn tổng tài sản và TSCĐ (tăng trong kỳ, nguyên giá, hao mòn, GTCL); giữ nguyên định dạng; bôi vàng nội dung đơn vị bổ sung (thuê bao, kế hoạch, vốn đầu tư / thu hồi, đầu tư mua sắm, nhân sự, thuế NSNN, ví điện tử, lời văn đánh giá).
+
 ## 4.99.32
 - IFRS 16 tính **đúng theo mẫu IFRS16_Viettel_Timor**: kỳ đầu trả trước (Down payment) cộng vào ROU, các kỳ sau trả ở tháng 1 + k·kỳ TT, nợ thuê = XNPV(lãi năm, khoản trả còn lại, ngày thực/365), lãi = khoản trả − giảm nợ, ROU khấu hao đều; lãi suất mặc định 9.0175%. Đối chiếu AN0011_1: PV 2,845.72, ROU 3,235.72, KH 53.93 – khớp file.
 - Lịch từng trạm hiển thị như khối "Contract data / Calculation" của mẫu; Excel 1 trạm theo mẫu; nút **Xuất theo mẫu IFRS16 (từng trạm)**: sheet Interest rate, List contract, 01. Office / 02. Warehouse / 03. Showroom / 04. BTS – mỗi trạm 1 khối cột, cột trái cộng tổng.

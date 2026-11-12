@@ -2887,7 +2887,7 @@ async function vOI(){const H=$('#oiBody'),F=OIF,P=oiPeriod(),Y=+F.y;
     ${F.mode==='r'?`<label>Từ tháng <input type="month" id="oiF" value="${P.from}"></label><label>Đến tháng <input type="month" id="oiT" value="${P.to}"></label>`:''}
     <label title="Áp dụng khi bút toán không có ngày đến hạn (Due date)">Hạn thanh toán <input type="number" id="oiTerm" value="${F.term||30}" style="width:60px"> ngày</label>
     <label title="Hàng tồn kho lưu quá số tháng này tính là quá hạn">Hạn lưu kho <input type="number" id="oiKeep" value="${F.keepM||12}" style="width:60px"> tháng</label>
-    <button class="btn primary" id="oiGo">${ic('trend')}Lập báo cáo</button><button class="btn" id="oiXls" ${OIR?'':'disabled'}>${ic('download')}Xuất Excel (6 mẫu)</button>
+    <button class="btn primary" id="oiGo">${ic('trend')}Lập báo cáo</button><button class="btn" id="oiXls" ${OIR?'':'disabled'}>${ic('download')}Xuất Excel (6 mẫu)</button><button class="btn" id="oiDoc" ${OIR?'':'disabled'} title="Chọn file Word báo cáo của đơn vị (Phụ lục 01) – AccSoft điền số liệu kỳ này, giữ nguyên định dạng, bôi vàng nội dung đơn vị cần bổ sung">${ic('download')}Điền báo cáo Word (Phụ lục 01)</button>
     <span class="hint">Kỳ: <b>${esc(P.label)} ${Y}</b> (${P.from} → ${P.to}); so sánh cùng kỳ ${Y-1}, ${Y-2}</span></div></div>
    <div class="card" style="padding:10px 16px"><div class="tabs" id="oiTabs">${[['01','01 · SXKD & tài chính'],['02','02 · Chỉ tiêu tài chính'],['03','03 · Nợ phải trả'],['04','04 · Hàng tồn kho'],['05','05 · Nợ phải thu'],['06','06 · Quy trình, quy chế']].map(([k,v])=>`<button data-oit="${k}" class="${F.tab===k?'on':''}">${v}</button>`).join('')}</div></div>
    <div id="oiRes"></div>`;
@@ -2895,7 +2895,8 @@ async function vOI(){const H=$('#oiBody'),F=OIF,P=oiPeriod(),Y=+F.y;
   $('#oiMode').onchange=()=>{rd();F.i=1;OIR=null;vOI()};$('#oiY').onchange=()=>{rd();OIR=null;vOI()};if($('#oiI'))$('#oiI').onchange=()=>{rd();OIR=null;vOI()};
   $('#oiTabs').onclick=e=>{const b=e.target.closest('[data-oit]');if(!b)return;F.tab=b.dataset.oit;ls.set('oiPick',F);$$('#oiTabs button').forEach(x=>x.classList.toggle('on',x===b));oiDraw()};
   $('#oiGo').onclick=async()=>{rd();const P=oiPeriod();$('#oiRes').innerHTML='<div class="card"><span class="spin"></span> Đang tính số liệu 6 mẫu…</div>';
-    try{OIR=await aq('oiCompute',{from:P.from,to:P.to,term:F.term,keepM:F.keepM});OIR.label=P.label;OIP=OIR.m06;$('#oiXls').disabled=false;oiDraw()}catch(e){$('#oiRes').innerHTML=`<div class="card neg">Lỗi: ${esc(e.message||e)}</div>`}};
+    try{OIR=await aq('oiCompute',{from:P.from,to:P.to,term:F.term,keepM:F.keepM});OIR.label=P.label;OIP=OIR.m06;$('#oiXls').disabled=false;$('#oiDoc').disabled=false;oiDraw()}catch(e){$('#oiRes').innerHTML=`<div class="card neg">Lỗi: ${esc(e.message||e)}</div>`}};
+  $('#oiDoc').onclick=async()=>{if(!OIR)return;try{const r=await api.oiWord(OIR);if(r)oiMsg('Đã điền báo cáo Word: '+r.file+' · nội dung bôi vàng = đơn vị bổ sung')}catch(e){alert(e.message||e)}};
   $('#oiXls').onclick=async()=>{if(!OIR)return;oiReadM01();const f=await api.oiExport({...OIR,m06:OIP||[]},{label:OIR.label});if(f)oiMsg('Đã xuất '+f)};
   if(!OIP)OIP=await aq('oiProcList');
   if(OIR&&OIR.from===P.from&&OIR.to===P.to)oiDraw();else if(F.tab==='06')oiDraw();else $('#oiRes').innerHTML='<div class="card mut">Chọn kỳ rồi bấm <b>Lập báo cáo</b>. Mẫu 06 (quy trình, quy chế) xem / sửa được ngay ở thẻ 06.</div>'}

@@ -232,7 +232,11 @@ function make(db, all, get, run, FIN) {
     const { from, to } = o, term = +o.term || 30, keepM = +o.keepM || 12;
     // Mẫu 02: nợ quá hạn (≥ 6 tháng) cuối kỳ và đầu năm – từ các mục nợ phải trả công nợ I–III của mẫu 03 (bỏ quỹ 353), cùng nguyên tắc xếp chiều theo thời điểm
     const a = m03(from, to, term), DS = a.secs.filter(x => x.no !== 'IV'), od = { cb: DS.reduce((s, x) => s + x.rows.reduce((t, r) => t + r.odCb, 0), 0), ob: DS.reduce((s, x) => s + x.rows.reduce((t, r) => t + (r.odY || 0), 0), 0) };
-    return { from, to, term, keepM, m01: m01(from, to), m02: m02(from, to, od), m03: a, m04: m04(from, to, keepM), m05: m05(from, to, term), m06: procList() };
+    // tài sản cố định cho báo cáo Word: nguyên giá 211/212/213, hao mòn 214 đến cuối kỳ, tăng nguyên giá trong kỳ (Nợ 211/212/213, Có TK khác nhóm 21x)
+    const bal = pre => get(`SELECT ifnull(sum(CASE WHEN acc_debit LIKE '${pre}%' THEN amount ELSE 0 END),0) - ifnull(sum(CASE WHEN acc_credit LIKE '${pre}%' THEN amount ELSE 0 END),0) v FROM entries WHERE ym<=? AND (acc_debit LIKE '${pre}%' OR acc_credit LIKE '${pre}%')`, to).v;
+    const inc = get(`SELECT ifnull(sum(amount),0) v FROM entries WHERE ym>=? AND ym<=? AND (acc_debit LIKE '211%' OR acc_debit LIKE '212%' OR acc_debit LIKE '213%') AND NOT (acc_credit LIKE '211%' OR acc_credit LIKE '212%' OR acc_credit LIKE '213%')`, from, to).v;
+    const fa = { cost: (bal('211') + bal('212') + bal('213')) / 1e6, dep: -bal('214') / 1e6, inc: inc / 1e6 };
+    return { from, to, term, keepM, fa, m01: m01(from, to), m02: m02(from, to, od), m03: a, m04: m04(from, to, keepM), m05: m05(from, to, term), m06: procList() };
   }
   // Dùng cho module Giám sát tài chính: cùng nguyên tắc B01; tuổi nợ quá hạn [chưa đến hạn, < 6 tháng, 6 tháng–1 năm, 1–2, 2–3, ≥ 3 năm] tại cuối kỳ và đầu kỳ
   const ageG = (p, p0 = []) => { const b = bk(p, [180, 365, 730, 1095]), b0 = bk(p0, [180, 365, 730, 1095]); return { ag: b, agOb: b0, bad: b[2] + b[3] + b[4] + b[5], badOb: b0[2] + b0[3] + b0[4] + b0[5] }; };

@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('api', {
   khExport: (P1, P6, o) => ipcRenderer.invoke('kh:export', P1, P6, o),
   khImport: () => ipcRenderer.invoke('kh:import'),
   oiExport: (R, o) => ipcRenderer.invoke('oi:export', R, o),
+  oiWord: R => ipcRenderer.invoke('oi:word', R),
   oiImport06: () => ipcRenderer.invoke('oi:import06'),
   apExport: (bps, o, kinds) => ipcRenderer.invoke('ap:export', bps, o, kinds),
   apPdfPreview: (bp, o) => ipcRenderer.invoke('ap:pdfPreview', bp, o),
