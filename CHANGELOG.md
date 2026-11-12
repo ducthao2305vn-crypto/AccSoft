@@ -1,5 +1,14 @@
 # Lịch sử phiên bản
 
+## 4.99.17
+- **Báo cáo Dòng tiền thanh toán** (Kết quả & báo cáo → Dòng tiền thanh toán): mọi bút toán ghi Có tiền 111 / 112 / 113 (bỏ chuyển tiền giữa quỹ, ngân hàng), chia theo tháng / quý / năm:
+  1. Thanh toán quốc tế – đối tượng nhóm Đối tác quốc tế, Roaming;
+  2. Thanh toán nội bộ – Nội bộ tập đoàn (VTG, TFU…), Trung tâm / chi nhánh;
+  3. Thanh toán đối tác nội địa – chủ nhà trạm, đối tác Timor / hợp đồng khác;
+  4. Chi tạm ứng nhân viên – Nợ 141;
+  5. Chi khác – thuế 333, lương 334, gửi có kỳ hạn 128, đối tượng chưa phân loại.
+  Mở từng nhóm đến đối tượng, nhấn đúp dòng / ô kỳ để xem chứng từ, xuất Excel. Nhóm đối tượng lấy từ Danh mục đối tượng.
+
 ## 4.99.16
 - Biên bản 14121 (PDF và Excel) chuyển sang **khổ ngang** như 15611 – cột tên mặt hàng rộng hơn, ít xuống dòng, nhiều dòng hơn mỗi trang.
 
