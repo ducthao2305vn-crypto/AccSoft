@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.67
+- Chi phí theo phòng ban → nút "⇄ Chuyển theo quy tắc khoản mục": nạp file Excel quy tắc (cột CODE ERP + Phòng Ban; trống / "Chưa phân" = nhiều phòng ban), tự khớp tên phòng ban với danh mục. Đối chiếu doanh thu (5xx/7xx) và chi phí (6xx/8xx, bỏ 911): bút toán có khoản mục chỉ thuộc 1 phòng ban mà ghi phòng ban khác → liệt kê theo nhóm (khoản mục × phòng ban đang ghi), chọn nhóm và chuyển hàng loạt về phòng ban đúng (điều chỉnh field_adj, không sửa dữ liệu gốc, trả lại được). Khoản mục "Chưa phân" giữ nguyên để phân thủ công. Sửa quy tắc từng khoản mục ngay trên bảng.
+
 ## 4.99.66
 - Chi phí theo phòng ban: sửa lỗi thỉnh thoảng nhấn đúp ra chi tiết trống dù bảng ngoài có số — Type of cost chứa xuống dòng / khoảng trắng lạ bị trình duyệt chuẩn hoá khi đi qua HTML nên không khớp. Nay lấy Type of cost theo chỉ số dòng gốc và so khớp đã chuẩn hoá khoảng trắng ở SQL.
 

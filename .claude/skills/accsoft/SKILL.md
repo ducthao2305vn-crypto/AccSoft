@@ -601,3 +601,4 @@ await p.evaluate(()=>window.api.q('stats'));
 
 - Chi tiết chi phí theo chiều (loccost.detail): tình trạng rà soát lưu ở `dim_mark(id, dim, st ok|wip|bad, note, at)`, ghi qua `locMark(d, ids, st, note)` (st rỗng = bỏ). Lọc Type of cost phải truyền vào SQL (tham số tc) — không lọc sau LIMIT.
 - So khớp Type of cost (hoặc mọi chuỗi gốc ERP) từ giao diện: không truyền chuỗi qua thuộc tính HTML (CR\/LF bị chuẩn hoá) — dùng chỉ số mảng; ở SQL so sánh qua NORM().
+- Quy tắc khoản mục → phòng ban: engine/tcdept.js, bảng `tc_dept(code, dept_raw, dept_code, name)`; dept_code rỗng = Chưa phân (nhiều phòng ban, không tự chuyển). Khi chuyển ghi Department Sub = tên gốc dùng nhiều nhất đang ánh xạ về mã danh mục đích (để báo cáo nhận đúng), qua faSet field dept.
