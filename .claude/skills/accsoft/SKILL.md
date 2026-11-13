@@ -600,3 +600,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Mỗi thẻ có tiêu đề thu gọn được; bảng dài có lọc trong kết quả; xuất Excel đúng những gì đang xem.
 
 - Chi tiết chi phí theo chiều (loccost.detail): tình trạng rà soát lưu ở `dim_mark(id, dim, st ok|wip|bad, note, at)`, ghi qua `locMark(d, ids, st, note)` (st rỗng = bỏ). Lọc Type of cost phải truyền vào SQL (tham số tc) — không lọc sau LIMIT.
+- So khớp Type of cost (hoặc mọi chuỗi gốc ERP) từ giao diện: không truyền chuỗi qua thuộc tính HTML (CR\/LF bị chuẩn hoá) — dùng chỉ số mảng; ở SQL so sánh qua NORM().

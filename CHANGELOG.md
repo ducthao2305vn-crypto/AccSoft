@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.66
+- Chi phí theo phòng ban: sửa lỗi thỉnh thoảng nhấn đúp ra chi tiết trống dù bảng ngoài có số — Type of cost chứa xuống dòng / khoảng trắng lạ bị trình duyệt chuẩn hoá khi đi qua HTML nên không khớp. Nay lấy Type of cost theo chỉ số dòng gốc và so khớp đã chuẩn hoá khoảng trắng ở SQL.
+
 ## 4.99.65
 - Chi phí theo phòng ban: sửa nhấn đúp không mở chi tiết khi đang lọc Type of cost; lọc Type of cost chuyển xuống truy vấn (trước đây bị cắt ở 30.000 dòng nên chi tiết thiếu, không khớp tổng); giới hạn chi tiết nâng lên 100.000 dòng.
 - Chi tiết bút toán (phòng ban / vị trí / xe): thêm Tình trạng rà soát từng dòng — Chính xác, Đang xử lý, Sai (kèm ghi chú, thời điểm), lưu bền trong bảng dim_mark; lọc theo tình trạng và đếm số dòng mỗi tình trạng.
