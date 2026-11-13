@@ -591,3 +591,10 @@ await p.evaluate(()=>window.api.q('stats'));
 ## Theo dõi đầu tư (engine/capex.js, trang `capex`)
 - `cx_item` cây hạng mục (parent), nhóm normal/station/freq; tháng proc/pay/ast (+ _a thực hiện); `acodes` = mã tài sản (cột Asset, `*` = tiền tố) → số TH tự động: Nợ 211/213 (lên TS), Nợ 241 (cip_a), Nợ 331/Có 11x có mã (pay_a). Gói thầu: vendor, cval, adv, appr; hạn mức `cx_limit`, KPI `cx_kpi_inv`.
 - `cx_ver` phiên bản kế hoạch (snapshot); `cipAging` 241 tồn đọng theo mã TS; `kpis`; `deptReport`.
+
+## Nguyên tắc trải nghiệm người dùng (bắt buộc khi viết giao diện mới)
+- Không bắt người dùng chọn lại cái đã rõ từ ngữ cảnh: mặc định theo bộ lọc đang dùng (VD tìm "chỉ bút toán thu/chi tiền" → trường điều chỉnh = Loại dòng tiền).
+- Nhớ lựa chọn gần nhất (ls.set) – trường, giá trị vừa áp dụng, bộ lọc, ẩn/hiện thẻ; sau thao tác giữ nguyên bộ lọc, vị trí cuộn, kết quả.
+- Danh sách chọn chỉ gồm giá trị hợp lệ theo ngữ cảnh (lọc liên hoàn, theo chiều thu/chi, theo kết quả đang xem) kèm số lượng; chặn lựa chọn sai và giải thích.
+- Thao tác hàng loạt: tick / chọn hết, áp dụng một lần, báo kết quả; có hoàn tác (bỏ điều chỉnh).
+- Mỗi thẻ có tiêu đề thu gọn được; bảng dài có lọc trong kết quả; xuất Excel đúng những gì đang xem.

@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.54
+- Điều chỉnh dữ liệu: tìm "Chỉ bút toán thu/chi tiền" → trường điều chỉnh mặc định **Loại dòng tiền** (tick ô này cũng đổi "Lọc theo" sang dòng tiền); nhớ trường đã chọn riêng cho chế độ thu/chi và chế độ thường; nhớ mã dòng tiền vừa áp dụng để chọn sẵn lần sau.
+- Ghi nguyên tắc trải nghiệm người dùng vào tài liệu phát triển (mặc định theo ngữ cảnh, nhớ lựa chọn, danh sách hợp lệ, thao tác hàng loạt).
+
 ## 4.99.53
 - Điều chỉnh dòng tiền: danh sách mã theo chiều bút toán đã chọn – Nợ TK tiền (thu) chỉ hiện mã THU (01, 06, 22, 24, 26, 27, 31, 33), Có TK tiền (chi) chỉ hiện mã CHI (02, 03, 04, 05, 07, 21, 23, 25, 32, 34, 35, 36); chọn lẫn thu và chi thì tách 2 nhóm; khi Áp dụng tự loại các dòng ngược chiều với mã đã chọn (có hỏi xác nhận).
 
