@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.51
+- Điều chỉnh dữ liệu: cột **Tình trạng** mỗi bút toán – "✔ Đã điều chỉnh" (trường đã chỉnh: HĐ / Vị trí / Biển số / Mã TS / Phòng ban / Dòng tiền, thời điểm) hoặc "Chưa điều chỉnh"; dòng đã điều chỉnh tô xanh nhạt; lọc trong kết quả theo Đã / Chưa điều chỉnh (kèm số dòng); Excel thêm cột Tình trạng.
+
 ## 4.99.50
 - Giao diện: **mọi thẻ có tiêu đề** trên tất cả các trang có nút ▾ / ▸ ở tiêu đề để thu gọn (chỉ giữ dòng tiêu đề) / mở; ghi nhớ theo trang + tên thẻ. Nút **⇕ Thu gọn thẻ** trên thanh tiêu đề thu gọn / mở tất cả thẻ của trang đang xem. Giữ các nút ẩn thẻ số liệu, banner, mô tả sẵn có.
 

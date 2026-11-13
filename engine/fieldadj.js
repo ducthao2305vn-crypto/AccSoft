@@ -26,11 +26,11 @@ function make(db, all, run, okYm, FIN) {
         e.description ds, e.created_by u, e.contract, e.location, e.plate, e.department_sub dept, e.cashflow cf, e.asset FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.id LIMIT ${lim + 1}`, ...a);
     const ids = rows.map(r => r.id), adj = new Map();
     for (let i = 0; i < ids.length; i += 500) { const c = ids.slice(i, i + 500); for (const x of all(`SELECT * FROM field_adj WHERE id IN (${c.map(() => '?').join(',')})`, ...c)) adj.set(x.id + '|' + x.field, x); }
-    const cfa = new Map(); try { for (const x of all(`SELECT sig, code, note FROM cf_adj`)) cfa.set(x.sig, x); } catch { }
+    const cfa = new Map(); try { for (const x of all(`SELECT sig, code, note, updated_at FROM cf_adj`)) cfa.set(x.sig, x); } catch { }
     const CFN = (FIN.cfRows ? null : null), out = rows.slice(0, lim).map(r => {
       const o2 = { ...r, sig: sigOf(r), cash: CASH(r.dr) !== CASH(r.cr) };
-      for (const k of ['contract', 'location', 'plate', 'dept', 'asset']) { const x = adj.get(r.id + '|' + k); o2[k + 'New'] = x ? x.value : null; o2[k + 'Note'] = x ? x.note : ''; }
-      const c = cfa.get('c:' + o2.sig); o2.cfNew = c ? c.code : null; o2.cfNote = c ? c.note : ''; if (o2.cash) { const g = RS.cfSuggest(o2.dr, o2.cr), e = RS.cfCode(o2.cf); o2.cfSug = g.b03; o2.cfCur = e; o2.cfBad = !!(e && (e === 'TR' || (g.fixed && e !== g.b03) || (CASH(o2.dr) && ['02','03','04','05','07','21','23','25','32','34','35','36'].includes(e)) || (!CASH(o2.dr) && ['01','06','22','24','26','27','31','33'].includes(e)))); }
+      for (const k of ['contract', 'location', 'plate', 'dept', 'asset']) { const x = adj.get(r.id + '|' + k); o2[k + 'New'] = x ? x.value : null; o2[k + 'Note'] = x ? x.note : ''; if (x) { (o2.adjF = o2.adjF || []).push(k); if (!o2.adjAt || x.updated_at > o2.adjAt) o2.adjAt = x.updated_at; } }
+      const c = cfa.get('c:' + o2.sig); o2.cfNew = c ? c.code : null; o2.cfNote = c ? c.note : ''; if (c) { (o2.adjF = o2.adjF || []).push('cf'); if (!o2.adjAt || (c.updated_at || '') > o2.adjAt) o2.adjAt = c.updated_at; } if (o2.cash) { const g = RS.cfSuggest(o2.dr, o2.cr), e = RS.cfCode(o2.cf); o2.cfSug = g.b03; o2.cfCur = e; o2.cfBad = !!(e && (e === 'TR' || (g.fixed && e !== g.b03) || (CASH(o2.dr) && ['02','03','04','05','07','21','23','25','32','34','35','36'].includes(e)) || (!CASH(o2.dr) && ['01','06','22','24','26','27','31','33'].includes(e)))); }
       return o2;
     });
     return { total: rows.length > lim ? lim + '+' : rows.length, rows: out, truncated: rows.length > lim };
