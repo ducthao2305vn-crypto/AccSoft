@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.64
+- Điều chỉnh trường → Phòng ban: danh sách giá trị chỉ lấy từ Danh mục phòng ban (mã — tên), không còn lấy phòng ban đang ghi nhận trong dữ liệu; bỏ nhập thủ công cho trường này.
+
 ## 4.99.63
 - Chi phí theo phòng ban: lọc liên hoàn Nhóm ↔ Khoản mục ↔ Type of cost, chọn theo thứ tự tuỳ ý; mỗi danh sách chỉ hiện giá trị còn hợp lệ theo các lựa chọn kia.
 
