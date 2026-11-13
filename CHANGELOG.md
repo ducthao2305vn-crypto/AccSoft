@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.52
+- Điều chỉnh dữ liệu: nút **📋 Báo cáo lỗi dòng tiền NV** (song ngữ Việt / Anh) cho kỳ đang tìm – sheet Tổng hợp theo nhân viên (để trống, chọn sai, tổng lỗi, số chứng từ, đã điều chỉnh), sheet Chi tiết và mỗi nhân viên 1 sheet: loại lỗi, ngày, số chứng từ, Nợ/Có, số tiền, đối tượng, diễn giải, dòng tiền đang ghi nhận, **dòng tiền đúng** (mã đã điều chỉnh hoặc gợi ý theo TK đối ứng), tình trạng.
+
 ## 4.99.51
 - Điều chỉnh dữ liệu: cột **Tình trạng** mỗi bút toán – "✔ Đã điều chỉnh" (trường đã chỉnh: HĐ / Vị trí / Biển số / Mã TS / Phòng ban / Dòng tiền, thời điểm) hoặc "Chưa điều chỉnh"; dòng đã điều chỉnh tô xanh nhạt; lọc trong kết quả theo Đã / Chưa điều chỉnh (kèm số dòng); Excel thêm cột Tình trạng.
 
