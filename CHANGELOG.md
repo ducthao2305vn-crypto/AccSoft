@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.68
+- Chi phí theo phòng ban → "📄 Báo cáo theo mẫu": chọn phòng ban (hoặc toàn công ty) + từ tháng – đến tháng → báo cáo doanh thu – chi phí theo đúng cây mẫu khoản mục đã nạp (A/B → 1 → 1.1 → 1.1.01), số từng tháng + tổng, dòng tổng tự cộng dồn; cột phòng ban phụ trách (đỏ khi khoản mục thuộc phòng ban khác), "Chưa phân"; phần "Phát sinh ngoài mẫu" cho mã chưa có trong mẫu; xuất Excel. Dùng phòng ban hiệu lực sau điều chỉnh.
+
 ## 4.99.67
 - Chi phí theo phòng ban → nút "⇄ Chuyển theo quy tắc khoản mục": nạp file Excel quy tắc (cột CODE ERP + Phòng Ban; trống / "Chưa phân" = nhiều phòng ban), tự khớp tên phòng ban với danh mục. Đối chiếu doanh thu (5xx/7xx) và chi phí (6xx/8xx, bỏ 911): bút toán có khoản mục chỉ thuộc 1 phòng ban mà ghi phòng ban khác → liệt kê theo nhóm (khoản mục × phòng ban đang ghi), chọn nhóm và chuyển hàng loạt về phòng ban đúng (điều chỉnh field_adj, không sửa dữ liệu gốc, trả lại được). Khoản mục "Chưa phân" giữ nguyên để phân thủ công. Sửa quy tắc từng khoản mục ngay trên bảng.
 

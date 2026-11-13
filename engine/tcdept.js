@@ -10,7 +10,8 @@ const PL = s => `((e.acc_${s} GLOB '[5678]*') AND e.acc_${s} NOT LIKE '911%')`; 
 
 function make(db, all, get, okYm) {
   const run = (q, ...a) => db.prepare(q).run(...a);
-  db.exec(`CREATE TABLE IF NOT EXISTS tc_dept(code TEXT PRIMARY KEY, dept_raw TEXT, dept_code TEXT, name TEXT, updated_at TEXT)`);
+  db.exec(`CREATE TABLE IF NOT EXISTS tc_dept(code TEXT PRIMARY KEY, dept_raw TEXT, dept_code TEXT, name TEXT, updated_at TEXT);
+    CREATE TABLE IF NOT EXISTS td_tpl(ord INTEGER PRIMARY KEY, code TEXT, stt TEXT, vn TEXT, en TEXT, dept_raw TEXT)`); // mẫu báo cáo (giữ nguyên thứ tự, phân cấp theo STT)
   const tx = f => { db.exec('BEGIN'); try { const r = f(); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } };
   const isMulti = s => !norm(s) || /^ch(ư|u)a\s*ph(â|a)n/i.test(norm(s)) || /nhi(ề|e)u\s*ph(ò|o)ng/i.test(norm(s));
 
@@ -29,7 +30,10 @@ function make(db, all, get, okYm) {
       if (a >= 0 && b >= 0) { h = i; cC = a; cD = b; cN = r.findIndex(x => /TI(Ế|E)NG VI(Ệ|E)T|T(Ê|E)N/.test(x)); } }
     if (h < 0) throw new Error('Không thấy dòng tiêu đề có cột "CODE ERP" và "Phòng Ban"');
     const R = resolver(); let n = 0, multi = 0; const unk = new Map();
-    tx(() => { for (const r of aoa.slice(h + 1)) { const code = norm(r[cC]); if (!code || code === '0' || /^#/.test(code)) continue;
+    const r2 = (aoa[h] || []).map(x => key(x)), cS = r2.findIndex(x => x === 'STT'), cE = r2.findIndex(x => /TI(Ế|E)NG ?ANH|ENGLISH/.test(x));
+    tx(() => { run(`DELETE FROM td_tpl`); let o = 0;
+      for (const r of aoa.slice(h + 1)) { const stt = cS >= 0 ? norm(r[cS]) : '', vn = cN >= 0 ? norm(r[cN]) : ''; if (!stt && !vn) continue;
+        run(`INSERT INTO td_tpl(ord, code, stt, vn, en, dept_raw) VALUES(?,?,?,?,?,?)`, ++o, norm(r[cC]), stt, vn, cE >= 0 ? norm(r[cE]) : '', norm(r[cD])); } for (const r of aoa.slice(h + 1)) { const code = norm(r[cC]); if (!code || code === '0' || /^#/.test(code)) continue;
       const raw = norm(r[cD]), m = isMulti(raw), dc = m ? '' : R(raw); if (m) multi++; else if (!dc) unk.set(raw, (unk.get(raw) || 0) + 1);
       run(`INSERT OR REPLACE INTO tc_dept(code, dept_raw, dept_code, name, updated_at) VALUES(?,?,?,?,datetime('now','localtime'))`, code, raw || 'Chưa phân', dc, cN >= 0 ? norm(r[cN]) : null); n++; } });
     return { n, multi, unknown: [...unk].map(([raw, n]) => ({ raw, n })) };
@@ -64,6 +68,34 @@ function make(db, all, get, okYm) {
     for (const g of G.values()) { g.wantName = nm.get(g.want) || ''; g.curName = nm.get(g.curCat) || ''; }
     return { groups: [...G.values()].sort((a, b) => Math.abs(b.a) - Math.abs(a.a)), rows: out.slice(0, 200000), multi };
   }
-  return { importAoa, list, setRow, clear, scan, srcOf };
+  // Báo cáo theo mẫu: chọn phòng ban (mã danh mục; rỗng = toàn công ty) + giai đoạn → cây mẫu, số theo tháng, cộng dồn các dòng tổng theo STT
+  function report(dept, from, to) {
+    const f = okYm(from), t = okYm(to), T = all(`SELECT * FROM td_tpl ORDER BY ord`); if (!T.length) return { tpl: 0 };
+    const months = []; if (f && t) for (let y = +f.slice(0, 4), m = +f.slice(5); `${y}-${String(m).padStart(2, '0')}` <= t; m === 12 ? (y++, m = 1) : m++) months.push(`${y}-${String(m).padStart(2, '0')}`);
+    const toCat = new Map(all(`SELECT src, code FROM dept_map`).map(r => [key(r.src), r.code])), cats = new Set(all(`SELECT code FROM dept_cat`).map(r => r.code));
+    const catOf = v => toCat.get(key(v)) || (cats.has(norm(v)) ? norm(v) : '');
+    const RC = `CASE WHEN instr(e.type_of_revenue,'_')>0 THEN substr(e.type_of_revenue,1,instr(e.type_of_revenue,'_')-1) ELSE e.type_of_revenue END`;
+    const rows = all(`SELECT e.ym, ${NORM('coalesce(f.value, e.department_sub, \'\')')} dv, ${NORM(CODE)} c, ${NORM(RC)} rc,
+        sum(CASE WHEN e.acc_debit GLOB '[68]*' AND e.acc_debit NOT LIKE '911%' THEN e.amount ELSE 0 END) - sum(CASE WHEN e.acc_credit GLOB '[68]*' AND e.acc_credit NOT LIKE '911%' THEN e.amount ELSE 0 END) ex,
+        sum(CASE WHEN e.acc_credit GLOB '[57]*' AND e.acc_credit NOT LIKE '911%' THEN e.amount ELSE 0 END) - sum(CASE WHEN e.acc_debit GLOB '[57]*' AND e.acc_debit NOT LIKE '911%' THEN e.amount ELSE 0 END) rv
+      FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept' WHERE e.ym>=? AND e.ym<=? AND (${PL('debit')} OR ${PL('credit')}) GROUP BY 1,2,3,4`, f, t);
+    const V = new Map(), add = (k, ym, a) => { if (!k || Math.abs(a) < 1e-9) return; const o = V.get(k) || V.set(k, {}).get(k); o[ym] = (o[ym] || 0) + a; };
+    for (const r of rows) { if (dept && catOf(r.dv) !== dept) continue; add('E:' + r.c, r.ym, r.ex); add('R:' + r.rc, r.ym, r.rv); }
+    // phân cấp: A/B = 0, còn lại = số đoạn của STT; dòng lá = dòng sau không sâu hơn
+    const lv = s => /^[A-Z]$/i.test(s) ? 0 : String(s).split('.').filter(Boolean).length || 9, revSec = [];
+    let sec = 'R'; const L = T.map(x => { if (/^[A-Z]$/i.test(x.stt)) sec = /CHI PH|EXPENSE/i.test(x.vn + x.en) ? 'E' : 'R'; return { ...x, lv: lv(x.stt), sec }; });
+    const R = resolver(), used = new Set();
+    L.forEach((x, i) => { x.leaf = !(L[i + 1] && L[i + 1].lv > x.lv); const code = /^[A-Z0-9][\w.]*$/i.test(x.code) && x.code !== '0' ? x.code : '';
+      x.own = isMulti(x.dept_raw) ? '' : R(x.dept_raw); x.multi = x.leaf && isMulti(x.dept_raw);
+      x.v = {}; if (x.leaf && code) { const k = (x.sec === 'E' ? 'E:' : 'R:') + code; used.add(k); Object.assign(x.v, V.get(k) || {}); } });
+    for (let i = L.length - 1; i >= 0; i--) { const x = L[i]; if (x.leaf) continue;
+      for (let j = i + 1; j < L.length && L[j].lv > x.lv; j++) if (L[j].leaf) for (const m of months) if (L[j].v[m]) x.v[m] = (x.v[m] || 0) + L[j].v[m]; } // dòng tổng = cộng các dòng lá bên trong
+    // phát sinh không có trong mẫu
+    const other = []; for (const [k, o] of V) if (!used.has(k)) other.push({ code: k.slice(2), sec: k[0], v: o });
+    const tot = o => months.reduce((s, m) => s + (o[m] || 0), 0);
+    return { tpl: T.length, months, rows: L.map(x => ({ ord: x.ord, code: x.code, stt: x.stt, vn: x.vn, en: x.en, lv: x.lv, leaf: x.leaf, sec: x.sec, own: x.own, raw: x.dept_raw, multi: x.multi, v: x.v, tot: tot(x.v) })),
+      other: other.map(o => ({ ...o, tot: tot(o.v) })).filter(o => Math.abs(o.tot) > 0.004).sort((a, b) => a.sec.localeCompare(b.sec) || String(a.code).localeCompare(String(b.code))) };
+  }
+  return { importAoa, list, setRow, clear, scan, srcOf, report };
 }
 module.exports = { make };
