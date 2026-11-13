@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.59
+- Điều chỉnh dữ liệu: cột Tình trạng phân biệt ✎ Đã điều chỉnh / ✔ Đã xác nhận đúng (thời điểm) / ✔ Khớp tự động / Chưa xử lý – dòng đã xác nhận hoặc khớp không còn hiện "Chưa điều chỉnh" và tô xanh; lọc "Tình trạng xử lý": Chưa xử lý, Đã xử lý (điều chỉnh / xác nhận / khớp), từng loại – kèm số dòng; Excel theo tình trạng mới.
+
 ## 4.99.58
 - Điều chỉnh dữ liệu: lọc trong kết quả theo **Nhân viên** (người nhập, chọn nhiều, có ô tìm, kèm số dòng); hiện tên nhân viên dưới số chứng từ; Excel thêm cột Nhân viên nhập.
 
