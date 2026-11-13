@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.60
+- Điều chỉnh dữ liệu: "Chỉ bút toán thu/chi tiền" loại bỏ chuyển tiền nội bộ giữa các TK tiền (Nợ 111/112/113 – Có 111/112/113) – không tính vào lưu chuyển tiền tệ nên không cần rà soát dòng tiền (B03 và quy tắc lỗi dòng tiền vốn đã loại các bút toán này).
+
 ## 4.99.59
 - Điều chỉnh dữ liệu: cột Tình trạng phân biệt ✎ Đã điều chỉnh / ✔ Đã xác nhận đúng (thời điểm) / ✔ Khớp tự động / Chưa xử lý – dòng đã xác nhận hoặc khớp không còn hiện "Chưa điều chỉnh" và tô xanh; lọc "Tình trạng xử lý": Chưa xử lý, Đã xử lý (điều chỉnh / xác nhận / khớp), từng loại – kèm số dòng; Excel theo tình trạng mới.
 

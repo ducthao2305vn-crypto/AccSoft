@@ -28,7 +28,7 @@ function make(db, all, run, okYm, FIN) {
     if (o.acc) { const ps = String(o.acc).split(/[,;\s]+/).filter(Boolean); if (ps.length) { w.push('(' + ps.map(() => '(e.acc_debit LIKE ? OR e.acc_credit LIKE ?)').join(' OR ') + ')'); for (const p of ps) a.push(p + '%', p + '%'); } }
     if (o.bp) { w.push('(e.partner_debit LIKE ? OR e.partner_credit LIKE ?)'); a.push('%' + o.bp + '%', '%' + o.bp + '%'); }
     if (o.q) { w.push('(e.description LIKE ? OR e.document_no LIKE ?)'); a.push('%' + o.q + '%', '%' + o.q + '%'); }
-    if (o.cash) w.push(`((e.acc_debit>='111' AND e.acc_debit<'114') OR (e.acc_credit>='111' AND e.acc_credit<'114'))`);
+    if (o.cash) w.push(`((e.acc_debit>='111' AND e.acc_debit<'114') OR (e.acc_credit>='111' AND e.acc_credit<'114')) AND NOT ((e.acc_debit>='111' AND e.acc_debit<'114') AND (e.acc_credit>='111' AND e.acc_credit<'114'))`); // bỏ chuyển tiền nội bộ giữa các TK tiền (không tính LCTT)
     const F = FIELDS[o.field];
     if (F && o.val) { w.push(`ifnull(e.${F.col},'') LIKE ?`); a.push('%' + o.val + '%'); }
     if (F && o.empty) w.push(`ifnull(e.${F.col},'')=''`);
