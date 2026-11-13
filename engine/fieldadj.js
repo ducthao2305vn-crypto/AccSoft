@@ -8,6 +8,11 @@ const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+(r.aa ?? r.a) || 0) * 1
 function make(db, all, run, okYm, FIN) {
   db.exec(`CREATE TABLE IF NOT EXISTS fa_ok(id INTEGER PRIMARY KEY, cf TEXT, at TEXT); CREATE TABLE IF NOT EXISTS cf_learn(k TEXT, code TEXT, n INTEGER, PRIMARY KEY(k, code));`);
   // mẫu đã học: chiều thu/chi + TK đối ứng (4 ký tự đầu) → mã dòng tiền đã được xác nhận / điều chỉnh
+  // dọn một lần: điều chỉnh dòng tiền trùng mã gốc (VD 0102 → 02) không phải điều chỉnh – chuyển thành "xác nhận đúng"
+  try { if (!(all(`SELECT v FROM settings WHERE k='cf_same_clean'`)[0])) { for (const a of all(`SELECT * FROM cf_adj`)) { if (RS.cfCode(a.cf) !== a.code) continue;
+        const e = all(`SELECT id FROM entries WHERE document_no IS ? AND account_date=? AND acc_debit=? AND acc_credit=? LIMIT 1`, a.doc, a.d, a.dr, a.cr)[0];
+        if (e) run(`INSERT OR REPLACE INTO fa_ok(id, cf, at) VALUES(?,?,datetime('now','localtime'))`, e.id, a.code); run(`DELETE FROM cf_adj WHERE sig=?`, a.sig); }
+      run(`INSERT OR REPLACE INTO settings(k, v) VALUES('cf_same_clean','1')`); } } catch { }
   const lkey = o => (CASH(o.dr) ? 'R|' + String(o.cr || '').slice(0, 4) : 'P|' + String(o.dr || '').slice(0, 4));
   const learn = (items, code) => { for (const x of items) if (code) run(`INSERT INTO cf_learn(k, code, n) VALUES(?,?,1) ON CONFLICT(k, code) DO UPDATE SET n=n+1`, lkey(x), code); };
   // xác nhận dòng tiền đang ghi nhận là ĐÚNG (không cần điều chỉnh)
@@ -59,7 +64,11 @@ function make(db, all, run, okYm, FIN) {
   function set(items, field, value, note = '') {
     const F = FIELDS[field]; if (!F) throw new Error('Trường không hợp lệ');
     items = [].concat(items || []).filter(x => x && x.id);
-    if (field === 'cf') { const cash = items.filter(x => CASH(x.dr) !== CASH(x.cr)); if (!cash.length) throw new Error('Chỉ điều chỉnh dòng tiền cho bút toán có thu / chi tiền (TK 111, 112, 113)'); learn(cash, value); return FIN.cfAdjSet(cash.map(x => ({ ...x, sig: 'c:' + sigOf(x) })), value, note); }
+    if (field === 'cf') { const cash = items.filter(x => CASH(x.dr) !== CASH(x.cr)); if (!cash.length) throw new Error('Chỉ điều chỉnh dòng tiền cho bút toán có thu / chi tiền (TK 111, 112, 113)'); learn(cash, value);
+      // trùng mã đang ghi nhận → không phải điều chỉnh: ghi "xác nhận đúng", bỏ điều chỉnh cũ (nếu có)
+      const same = cash.filter(x => RS.cfCode(x.cf) === value), diff = cash.filter(x => RS.cfCode(x.cf) !== value);
+      if (same.length) { confirmCf(same); FIN.cfAdjRemove(same.map(x => 'c:' + sigOf(x))); }
+      const r = diff.length ? FIN.cfAdjSet(diff.map(x => ({ ...x, sig: 'c:' + sigOf(x) })), value, note) : { n: 0 }; r.same = same.length; return r; }
     db.exec('BEGIN'); try { let n = 0;
       for (const x of items) { run(`INSERT OR REPLACE INTO field_adj(id, field, value, orig, sig, doc, d, ym, note, updated_at) VALUES(?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`,
         x.id, field, String(value ?? '').trim(), x[field] ?? null, sigOf(x), x.doc, x.d, String(x.d || '').slice(0, 7), note || ''); n++; }

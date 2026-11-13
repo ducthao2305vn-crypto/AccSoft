@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.56
+- Sửa: điều chỉnh dòng tiền **trùng mã đang ghi nhận** (VD 0102_Cash paid to suppliers → 02) không còn tạo điều chỉnh / không ghi lỗi nhân viên – chuyển thành "Xác nhận đúng"; các điều chỉnh trùng mã đã lưu trước đây tự dọn một lần.
+
 ## 4.99.55
 - Điều chỉnh dòng tiền – **giảm số dòng phải rà soát**: mỗi bút toán thu/chi có tình trạng: ✔ Khớp tự động (TK đối ứng xác định rõ mã, hoặc khớp mẫu đã xác nhận), ✔ Đã xác nhận đúng, ✎ Đã điều chỉnh, ⚠ Nghi chọn sai, Để trống, ? Chưa xác nhận. Lọc "Dòng tiền: 🔎 Cần rà soát" (để trống + nghi sai + chưa xác nhận) kèm số dòng.
 - Nút **✔ Xác nhận đúng / Bỏ xác nhận**: đánh dấu dòng tiền đang ghi nhận là đúng; app **học mẫu** (chiều thu/chi + TK đối ứng → mã) từ xác nhận và điều chỉnh, để tự nhận diện bút toán tương tự là khớp và gợi ý mã cho dòng để trống.
