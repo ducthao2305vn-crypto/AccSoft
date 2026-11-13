@@ -34,7 +34,7 @@ function make(db, all, run, okYm, FIN) {
     if (F && o.empty) w.push(`ifnull(e.${F.col},'')=''`);
     if (o.adjOnly) w.push(`(EXISTS (SELECT 1 FROM field_adj x WHERE x.id=e.id) OR EXISTS (SELECT 1 FROM cf_adj c WHERE c.doc=e.document_no AND c.d=e.account_date AND c.dr=e.acc_debit AND c.cr=e.acc_credit))`);
     if (!w.length) w.push('1');
-    const lim = Math.min(+o.limit || 5000, o.report ? 300000 : 20000);
+    const lim = Math.min(+o.limit || 5000, o.report ? 300000 : 60000);
     const rows = all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount a, coalesce(e.amount_acc, e.amount) aa, e.partner_debit bp, e.partner_credit bpCr,
         e.description ds, e.created_by u, e.contract, e.location, e.plate, e.department_sub dept, e.cashflow cf, e.asset FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.id LIMIT ${lim + 1}`, ...a);
     const ids = rows.map(r => r.id), adj = new Map();

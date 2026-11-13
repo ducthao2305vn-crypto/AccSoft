@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.61
+- Điều chỉnh dữ liệu: tìm tối đa **60.000** bút toán (trước 5.000) – lọc trong kết quả, đếm, chọn hết, áp dụng, xuất Excel trên toàn bộ kết quả; bảng vẫn hiển thị 2.000 dòng đầu cho nhanh (ghi rõ số dòng còn lại); ô chọn tất cả chọn toàn bộ dòng đang lọc.
+
 ## 4.99.60
 - Điều chỉnh dữ liệu: "Chỉ bút toán thu/chi tiền" loại bỏ chuyển tiền nội bộ giữa các TK tiền (Nợ 111/112/113 – Có 111/112/113) – không tính vào lưu chuyển tiền tệ nên không cần rà soát dòng tiền (B03 và quy tắc lỗi dòng tiền vốn đã loại các bút toán này).
 
