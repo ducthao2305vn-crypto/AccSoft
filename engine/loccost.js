@@ -34,6 +34,13 @@ const addM = (m, d) => { let y = +m.slice(0, 4), mo = +m.slice(5) + d; while (mo
 const monthsOf = (f, t) => { const o = []; for (let m = f; m <= t; m = addM(m, 1)) o.push(m); return o; };
 
 function make(db, all, get, okYm) {
+  // Trạng thái rà soát từng bút toán theo chiều: ok = chính xác, wip = đang xử lý, bad = sai
+  db.exec(`CREATE TABLE IF NOT EXISTS dim_mark(id INTEGER, dim TEXT, st TEXT, note TEXT, at TEXT, PRIMARY KEY(id, dim))`);
+  function mark(d, ids, st, note) {
+    const del = db.prepare(`DELETE FROM dim_mark WHERE id=? AND dim=?`), ins = db.prepare(`INSERT OR REPLACE INTO dim_mark(id, dim, st, note, at) VALUES(?,?,?,?,datetime('now','localtime'))`);
+    db.exec('BEGIN'); try { for (const id of [].concat(ids || [])) st ? ins.run(+id, d, st, note || null) : del.run(+id, d); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
+    return { n: [].concat(ids || []).length };
+  }
   const D = d => DIMS[d] || DIMS.location;
   // chuẩn hoá khoảng trắng (đầu/cuối, NBSP, tab, xuống dòng, 2 dấu cách) để cùng một mã không bị tách thành 2 dòng
   const NORM = x => `trim(replace(replace(replace(replace(replace(replace(${x}, char(160), ' '), char(9), ' '), char(13), ' '), char(10), ' '), '  ', ' '), '  ', ' '))`;
@@ -77,15 +84,15 @@ function make(db, all, get, okYm) {
       .sort((a, b) => String(a.label).localeCompare(String(b.label)) || a.g.localeCompare(b.g));
     return { dim: d, months, rows, groups: G, norms: N };
   }
-  function detail(d, key, g, from, to) {
+  function detail(d, key, g, from, to, tc) {
     const G = groups(d), isDept = d === 'dept', Gs = G.filter(x => !g || x.k === g), codes = Gs.flatMap(x => x.codes), other = isDept && (!g || g === '(khoản mục ngoài danh mục)');
     const known = isDept ? G.flatMap(x => x.codes) : [];
     let W = '', A = [];
     if (isDept) { if (g && g !== '(khoản mục ngoài danh mục)') { W = ` AND ${CODE} IN (${codes.map(() => '?').join(',')})`; A = codes; } else if (g) { W = known.length ? ` AND (e.type_of_cost IS NULL OR ${CODE} NOT IN (${known.map(() => '?').join(',')}))` : ''; A = known; } }
     else { if (!codes.length) return []; W = ` AND ${CODE} IN (${codes.map(() => '?').join(',')})`; A = codes; }
     return all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount a, e.partner_debit bp, e.partner_credit bpCr,
-        e.description ds, e.created_by u, e.type_of_cost t, e.location, e.plate, e.department_sub dept, e.department deptAcc, ${VAL(d)} val, f.value newVal
-      FROM entries e ${FJ(d)} WHERE e.ym>=? AND e.ym<=?${W} AND (${EXP('debit')} OR ${EXP('credit')})${key == null ? '' : ` AND ${VAL(d)}=?`} ORDER BY e.account_date, e.id LIMIT 30000`, okYm(from), okYm(to), ...A, ...(key == null ? [] : [key || '']))
+        e.description ds, e.created_by u, e.type_of_cost t, e.location, e.plate, e.department_sub dept, e.department deptAcc, ${VAL(d)} val, f.value newVal, mk.st mk, mk.note mkNote, mk.at mkAt
+      FROM entries e ${FJ(d)} LEFT JOIN dim_mark mk ON mk.id=e.id AND mk.dim='${DIMS[d] ? d : ''}' WHERE e.ym>=? AND e.ym<=?${W} AND (${EXP('debit')} OR ${EXP('credit')})${key == null ? '' : ` AND ${VAL(d)}=?`}${tc == null ? '' : ` AND coalesce(e.type_of_cost,'')=?`} ORDER BY e.account_date, e.id LIMIT 100000`, okYm(from), okYm(to), ...A, ...(key == null ? [] : [key || '']), ...(tc == null ? [] : [tc]))
       .map(r => ({ ...r, orig: d === 'location' ? r.location : d === 'plate' ? r.plate : r.dept, v: (/^[68]/.test(r.dr) && !/^911/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) && !/^911/.test(r.cr) ? r.a : 0) }));
   }
   // Giá trị đang dùng của chiều (để chọn khi điều chỉnh); phòng ban kèm tên danh mục
@@ -96,6 +103,6 @@ function make(db, all, get, okYm) {
     const dm = new Map(all(`SELECT m.src, d.code, d.name FROM dept_map m JOIN dept_cat d ON d.code=m.code`).map(r => [nz(r.src), r]));
     return rows.map(r => ({ ...r, cat: dm.get(r.v) ? dm.get(r.v).code + ' – ' + (dm.get(r.v).name || '') : '' }));
   }
-  return { matrix, detail, values, groups, norms };
+  return { matrix, detail, values, groups, norms, mark };
 }
 module.exports = { make, GROUPS, DIMS };

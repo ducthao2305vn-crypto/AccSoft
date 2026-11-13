@@ -598,3 +598,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Danh sách chọn chỉ gồm giá trị hợp lệ theo ngữ cảnh (lọc liên hoàn, theo chiều thu/chi, theo kết quả đang xem) kèm số lượng; chặn lựa chọn sai và giải thích.
 - Thao tác hàng loạt: tick / chọn hết, áp dụng một lần, báo kết quả; có hoàn tác (bỏ điều chỉnh).
 - Mỗi thẻ có tiêu đề thu gọn được; bảng dài có lọc trong kết quả; xuất Excel đúng những gì đang xem.
+
+- Chi tiết chi phí theo chiều (loccost.detail): tình trạng rà soát lưu ở `dim_mark(id, dim, st ok|wip|bad, note, at)`, ghi qua `locMark(d, ids, st, note)` (st rỗng = bỏ). Lọc Type of cost phải truyền vào SQL (tham số tc) — không lọc sau LIMIT.

@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.65
+- Chi phí theo phòng ban: sửa nhấn đúp không mở chi tiết khi đang lọc Type of cost; lọc Type of cost chuyển xuống truy vấn (trước đây bị cắt ở 30.000 dòng nên chi tiết thiếu, không khớp tổng); giới hạn chi tiết nâng lên 100.000 dòng.
+- Chi tiết bút toán (phòng ban / vị trí / xe): thêm Tình trạng rà soát từng dòng — Chính xác, Đang xử lý, Sai (kèm ghi chú, thời điểm), lưu bền trong bảng dim_mark; lọc theo tình trạng và đếm số dòng mỗi tình trạng.
+
 ## 4.99.64
 - Điều chỉnh trường → Phòng ban: danh sách giá trị chỉ lấy từ Danh mục phòng ban (mã — tên), không còn lấy phòng ban đang ghi nhận trong dữ liệu; bỏ nhập thủ công cho trường này.
 
