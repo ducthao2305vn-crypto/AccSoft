@@ -6,6 +6,14 @@ const RS = require('./rules');
 const sigOf = r => [r.doc, r.d, r.dr, r.cr, Math.round((+(r.aa ?? r.a) || 0) * 100), r.bp || '', r.bpCr || ''].join('|');
 
 function make(db, all, run, okYm, FIN) {
+  db.exec(`CREATE TABLE IF NOT EXISTS fa_ok(id INTEGER PRIMARY KEY, cf TEXT, at TEXT); CREATE TABLE IF NOT EXISTS cf_learn(k TEXT, code TEXT, n INTEGER, PRIMARY KEY(k, code));`);
+  // mẫu đã học: chiều thu/chi + TK đối ứng (4 ký tự đầu) → mã dòng tiền đã được xác nhận / điều chỉnh
+  const lkey = o => (CASH(o.dr) ? 'R|' + String(o.cr || '').slice(0, 4) : 'P|' + String(o.dr || '').slice(0, 4));
+  const learn = (items, code) => { for (const x of items) if (code) run(`INSERT INTO cf_learn(k, code, n) VALUES(?,?,1) ON CONFLICT(k, code) DO UPDATE SET n=n+1`, lkey(x), code); };
+  // xác nhận dòng tiền đang ghi nhận là ĐÚNG (không cần điều chỉnh)
+  function confirmCf(items, undo) { let n = 0; db.exec('BEGIN'); try { for (const x of [].concat(items || [])) { if (!x.id) continue;
+        if (undo) n += run(`DELETE FROM fa_ok WHERE id=?`, +x.id).changes; else { const c = RS.cfCode(x.cf); if (!c || c === 'TR') continue; run(`INSERT OR REPLACE INTO fa_ok(id, cf, at) VALUES(?,?,datetime('now','localtime'))`, +x.id, c); learn([x], c); n++; } }
+      db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; } return { n }; }
   const CASH = a => /^11[123]/.test(a || '');
   // Tìm bút toán theo điều kiện; trả kèm giá trị gốc và giá trị sau điều chỉnh của 4 trường
   function search(o = {}) {
@@ -26,11 +34,17 @@ function make(db, all, run, okYm, FIN) {
         e.description ds, e.created_by u, e.contract, e.location, e.plate, e.department_sub dept, e.cashflow cf, e.asset FROM entries e WHERE ${w.join(' AND ')} ORDER BY e.account_date, e.id LIMIT ${lim + 1}`, ...a);
     const ids = rows.map(r => r.id), adj = new Map();
     for (let i = 0; i < ids.length; i += 500) { const c = ids.slice(i, i + 500); for (const x of all(`SELECT * FROM field_adj WHERE id IN (${c.map(() => '?').join(',')})`, ...c)) adj.set(x.id + '|' + x.field, x); }
+    const OK = new Map(); for (let i = 0; i < ids.length; i += 500) { const c = ids.slice(i, i + 500); for (const x of all(`SELECT * FROM fa_ok WHERE id IN (${c.map(() => '?').join(',')})`, ...c)) OK.set(x.id, x); }
+    const LRN = new Map(); for (const x of all(`SELECT k, code, n FROM cf_learn`)) { const g = LRN.get(x.k); if (!g || x.n > g.n) LRN.set(x.k, x); }
     const cfa = new Map(); try { for (const x of all(`SELECT sig, code, note, updated_at FROM cf_adj`)) cfa.set(x.sig, x); } catch { }
     const CFN = (FIN.cfRows ? null : null), out = rows.slice(0, lim).map(r => {
       const o2 = { ...r, sig: sigOf(r), cash: CASH(r.dr) !== CASH(r.cr) };
       for (const k of ['contract', 'location', 'plate', 'dept', 'asset']) { const x = adj.get(r.id + '|' + k); o2[k + 'New'] = x ? x.value : null; o2[k + 'Note'] = x ? x.note : ''; if (x) { (o2.adjF = o2.adjF || []).push(k); if (!o2.adjAt || x.updated_at > o2.adjAt) o2.adjAt = x.updated_at; } }
       const c = cfa.get('c:' + o2.sig); o2.cfNew = c ? c.code : null; o2.cfNote = c ? c.note : ''; if (c) { (o2.adjF = o2.adjF || []).push('cf'); if (!o2.adjAt || (c.updated_at || '') > o2.adjAt) o2.adjAt = c.updated_at; } if (o2.cash) { const g = RS.cfSuggest(o2.dr, o2.cr), e = RS.cfCode(o2.cf); o2.cfSug = g.b03; o2.cfCur = e; o2.cfBad = !!(e && (e === 'TR' || (g.fixed && e !== g.b03) || (CASH(o2.dr) && ['02','03','04','05','07','21','23','25','32','34','35','36'].includes(e)) || (!CASH(o2.dr) && ['01','06','22','24','26','27','31','33'].includes(e)))); }
+      if (o2.cash) { const ok = OK.get(o2.id), L = LRN.get(lkey(o2)), g = RS.cfSuggest(o2.dr, o2.cr);
+        o2.cfLearn = L ? L.code : null; o2.cfLearnN = L ? L.n : 0; if (L && !o2.cfNew && !o2.cfCur) o2.cfSug = L.code; // gợi ý theo mẫu đã học cho dòng trống
+        o2.cfState = o2.cfNew != null ? 'adj' : ok && ok.cf === o2.cfCur ? 'ok' : !o2.cfCur ? 'blank' : o2.cfBad ? 'bad'
+          : (g.fixed && g.b03 === o2.cfCur) || (L && L.code === o2.cfCur) ? 'auto' : 'review'; o2.okAt = ok ? ok.at : null; }
       return o2;
     });
     return { total: rows.length > lim ? lim + '+' : rows.length, rows: out, truncated: rows.length > lim };
@@ -45,7 +59,7 @@ function make(db, all, run, okYm, FIN) {
   function set(items, field, value, note = '') {
     const F = FIELDS[field]; if (!F) throw new Error('Trường không hợp lệ');
     items = [].concat(items || []).filter(x => x && x.id);
-    if (field === 'cf') { const cash = items.filter(x => CASH(x.dr) !== CASH(x.cr)); if (!cash.length) throw new Error('Chỉ điều chỉnh dòng tiền cho bút toán có thu / chi tiền (TK 111, 112, 113)'); return FIN.cfAdjSet(cash.map(x => ({ ...x, sig: 'c:' + sigOf(x) })), value, note); }
+    if (field === 'cf') { const cash = items.filter(x => CASH(x.dr) !== CASH(x.cr)); if (!cash.length) throw new Error('Chỉ điều chỉnh dòng tiền cho bút toán có thu / chi tiền (TK 111, 112, 113)'); learn(cash, value); return FIN.cfAdjSet(cash.map(x => ({ ...x, sig: 'c:' + sigOf(x) })), value, note); }
     db.exec('BEGIN'); try { let n = 0;
       for (const x of items) { run(`INSERT OR REPLACE INTO field_adj(id, field, value, orig, sig, doc, d, ym, note, updated_at) VALUES(?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`,
         x.id, field, String(value ?? '').trim(), x[field] ?? null, sigOf(x), x.doc, x.d, String(x.d || '').slice(0, 7), note || ''); n++; }
@@ -101,6 +115,6 @@ function make(db, all, run, okYm, FIN) {
     }
     return { rows: (rows || []).length, ok, lines, skip, notFound: miss.length, miss, multi };
   }
-  return { search, values, set, remove, list, rebind, contractsOf, assetTemplate, assetImport, FIELDS };
+  return { search, confirmCf, values, set, remove, list, rebind, contractsOf, assetTemplate, assetImport, FIELDS };
 }
 module.exports = { make, FIELDS };

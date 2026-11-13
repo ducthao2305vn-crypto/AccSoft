@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.55
+- Điều chỉnh dòng tiền – **giảm số dòng phải rà soát**: mỗi bút toán thu/chi có tình trạng: ✔ Khớp tự động (TK đối ứng xác định rõ mã, hoặc khớp mẫu đã xác nhận), ✔ Đã xác nhận đúng, ✎ Đã điều chỉnh, ⚠ Nghi chọn sai, Để trống, ? Chưa xác nhận. Lọc "Dòng tiền: 🔎 Cần rà soát" (để trống + nghi sai + chưa xác nhận) kèm số dòng.
+- Nút **✔ Xác nhận đúng / Bỏ xác nhận**: đánh dấu dòng tiền đang ghi nhận là đúng; app **học mẫu** (chiều thu/chi + TK đối ứng → mã) từ xác nhận và điều chỉnh, để tự nhận diện bút toán tương tự là khớp và gợi ý mã cho dòng để trống.
+
 ## 4.99.54
 - Điều chỉnh dữ liệu: tìm "Chỉ bút toán thu/chi tiền" → trường điều chỉnh mặc định **Loại dòng tiền** (tick ô này cũng đổi "Lọc theo" sang dòng tiền); nhớ trường đã chọn riêng cho chế độ thu/chi và chế độ thường; nhớ mã dòng tiền vừa áp dụng để chọn sẵn lần sau.
 - Ghi nguyên tắc trải nghiệm người dùng vào tài liệu phát triển (mặc định theo ngữ cảnh, nhớ lựa chọn, danh sách hợp lệ, thao tác hàng loạt).
