@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.63
+- Chi phí theo phòng ban: lọc liên hoàn Nhóm ↔ Khoản mục ↔ Type of cost, chọn theo thứ tự tuỳ ý; mỗi danh sách chỉ hiện giá trị còn hợp lệ theo các lựa chọn kia.
+
 ## 4.99.62
 - Chi phí theo phòng ban / vị trí / xe: bỏ mọi bút toán kết chuyển xác định kết quả kinh doanh (Nợ hoặc Có 911) – trước đây kết chuyển Nợ 911 / Có 6xx bị tính thành chi phí âm (VD -31,6 triệu ở dòng "không có Department Sub").
 
