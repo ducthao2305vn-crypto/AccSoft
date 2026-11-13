@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.57
+- Điều chỉnh dữ liệu – Lọc trong kết quả: **chọn nhiều** TK Nợ / TK Có / Đối tượng – bấm ô để mở danh sách có ô tìm, tick nhiều giá trị (kèm số dòng), Chọn hết (theo kết quả tìm) / Bỏ hết / Áp dụng; nút hiện số đã chọn.
+
 ## 4.99.56
 - Sửa: điều chỉnh dòng tiền **trùng mã đang ghi nhận** (VD 0102_Cash paid to suppliers → 02) không còn tạo điều chỉnh / không ghi lỗi nhân viên – chuyển thành "Xác nhận đúng"; các điều chỉnh trùng mã đã lưu trước đây tự dọn một lần.
 
