@@ -3,7 +3,7 @@
 //   location = mã vị trí (Location): thuê trạm / văn phòng / nhà nghỉ, điện trạm, xăng dầu máy phát…
 //   plate    = biển số xe (License Plate): xăng dầu, sửa chữa, dầu – nước làm mát, thuê xe, khấu hao… (có định mức / tháng / xe)
 //   dept     = phòng ban ngân sách (Department Sub, ánh xạ sang danh mục phòng ban): mọi chi phí, nhóm theo Expense Group của danh mục khoản mục
-// Giá trị chiều hiệu lực = giá trị đã điều chỉnh (field_adj) nếu có, không thì cột gốc. Chi phí = Nợ − Có TK 6xx/8xx (trừ 911).
+// Giá trị chiều hiệu lực = giá trị đã điều chỉnh (field_adj) nếu có, không thì cột gốc. Chi phí = Nợ − Có TK 6xx/8xx (bỏ bút toán kết chuyển Nợ/Có 911).
 const DIMS = {
   location: { col: 'e.location', f: 'location', none: '(không có vị trí)' },
   plate: { col: 'e.plate', f: 'plate', none: '(không có biển số)' },
@@ -28,7 +28,8 @@ const GROUPS = {
   ],
 };
 const CODE = `CASE WHEN instr(e.type_of_cost,'_')>0 THEN substr(e.type_of_cost,1,instr(e.type_of_cost,'_')-1) ELSE e.type_of_cost END`;
-const EXP = s => `(e.acc_${s} LIKE '6%' OR e.acc_${s} LIKE '8%') AND e.acc_${s} NOT LIKE '911%'`;
+// bỏ mọi bút toán kết chuyển xác định kết quả (Nợ hoặc Có 911) – chỉ là kết chuyển, không phải chi phí phát sinh
+const EXP = s => `(e.acc_${s} LIKE '6%' OR e.acc_${s} LIKE '8%') AND e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%'`;
 const addM = (m, d) => { let y = +m.slice(0, 4), mo = +m.slice(5) + d; while (mo > 12) { mo -= 12; y++; } while (mo < 1) { mo += 12; y--; } return `${y}-${String(mo).padStart(2, '0')}`; };
 const monthsOf = (f, t) => { const o = []; for (let m = f; m <= t; m = addM(m, 1)) o.push(m); return o; };
 
