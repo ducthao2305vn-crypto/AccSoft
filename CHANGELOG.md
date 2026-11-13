@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.58
+- Điều chỉnh dữ liệu: lọc trong kết quả theo **Nhân viên** (người nhập, chọn nhiều, có ô tìm, kèm số dòng); hiện tên nhân viên dưới số chứng từ; Excel thêm cột Nhân viên nhập.
+
 ## 4.99.57
 - Điều chỉnh dữ liệu – Lọc trong kết quả: **chọn nhiều** TK Nợ / TK Có / Đối tượng – bấm ô để mở danh sách có ô tìm, tick nhiều giá trị (kèm số dòng), Chọn hết (theo kết quả tìm) / Bỏ hết / Áp dụng; nút hiện số đã chọn.
 
