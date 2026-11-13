@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.53
+- Điều chỉnh dòng tiền: danh sách mã theo chiều bút toán đã chọn – Nợ TK tiền (thu) chỉ hiện mã THU (01, 06, 22, 24, 26, 27, 31, 33), Có TK tiền (chi) chỉ hiện mã CHI (02, 03, 04, 05, 07, 21, 23, 25, 32, 34, 35, 36); chọn lẫn thu và chi thì tách 2 nhóm; khi Áp dụng tự loại các dòng ngược chiều với mã đã chọn (có hỏi xác nhận).
+
 ## 4.99.52
 - Điều chỉnh dữ liệu: nút **📋 Báo cáo lỗi dòng tiền NV** (song ngữ Việt / Anh) cho kỳ đang tìm – sheet Tổng hợp theo nhân viên (để trống, chọn sai, tổng lỗi, số chứng từ, đã điều chỉnh), sheet Chi tiết và mỗi nhân viên 1 sheet: loại lỗi, ngày, số chứng từ, Nợ/Có, số tiền, đối tượng, diễn giải, dòng tiền đang ghi nhận, **dòng tiền đúng** (mã đã điều chỉnh hoặc gợi ý theo TK đối ứng), tình trạng.
 
