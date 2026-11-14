@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.70
+- Trang mới "Kế hoạch – thực hiện chi phí": nạp kế hoạch năm theo mẫu (Code ERP · tên Anh · tên Việt · KH năm · T1…T12 · Phòng Ban), tự khớp phòng ban với danh mục. So sánh KH – TH theo mã khoản mục + tên khoản mục, chọn năm, từ tháng – đến tháng: toàn công ty, toàn công ty chi tiết theo phòng ban, một phòng ban; chi tiết KH/TH từng tháng; % thực hiện kỳ và năm; tô đỏ vượt KH; nhãn "Ngoài KH" cho chi phí phát sinh không có trong kế hoạch; nhấn đúp xem bút toán; xuất Excel.
+- Tab Kế hoạch: sửa trực tiếp từng ô (tự lưu), thêm / xoá dòng, nạp thêm dòng bổ sung, tạo kế hoạch năm mới (vd 2027) từ năm trước × hệ số, xuất biểu mẫu Excel cùng định dạng.
+
 ## 4.99.69
 - Dòng tiền thanh toán: thêm "Xem theo → Chức năng dòng tiền (B03, sau điều chỉnh)": nhóm I. Kinh doanh / II. Đầu tư / III. Tài chính → chỉ tiêu B03 (02, 03, 07, 21, 25, 34…) → đối tượng có nhãn Quốc tế / Nội bộ / Nội địa / Tạm ứng / Khác; mỗi chỉ tiêu hiện cơ cấu theo nhóm đối tượng; lọc theo nhóm đối tượng (vd chỉ Nội bộ); nhấn đúp xem chứng từ; Excel kèm nhãn. Dùng mã dòng tiền đã điều chỉnh ở Điều chỉnh dữ liệu.
 
