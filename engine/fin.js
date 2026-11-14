@@ -329,6 +329,8 @@ function make(all, okYm, INC, plRange, run) {
         N('VI.8', 'Chi phí thuế thu nhập doanh nghiệp hiện hành', { type: 'kv', rows: [['Lợi nhuận kế toán trước thuế', pl.pbt], ['Chi phí thuế TNDN (821)', pl.tax], ['Lợi nhuận sau thuế', pl.pat]] }),
       ] };
   }
-  return { trial, balanceSheet, income, cashFlow, notes, status, cfRows, cfAdjSet, cfAdjRemove, cfAdjList, drill };
+  // Mã dòng tiền B03 hiệu lực (sau điều chỉnh) cho danh sách bút toán {doc,d,dr,cr,a,aa,bp,bpCr,cf}
+  function cfAfter(rows, from, to) { const adj = new Map(adjRows(from, to).map(a => [a.sig, a.code])); return rows.map(r => adj.get(sigOf(r)) || baseCode(r.dr, r.cr, r.cf)); }
+  return { trial, balanceSheet, income, cashFlow, notes, status, cfRows, cfAdjSet, cfAdjRemove, cfAdjList, drill, cfAfter, CFN };
 }
 module.exports = { make, L1 };

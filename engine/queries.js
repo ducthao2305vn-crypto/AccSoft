@@ -528,7 +528,7 @@ function make(db) {
   const LG = require('./ledgerx').make(db, all, get, (q, ...a) => db.prepare(q).run(...a));
   const AP = require('./ap331').make(db, all, get, (q, ...a) => db.prepare(q).run(...a));
   const GR = require('./goodsrec').make(db, all, get, (q, ...a) => db.prepare(q).run(...a));
-  const PF = require('./payflow').make(db, all);
+  const PF = require('./payflow').make(db, all, FIN);
   const CX = require('./capex').make(db, all, get, (q, ...a) => db.prepare(q).run(...a));
   const P242 = require('./prepaid242').make(db, all);
   const SL = require('./sitelease').make(db, all, get, (q, ...a) => db.prepare(q).run(...a));

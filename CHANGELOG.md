@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.69
+- Dòng tiền thanh toán: thêm "Xem theo → Chức năng dòng tiền (B03, sau điều chỉnh)": nhóm I. Kinh doanh / II. Đầu tư / III. Tài chính → chỉ tiêu B03 (02, 03, 07, 21, 25, 34…) → đối tượng có nhãn Quốc tế / Nội bộ / Nội địa / Tạm ứng / Khác; mỗi chỉ tiêu hiện cơ cấu theo nhóm đối tượng; lọc theo nhóm đối tượng (vd chỉ Nội bộ); nhấn đúp xem chứng từ; Excel kèm nhãn. Dùng mã dòng tiền đã điều chỉnh ở Điều chỉnh dữ liệu.
+
 ## 4.99.68
 - Chi phí theo phòng ban → "📄 Báo cáo theo mẫu": chọn phòng ban (hoặc toàn công ty) + từ tháng – đến tháng → báo cáo doanh thu – chi phí theo đúng cây mẫu khoản mục đã nạp (A/B → 1 → 1.1 → 1.1.01), số từng tháng + tổng, dòng tổng tự cộng dồn; cột phòng ban phụ trách (đỏ khi khoản mục thuộc phòng ban khác), "Chưa phân"; phần "Phát sinh ngoài mẫu" cho mã chưa có trong mẫu; xuất Excel. Dùng phòng ban hiệu lực sau điều chỉnh.
 
