@@ -23,7 +23,9 @@ const ACT = [
   { k: 'tc', re: /^3/, vi: 'III. Hoạt động tài chính', en: 'III. Financing activities' },
   { k: 'na', re: /.*/, vi: 'IV. Chưa xác định chỉ tiêu dòng tiền', en: 'IV. Unclassified' },
 ];
-const PG = { intl: ['Quốc tế', 'Intl'], int: ['Nội bộ', 'Intra-group'], dom: ['Nội địa', 'Domestic'], adv: ['Tạm ứng', 'Advance'], oth: ['Khác', 'Other'] };
+const PG = { intl: ['Quốc tế', 'Intl'], int: ['Nội bộ', 'Intra-group'], dom: ['Nội địa', 'Domestic'], adv: ['Tạm ứng', 'Advance'], oth: ['Khác', 'Other'],
+  // nhóm "Khác" tách rõ: thuế, lương, nhân viên, ngân hàng, chưa phân loại…
+  TAX: ['Thuế NSNN', 'Taxes'], SAL: ['Lương', 'Salaries'], DEP: ['Tiền gửi kỳ hạn', 'Term deposits'], NV: ['Nhân viên', 'Staff'], NH: ['Ngân hàng / quỹ', 'Banks'], UNK: ['Chưa phân loại', 'Unclassified'], NONE: ['Không đối tượng', 'No partner'] };
 function make(db, all, FIN) {
   const s = v => String(v ?? '').trim(), day = d => s(d).slice(0, 10);
   const pkey = (d, per) => per === 'y' ? d.slice(0, 4) : per === 'q' ? d.slice(0, 4) + '-Q' + (Math.floor((+d.slice(5, 7) - 1) / 3) + 1) : d.slice(0, 7);
@@ -45,12 +47,19 @@ function make(db, all, FIN) {
   }
   // gắn mã dòng tiền hiệu lực (sau điều chỉnh) + nhóm đối tượng cho từng dòng
   function annotate(o, cls) { const L = lines(o); if (!FIN) return L; const f = day(o.from).slice(0, 7), t = day(o.to).slice(0, 7), C = FIN.cfAfter(L, f, t);
-    L.forEach((x, i) => { x.code = C[i] || ''; x.sub0 = cls(x); x.pg = GOF[x.sub0]; }); return L; }
+    L.forEach((x, i) => { x.code = C[i] || ''; x.sub0 = cls(x); x.pg = GOF[x.sub0]; x.pt = x.pg === 'oth' ? x.sub0 : x.pg; }); return L; }
+  // Đối tượng chưa phân loại trong Danh mục đối tượng (để phân loại nhanh ngay trên báo cáo)
+  function unkOf(L) { const m = new Map(); for (const x of L) if (x._u) { const b = m.get(s(x.bp)) || m.set(s(x.bp), { bp: s(x.bp), a: 0, n: 0 }).get(s(x.bp)); b.a += x.a; b.n++; }
+    return [...m.values()].sort((a, b) => b.a - a.a).slice(0, 1000); }
+  function setKind(bp, kind) { bp = s(bp); kind = s(kind).toUpperCase(); if (!bp) throw new Error('Thiếu đối tượng');
+    const code = bp.split('_').slice(0, -1).join('_') || bp, name = bp.split('_').slice(-1)[0];
+    db.prepare(`INSERT INTO partners_cat(code_name, code, name, kind, updated_at) VALUES(?,?,?,?,datetime('now','localtime')) ON CONFLICT(code_name) DO UPDATE SET kind=excluded.kind, updated_at=excluded.updated_at`).run(bp, code, name, kind || null);
+    return { ok: 1 }; }
   function reportCf(o) { const per = ['m', 'q', 'y'].includes(o.per) ? o.per : 'm', cls = classifier(), en = o.lang === 'en', P = new Set(), S = new Map(), BP = new Map(), CFN = (FIN && FIN.CFN) || {};
     const L = annotate(o, cls).filter(x => !o.pg || x.pg === o.pg);
     for (const x of L) { const sub = x.code || '??', p = pkey(x.d, per); P.add(p);
       const q = S.get(sub) || S.set(sub, { sub, g: (ACT.find(a => a.k !== 'na' && a.re.test(sub)) || ACT[3]).k, by: {}, a: 0, n: 0 }).get(sub); q.by[p] = (q.by[p] || 0) + x.a; q.a += x.a; q.n++;
-      const kb = sub + '|' + x.pg + '|' + s(x.bp), b = BP.get(kb) || BP.set(kb, { sub, pg: x.pg, bp: s(x.bp) || '(không có đối tượng)', by: {}, a: 0, n: 0 }).get(kb); b.by[p] = (b.by[p] || 0) + x.a; b.a += x.a; b.n++; }
+      const kb = sub + '|' + x.pt + '|' + s(x.bp), b = BP.get(kb) || BP.set(kb, { sub, pg: x.pt, bp: s(x.bp) || '(không có đối tượng)', by: {}, a: 0, n: 0 }).get(kb); b.by[p] = (b.by[p] || 0) + x.a; b.a += x.a; b.n++; }
     const periods = [...P].sort();
     const groups = ACT.map(g => { const subs = [...S.values()].filter(q => q.g === g.k).sort((a, b) => a.sub.localeCompare(b.sub)).map(q => ({ ...q, name: q.sub === '??' ? (en ? 'No cash-flow code' : 'Không xác định mã') : q.sub + ' – ' + (CFN[q.sub] || ''),
         partners: [...BP.values()].filter(b => b.sub === q.sub).sort((a, b) => b.a - a.a).slice(0, 300).map(b => ({ ...b, tag: PG[b.pg] ? PG[b.pg][en ? 1 : 0] : '' })),
@@ -58,7 +67,7 @@ function make(db, all, FIN) {
       const by = {}; for (const q of subs) for (const p in q.by) by[p] = (by[p] || 0) + q.by[p];
       return { k: g.k, name: en ? g.en : g.vi, subs, by, a: subs.reduce((t, q) => t + q.a, 0), n: subs.reduce((t, q) => t + q.n, 0) }; }).filter(g => g.n || g.k !== 'na');
     const by = {}; for (const g of groups) for (const p in g.by) by[p] = (by[p] || 0) + g.by[p];
-    return { mode: 'cf', from: day(o.from), to: day(o.to), per, periods, groups, tot: { by, a: groups.reduce((t, g) => t + g.a, 0), n: L.length } };
+    return { mode: 'cf', unk: unkOf(L.map(x => ({ ...x, _u: x.sub0 === 'UNK' }))), from: day(o.from), to: day(o.to), per, periods, groups, tot: { by, a: groups.reduce((t, g) => t + g.a, 0), n: L.length } };
   }
   function report(o = {}) { if (o.by === 'cf') return reportCf(o);
     const per = ['m', 'q', 'y'].includes(o.per) ? o.per : 'm', cls = classifier(), L = lines(o), P = new Set(), S = new Map(), BP = new Map();
@@ -71,12 +80,12 @@ function make(db, all, FIN) {
       const by = {}; for (const q of subs) for (const p in q.by) by[p] = (by[p] || 0) + q.by[p];
       return { k: g.k, name: en ? g.en : g.vi, subs, by, a: subs.reduce((t, q) => t + q.a, 0), n: subs.reduce((t, q) => t + q.n, 0) }; });
     const by = {}; for (const g of groups) for (const p in g.by) by[p] = (by[p] || 0) + g.by[p];
-    return { from: day(o.from), to: day(o.to), per, periods, groups, tot: { by, a: groups.reduce((t, g) => t + g.a, 0), n: L.length } };
+    return { unk: unkOf(L.map(x => ({ ...x, _u: cls(x) === 'UNK' }))), from: day(o.from), to: day(o.to), per, periods, groups, tot: { by, a: groups.reduce((t, g) => t + g.a, 0), n: L.length } };
   }
   // chứng từ chi tiết của một nhóm con (và một đối tượng / một kỳ nếu có)
   function detail(o = {}) { const per = o.per || 'm', cls = classifier();
-    if (o.by === 'cf') return annotate(o, cls).filter(x => (x.code || '??') === o.sub && (!o.pg || x.pg === o.pg) && (o.bpg == null || x.pg === o.bpg) && (o.bp == null || (s(x.bp) || '(không có đối tượng)') === o.bp) && (!o.p || pkey(x.d, per) === o.p)).sort((a, b) => a.d.localeCompare(b.d)).slice(0, 5000);
+    if (o.by === 'cf') return annotate(o, cls).filter(x => (x.code || '??') === o.sub && (!o.pg || x.pg === o.pg) && (o.bpg == null || x.pt === o.bpg) && (o.bp == null || (s(x.bp) || '(không có đối tượng)') === o.bp) && (!o.p || pkey(x.d, per) === o.p)).sort((a, b) => a.d.localeCompare(b.d)).slice(0, 5000);
     return lines(o).filter(x => cls(x) === o.sub && (o.bp == null || (s(x.bp) || '(không có đối tượng)') === o.bp) && (!o.p || pkey(x.d, per) === o.p)).sort((a, b) => a.d.localeCompare(b.d)).slice(0, 5000); }
-  return { report, detail };
+  return { report, detail, setKind };
 }
 module.exports = { make };

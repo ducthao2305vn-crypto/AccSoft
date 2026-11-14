@@ -5,6 +5,8 @@
 const norm = s => String(s ?? '').trim();
 const key = s => norm(s).toUpperCase().replace(/[\s ]+/g, ' ').replace(/[.]+$/, '');
 const CODE = `CASE WHEN instr(e.type_of_cost,'_')>0 THEN substr(e.type_of_cost,1,instr(e.type_of_cost,'_')-1) ELSE e.type_of_cost END`;
+// mã khoản mục chung: chi phí = Type of cost, doanh thu = Sales Region (A0xx_…)
+const KM = `coalesce(e.type_of_cost, e.sales_region)`, KCODE = `CASE WHEN instr(${KM},'_')>0 THEN substr(${KM},1,instr(${KM},'_')-1) ELSE ${KM} END`;
 const NORM = x => `trim(replace(replace(replace(replace(${x}, char(160), ' '), char(9), ' '), char(13), ' '), char(10), ' '))`;
 const PL = s => `((e.acc_${s} GLOB '[5678]*') AND e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%')`; // loại hẳn bút toán kết chuyển (một vế là 911) // doanh thu 5xx/7xx, chi phí 6xx/8xx
 
@@ -53,10 +55,10 @@ function make(db, all, get, okYm) {
     const toCat = new Map(all(`SELECT src, code FROM dept_map`).map(r => [key(r.src), r.code])), cats = new Set(all(`SELECT code FROM dept_cat`).map(r => r.code));
     const catOf = v => toCat.get(key(v)) || (cats.has(norm(v)) ? norm(v) : ''), S = srcOf(), TD = new Map(all(`SELECT code, dept_code FROM tc_dept`).map(r => [r.code, r.dept_code]));
     // gộp sẵn ở SQL theo (mã khoản mục, phòng ban hiệu lực) – không kéo từng bút toán về (nhanh, nhẹ bộ nhớ); bút toán chỉ lấy khi bấm chuyển
-    const agg = all(`SELECT ${NORM(CODE)} code, ${NORM('coalesce(f.value, e.department_sub, \'\')')} cur, min(e.type_of_cost) tc, count(*) n,
-        sum(CASE WHEN e.acc_debit GLOB '[5678]*' THEN e.amount ELSE 0 END) - sum(CASE WHEN e.acc_credit GLOB '[5678]*' THEN e.amount ELSE 0 END) a
+    const agg = all(`SELECT ${NORM(KCODE)} code, ${NORM('coalesce(f.value, e.department_sub, \'\')')} cur, min(${KM}) tc, count(*) n,
+        sum(CASE WHEN e.acc_debit GLOB '[68]*' THEN e.amount ELSE 0 END) - sum(CASE WHEN e.acc_credit GLOB '[68]*' THEN e.amount ELSE 0 END) + sum(CASE WHEN e.acc_credit GLOB '[57]*' THEN e.amount ELSE 0 END) - sum(CASE WHEN e.acc_debit GLOB '[57]*' THEN e.amount ELSE 0 END) a
       FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept'
-      WHERE e.ym>=? AND e.ym<=? AND e.type_of_cost IS NOT NULL AND (${PL('debit')} OR ${PL('credit')}) GROUP BY 1,2`, f, t);
+      WHERE e.ym>=? AND e.ym<=? AND ${KM} IS NOT NULL AND (${PL('debit')} OR ${PL('credit')}) GROUP BY 1,2`, f, t);
     const multi = { n: 0, a: 0 }, G = [], nm = new Map(all(`SELECT code, name FROM dept_cat`).map(r => [r.code, r.name]));
     for (const r of agg) { if (!TD.has(r.code)) continue; const want = TD.get(r.code);
       if (!want) { multi.n += r.n; multi.a += r.a; continue; }
@@ -70,9 +72,9 @@ function make(db, all, get, okYm) {
     const f = okYm(from), t = okYm(to), P = new Map([].concat(pairs || []).map(p => [p.code + '|' + p.cur, p.target])); if (!f || !t || !P.size) return new Map();
     const codes = [...new Set([].concat(pairs).map(p => p.code))], by = new Map();
     for (const r of all(`SELECT e.id, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.department_sub dept,
-        ${NORM(CODE)} code, ${NORM('coalesce(f.value, e.department_sub, \'\')')} cur
+        ${NORM(KCODE)} code, ${NORM('coalesce(f.value, e.department_sub, \'\')')} cur
       FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept'
-      WHERE e.ym>=? AND e.ym<=? AND e.type_of_cost IS NOT NULL AND (${PL('debit')} OR ${PL('credit')}) AND ${NORM(CODE)} IN (${codes.map(() => '?').join(',')})`, f, t, ...codes)) {
+      WHERE e.ym>=? AND e.ym<=? AND ${KM} IS NOT NULL AND (${PL('debit')} OR ${PL('credit')}) AND ${NORM(KCODE)} IN (${codes.map(() => '?').join(',')})`, f, t, ...codes)) {
       const tg = P.get(r.code + '|' + r.cur); if (tg == null) continue; (by.get(tg) || by.set(tg, []).get(tg)).push(r); }
     return by;
   }
@@ -82,7 +84,7 @@ function make(db, all, get, okYm) {
     const months = []; if (f && t) for (let y = +f.slice(0, 4), m = +f.slice(5); `${y}-${String(m).padStart(2, '0')}` <= t; m === 12 ? (y++, m = 1) : m++) months.push(`${y}-${String(m).padStart(2, '0')}`);
     const toCat = new Map(all(`SELECT src, code FROM dept_map`).map(r => [key(r.src), r.code])), cats = new Set(all(`SELECT code FROM dept_cat`).map(r => r.code));
     const catOf = v => toCat.get(key(v)) || (cats.has(norm(v)) ? norm(v) : '');
-    const RC = `CASE WHEN instr(e.type_of_revenue,'_')>0 THEN substr(e.type_of_revenue,1,instr(e.type_of_revenue,'_')-1) ELSE e.type_of_revenue END`;
+    const RV = `coalesce(e.sales_region, e.type_of_revenue)`, RC = `CASE WHEN instr(${RV},'_')>0 THEN substr(${RV},1,instr(${RV},'_')-1) ELSE ${RV} END`; // doanh thu: mã Sales Region (A0xx), thiếu thì Type of revenue
     const rows = all(`SELECT e.ym, ${NORM('coalesce(f.value, e.department_sub, \'\')')} dv, ${NORM(CODE)} c, ${NORM(RC)} rc,
         sum(CASE WHEN e.acc_debit GLOB '[68]*' AND e.acc_debit NOT LIKE '911%' THEN e.amount ELSE 0 END) - sum(CASE WHEN e.acc_credit GLOB '[68]*' AND e.acc_credit NOT LIKE '911%' THEN e.amount ELSE 0 END) ex,
         sum(CASE WHEN e.acc_credit GLOB '[57]*' AND e.acc_credit NOT LIKE '911%' THEN e.amount ELSE 0 END) - sum(CASE WHEN e.acc_debit GLOB '[57]*' AND e.acc_debit NOT LIKE '911%' THEN e.amount ELSE 0 END) rv

@@ -45,7 +45,7 @@ const SRC = {
   drName: ['Account', str], crName: ['Account credit', str], amtAcc: ['Accounted Amount', num], amtSrc: ['Source Amount', num], codeBooking: ['Code Booking', str], qty: ['Quantity', num], price: ['Unit Price', num],
   bp: ['Business Partner', str], bpCr: ['Bpartner credit', str], desc: ['Description', str], descP: ['DescriptionParent', str],
   dept: ['Department', str], deptSub: ['Department Sub', str], table: ['Table', str], tcost: ['Type of cost', str],
-  trev: ['Type of revenue ERP', str], trev2: ['Type of revenue BCCS', str], inv: ['Invoice', str], adv: ['Advance Request', str],
+  salesRegion: [['Sales Region', 'Sale Region', 'SalesRegion'], str], trev: ['Type of revenue ERP', str], trev2: ['Type of revenue BCCS', str], inv: ['Invoice', str], adv: ['Advance Request', str],
   contract: ['Contract', str], user: ['Created By', str], updUser: ['Updated By', str], cf: ['Cashflow activities', str], bts: ['BTS Site', str],
   product: ['Product', str], uom: ['UOM', str], loc: ['Locator', str], locCr: ['Locator Credit', str],
   distFrom: ['Distribution From', isoDate], distTo: ['Distribution To', isoDate], currency: ['Currency', str], rate: ['Rate', num], rateVnd: ['RateToVND', num],
@@ -294,7 +294,7 @@ async function enrichFile({ file, name }) {
   const updAmt = db.prepare(`UPDATE entries SET amount_acc=coalesce(?,amount_acc), amount_src=coalesce(?,amount_src), code_booking=coalesce(?,code_booking), amount=? WHERE id=?`); let amtUpd = 0;
   const upd = db.prepare(`UPDATE entries SET product=coalesce(?,product), uom=coalesce(?,uom), locator=coalesce(?,locator), locator_credit=coalesce(?,locator_credit),
     dist_from=coalesce(?,dist_from), dist_to=coalesce(?,dist_to), currency=coalesce(?,currency), rate=coalesce(?,rate), rate_vnd=coalesce(?,rate_vnd),
-    group_cost=coalesce(?,group_cost), services=coalesce(?,services), location=coalesce(?,location), project=coalesce(?,project), period=coalesce(?,period), plate=coalesce(?,plate), asset=coalesce(?,asset), enriched=1 WHERE id=?`);
+    group_cost=coalesce(?,group_cost), services=coalesce(?,services), location=coalesce(?,location), project=coalesce(?,project), period=coalesce(?,period), plate=coalesce(?,plate), asset=coalesce(?,asset), sales_region=coalesce(?,sales_region), enriched=1 WHERE id=?`);
   const samples = [];
   db.exec('BEGIN');
   try {
@@ -307,8 +307,8 @@ async function enrichFile({ file, name }) {
       if (hit.length > 1) ambiguous++;
       matched++;
       if (r.amtSrc != null || r.codeBooking) for (const h of hit) { updAmt.run(r.amtAcc, r.amtSrc, r.codeBooking, r.amt, h.id); amtUpd++; } // Source Amount / Code Booking; amount theo cài đặt
-      if (!r.product && !r.loc && !r.locCr && !r.uom && !r.location && !r.plate && !r.asset && r.amtSrc == null && !r.codeBooking) skipped++; // file gốc cũng không có mã hàng/kho: chỉ đánh dấu đã đối chiếu
-      for (const h of hit) { upd.run(r.product, r.uom, r.loc, r.locCr, r.distFrom, r.distTo, r.currency, r.rate, r.rateVnd, r.grpCost, r.services, r.location, r.project, r.period, r.plate, r.asset, h.id); if (h.product !== r.product || h.uom !== r.uom || h.locator !== r.loc || h.locator_credit !== r.locCr || (r.location && h.location !== r.location) || (r.plate && h.plate !== r.plate) || (r.asset && h.asset !== r.asset)) updated++; }
+      if (!r.product && !r.loc && !r.locCr && !r.uom && !r.location && !r.plate && !r.asset && !r.salesRegion && r.amtSrc == null && !r.codeBooking) skipped++; // file gốc cũng không có mã hàng/kho: chỉ đánh dấu đã đối chiếu
+      for (const h of hit) { upd.run(r.product, r.uom, r.loc, r.locCr, r.distFrom, r.distTo, r.currency, r.rate, r.rateVnd, r.grpCost, r.services, r.location, r.project, r.period, r.plate, r.asset, r.salesRegion, h.id); if (h.product !== r.product || h.uom !== r.uom || h.locator !== r.loc || h.locator_credit !== r.locCr || (r.location && h.location !== r.location) || (r.plate && h.plate !== r.plate) || (r.asset && h.asset !== r.asset)) updated++; }
       if (n % BATCH === 0) {
         db.exec('COMMIT'); db.exec('BEGIN');
         if (Date.now() - lastPost > 400) { lastPost = Date.now(); post({ type: 'progress', rows: n, pct: Math.min(99, read / size * 100), secs: (Date.now() - t0) / 1000 }); }

@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## 4.99.72
+- Doanh thu theo khoản mục: nạp thêm cột **Sales Region** của file ERP (mã A0xx_… = mã khoản mục doanh thu). Báo cáo theo mẫu và Chuyển theo quy tắc khoản mục dùng mã này cho doanh thu (thiếu thì dùng Type of revenue). Dữ liệu đã nạp: chạy "Bổ sung thông tin" từ file gốc để điền Sales Region, không cần nạp lại.
+- Dòng tiền thanh toán: nhóm "Khác" tách rõ Thuế NSNN / Lương / Tiền gửi kỳ hạn / Nhân viên / Ngân hàng / Chưa phân loại / Không đối tượng; nút "⚠ Phân loại đối tượng chưa phân loại" gán nhóm ngay trên báo cáo (từng dòng hoặc hàng loạt), lưu vào Danh mục đối tượng.
+- Khớp phòng ban thống nhất giữa Chi phí theo phòng ban, Kế hoạch – thực hiện, Báo cáo theo mẫu: không phân biệt hoa / thường, nhận cả giá trị là mã danh mục (dòng đã chuyển phòng ban bằng mã không còn bị "chưa ánh xạ").
+- Nạp lại dữ liệu một tháng: tự gắn lại các điều chỉnh (hợp đồng, vị trí, biển số, phòng ban…) và đánh dấu rà soát (Chính xác / Đang xử lý / Sai) vào bút toán mới theo nội dung bút toán — trước đây hàm gắn lại có sẵn nhưng không được gọi.
+
 ## 4.99.71
 - Sửa công thức: Kế hoạch – thực hiện chi phí, Báo cáo theo mẫu và Chuyển theo quy tắc khoản mục tính sai khi có bút toán kết chuyển 911 (Nợ 911 / Có 6xx bị trừ vào chi phí, Nợ 5xx / Có 911 bị trừ vào doanh thu). Nay loại hẳn bút toán có một vế 911 — khớp với Chi phí theo phòng ban.
 - Tốc độ: quét "Chuyển theo quy tắc khoản mục" nhanh hơn ~10 lần (gộp ở SQL, bút toán chỉ lấy khi bấm chuyển, ghi điều chỉnh ở phía máy chủ); danh mục phòng ban đếm số dòng bằng 1 lần quét thay cho truy vấn lồng.

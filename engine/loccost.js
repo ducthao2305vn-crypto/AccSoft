@@ -36,15 +36,21 @@ const monthsOf = (f, t) => { const o = []; for (let m = f; m <= t; m = addM(m, 1
 function make(db, all, get, okYm) {
   // Trạng thái rà soát từng bút toán theo chiều: ok = chính xác, wip = đang xử lý, bad = sai
   db.exec(`CREATE TABLE IF NOT EXISTS dim_mark(id INTEGER, dim TEXT, st TEXT, note TEXT, at TEXT, PRIMARY KEY(id, dim))`);
+  try { db.exec(`ALTER TABLE dim_mark ADD COLUMN sig TEXT`); } catch { } // chữ ký nội dung bút toán – để gắn lại sau khi nạp lại dữ liệu (id đổi)
+  const SIG = `(SELECT document_no||'|'||account_date||'|'||acc_debit||'|'||acc_credit||'|'||cast(round(coalesce(amount_acc,amount)*100) AS INTEGER)||'|'||ifnull(partner_debit,'')||'|'||ifnull(partner_credit,'') FROM entries WHERE id=?)`;
   function mark(d, ids, st, note) {
-    const del = db.prepare(`DELETE FROM dim_mark WHERE id=? AND dim=?`), ins = db.prepare(`INSERT OR REPLACE INTO dim_mark(id, dim, st, note, at) VALUES(?,?,?,?,datetime('now','localtime'))`);
-    db.exec('BEGIN'); try { for (const id of [].concat(ids || [])) st ? ins.run(+id, d, st, note || null) : del.run(+id, d); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
+    const del = db.prepare(`DELETE FROM dim_mark WHERE id=? AND dim=?`), ins = db.prepare(`INSERT OR REPLACE INTO dim_mark(id, dim, st, note, at, sig) VALUES(?,?,?,?,datetime('now','localtime'),${SIG})`);
+    db.exec('BEGIN'); try { for (const id of [].concat(ids || [])) st ? ins.run(+id, d, st, note || null, +id) : del.run(+id, d); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
     return { n: [].concat(ids || []).length };
   }
   const D = d => DIMS[d] || DIMS.location;
   // chuẩn hoá khoảng trắng (đầu/cuối, NBSP, tab, xuống dòng, 2 dấu cách) để cùng một mã không bị tách thành 2 dòng
   const NORM = x => `trim(replace(replace(replace(replace(replace(replace(${x}, char(160), ' '), char(9), ' '), char(13), ' '), char(10), ' '), '  ', ' '), '  ', ' '))`;
   const nz = v => String(v ?? '').replace(/[\u00a0\t\r\n]/g, ' ').replace(/ {2,}/g, ' ').trim();
+  // Tên phòng ban dữ liệu → danh mục: không phân biệt hoa / thường, nhận cả giá trị là chính mã danh mục (thống nhất với Kế hoạch – thực hiện, Báo cáo theo mẫu)
+  const dkey = v => nz(v).toUpperCase().replace(/[.]+$/, '');
+  function deptMap() { const m = new Map(); for (const d of all(`SELECT code, name FROM dept_cat`)) m.set(dkey(d.code), d);
+    for (const r of all(`SELECT m.src, d.code, d.name FROM dept_map m JOIN dept_cat d ON d.code=m.code`)) m.set(dkey(r.src), r); return { get: v => m.get(dkey(v)) }; }
   const VAL = d => NORM(`coalesce(f.value, ${D(d).col}, '')`), FJ = d => `LEFT JOIN field_adj f ON f.id=e.id AND f.field='${D(d).f}'`;
   const setting = (k, def) => { const s = get(`SELECT v FROM settings WHERE k=?`, k); try { return s && s.v ? JSON.parse(s.v) : def; } catch { return def; } };
   // Nhóm chi phí: vị trí / xe theo danh sách mã; phòng ban theo Expense Group của danh mục khoản mục
@@ -66,7 +72,7 @@ function make(db, all, get, okYm) {
         const key = r.k + '|' + g, o = m.get(key) || m.set(key, { k: r.k || '', g, v: {}, n: 0 }).get(key); o.v[r.ym] = (o.v[r.ym] || 0) + sg * r.a; o.n += r.n; if (isDept) { o.tcv = o.tcv || {}; const T = o.tcv[r.tc || ''] || (o.tcv[r.tc || ''] = {}); T[r.ym] = (T[r.ym] || 0) + sg * r.a; if (r.ym >= f) { o.tc = o.tc || {}; o.tc[r.tc || ''] = (o.tc[r.tc || ''] || 0) + sg * r.a; } } }
     const months = monthsOf(f, t), gn = Object.fromEntries(G.map(g => [g.k, g.n])), N = d === 'plate' ? norms() : {};
     // phòng ban: tên theo danh mục phòng ban (ánh xạ)
-    const dmap = isDept ? new Map(all(`SELECT m.src, d.code, d.name FROM dept_map m JOIN dept_cat d ON d.code=m.code`).map(r => [nz(r.src), r])) : null;
+    const dmap = isDept ? deptMap() : null;
     let rows = [...m.values()].map(o => {
       const nz = Object.keys(o.v).filter(k => Math.abs(o.v[k]) > 0.004).sort(), first = nz[0] || null;
       const inP = months.filter(x => Math.abs(o.v[x] || 0) > 0.004), tot = months.reduce((s, x) => s + (o.v[x] || 0), 0), avg = inP.length ? tot / inP.length : 0;
@@ -100,9 +106,17 @@ function make(db, all, get, okYm) {
     const c = D(d).col.replace('e.', ''), f = D(d).f;
     const rows = all(`SELECT ${NORM('v')} v, sum(n) n FROM (SELECT ${c} v, count(*) n FROM entries WHERE ${c} IS NOT NULL AND ${c}<>'' GROUP BY 1 UNION ALL SELECT value, count(*) FROM field_adj WHERE field=? AND value<>'' GROUP BY 1) WHERE ${NORM('v')}<>'' GROUP BY 1 ORDER BY 2 DESC LIMIT 5000`, f);
     if (d !== 'dept') return rows;
-    const dm = new Map(all(`SELECT m.src, d.code, d.name FROM dept_map m JOIN dept_cat d ON d.code=m.code`).map(r => [nz(r.src), r]));
+    const dm = deptMap();
     return rows.map(r => ({ ...r, cat: dm.get(r.v) ? dm.get(r.v).code + ' – ' + (dm.get(r.v).name || '') : '' }));
   }
-  return { matrix, detail, values, groups, norms, mark };
+  // Sau khi nạp lại dữ liệu: đánh dấu có id không còn tồn tại → tìm lại bút toán theo chữ ký; đánh dấu cũ chưa có chữ ký thì bổ sung
+  function rebindMarks() { let n = 0;
+    db.exec(`UPDATE dim_mark SET sig=(SELECT document_no||'|'||account_date||'|'||acc_debit||'|'||acc_credit||'|'||cast(round(coalesce(amount_acc,amount)*100) AS INTEGER)||'|'||ifnull(partner_debit,'')||'|'||ifnull(partner_credit,'') FROM entries e WHERE e.id=dim_mark.id) WHERE sig IS NULL`);
+    for (const x of all(`SELECT m.rowid r, m.sig FROM dim_mark m LEFT JOIN entries e ON e.id=m.id WHERE e.id IS NULL AND m.sig IS NOT NULL`)) { const [doc, d, dr, cr, cents, bp, bpCr] = String(x.sig).split('|');
+      const e = all(`SELECT id FROM entries WHERE document_no=? AND account_date=? AND acc_debit=? AND acc_credit=? AND round(coalesce(amount_acc,amount)*100)=? AND ifnull(partner_debit,'')=? AND ifnull(partner_credit,'')=? LIMIT 1`, doc, d, dr, cr, +cents, bp, bpCr)[0];
+      if (e) { try { db.prepare(`UPDATE dim_mark SET id=? WHERE rowid=?`).run(e.id, x.r); n++; } catch { } } }
+    return { n }; }
+  try { rebindMarks(); } catch { }
+  return { matrix, detail, values, groups, norms, mark, rebindMarks };
 }
 module.exports = { make, GROUPS, DIMS };
