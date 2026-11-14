@@ -5,7 +5,8 @@ const norm = s => String(s ?? '').trim();
 const key = s => norm(s).toUpperCase().replace(/[\s ]+/g, ' ').replace(/[.]+$/, '');
 const CODE = `CASE WHEN instr(e.type_of_cost,'_')>0 THEN substr(e.type_of_cost,1,instr(e.type_of_cost,'_')-1) ELSE e.type_of_cost END`;
 const NORM = x => `trim(replace(replace(replace(replace(${x}, char(160), ' '), char(9), ' '), char(13), ' '), char(10), ' '))`;
-const EXP = s => `(e.acc_${s} GLOB '[68]*' AND e.acc_${s} NOT LIKE '911%')`;
+// bút toán kết chuyển (một vế là 911) bị loại hẳn – không tính vế 6xx/8xx đối ứng
+const EXP = s => `(e.acc_${s} GLOB '[68]*' AND e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%')`;
 const num = v => { const n = typeof v === 'number' ? v : +String(v ?? '').replace(/,/g, ''); return isFinite(n) ? n : 0; };
 
 function make(db, all) {
@@ -94,7 +95,7 @@ function make(db, all) {
     const toCat = new Map(all(`SELECT src, code FROM dept_map`).map(r => [key(r.src), r.code])), catSet = new Set(all(`SELECT code FROM dept_cat`).map(r => r.code)), catOf = v => toCat.get(key(v)) || (catSet.has(norm(v)) ? norm(v) : '') || '(chưa ánh xạ)';
     return all(`SELECT e.id, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.description ds, e.created_by u, ${NORM('coalesce(f.value, e.department_sub, \'\')')} dept
       FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept' WHERE e.ym>=? AND e.ym<=? AND ${NORM(CODE)}=? AND (${EXP('debit')} OR ${EXP('credit')}) ORDER BY e.account_date, e.id`, from, to, code === '(không có khoản mục)' ? '' : code)
-      .filter(r => !dept || catOf(r.dept) === dept).map(r => ({ ...r, v: (/^[68]/.test(r.dr) && !/^911/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) && !/^911/.test(r.cr) ? r.a : 0) }));
+      .filter(r => !dept || catOf(r.dept) === dept).map(r => ({ ...r, v: (/^[68]/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) ? r.a : 0) }));
   }
   return { years, list, importAoa, save, remove, copyYear, compare, lines };
 }

@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 4.99.71
+- Sửa công thức: Kế hoạch – thực hiện chi phí, Báo cáo theo mẫu và Chuyển theo quy tắc khoản mục tính sai khi có bút toán kết chuyển 911 (Nợ 911 / Có 6xx bị trừ vào chi phí, Nợ 5xx / Có 911 bị trừ vào doanh thu). Nay loại hẳn bút toán có một vế 911 — khớp với Chi phí theo phòng ban.
+- Tốc độ: quét "Chuyển theo quy tắc khoản mục" nhanh hơn ~10 lần (gộp ở SQL, bút toán chỉ lấy khi bấm chuyển, ghi điều chỉnh ở phía máy chủ); danh mục phòng ban đếm số dòng bằng 1 lần quét thay cho truy vấn lồng.
+- Kế hoạch – thực hiện: xem "Một phòng ban" mà chưa chọn thì tự lấy phòng ban đầu tiên (trước đây hiện số toàn công ty).
+
 ## 4.99.70
 - Trang mới "Kế hoạch – thực hiện chi phí": nạp kế hoạch năm theo mẫu (Code ERP · tên Anh · tên Việt · KH năm · T1…T12 · Phòng Ban), tự khớp phòng ban với danh mục. So sánh KH – TH theo mã khoản mục + tên khoản mục, chọn năm, từ tháng – đến tháng: toàn công ty, toàn công ty chi tiết theo phòng ban, một phòng ban; chi tiết KH/TH từng tháng; % thực hiện kỳ và năm; tô đỏ vượt KH; nhãn "Ngoài KH" cho chi phí phát sinh không có trong kế hoạch; nhấn đúp xem bút toán; xuất Excel.
 - Tab Kế hoạch: sửa trực tiếp từng ô (tự lưu), thêm / xoá dòng, nạp thêm dòng bổ sung, tạo kế hoạch năm mới (vd 2027) từ năm trước × hệ số, xuất biểu mẫu Excel cùng định dạng.

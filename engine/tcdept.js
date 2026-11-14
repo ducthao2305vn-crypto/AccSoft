@@ -6,7 +6,7 @@ const norm = s => String(s ?? '').trim();
 const key = s => norm(s).toUpperCase().replace(/[\s ]+/g, ' ').replace(/[.]+$/, '');
 const CODE = `CASE WHEN instr(e.type_of_cost,'_')>0 THEN substr(e.type_of_cost,1,instr(e.type_of_cost,'_')-1) ELSE e.type_of_cost END`;
 const NORM = x => `trim(replace(replace(replace(replace(${x}, char(160), ' '), char(9), ' '), char(13), ' '), char(10), ' '))`;
-const PL = s => `((e.acc_${s} GLOB '[5678]*') AND e.acc_${s} NOT LIKE '911%')`; // doanh thu 5xx/7xx, chi phí 6xx/8xx
+const PL = s => `((e.acc_${s} GLOB '[5678]*') AND e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%')`; // loại hẳn bút toán kết chuyển (một vế là 911) // doanh thu 5xx/7xx, chi phí 6xx/8xx
 
 function make(db, all, get, okYm) {
   const run = (q, ...a) => db.prepare(q).run(...a);
@@ -43,30 +43,38 @@ function make(db, all, get, okYm) {
   const clear = () => (run(`DELETE FROM tc_dept`), { ok: 1 });
 
   // Giá trị Department Sub ghi vào khi chuyển: tên gốc dùng nhiều nhất đang ánh xạ về mã danh mục đó (để báo cáo nhận đúng), không có thì dùng mã
-  function srcOf() { const m = new Map();
-    for (const r of all(`SELECT m.code, m.src, (SELECT count(*) FROM entries e WHERE e.department_sub=m.src) n FROM dept_map m ORDER BY n DESC`)) if (!m.has(r.code)) m.set(r.code, r.src);
+  function srcOf() { const cnt = new Map(all(`SELECT department_sub s, count(*) n FROM entries WHERE department_sub IS NOT NULL GROUP BY 1`).map(r => [r.s, r.n])), m = new Map(); // 1 lần quét, không đếm lồng từng phòng ban
+    for (const r of all(`SELECT code, src FROM dept_map`).map(r => ({ ...r, n: cnt.get(r.src) || 0 })).sort((x, y) => y.n - x.n)) if (!m.has(r.code)) m.set(r.code, r.src);
     return c => m.get(c) || c; }
 
   // Bút toán có khoản mục đã gán 1 phòng ban nhưng phòng ban hiệu lực (sau điều chỉnh) khác → đề xuất chuyển
   function scan(from, to) {
-    const f = okYm(from), t = okYm(to); if (!f || !t) return { groups: [], rows: [], multi: { n: 0, a: 0 } };
+    const f = okYm(from), t = okYm(to); if (!f || !t) return { groups: [], n: 0, a: 0, multi: { n: 0, a: 0 } };
     const toCat = new Map(all(`SELECT src, code FROM dept_map`).map(r => [key(r.src), r.code])), cats = new Set(all(`SELECT code FROM dept_cat`).map(r => r.code));
-    const catOf = v => toCat.get(key(v)) || (cats.has(norm(v)) ? norm(v) : ''), S = srcOf();
-    const rows = all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.description ds, e.created_by u,
-        e.type_of_cost tc, e.department_sub orig, ${NORM('coalesce(f.value, e.department_sub, \'\')')} cur, f.value adj, t.code code, t.dept_code want, t.dept_raw raw
-      FROM entries e JOIN tc_dept t ON t.code=${NORM(CODE)} LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept'
-      WHERE e.ym>=? AND e.ym<=? AND (${PL('debit')} OR ${PL('credit')})`, f, t);
-    const out = [], multi = { n: 0, a: 0 }, G = new Map();
-    for (const r of rows) {
-      const v = (/^[5678]/.test(r.dr) && !/^911/.test(r.dr) ? r.a : 0) - (/^[5678]/.test(r.cr) && !/^911/.test(r.cr) ? r.a : 0);
-      if (!r.want) { multi.n++; multi.a += v; continue; }
-      const cc = catOf(r.cur); if (cc === r.want) continue;
-      const o = { ...r, v, curCat: cc, target: S(r.want) }; out.push(o);
-      const k = r.code + '|' + r.cur, g = G.get(k) || G.set(k, { code: r.code, tc: r.tc, cur: r.cur, curCat: cc, want: r.want, n: 0, a: 0 }).get(k); g.n++; g.a += v;
-    }
-    const nm = new Map(all(`SELECT code, name FROM dept_cat`).map(r => [r.code, r.name]));
-    for (const g of G.values()) { g.wantName = nm.get(g.want) || ''; g.curName = nm.get(g.curCat) || ''; }
-    return { groups: [...G.values()].sort((a, b) => Math.abs(b.a) - Math.abs(a.a)), rows: out.slice(0, 200000), multi };
+    const catOf = v => toCat.get(key(v)) || (cats.has(norm(v)) ? norm(v) : ''), S = srcOf(), TD = new Map(all(`SELECT code, dept_code FROM tc_dept`).map(r => [r.code, r.dept_code]));
+    // gộp sẵn ở SQL theo (mã khoản mục, phòng ban hiệu lực) – không kéo từng bút toán về (nhanh, nhẹ bộ nhớ); bút toán chỉ lấy khi bấm chuyển
+    const agg = all(`SELECT ${NORM(CODE)} code, ${NORM('coalesce(f.value, e.department_sub, \'\')')} cur, min(e.type_of_cost) tc, count(*) n,
+        sum(CASE WHEN e.acc_debit GLOB '[5678]*' THEN e.amount ELSE 0 END) - sum(CASE WHEN e.acc_credit GLOB '[5678]*' THEN e.amount ELSE 0 END) a
+      FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept'
+      WHERE e.ym>=? AND e.ym<=? AND e.type_of_cost IS NOT NULL AND (${PL('debit')} OR ${PL('credit')}) GROUP BY 1,2`, f, t);
+    const multi = { n: 0, a: 0 }, G = [], nm = new Map(all(`SELECT code, name FROM dept_cat`).map(r => [r.code, r.name]));
+    for (const r of agg) { if (!TD.has(r.code)) continue; const want = TD.get(r.code);
+      if (!want) { multi.n += r.n; multi.a += r.a; continue; }
+      const cc = catOf(r.cur); if (cc === want) continue;
+      G.push({ code: r.code, tc: r.tc, cur: r.cur, curCat: cc, want, target: S(want), n: r.n, a: r.a, wantName: nm.get(want) || '', curName: nm.get(cc) || '' }); }
+    G.sort((a, b) => Math.abs(b.a) - Math.abs(a.a));
+    return { groups: G, n: G.reduce((s, g) => s + g.n, 0), a: G.reduce((s, g) => s + g.a, 0), multi };
+  }
+  // Bút toán của các nhóm (mã khoản mục × phòng ban đang ghi) đã chọn – để ghi điều chỉnh; trả về theo giá trị đích
+  function rowsOf(from, to, pairs) {
+    const f = okYm(from), t = okYm(to), P = new Map([].concat(pairs || []).map(p => [p.code + '|' + p.cur, p.target])); if (!f || !t || !P.size) return new Map();
+    const codes = [...new Set([].concat(pairs).map(p => p.code))], by = new Map();
+    for (const r of all(`SELECT e.id, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.department_sub dept,
+        ${NORM(CODE)} code, ${NORM('coalesce(f.value, e.department_sub, \'\')')} cur
+      FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept'
+      WHERE e.ym>=? AND e.ym<=? AND e.type_of_cost IS NOT NULL AND (${PL('debit')} OR ${PL('credit')}) AND ${NORM(CODE)} IN (${codes.map(() => '?').join(',')})`, f, t, ...codes)) {
+      const tg = P.get(r.code + '|' + r.cur); if (tg == null) continue; (by.get(tg) || by.set(tg, []).get(tg)).push(r); }
+    return by;
   }
   // Báo cáo theo mẫu: chọn phòng ban (mã danh mục; rỗng = toàn công ty) + giai đoạn → cây mẫu, số theo tháng, cộng dồn các dòng tổng theo STT
   function report(dept, from, to) {
@@ -96,6 +104,6 @@ function make(db, all, get, okYm) {
     return { tpl: T.length, months, rows: L.map(x => ({ ord: x.ord, code: x.code, stt: x.stt, vn: x.vn, en: x.en, lv: x.lv, leaf: x.leaf, sec: x.sec, own: x.own, raw: x.dept_raw, multi: x.multi, v: x.v, tot: tot(x.v) })),
       other: other.map(o => ({ ...o, tot: tot(o.v) })).filter(o => Math.abs(o.tot) > 0.004).sort((a, b) => a.sec.localeCompare(b.sec) || String(a.code).localeCompare(String(b.code))) };
   }
-  return { importAoa, list, setRow, clear, scan, srcOf, report };
+  return { importAoa, list, setRow, clear, scan, rowsOf, srcOf, report };
 }
 module.exports = { make };

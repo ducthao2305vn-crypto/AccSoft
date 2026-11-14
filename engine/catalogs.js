@@ -11,7 +11,8 @@ function make(db, all, get, run) {
   const tx = f => { db.exec('BEGIN'); try { const r = f(); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } };
   /* ---- Phòng ban ---- */
   function deptList() {
-    const maps = all(`SELECT m.src, m.code, (SELECT count(*) FROM entries e WHERE e.department_sub=m.src) n FROM dept_map m`);
+    const cnt = new Map(all(`SELECT department_sub s, count(*) n FROM entries WHERE department_sub IS NOT NULL GROUP BY 1`).map(r => [r.s, r.n])); // 1 lần quét thay cho đếm lồng từng dòng ánh xạ
+    const maps = all(`SELECT src, code FROM dept_map`).map(m => ({ ...m, n: cnt.get(m.src) || 0 }));
     const by = new Map(); for (const m of maps) (by.get(m.code) || by.set(m.code, []).get(m.code)).push({ src: m.src, n: m.n });
     return all(`SELECT * FROM dept_cat ORDER BY code`).map(d => ({ ...d, maps: by.get(d.code) || [], n: (by.get(d.code) || []).reduce((s, x) => s + x.n, 0) }));
   }
