@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## 4.99.75
+- Trang mới "Báo cáo tài chính IFRS" (Kết quả & báo cáo) theo mẫu Financial Statement 2025, lập cho mọi năm có dữ liệu (cột năm trước lập lại theo cùng quy tắc):
+  - TB – bảng cân đối thử chi tiết từ dữ liệu hạch toán: TK chi tiết, TK công nợ 131 / 331 / 138 tách theo từng đối tượng (dư Nợ → phải thu, dư Có → phải trả), đầu kỳ / phát sinh / cuối kỳ, điều chỉnh IFRS, sau điều chỉnh, chỉ tiêu IFRS. TB là nguồn duy nhất: SOFP = tổng TB theo chỉ tiêu.
+  - SOFP, SOPL, SOCF (gián tiếp, dòng "chưa phân loại" để rà soát), SOCE, Notes (doanh thu, thuế TNDN, tiền, tiền gửi, phải thu, HTK, tài sản khác, biến động TSCĐ hữu hình / vô hình, phải trả, thuế, thuế hoãn lại lấy từ trang Thuế TNDN).
+  - Quy tắc phân loại TK → chỉ tiêu (mặc định theo sheet TB của file mẫu, sửa được), bút toán điều chỉnh IFRS theo năm (như sheet JE), điều chỉnh dòng tiền, thông tin người ký; nhấn đúp chỉ tiêu SOFP để xem TB của chỉ tiêu.
+  - Xuất Excel bộ báo cáo: SOPL, SOFP, SOCF, SOCE, Notes, TB (mỗi chỉ tiêu một cột như mẫu), JE – số dạng (1,234), dòng tổng in đậm.
+
 ## 4.99.74
 - Trang mới "Thuế TNDN & thuế hoãn lại" (Kết quả & báo cáo), mô hình theo file Income Tax Viettel Timor, luật thuế Timor-Leste: hàng hoá / vật tư được trừ khi mua, TSCĐ được trừ toàn bộ khi ghi tăng; giá vốn, xuất dùng, dự phòng HTK, khấu hao, giá trị còn lại TS thanh lý không được trừ. Tự lấy số từ dữ liệu hạch toán từng năm:
   - Tờ khai ITR (dòng 5, 10, 15, 20, 110, 140–220), đối chiếu lợi nhuận kế toán → thu nhập chịu thuế, thuế 10%, đã tạm nộp, còn phải nộp; lỗ chuyển kỳ tự tính theo chuỗi các năm (nhập tay đè được).

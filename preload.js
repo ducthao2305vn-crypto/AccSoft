@@ -64,6 +64,7 @@ contextBridge.exposeInMainWorld('api', {
   staffImport: mode => ipcRenderer.invoke('staff:import', mode),
   staffMail: (list, subject, body) => ipcRenderer.invoke('staff:mail', list, subject, body),
   catImport: mode => ipcRenderer.invoke('cat:import', mode),
+  ifrsExport: y => ipcRenderer.invoke('ifrs:export', y),
   xlsxSheets: (name, sheets) => ipcRenderer.invoke('xlsx:sheets', name, sheets),
   recvXlsx: (acc, asOf, term) => ipcRenderer.invoke('report:recv', acc, asOf, term),
   finXlsx: p => ipcRenderer.invoke('report:fin', p),
