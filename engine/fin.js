@@ -331,6 +331,6 @@ function make(all, okYm, INC, plRange, run) {
   }
   // Mã dòng tiền B03 hiệu lực (sau điều chỉnh) cho danh sách bút toán {doc,d,dr,cr,a,aa,bp,bpCr,cf}
   function cfAfter(rows, from, to) { const adj = new Map(adjRows(from, to).map(a => [a.sig, a.code])); return rows.map(r => adj.get(sigOf(r)) || baseCode(r.dr, r.cr, r.cf)); }
-  return { trial, balanceSheet, income, cashFlow, notes, status, cfRows, cfAdjSet, cfAdjRemove, cfAdjList, drill, cfAfter, CFN };
+  return { trial, balanceSheet, income, cashFlow, notes, status, cfRows, cfAdjSet, cfAdjRemove, cfAdjList, drill, cfAfter, CFN, closeAt };
 }
 module.exports = { make, L1 };

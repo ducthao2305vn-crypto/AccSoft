@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## 4.99.74
+- Trang mới "Thuế TNDN & thuế hoãn lại" (Kết quả & báo cáo), mô hình theo file Income Tax Viettel Timor, luật thuế Timor-Leste: hàng hoá / vật tư được trừ khi mua, TSCĐ được trừ toàn bộ khi ghi tăng; giá vốn, xuất dùng, dự phòng HTK, khấu hao, giá trị còn lại TS thanh lý không được trừ. Tự lấy số từ dữ liệu hạch toán từng năm:
+  - Tờ khai ITR (dòng 5, 10, 15, 20, 110, 140–220), đối chiếu lợi nhuận kế toán → thu nhập chịu thuế, thuế 10%, đã tạm nộp, còn phải nộp; lỗ chuyển kỳ tự tính theo chuỗi các năm (nhập tay đè được).
+  - Thuế hoãn lại theo bảng cân đối 31/12 năm nay so với năm trước: HTK, TSCĐ hữu hình, vô hình (cơ sở thuế = 0), XDCB dở dang (cơ sở thuế = phần không phải vật tư, ước tính / nhập tay), dự phòng phải thu (DTA), khoản mục nhập tay; DTA/(DTL) thuần, biến động, so với số dư sổ 243/347.
+  - Chi phí thuế hiện hành + hoãn lại, thuế suất thực tế, bút toán đề xuất (8211/3334, 8212/347); tổng hợp các năm; cấu hình tài khoản & thuế suất; xuất Excel 5 sheet.
+
 ## 4.99.73
 - Xác nhận dòng tiền "chính xác" nay giữ được khi nạp lại dữ liệu tháng: lưu kèm chữ ký nội dung bút toán (chứng từ, ngày, TK, số tiền, đối tượng) và tự gắn lại vào bút toán mới sau khi nạp. Xác nhận cũ được bổ sung chữ ký tự động khi mở phần mềm.
 
