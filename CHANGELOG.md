@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.76
+- Báo cáo tài chính IFRS → tab "Ngắn hạn / dài hạn": liệt kê đối tượng còn dư Có ở TK 3311, 33888 (cấu hình được) cuối năm; nhập phần dài hạn (hoặc nút Tất cả DH / Tất cả NH), chọn loại Phải trả / Nợ thuê IFRS 16 / Vay ⇒ TB, SOFP, Notes tự tách vào chỉ tiêu ngắn hạn và dài hạn tương ứng; xem số dài hạn năm trước, chép phân loại từ năm trước. Phần dài hạn không vượt số dư Có. TB xuất Excel tách số vào hai cột chỉ tiêu.
+
 ## 4.99.75
 - Trang mới "Báo cáo tài chính IFRS" (Kết quả & báo cáo) theo mẫu Financial Statement 2025, lập cho mọi năm có dữ liệu (cột năm trước lập lại theo cùng quy tắc):
   - TB – bảng cân đối thử chi tiết từ dữ liệu hạch toán: TK chi tiết, TK công nợ 131 / 331 / 138 tách theo từng đối tượng (dư Nợ → phải thu, dư Có → phải trả), đầu kỳ / phát sinh / cuối kỳ, điều chỉnh IFRS, sau điều chỉnh, chỉ tiêu IFRS. TB là nguồn duy nhất: SOFP = tổng TB theo chỉ tiêu.

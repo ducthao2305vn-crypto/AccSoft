@@ -26,7 +26,7 @@ const PL = [ // chỉ tiêu SOPL: [k, tên, TK, dấu (+1 = thu nhập: Có − 
   ['sell', 'Selling and distribution expenses', ['641'], -1], ['adm', 'Administrative expenses', ['642'], -1], ['finc', 'Finance costs', ['635'], -1], ['othe', 'Other expenses', ['811'], -1],
   ['ctax', 'Current income tax', ['8211'], -1], ['dtax', 'Deferred income tax', ['8212'], -1],
 ];
-const CFG = { split: ['131', '331', '138'], cash: ['111', '112', '113'], dep: ['2141', '2142'], amort: ['2143'], invProv: ['2294'], ecl: ['2293'], cit: ['3334'], welf: ['353'], divPay: ['3388', '421'],
+const CFG = { ltAccs: ['3311', '33888'], split: ['131', '331', '138'], cash: ['111', '112', '113'], dep: ['2141', '2142'], amort: ['2143'], invProv: ['2294'], ecl: ['2293'], cit: ['3334'], welf: ['353'], divPay: ['3388', '421'],
   capex: ['211', '241'], capexI: ['213'], lease: [], loan: ['341'], tdep: ['128'] };
 const isP = (a, L) => (L || []).some(p => String(a || '').startsWith(p));
 
@@ -44,6 +44,10 @@ function make(db, all, FIN, DTX) {
   // thông tin chung báo cáo (tên công ty, người lập …) và điều chỉnh tay dòng tiền theo năm
   const meta = () => ({ company: 'VIETTEL TIMOR UNIPESSOAL LDA', preparer: '', chief: '', director: '', ...(get('ifrs_meta') || {}) });
   const setMeta = o => { put('ifrs_meta', { ...meta(), ...(o || {}) }); return meta(); };
+  // Phân loại ngắn hạn / dài hạn theo đối tượng (TK trong cfg.ltAccs): {'TK|đối tượng': {lt: số dài hạn (dương), kind: 'pay' | 'lease' | 'bor'}}
+  const ltOf = y => get('ifrs_lt_' + y) || {};
+  const setLt = (y, key, o) => { const m = ltOf(y); if (!o || (!(+o.lt) && !o.kind)) delete m[key]; else m[key] = { lt: +o.lt || 0, kind: o.kind || 'pay' }; put('ifrs_lt_' + y, m); return m; };
+  const copyLt = (from, to) => { put('ifrs_lt_' + to, { ...ltOf(from) }); return ltOf(to); };
   const cfAdjOf = y => get('ifrs_cfadj_' + y) || {};
   const setCfAdj = (y, o) => { put('ifrs_cfadj_' + y, { ...cfAdjOf(y), ...(o || {}) }); return cfAdjOf(y); };
 
@@ -52,7 +56,7 @@ function make(db, all, FIN, DTX) {
   // SOFP = cộng các dòng TB theo chỉ tiêu (TB là nguồn duy nhất)
   function sofp(y) { const T = tb(y), accs = [], un = [];
     for (const r of T.rows) { if (!r.lv || Math.abs(r.adj) < 0.004) continue; if (!r.line) { un.push({ acc: r.par || r.acc, v: r.adj, n: r.n }); continue; }
-      accs.push({ acc: r.par || r.acc, part: r.lv === 2 ? r.acc : '', v: r.adj, line: r.line, shown: LINES.find(x => x[0] === r.line)[3] * r.adj, je: 0 }); }
+      for (const x of (r.parts || [{ line: r.line, v: r.adj }])) accs.push({ acc: r.par || r.acc, part: r.lv === 2 ? r.acc : '', v: x.v, line: x.line, shown: LINES.find(z => z[0] === x.line)[3] * x.v, je: 0 }); }
     return { L: T.byLine, accs, un, T }; }
   // phát sinh năm theo cặp TK Nợ / Có (bỏ kết chuyển 911) + bút toán điều chỉnh
   function pairs(y) { const P = all(`SELECT acc_debit d, acc_credit c, sum(amount) a FROM entries WHERE ym>=? AND ym<=? AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%' GROUP BY 1,2`, `${y}-01`, `${y}-12`);
@@ -122,7 +126,7 @@ function make(db, all, FIN, DTX) {
   }
   // Bảng cân đối thử chi tiết (như sheet TB của file mẫu): TK chi tiết (+ từng đối tượng với TK tách dư Nợ/Có), đầu kỳ, phát sinh, cuối kỳ,
   // bút toán điều chỉnh IFRS, cuối kỳ sau điều chỉnh, chỉ tiêu IFRS được phân vào. Tổng các dòng theo chỉ tiêu = số trên SOFP.
-  function tb(y) { y = +y; const C = cfg(), cl = classify(rules()), f = `${y}-01`, t = `${y}-12`, T = FIN.trial(f, t, 0), split = new Set(C.split), out = [];
+  function tb(y) { y = +y; const C = cfg(), cl = classify(rules()), f = `${y}-01`, t = `${y}-12`, T = FIN.trial(f, t, 0), split = new Set([...C.split, ...(C.ltAccs || []).map(a => a.slice(0, 3))]), out = [], LT = ltOf(y);
     const nm = new Map(all(`SELECT acc, max(name) n FROM fin_mv GROUP BY acc`).map(r => [r.acc, r.n]));
     const je = new Map(); for (const j of jeOf(y)) { if (j.dr) { const o = je.get(j.dr) || je.set(j.dr, { dr: 0, cr: 0 }).get(j.dr); o.dr += +j.a; } if (j.cr) { const o = je.get(j.cr) || je.set(j.cr, { dr: 0, cr: 0 }).get(j.cr); o.cr += +j.a; } }
     const row = (lv, acc, par, name, ob, dr, cr, jd, jc) => { const cb = ob + dr - cr, adj = cb + jd - jc; return { lv, acc, par, n: name, ob, dr, cr, cb, jd, jc, adj, line: lv ? cl(par || acc, adj) : null }; };
@@ -143,10 +147,17 @@ function make(db, all, FIN, DTX) {
       const rest = row(2, '(chênh lệch đầu kỳ / chưa tách đối tượng)', a.a, 'Số dư không gắn đối tượng', ob - sumOb, a.dr - parts.reduce((s, x) => s + x.dr, 0), a.cr - parts.reduce((s, x) => s + x.cr, 0), j.dr, j.cr);
       if (Math.abs(rest.ob) + Math.abs(rest.dr) + Math.abs(rest.cr) + Math.abs(rest.jd) + Math.abs(rest.jc) > 0.004) out.push(rest); }
     for (const [a, j] of je) out.push(row(1, a, '', 'Bút toán điều chỉnh IFRS (TK không có số dư)', 0, 0, 0, j.dr, j.cr));
-    const L = {}; for (const k of LINES) L[k[0]] = 0; for (const r of out) if (r.lv && r.line) L[r.line] += LINES.find(x => x[0] === r.line)[3] * r.adj;
+    const ST = { lease: 'leaseS', bor: 'borS' }, LTL = { pay: 'payL', lease: 'leaseL', bor: 'borL' };
+    for (const r of out) { if (r.lv !== 2 || !isP(r.par, C.ltAccs)) continue; const o = LT[r.par + '|' + r.acc]; if (!o) continue;
+      const lt = r.adj < 0 ? Math.min(Math.abs(r.adj), Math.max(0, +o.lt || 0)) : 0, stLine = ST[o.kind] || r.line; // phần dài hạn không vượt số dư Có
+      r.parts = [{ line: stLine, v: r.adj + lt }, { line: LTL[o.kind] || 'payL', v: -lt }].filter(x => Math.abs(x.v) > 0.004); r.lt = lt; r.kind = o.kind; r.line = stLine; }
+    const L = {}; for (const k of LINES) L[k[0]] = 0; for (const r of out) if (r.lv) for (const x of (r.parts || (r.line ? [{ line: r.line, v: r.adj }] : []))) L[x.line] += LINES.find(z => z[0] === x.line)[3] * x.v;
     return { year: y, rows: out, lines: LINES, byLine: L, tot: out.filter(r => r.lv).reduce((s, r) => { for (const k of ['ob', 'dr', 'cr', 'cb', 'jd', 'jc', 'adj']) s[k] += r[k]; return s; }, { ob: 0, dr: 0, cr: 0, cb: 0, jd: 0, jc: 0, adj: 0 }) };
   }
+  function ltList(y) { y = +y; const C = cfg(), T = tb(y), LT = ltOf(y), P = ltOf(y - 1);
+    return T.rows.filter(r => r.lv === 2 && isP(r.par, C.ltAccs) && r.adj < -0.004).map(r => { const k = r.par + '|' + r.acc, o = LT[k] || {};
+      return { key: k, acc: r.par, bp: r.acc, bal: -r.adj, lt: r.lt || 0, kind: o.kind || r.kind || (isP(r.par, ['33888']) ? 'lease' : 'pay'), set: !!LT[k], prevLt: (P[k] || {}).lt || 0 }; }).sort((a, b) => b.bal - a.bal); }
   const years = () => all(`SELECT DISTINCT substr(ym,1,4) y FROM entries WHERE ym IS NOT NULL ORDER BY 1`).map(r => +r.y);
-  return { build, tb, years, rules, setRules, resetRules, cfg, setCfg, jeOf, setJe, meta, setMeta, setCfAdj, LINES };
+  return { build, tb, ltList, setLt, copyLt, years, rules, setRules, resetRules, cfg, setCfg, jeOf, setJe, meta, setMeta, setCfAdj, LINES };
 }
 module.exports = { make, LINES, RULES };

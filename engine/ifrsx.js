@@ -91,7 +91,7 @@ function sheetsOf(r) {
     const dc = v => v > 0.004 ? [R2(v), ''] : v < -0.004 ? ['', R2(-v)] : ['', ''], R2 = v => Math.round(v * 100) / 100;
     const T = r.tb, tot = Array(13 + LN.length).fill(0);
     bold.add(rows.length); const totRow = rows.length; rows.push([]);
-    for (const t of T.rows) { const o = dc(t.ob), c = dc(t.cb), a = dc(t.adj), line = LN.map(x => t.lv && t.line === x[0] ? R2(x[3] * t.adj) : '');
+    for (const t of T.rows) { const o = dc(t.ob), c = dc(t.cb), a = dc(t.adj), line = LN.map(x => { if (!t.lv) return ''; const v = (t.parts || (t.line ? [{ line: t.line, v: t.adj }] : [])).filter(p => p.line === x[0]).reduce((s, p) => s + p.v, 0); return Math.abs(v) > 0.004 ? R2(x[3] * v) : ''; });
       const row = [t.lv === 2 ? '    ' + t.acc : t.acc, t.par || t.acc, t.lv === 2 ? '' : t.n, ...o, R2(t.dr) || '', R2(t.cr) || '', ...c, R2(t.jd) || '', R2(t.jc) || '', ...a, ...line];
       if (t.lv === 0) bold.add(rows.length); rows.push(row);
       if (t.lv) for (let i = 3; i < row.length; i++) if (typeof row[i] === 'number') tot[i] += row[i]; }
