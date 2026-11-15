@@ -26,7 +26,7 @@ const PL = [ // chỉ tiêu SOPL: [k, tên, TK, dấu (+1 = thu nhập: Có − 
   ['sell', 'Selling and distribution expenses', ['641'], -1], ['adm', 'Administrative expenses', ['642'], -1], ['finc', 'Finance costs', ['635'], -1], ['othe', 'Other expenses', ['811'], -1],
   ['ctax', 'Current income tax', ['8211'], -1], ['dtax', 'Deferred income tax', ['8212'], -1],
 ];
-const CFG = { leaseAccs: ['33888'], leaseAuto: true, ltAccs: ['3311', '33888'], split: ['131', '331', '138'], cash: ['111', '112', '113'], dep: ['2141', '2142'], amort: ['2143'], invProv: ['2294'], ecl: ['2293'], cit: ['3334'], welf: ['353'], divPay: ['3388', '421'],
+const CFG = { l16Rou: ['2138'], l16Rent: ['627'], l16Dep: ['627'], l16Int: ['635'], l16Prep: ['24211'], l16Re: ['4211'], leaseAccs: ['33888'], leaseAuto: true, ltAccs: ['3311', '33888'], split: ['131', '331', '138'], cash: ['111', '112', '113'], dep: ['2141', '2142'], amort: ['2143'], invProv: ['2294'], ecl: ['2293'], cit: ['3334'], welf: ['353'], divPay: ['3388', '421'],
   capex: ['211', '241'], capexI: ['213'], lease: [], loan: ['341'], tdep: ['128'] };
 const isP = (a, L) => (L || []).some(p => String(a || '').startsWith(p));
 
@@ -51,13 +51,41 @@ function make(db, all, FIN, DTX, getSL) {
     for (const { id } of ids) { let x; try { x = SL.ifrs16(id, { asOf: `${y}-12-31` }); } catch { continue; } if (!x || x.err || x.short) continue;
       const k = pcode(x.r.bp), o = out.get(k) || out.set(k, { bp: x.r.bp, liab: 0, cur: 0, n: 0, codes: [] }).get(k); o.liab += x.at.liab; o.cur += x.at.liabCur; o.n++; if (o.codes.length < 5) o.codes.push(x.r.code || x.r.name || id); }
     for (const o of out.values()) o.lt = Math.max(0, o.liab - o.cur); return out; }
+  // Bút toán IFRS 16 từ lịch nợ thuê (luỹ kế đến 31/12/y – ERP không ghi nhận IFRS 16):
+  //  Nợ TS quyền sử dụng = GTCL; Có nợ thuê ngắn hạn (L16S) / dài hạn (L16L); Có trả trước ERP (luỹ kế đã trả − luỹ kế chi phí thuê ERP);
+  //  năm y: Nợ chi phí khấu hao, Nợ chi phí lãi, Có chi phí thuê ERP; chênh lệch luỹ kế các năm trước → lợi nhuận chưa phân phối.
+  const TAG = '[IFRS16] ';
+  function l16(y, onlyMissing = true) { y = +y; const SL = getSL && getSL(), C = cfg(), at = `${y}-12`; if (!SL) return { err: 'Chưa có module hợp đồng thuê' };
+    const has = new Set(); if (onlyMissing) { const T = tb(y); for (const r of T.rows) if (r.lv === 2 && isP(r.par, C.leaseAccs) && Math.abs(r.adj) > 0.5) has.add(pcode(r.acc)); }
+    const per = [], t = { nbv: 0, cur: 0, lt: 0, prep: 0, dep: 0, int: 0, rent: 0, prior: 0 };
+    let ids = []; try { ids = all(`SELECT id FROM site_contract`); } catch { }
+    for (const { id } of ids) { let x; try { x = SL.ifrs16(id, { asOf: `${y}-12-31` }); } catch { continue; } if (!x || x.err || x.short) continue;
+      const S = x.sch.filter(z => z.ym <= at); if (!S.length) continue; if (onlyMissing && x.r.bp && has.has(pcode(x.r.bp))) continue;
+      const Y = S.filter(z => z.ym.startsWith(y + '-')), cum = k => S.reduce((s, z) => s + (z[k] || 0), 0), yr = k => Y.reduce((s, z) => s + (z[k] || 0), 0);
+      const cumRent = S.length * x.r.rent, rentY = Y.length * x.r.rent, cumPay = cum('pay'), nbv = x.at.nbv, liab = x.at.liab, cur = x.at.liabCur;
+      const o = { id, code: x.r.code || x.r.name || id, bp: x.r.bp || '', nbv, liab, cur, lt: Math.max(0, liab - cur), prep: cumPay - cumRent, dep: yr('dep'), int: yr('int'), rent: rentY,
+        prior: (cumRent - cum('dep') - cum('int')) - (rentY - yr('dep') - yr('int')) };
+      if (Math.abs(o.nbv) + Math.abs(o.liab) + Math.abs(o.rent) < 0.5) continue; per.push(o); for (const k of Object.keys(t)) t[k] += o[k]; }
+    // mỗi dòng một vế (Nợ hoặc Có); tổng Nợ = tổng Có: GTCL − nợ thuê − trả trước ERP = luỹ kế (chi phí thuê ERP − khấu hao − lãi)
+    const je = [], v = (acc, a, n) => { a = Math.round(a * 100) / 100; if (Math.abs(a) >= 0.01) je.push(a > 0 ? { dr: acc, cr: '', a, n: TAG + n } : { dr: '', cr: acc, a: -a, n: TAG + n }); };
+    v(C.l16Rou[0], t.nbv, 'Tài sản quyền sử dụng – giá trị còn lại 31/12');
+    v('L16S', -t.cur, 'Nợ thuê ngắn hạn (gốc đến hạn trong 12 tháng tới)'); v('L16L', -t.lt, 'Nợ thuê dài hạn');
+    v(C.l16Prep[0], -t.prep, 'Loại trả trước / (phải trả) tiền thuê đang treo trên ERP');
+    v(C.l16Dep[0], t.dep, `Năm ${y}: khấu hao tài sản quyền sử dụng`); v(C.l16Int[0], t.int, `Năm ${y}: lãi nợ thuê`); v(C.l16Rent[0], -t.rent, `Năm ${y}: loại chi phí thuê ERP đã ghi`);
+    v(C.l16Re[0], -t.prior, 'Chênh lệch luỹ kế các năm trước');
+    const dr = je.reduce((q, x) => q + (x.dr ? x.a : 0), 0), cr = je.reduce((q, x) => q + (x.cr ? x.a : 0), 0);
+    if (Math.abs(dr - cr) >= 0.01) v(C.l16Re[0], cr - dr, 'Làm tròn');
+    return { year: y, onlyMissing, n: per.length, per, tot: t, je, diff: Math.round((dr - cr) * 100) / 100 }; }
+  function applyL16(y, onlyMissing = true) { const r = l16(y, onlyMissing); if (r.err) throw new Error(r.err); const keep = jeOf(y).filter(x => !String(x.n || '').startsWith(TAG));
+    setJe(y, keep.concat(r.je)); return { n: r.je.length, contracts: r.n }; }
+  const clearL16 = y => { setJe(y, jeOf(y).filter(x => !String(x.n || '').startsWith(TAG))); return { ok: 1 }; };
   const ltOf = y => get('ifrs_lt_' + y) || {};
   const setLt = (y, key, o) => { const m = ltOf(y); if (!o || (!(+o.lt) && !o.kind)) delete m[key]; else m[key] = { lt: +o.lt || 0, kind: o.kind || 'pay' }; put('ifrs_lt_' + y, m); return m; };
   const copyLt = (from, to) => { put('ifrs_lt_' + to, { ...ltOf(from) }); return ltOf(to); };
   const cfAdjOf = y => get('ifrs_cfadj_' + y) || {};
   const setCfAdj = (y, o) => { put('ifrs_cfadj_' + y, { ...cfAdjOf(y), ...(o || {}) }); return cfAdjOf(y); };
 
-  function classify(R) { const L = [...R].sort((a, b) => b.pre.length - a.pre.length); return (acc, v) => { const side = v >= 0 ? 'dr' : 'cr';
+  function classify(R) { const L = [...R].sort((a, b) => b.pre.length - a.pre.length); return (acc, v) => { const side = v >= 0 ? 'dr' : 'cr'; if (acc === 'L16S') return 'leaseS'; if (acc === 'L16L') return 'leaseL';
     const r = L.find(r => String(acc).startsWith(r.pre) && (!r.side || r.side === side)); return r ? r.line : null; }; }
   // SOFP = cộng các dòng TB theo chỉ tiêu (TB là nguồn duy nhất)
   function sofp(y) { const T = tb(y), accs = [], un = [];
@@ -172,6 +200,6 @@ function make(db, all, FIN, DTX, getSL) {
   // dùng lịch IFRS 16 cho các dòng nợ thuê: bỏ số nhập tay để lấy theo lịch
   const useSched = (y, keys) => { const m = ltOf(y); for (const k of [].concat(keys || [])) delete m[k]; put('ifrs_lt_' + y, m); return m; };
   const years = () => all(`SELECT DISTINCT substr(ym,1,4) y FROM entries WHERE ym IS NOT NULL ORDER BY 1`).map(r => +r.y);
-  return { build, tb, ltList, setLt, copyLt, useSched, years, rules, setRules, resetRules, cfg, setCfg, jeOf, setJe, meta, setMeta, setCfAdj, LINES };
+  return { build, tb, ltList, setLt, copyLt, useSched, l16, applyL16, clearL16, years, rules, setRules, resetRules, cfg, setCfg, jeOf, setJe, meta, setMeta, setCfAdj, LINES };
 }
 module.exports = { make, LINES, RULES };

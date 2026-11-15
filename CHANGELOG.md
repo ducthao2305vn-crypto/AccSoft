@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.78
+- BCTC IFRS → Điều chỉnh IFRS: nút "Tạo / cập nhật bút toán" IFRS 16 từ lịch hợp đồng thuê trạm (luỹ kế đến 31/12): Nợ TS quyền sử dụng (2138) = GTCL; Có nợ thuê ngắn hạn / dài hạn theo lịch; loại trả trước tiền thuê treo trên ERP (24211); năm hiện tại Nợ khấu hao (627) + lãi (635), Có chi phí thuê ERP (627); chênh lệch luỹ kế năm trước vào 4211. Mặc định chỉ lấy hợp đồng có chủ nhà chưa có số dư nợ thuê trên sổ (tránh trùng); xem trước bút toán + chi tiết từng hợp đồng; tạo lại thay bút toán [IFRS16] cũ; TK cấu hình được.
+
 ## 4.99.77
 - BCTC IFRS → Ngắn hạn / dài hạn: nợ thuê (TK 33888, cấu hình được) tự lấy phần dài hạn theo lịch nợ thuê IFRS 16 của các hợp đồng thuê trạm cùng chủ nhà (nợ thuê 31/12 − gốc đến hạn trong 12 tháng tới); số nhập tay được ưu tiên, nút "Theo lịch" / "Dùng lịch IFRS 16 cho mọi dòng nợ thuê" để quay lại lịch. Hiện nợ thuê theo lịch cạnh số dư sổ (tô đỏ khi lệch) và cảnh báo chủ nhà có nợ thuê theo lịch nhưng chưa có số dư trên sổ (nợ thuê IFRS 16 chưa ghi nhận).
 
