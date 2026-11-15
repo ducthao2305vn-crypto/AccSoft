@@ -26,18 +26,18 @@ const PL = [ // chỉ tiêu SOPL: [k, tên, TK, dấu (+1 = thu nhập: Có − 
   ['sell', 'Selling and distribution expenses', ['641'], -1], ['adm', 'Administrative expenses', ['642'], -1], ['finc', 'Finance costs', ['635'], -1], ['othe', 'Other expenses', ['811'], -1],
   ['ctax', 'Current income tax', ['8211'], -1], ['dtax', 'Deferred income tax', ['8212'], -1],
 ];
-const CFG = { ltAccs: ['3311', '33888'], split: ['131', '331', '138'], cash: ['111', '112', '113'], dep: ['2141', '2142'], amort: ['2143'], invProv: ['2294'], ecl: ['2293'], cit: ['3334'], welf: ['353'], divPay: ['3388', '421'],
+const CFG = { leaseAccs: ['33888'], leaseAuto: true, ltAccs: ['3311', '33888'], split: ['131', '331', '138'], cash: ['111', '112', '113'], dep: ['2141', '2142'], amort: ['2143'], invProv: ['2294'], ecl: ['2293'], cit: ['3334'], welf: ['353'], divPay: ['3388', '421'],
   capex: ['211', '241'], capexI: ['213'], lease: [], loan: ['341'], tdep: ['128'] };
 const isP = (a, L) => (L || []).some(p => String(a || '').startsWith(p));
 
-function make(db, all, FIN, DTX) {
+function make(db, all, FIN, DTX, getSL) {
   const get = k => { const r = all(`SELECT v FROM settings WHERE k=?`, k)[0]; try { return r && r.v ? JSON.parse(r.v) : null; } catch { return null; } };
   const put = (k, v) => db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES(?,?)`).run(k, JSON.stringify(v));
   const rules = () => get('ifrs_rules') || RULES.map(r => ({ line: r[0], pre: r[1], side: r[2] || '' }));
   const setRules = L => { put('ifrs_rules', (L || []).filter(r => r && r.line && r.pre).map(r => ({ line: r.line, pre: String(r.pre).trim(), side: r.side || '' }))); return rules(); };
   const resetRules = () => { db.prepare(`DELETE FROM settings WHERE k='ifrs_rules'`).run(); return rules(); };
   const cfg = () => ({ ...CFG, ...(get('ifrs_cfg') || {}) });
-  const setCfg = o => { const c = { ...cfg() }; for (const k of Object.keys(CFG)) if (o && o[k] != null) c[k] = Array.isArray(o[k]) ? o[k] : String(o[k]).split(/[,; ]+/).filter(Boolean); put('ifrs_cfg', c); return c; };
+  const setCfg = o => { const c = { ...cfg() }; for (const k of Object.keys(CFG)) if (o && o[k] != null) c[k] = typeof CFG[k] === 'boolean' ? !!o[k] : Array.isArray(o[k]) ? o[k] : String(o[k]).split(/[,; ]+/).filter(Boolean); put('ifrs_cfg', c); return c; };
   // bút toán điều chỉnh IFRS theo năm: [{dr, cr, a, n}] – cộng vào số dư cuối năm và phát sinh năm (không sửa dữ liệu gốc)
   const jeOf = y => get('ifrs_je_' + y) || [];
   const setJe = (y, L) => { put('ifrs_je_' + y, (L || []).filter(x => x && (x.dr || x.cr)).map(x => ({ dr: String(x.dr || '').trim(), cr: String(x.cr || '').trim(), a: +x.a || 0, n: String(x.n || '') }))); return jeOf(y); };
@@ -45,6 +45,12 @@ function make(db, all, FIN, DTX) {
   const meta = () => ({ company: 'VIETTEL TIMOR UNIPESSOAL LDA', preparer: '', chief: '', director: '', ...(get('ifrs_meta') || {}) });
   const setMeta = o => { put('ifrs_meta', { ...meta(), ...(o || {}) }); return meta(); };
   // Phân loại ngắn hạn / dài hạn theo đối tượng (TK trong cfg.ltAccs): {'TK|đối tượng': {lt: số dài hạn (dương), kind: 'pay' | 'lease' | 'bor'}}
+  // Lịch nợ thuê IFRS 16 (trang Hợp đồng thuê trạm) tại 31/12: theo chủ nhà – tổng nợ thuê, phần gốc đến hạn trong 12 tháng (ngắn hạn), dài hạn
+  const pcode = s => { const m = String(s || '').trim().match(/^[A-Za-z]+_[A-Za-z0-9]+/); return (m ? m[0] : String(s || '').trim()).toUpperCase(); };
+  function leaseSched(y) { const SL = getSL && getSL(), out = new Map(); if (!SL) return out; let ids = []; try { ids = all(`SELECT id FROM site_contract WHERE bp IS NOT NULL AND bp<>''`); } catch { return out; }
+    for (const { id } of ids) { let x; try { x = SL.ifrs16(id, { asOf: `${y}-12-31` }); } catch { continue; } if (!x || x.err || x.short) continue;
+      const k = pcode(x.r.bp), o = out.get(k) || out.set(k, { bp: x.r.bp, liab: 0, cur: 0, n: 0, codes: [] }).get(k); o.liab += x.at.liab; o.cur += x.at.liabCur; o.n++; if (o.codes.length < 5) o.codes.push(x.r.code || x.r.name || id); }
+    for (const o of out.values()) o.lt = Math.max(0, o.liab - o.cur); return out; }
   const ltOf = y => get('ifrs_lt_' + y) || {};
   const setLt = (y, key, o) => { const m = ltOf(y); if (!o || (!(+o.lt) && !o.kind)) delete m[key]; else m[key] = { lt: +o.lt || 0, kind: o.kind || 'pay' }; put('ifrs_lt_' + y, m); return m; };
   const copyLt = (from, to) => { put('ifrs_lt_' + to, { ...ltOf(from) }); return ltOf(to); };
@@ -147,17 +153,25 @@ function make(db, all, FIN, DTX) {
       const rest = row(2, '(chênh lệch đầu kỳ / chưa tách đối tượng)', a.a, 'Số dư không gắn đối tượng', ob - sumOb, a.dr - parts.reduce((s, x) => s + x.dr, 0), a.cr - parts.reduce((s, x) => s + x.cr, 0), j.dr, j.cr);
       if (Math.abs(rest.ob) + Math.abs(rest.dr) + Math.abs(rest.cr) + Math.abs(rest.jd) + Math.abs(rest.jc) > 0.004) out.push(rest); }
     for (const [a, j] of je) out.push(row(1, a, '', 'Bút toán điều chỉnh IFRS (TK không có số dư)', 0, 0, 0, j.dr, j.cr));
-    const ST = { lease: 'leaseS', bor: 'borS' }, LTL = { pay: 'payL', lease: 'leaseL', bor: 'borL' };
-    for (const r of out) { if (r.lv !== 2 || !isP(r.par, C.ltAccs)) continue; const o = LT[r.par + '|' + r.acc]; if (!o) continue;
+    const ST = { lease: 'leaseS', bor: 'borS' }, LTL = { pay: 'payL', lease: 'leaseL', bor: 'borL' }, SCH = C.leaseAuto !== false && (C.leaseAccs || []).length ? leaseSched(y) : new Map();
+    for (const r of out) { if (r.lv !== 2 || !isP(r.par, C.ltAccs)) continue; let o = LT[r.par + '|' + r.acc]; r.ltSrc = o ? 'manual' : '';
+      if (!o && isP(r.par, C.leaseAccs) && SCH.has(pcode(r.acc))) { o = { lt: SCH.get(pcode(r.acc)).lt, kind: 'lease' }; r.ltSrc = 'ifrs16'; } if (!o) continue;
       const lt = r.adj < 0 ? Math.min(Math.abs(r.adj), Math.max(0, +o.lt || 0)) : 0, stLine = ST[o.kind] || r.line; // phần dài hạn không vượt số dư Có
       r.parts = [{ line: stLine, v: r.adj + lt }, { line: LTL[o.kind] || 'payL', v: -lt }].filter(x => Math.abs(x.v) > 0.004); r.lt = lt; r.kind = o.kind; r.line = stLine; }
     const L = {}; for (const k of LINES) L[k[0]] = 0; for (const r of out) if (r.lv) for (const x of (r.parts || (r.line ? [{ line: r.line, v: r.adj }] : []))) L[x.line] += LINES.find(z => z[0] === x.line)[3] * x.v;
-    return { year: y, rows: out, lines: LINES, byLine: L, tot: out.filter(r => r.lv).reduce((s, r) => { for (const k of ['ob', 'dr', 'cr', 'cb', 'jd', 'jc', 'adj']) s[k] += r[k]; return s; }, { ob: 0, dr: 0, cr: 0, cb: 0, jd: 0, jc: 0, adj: 0 }) };
+    return { sched: SCH, year: y, rows: out, lines: LINES, byLine: L, tot: out.filter(r => r.lv).reduce((s, r) => { for (const k of ['ob', 'dr', 'cr', 'cb', 'jd', 'jc', 'adj']) s[k] += r[k]; return s; }, { ob: 0, dr: 0, cr: 0, cb: 0, jd: 0, jc: 0, adj: 0 }) };
   }
-  function ltList(y) { y = +y; const C = cfg(), T = tb(y), LT = ltOf(y), P = ltOf(y - 1);
-    return T.rows.filter(r => r.lv === 2 && isP(r.par, C.ltAccs) && r.adj < -0.004).map(r => { const k = r.par + '|' + r.acc, o = LT[k] || {};
-      return { key: k, acc: r.par, bp: r.acc, bal: -r.adj, lt: r.lt || 0, kind: o.kind || r.kind || (isP(r.par, ['33888']) ? 'lease' : 'pay'), set: !!LT[k], prevLt: (P[k] || {}).lt || 0 }; }).sort((a, b) => b.bal - a.bal); }
+  function ltList(y) { y = +y; const C = cfg(), T = tb(y), LT = ltOf(y), P = ltOf(y - 1), SCH = T.sched || new Map(), seen = new Set();
+    const rows = T.rows.filter(r => r.lv === 2 && isP(r.par, C.ltAccs) && r.adj < -0.004).map(r => { const k = r.par + '|' + r.acc, o = LT[k] || {}, s = isP(r.par, C.leaseAccs) ? SCH.get(pcode(r.acc)) : null; if (s) seen.add(pcode(r.acc));
+      return { key: k, acc: r.par, bp: r.acc, bal: -r.adj, lt: r.lt || 0, kind: o.kind || r.kind || (isP(r.par, C.leaseAccs) ? 'lease' : 'pay'), set: !!LT[k], src: r.ltSrc || '', prevLt: (P[k] || {}).lt || 0,
+        sch: s ? { liab: s.liab, cur: s.cur, lt: s.lt, n: s.n, codes: s.codes } : null }; }).sort((a, b) => b.bal - a.bal);
+    // chủ nhà có nợ thuê theo lịch nhưng không có số dư trên TK nợ thuê – nợ thuê IFRS 16 chưa ghi sổ (cần bút toán điều chỉnh)
+    const missing = [...SCH.entries()].filter(([k, s]) => !seen.has(k) && s.liab > 0.5).map(([k, s]) => ({ bp: s.bp, liab: s.liab, cur: s.cur, lt: s.lt, n: s.n, codes: s.codes })).sort((a, b) => b.liab - a.liab);
+    const tot = [...SCH.values()].reduce((q, s) => (q.liab += s.liab, q.cur += s.cur, q.lt += s.lt, q.n += s.n, q), { liab: 0, cur: 0, lt: 0, n: 0 });
+    return { rows, missing, sched: tot, auto: C.leaseAuto !== false, leaseAccs: C.leaseAccs || [] }; }
+  // dùng lịch IFRS 16 cho các dòng nợ thuê: bỏ số nhập tay để lấy theo lịch
+  const useSched = (y, keys) => { const m = ltOf(y); for (const k of [].concat(keys || [])) delete m[k]; put('ifrs_lt_' + y, m); return m; };
   const years = () => all(`SELECT DISTINCT substr(ym,1,4) y FROM entries WHERE ym IS NOT NULL ORDER BY 1`).map(r => +r.y);
-  return { build, tb, ltList, setLt, copyLt, years, rules, setRules, resetRules, cfg, setCfg, jeOf, setJe, meta, setMeta, setCfAdj, LINES };
+  return { build, tb, ltList, setLt, copyLt, useSched, years, rules, setRules, resetRules, cfg, setCfg, jeOf, setJe, meta, setMeta, setCfAdj, LINES };
 }
 module.exports = { make, LINES, RULES };

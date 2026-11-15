@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.77
+- BCTC IFRS → Ngắn hạn / dài hạn: nợ thuê (TK 33888, cấu hình được) tự lấy phần dài hạn theo lịch nợ thuê IFRS 16 của các hợp đồng thuê trạm cùng chủ nhà (nợ thuê 31/12 − gốc đến hạn trong 12 tháng tới); số nhập tay được ưu tiên, nút "Theo lịch" / "Dùng lịch IFRS 16 cho mọi dòng nợ thuê" để quay lại lịch. Hiện nợ thuê theo lịch cạnh số dư sổ (tô đỏ khi lệch) và cảnh báo chủ nhà có nợ thuê theo lịch nhưng chưa có số dư trên sổ (nợ thuê IFRS 16 chưa ghi nhận).
+
 ## 4.99.76
 - Báo cáo tài chính IFRS → tab "Ngắn hạn / dài hạn": liệt kê đối tượng còn dư Có ở TK 3311, 33888 (cấu hình được) cuối năm; nhập phần dài hạn (hoặc nút Tất cả DH / Tất cả NH), chọn loại Phải trả / Nợ thuê IFRS 16 / Vay ⇒ TB, SOFP, Notes tự tách vào chỉ tiêu ngắn hạn và dài hạn tương ứng; xem số dài hạn năm trước, chép phân loại từ năm trước. Phần dài hạn không vượt số dư Có. TB xuất Excel tách số vào hai cột chỉ tiêu.
 
