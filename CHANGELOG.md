@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.73
+- Xác nhận dòng tiền "chính xác" nay giữ được khi nạp lại dữ liệu tháng: lưu kèm chữ ký nội dung bút toán (chứng từ, ngày, TK, số tiền, đối tượng) và tự gắn lại vào bút toán mới sau khi nạp. Xác nhận cũ được bổ sung chữ ký tự động khi mở phần mềm.
+
 ## 4.99.72
 - Doanh thu theo khoản mục: nạp thêm cột **Sales Region** của file ERP (mã A0xx_… = mã khoản mục doanh thu). Báo cáo theo mẫu và Chuyển theo quy tắc khoản mục dùng mã này cho doanh thu (thiếu thì dùng Type of revenue). Dữ liệu đã nạp: chạy "Bổ sung thông tin" từ file gốc để điền Sales Region, không cần nạp lại.
 - Dòng tiền thanh toán: nhóm "Khác" tách rõ Thuế NSNN / Lương / Tiền gửi kỳ hạn / Nhân viên / Ngân hàng / Chưa phân loại / Không đối tượng; nút "⚠ Phân loại đối tượng chưa phân loại" gán nhóm ngay trên báo cáo (từng dòng hoặc hàng loạt), lưu vào Danh mục đối tượng.

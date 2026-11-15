@@ -13,6 +13,10 @@ function make(db, all, run, okYm, FIN) {
         const e = all(`SELECT id FROM entries WHERE document_no IS ? AND account_date=? AND acc_debit=? AND acc_credit=? LIMIT 1`, a.doc, a.d, a.dr, a.cr)[0];
         if (e) run(`INSERT OR REPLACE INTO fa_ok(id, cf, at) VALUES(?,?,datetime('now','localtime'))`, e.id, a.code); run(`DELETE FROM cf_adj WHERE sig=?`, a.sig); }
       run(`INSERT OR REPLACE INTO settings(k, v) VALUES('cf_same_clean','1')`); } } catch { }
+  // chữ ký nội dung bút toán cho xác nhận dòng tiền – để gắn lại khi nạp lại dữ liệu (id bút toán đổi); trigger tự điền cho mọi đường ghi vào fa_ok
+  try { db.exec(`ALTER TABLE fa_ok ADD COLUMN sig TEXT`); } catch { }
+  db.exec(`CREATE TRIGGER IF NOT EXISTS tg_fa_ok_sig AFTER INSERT ON fa_ok WHEN NEW.sig IS NULL BEGIN UPDATE fa_ok SET sig=(SELECT document_no||'|'||account_date||'|'||acc_debit||'|'||acc_credit||'|'||cast(round(coalesce(amount_acc,amount)*100) AS INTEGER)||'|'||ifnull(partner_debit,'')||'|'||ifnull(partner_credit,'') FROM entries WHERE id=NEW.id) WHERE id=NEW.id; END;
+    UPDATE fa_ok SET sig=(SELECT document_no||'|'||account_date||'|'||acc_debit||'|'||acc_credit||'|'||cast(round(coalesce(amount_acc,amount)*100) AS INTEGER)||'|'||ifnull(partner_debit,'')||'|'||ifnull(partner_credit,'') FROM entries e WHERE e.id=fa_ok.id) WHERE sig IS NULL;`);
   const lkey = o => (CASH(o.dr) ? 'R|' + String(o.cr || '').slice(0, 4) : 'P|' + String(o.dr || '').slice(0, 4));
   const learn = (items, code) => { for (const x of items) if (code) run(`INSERT INTO cf_learn(k, code, n) VALUES(?,?,1) ON CONFLICT(k, code) DO UPDATE SET n=n+1`, lkey(x), code); };
   // xác nhận dòng tiền đang ghi nhận là ĐÚNG (không cần điều chỉnh)
@@ -88,7 +92,12 @@ function make(db, all, run, okYm, FIN) {
       const [doc, d, dr, cr, cents, bp, bpCr] = String(x.sig).split('|');
       const e = all(`SELECT id FROM entries WHERE document_no=? AND account_date=? AND acc_debit=? AND acc_credit=? AND round(coalesce(amount_acc,amount)*100)=? AND ifnull(partner_debit,'')=? AND ifnull(partner_credit,'')=? LIMIT 1`, doc, d, dr, cr, +cents, bp, bpCr)[0];
       if (e) { try { run(`UPDATE field_adj SET id=? WHERE rowid=?`, e.id, x.r); n++; } catch { } } }
-    return { n }; }
+    let ok = 0; // xác nhận dòng tiền "chính xác"
+    for (const x of all(`SELECT k.id oid, k.sig FROM fa_ok k LEFT JOIN entries e ON e.id=k.id WHERE e.id IS NULL AND k.sig IS NOT NULL`)) {
+      const [doc, d, dr, cr, cents, bp, bpCr] = String(x.sig).split('|');
+      const e = all(`SELECT id FROM entries WHERE document_no=? AND account_date=? AND acc_debit=? AND acc_credit=? AND round(coalesce(amount_acc,amount)*100)=? AND ifnull(partner_debit,'')=? AND ifnull(partner_credit,'')=? LIMIT 1`, doc, d, dr, cr, +cents, bp, bpCr)[0];
+      if (e) { try { run(`UPDATE OR REPLACE fa_ok SET id=? WHERE id=?`, e.id, x.oid); ok++; } catch { } } }
+    return { n, ok }; }
   // Mọi hợp đồng của một đối tượng (cả hai phía Nợ / Có, gồm hợp đồng đã điều chỉnh) – để chọn khi đổi hợp đồng, tránh gõ sai
   function contractsOf(bp) {
     if (!bp) return [];

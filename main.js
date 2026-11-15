@@ -114,7 +114,7 @@ async function importFiles(files) {
           if (mode !== 'merge') { replace = true; mode = 'replace'; }
         }
         const fin = await runTask('finalize', { importId: r.importId, mode }, 'Đang hoàn tất');
-        try { const rb = await qa('faRebind'); if (rb && (rb.n || rb.marks)) log.info(`Gắn lại ${rb.n || 0} điều chỉnh, ${rb.marks || 0} đánh dấu rà soát sau khi nạp lại dữ liệu`); } catch (e) { log.info('faRebind: ' + e.message); } // id bút toán đổi khi thay dữ liệu tháng
+        try { const rb = await qa('faRebind'); if (rb && (rb.n || rb.marks || rb.ok)) log.info(`Gắn lại ${rb.n || 0} điều chỉnh, ${rb.ok || 0} xác nhận dòng tiền, ${rb.marks || 0} đánh dấu rà soát sau khi nạp lại dữ liệu`); } catch (e) { log.info('faRebind: ' + e.message); } // id bút toán đổi khi thay dữ liệu tháng
         const msg = `${(mode === 'merge' ? fin.kept : r.rows).toLocaleString('vi')} dòng · ${r.months.join(', ')} · ${Math.round(r.secs)} giây` + (mode === 'merge' ? ` · gộp: bỏ ${fin.merged.toLocaleString('vi')} bút toán đã có` : mode === 'replace' ? ' · thay thế tháng trùng' : '');
         log.info(`Nạp ${name} (${mb} MB) thành công (chưa phân tích): ${msg}`, { file });
         out.push(`✓ ${name}: ${msg}`);

@@ -608,3 +608,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Định nghĩa chi phí \/ doanh thu dùng chung: loại HẲN bút toán có một vế 911 (điều kiện ở WHERE cho cả hai vế), không chỉ bỏ vế 911 — nếu không vế 6xx\/5xx đối ứng của bút toán kết chuyển sẽ bị trừ. Kiểm tra chéo: tổng locMatrix(dept) = bpCompare.total.A = tdReport (E mẫu + E ngoài mẫu).
 - Tránh truy vấn lồng đếm entries theo từng dòng danh mục (không có index department_sub) — GROUP BY 1 lần rồi ghép ở JS.
 - Sales Region (entries.sales_region) = mã khoản mục doanh thu A0xx; tcdept dùng KM = coalesce(type_of_cost, sales_region). Sau finalize import, main.js gọi faRebind (field_adj + dim_mark theo sig) vì id bút toán đổi khi thay dữ liệu tháng; fa_ok (xác nhận dòng tiền) chưa có sig nên chưa gắn lại được.
+- fa_ok có cột sig (trigger tg_fa_ok_sig tự điền khi INSERT); FA.rebind gắn lại field_adj + fa_ok, LC.rebindMarks gắn dim_mark — main.js gọi faRebind sau mỗi finalize import.
