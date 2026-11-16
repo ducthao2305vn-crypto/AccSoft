@@ -615,3 +615,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Nối nợ thuê với lịch IFRS 16: ifrs.leaseSched(y) gọi SL.ifrs16(id, {asOf: 31\/12}) cho hợp đồng có bp, khớp chủ nhà theo mã đối tượng (phần "VTL_HOVEN01192" trước tên); bỏ hợp đồng ngắn hạn (≤ 12 tháng). Cờ cfg.leaseAuto.
 - Bút toán IFRS 16 (ifrs.l16 \/ applyL16): dòng một vế, gắn nhãn "[IFRS16] " để thay khi tạo lại; nợ thuê ghi vào TK giả L16S \/ L16L (classify luôn đưa vào leaseS \/ leaseL). Cân bằng: GTCL − nợ thuê − trả trước ERP = luỹ kế (thuê ERP − khấu hao − lãi).
 - Biển số: ưu tiên cột "Lisence plate" (giá trị danh mục) trước "License plate" (gõ tay). enrich ghi đè plate bằng giá trị mới (coalesce(?, plate)).
+- Chi phí theo xe: groups(plate) dựng động theo khoản mục gốc (mã có plate trong dữ liệu ∪ GROUPS.plate), tên lấy từ type_of_cost \/ cost_cat; không còn dùng setting veh_groups.

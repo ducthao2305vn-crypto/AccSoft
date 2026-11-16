@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.80
+- Chi phí theo xe: bỏ các nhóm tiếng Việt tự đặt (vd "Xăng dầu xe" từng gộp cả E17.1.10.4.4.5 – công tác phí xăng, cầu đường). Nay mỗi khoản mục gốc trên ERP (Type of cost, mã + tên tiếng Anh) là một nhóm: các mã thực tế có gắn biển số trong dữ liệu + các mã chi phí xe thường dùng. Định mức / xe / tháng đặt lại theo từng khoản mục gốc.
+
 ## 4.99.79
 - Sửa biển số xe: file ERP có 2 cột – "Lisence plate" (chọn từ danh mục xe công ty) và "License plate" (gõ tay, nhiều cách viết: "15-847 T", "14386", "17223"…). Trước đây lấy cột gõ tay nên chi phí theo xe tách ra nhiều biển gần giống nhau. Nay ưu tiên cột danh mục, chỉ dùng cột gõ tay khi cột danh mục trống. Dữ liệu đã nạp: chạy "Bổ sung thông tin" từ các file ERP gốc để cập nhật lại biển số (không cần nạp lại).
 
