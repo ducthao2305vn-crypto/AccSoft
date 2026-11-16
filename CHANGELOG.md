@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.81
+- Chi phí theo vị trí: như chi phí theo xe – bỏ các nhóm tiếng Việt tự đặt (thuê trạm, điện trạm, xăng máy phát…), mỗi khoản mục gốc ERP (mã + tên Type of cost) là một nhóm: các mã thực tế có gắn mã vị trí trong dữ liệu + các mã thuê / điện / xăng máy phát thường dùng.
+
 ## 4.99.80
 - Chi phí theo xe: bỏ các nhóm tiếng Việt tự đặt (vd "Xăng dầu xe" từng gộp cả E17.1.10.4.4.5 – công tác phí xăng, cầu đường). Nay mỗi khoản mục gốc trên ERP (Type of cost, mã + tên tiếng Anh) là một nhóm: các mã thực tế có gắn biển số trong dữ liệu + các mã chi phí xe thường dùng. Định mức / xe / tháng đặt lại theo từng khoản mục gốc.
 

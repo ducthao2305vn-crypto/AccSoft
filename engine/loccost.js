@@ -57,9 +57,9 @@ function make(db, all, get, okYm) {
   function groups(d) {
     if (d === 'dept') { const m = new Map(); for (const r of all(`SELECT code, ifnull(nullif(trim(grp),''),'(chưa phân nhóm)') g FROM cost_cat`)) (m.get(r.g) || m.set(r.g, []).get(r.g)).push(r.code);
       return [...m].sort((a, b) => a[0].localeCompare(b[0])).map(([g, codes]) => ({ k: g, n: g, codes })).concat([{ k: '(khoản mục ngoài danh mục)', n: '(khoản mục ngoài danh mục)', codes: [] }]); }
-    // xe: mỗi khoản mục gốc (Type of cost trên ERP) một nhóm – các mã thực tế có gắn biển số + các mã chi phí xe thường dùng; tên = tên khoản mục gốc
-    if (d === 'plate') { const base = GROUPS.plate.flatMap(g => g.codes), nm = new Map();
-      for (const r of all(`SELECT ${CODE} c, max(e.type_of_cost) t FROM entries e WHERE coalesce(e.plate,'')<>'' AND e.type_of_cost IS NOT NULL AND (${EXP('debit')} OR ${EXP('credit')}) GROUP BY 1`)) if (r.c) nm.set(r.c, r.t);
+    // xe / vị trí: mỗi khoản mục gốc (Type of cost trên ERP) một nhóm – các mã thực tế có gắn biển số / mã vị trí + các mã thường dùng; tên = tên khoản mục gốc
+    if (d === 'plate' || d === 'location') { const base = GROUPS[d].flatMap(g => g.codes), nm = new Map(), col = D(d).col;
+      for (const r of all(`SELECT ${CODE} c, max(e.type_of_cost) t FROM entries e WHERE coalesce(${col},'')<>'' AND e.type_of_cost IS NOT NULL AND (${EXP('debit')} OR ${EXP('credit')}) GROUP BY 1`)) if (r.c) nm.set(r.c, r.t);
       let cc = new Map(); try { cc = new Map(all(`SELECT code, name FROM cost_cat`).map(r => [r.code, r.name])); } catch { } // tên khoản mục từ danh mục (không quét lại dữ liệu)
       for (const c of base) if (!nm.has(c)) nm.set(c, cc.get(c) ? c + '_' + cc.get(c) : c);
       return [...nm].sort((a, b) => a[0].localeCompare(b[0], 'en', { numeric: true })).map(([c, t]) => ({ k: c, n: t || c, codes: [c] })); }
