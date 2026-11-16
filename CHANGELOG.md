@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.82
+- Chi phí theo xe / theo vị trí: nút "⚙ Khoản mục theo dõi" – bỏ tích khoản mục không muốn theo dõi (vd khấu hao phương tiện, công tác phí), khoản mục bị loại không hiện trong bảng, danh sách lọc, tổng; lưu riêng cho từng trang, bật lại bất cứ lúc nào.
+
 ## 4.99.81
 - Chi phí theo vị trí: như chi phí theo xe – bỏ các nhóm tiếng Việt tự đặt (thuê trạm, điện trạm, xăng máy phát…), mỗi khoản mục gốc ERP (mã + tên Type of cost) là một nhóm: các mã thực tế có gắn mã vị trí trong dữ liệu + các mã thuê / điện / xăng máy phát thường dùng.
 

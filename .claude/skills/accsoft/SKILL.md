@@ -616,3 +616,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Bút toán IFRS 16 (ifrs.l16 \/ applyL16): dòng một vế, gắn nhãn "[IFRS16] " để thay khi tạo lại; nợ thuê ghi vào TK giả L16S \/ L16L (classify luôn đưa vào leaseS \/ leaseL). Cân bằng: GTCL − nợ thuê − trả trước ERP = luỹ kế (thuê ERP − khấu hao − lãi).
 - Biển số: ưu tiên cột "Lisence plate" (giá trị danh mục) trước "License plate" (gõ tay). enrich ghi đè plate bằng giá trị mới (coalesce(?, plate)).
 - Chi phí theo xe / vị trí: groups(plate|location) dựng động theo khoản mục gốc (mã có plate trong dữ liệu ∪ GROUPS.plate), tên lấy từ type_of_cost \/ cost_cat; không còn dùng setting veh_groups.
+- Khoản mục loại khỏi theo dõi (xe \/ vị trí): settings grp_excl_plate \/ grp_excl_location; groups(d, withExcl) – locGroups trả cả khoản mục bị loại (excl: true).

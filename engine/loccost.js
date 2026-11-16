@@ -54,7 +54,10 @@ function make(db, all, get, okYm) {
   const VAL = d => NORM(`coalesce(f.value, ${D(d).col}, '')`), FJ = d => `LEFT JOIN field_adj f ON f.id=e.id AND f.field='${D(d).f}'`;
   const setting = (k, def) => { const s = get(`SELECT v FROM settings WHERE k=?`, k); try { return s && s.v ? JSON.parse(s.v) : def; } catch { return def; } };
   // Nhóm chi phí: vị trí / xe theo danh sách mã; phòng ban theo Expense Group của danh mục khoản mục
-  function groups(d) {
+  // khoản mục loại khỏi theo dõi (xe / vị trí) – lưu settings grp_excl_<chiều>
+  const exclOf = d => new Set(setting('grp_excl_' + d, []));
+  const setExcl = (d, codes) => { db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES(?,?)`).run('grp_excl_' + d, JSON.stringify([...new Set([].concat(codes || []).map(String))])); return [...exclOf(d)]; };
+  function groups(d, withExcl) {
     if (d === 'dept') { const m = new Map(); for (const r of all(`SELECT code, ifnull(nullif(trim(grp),''),'(chưa phân nhóm)') g FROM cost_cat`)) (m.get(r.g) || m.set(r.g, []).get(r.g)).push(r.code);
       return [...m].sort((a, b) => a[0].localeCompare(b[0])).map(([g, codes]) => ({ k: g, n: g, codes })).concat([{ k: '(khoản mục ngoài danh mục)', n: '(khoản mục ngoài danh mục)', codes: [] }]); }
     // xe / vị trí: mỗi khoản mục gốc (Type of cost trên ERP) một nhóm – các mã thực tế có gắn biển số / mã vị trí + các mã thường dùng; tên = tên khoản mục gốc
@@ -62,7 +65,7 @@ function make(db, all, get, okYm) {
       for (const r of all(`SELECT ${CODE} c, max(e.type_of_cost) t FROM entries e WHERE coalesce(${col},'')<>'' AND e.type_of_cost IS NOT NULL AND (${EXP('debit')} OR ${EXP('credit')}) GROUP BY 1`)) if (r.c) nm.set(r.c, r.t);
       let cc = new Map(); try { cc = new Map(all(`SELECT code, name FROM cost_cat`).map(r => [r.code, r.name])); } catch { } // tên khoản mục từ danh mục (không quét lại dữ liệu)
       for (const c of base) if (!nm.has(c)) nm.set(c, cc.get(c) ? c + '_' + cc.get(c) : c);
-      return [...nm].sort((a, b) => a[0].localeCompare(b[0], 'en', { numeric: true })).map(([c, t]) => ({ k: c, n: t || c, codes: [c] })); }
+      const X = exclOf(d); return [...nm].sort((a, b) => a[0].localeCompare(b[0], 'en', { numeric: true })).map(([c, t]) => ({ k: c, n: t || c, codes: [c], excl: X.has(c) })).filter(g => withExcl || !g.excl); }
     return setting('loc_groups', GROUPS[d] || GROUPS.location);
   }
   const norms = () => setting('veh_norm', {}); // định mức chi phí / xe / tháng theo nhóm
@@ -123,6 +126,6 @@ function make(db, all, get, okYm) {
       if (e) { try { db.prepare(`UPDATE dim_mark SET id=? WHERE rowid=?`).run(e.id, x.r); n++; } catch { } } }
     return { n }; }
   try { rebindMarks(); } catch { }
-  return { matrix, detail, values, groups, norms, mark, rebindMarks };
+  return { matrix, detail, values, groups, norms, mark, rebindMarks, setExcl };
 }
 module.exports = { make, GROUPS, DIMS };
