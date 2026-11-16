@@ -51,7 +51,8 @@ const SRC = {
   distFrom: ['Distribution From', isoDate], distTo: ['Distribution To', isoDate], currency: ['Currency', str], rate: ['Rate', num], rateVnd: ['RateToVND', num],
   grpCost: ['Group cost', str], services: ['Services', str], location: ['Location', str], project: ['Project', str], period: ['Period', str],
   asset: [['Asset', 'Asset Name', 'Asset Code', 'Fixed Asset', 'A_Asset_ID', 'GL_JournalLine>A_Asset_ID[Name]', 'Tài sản', 'Mã tài sản', 'Tên tài sản'], str],
-  plate: [['License Plate', 'Lisence plate', 'LicensePlate', 'TOC_LicensePlate', 'Biển số xe', 'Bien so xe', 'Vehicle', 'Vehicles', 'Plate No'], str],
+  // 'Lisence plate' = biển số chọn từ danh mục xe công ty (ưu tiên); 'License plate' = ô gõ tay (nhiều cách viết khác nhau) – chỉ dùng khi cột danh mục trống
+  plate: [['Lisence plate', 'License Plate', 'LicensePlate', 'TOC_LicensePlate', 'Biển số xe', 'Bien so xe', 'Vehicle', 'Vehicles', 'Plate No'], str],
 };
 function headerMap(header) {
   try { BASIS = db.prepare(`SELECT v FROM settings WHERE k='amount_basis'`).get()?.v === 'acc' ? 'acc' : 'src'; } catch { }

@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.79
+- Sửa biển số xe: file ERP có 2 cột – "Lisence plate" (chọn từ danh mục xe công ty) và "License plate" (gõ tay, nhiều cách viết: "15-847 T", "14386", "17223"…). Trước đây lấy cột gõ tay nên chi phí theo xe tách ra nhiều biển gần giống nhau. Nay ưu tiên cột danh mục, chỉ dùng cột gõ tay khi cột danh mục trống. Dữ liệu đã nạp: chạy "Bổ sung thông tin" từ các file ERP gốc để cập nhật lại biển số (không cần nạp lại).
+
 ## 4.99.78
 - BCTC IFRS → Điều chỉnh IFRS: nút "Tạo / cập nhật bút toán" IFRS 16 từ lịch hợp đồng thuê trạm (luỹ kế đến 31/12): Nợ TS quyền sử dụng (2138) = GTCL; Có nợ thuê ngắn hạn / dài hạn theo lịch; loại trả trước tiền thuê treo trên ERP (24211); năm hiện tại Nợ khấu hao (627) + lãi (635), Có chi phí thuê ERP (627); chênh lệch luỹ kế năm trước vào 4211. Mặc định chỉ lấy hợp đồng có chủ nhà chưa có số dư nợ thuê trên sổ (tránh trùng); xem trước bút toán + chi tiết từng hợp đồng; tạo lại thay bút toán [IFRS16] cũ; TK cấu hình được.
 
