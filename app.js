@@ -1998,6 +1998,43 @@ async function bpPlan(H,tabs,yearSel,D,dsel,bind,Y){const L=await aq('bpList',BP
     try{const f=await api.xlsxSheets(`KH_CP_${BPF.year}.xlsx`,[['KH'+BPF.year,rows]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
 }
 const vLoc=()=>vDim('location'),vVeh=()=>vDim('plate'),vDpt=()=>vDim('dept');
+// ======== Tìm chức năng (Ctrl+P): tìm theo tên trang, mô tả, từ khoá, cả các chức năng nằm trong trang (tab, nút) – không phân biệt dấu ========
+const NAVKW={overview:'dashboard tong quan',errors:'loi nhap lieu rule quy tac canh bao gui email nhan vien bao cao loi',aging:'cong no tuoi no phai thu phai tra 131 331 fifo',r88:'1388 131 phai thu khac',inv88:'hoa don 138812 bccs doanh thu thoe hoa don',adv:'tam ung 141 nhan vien doi chieu',grec:'15611 14121 hang hoa vat tu bien ban doi chieu',ap331:'331 hop dong bien ban doi chieu cong no word',landl:'chu nha tram 24211 ngan hang tai khoan',slease:'thue tram ifrs 16 hop dong thue lich tra 242 nha tram',lgr:'ledger so chi tiet khop',deep:'chuyen sau benford trich truoc 335 huy trich 242 bat thuong',inv:'ton kho tuoi hang fifo',pl:'ket qua kinh doanh b02 lai lo',cost:'doanh thu chi phi',fin:'bao cao tai chinh b01 b02 b03 luu chuyen tien te can doi so phat sinh vas',asset:'tai san co dinh khau hao 211 213 214',gstc:'giam sat tai chinh tong cong ty 7.1 7.2 7.3 7.4 7.7',khnam:'ke hoach nam pl01 pl06 tap doan',oinv:'dau tu ra nuoc ngoai bao cao quan tri',capex:'dau tu theo doi ngan sach capex',fcst:'du bao tai chinh',p242:'chi phi tra truoc 242 phan bo',payf:'dong tien thanh toan chi tien quoc te noi bo b03 chuc nang dau tu',locc:'chi phi vi tri thue tram dien tram xang may phat',vehc:'chi phi xe bien so xang dau sua chua dinh muc',deptc:'chi phi phong ban department sub khoan muc type of cost',budc:'ke hoach thuc hien chi phi ngan sach so sanh kh th 2026 2027',dtax:'thue tndn thue hoan lai dta dtl 821 itr timor deferred tax',ifrs:'bao cao tai chinh ifrs sofp sopl socf soce notes tb bang can doi thu financial statement',dmc:'danh muc phong ban khoan muc anh xa',fadj:'dieu chinh du lieu hop dong vi tri bien so dong tien phong ban',staff:'nhan vien danh sach email',cat:'danh muc doi tuong doi tac noi bo quoc te',report:'bao cao thang loi nhan vien',data:'nap du lieu import bo sung thong tin xoa thang'};
+const NAVFEAT=[ // [tên, trang, việc làm thêm sau khi mở, từ khoá]
+  ['Báo cáo IFRS – Ngắn hạn / dài hạn theo đối tượng (3311, 33888)','ifrs',()=>{IFF.tab='lt'},'phan loai ngan han dai han no thue'],
+  ['Báo cáo IFRS – Tạo bút toán IFRS 16 từ lịch hợp đồng thuê','ifrs',()=>{IFF.tab='adj'},'ifrs16 but toan quyen su dung no thue'],
+  ['Báo cáo IFRS – Bút toán điều chỉnh (JE)','ifrs',()=>{IFF.tab='adj'},'je dieu chinh'],
+  ['Báo cáo IFRS – TB bảng cân đối thử chi tiết','ifrs',()=>{IFF.tab='tb'},'trial balance tb'],
+  ['Báo cáo IFRS – Quy tắc phân loại tài khoản','ifrs',()=>{IFF.tab='map'},'mapping anh xa tai khoan chi tieu'],
+  ['Báo cáo IFRS – Bảng lưu chuyển tiền tệ (SOCF)','ifrs',()=>{IFF.tab='socf'},'cash flow'],
+  ['Báo cáo IFRS – Thuyết minh (Notes)','ifrs',()=>{IFF.tab='notes'},'thuyet minh'],
+  ['Chi phí theo phòng ban – Chuyển phòng ban theo quy tắc khoản mục','deptc',()=>setTimeout(()=>{const b=$('#dTd_dept');if(b)b.click()},1500),'chuyen phong ban sai quy tac'],
+  ['Chi phí theo phòng ban – Báo cáo theo mẫu (doanh thu – chi phí phòng ban)','deptc',()=>setTimeout(()=>{const b=$('#dTp_dept');if(b)b.click()},1500),'mau kmmoi bao cao phong ban'],
+  ['Chi phí theo xe – Khoản mục theo dõi (loại khoản mục)','vehc',()=>setTimeout(()=>{const b=$('#dEx_plate');if(b)b.click()},1500),'loai khoan muc an'],
+  ['Chi phí theo vị trí – Khoản mục theo dõi (loại khoản mục)','locc',()=>setTimeout(()=>{const b=$('#dEx_location');if(b)b.click()},1500),'loai khoan muc an'],
+  ['Kế hoạch chi phí – Nạp / sửa / bổ sung kế hoạch năm','budc',()=>{BPF.tab='plan'},'nap ke hoach bieu mau 2027'],
+  ['Kế hoạch chi phí – So sánh kế hoạch – thực hiện','budc',()=>{BPF.tab='cmp'},'so sanh'],
+  ['Dòng tiền thanh toán – Xem theo chức năng (kinh doanh / đầu tư / tài chính)','payf',()=>{PFF.by='cf'},'b03 chuc nang dau tu doi tac'],
+];
+(function(){const nz=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
+  const inp=$('#navQ'),box=$('#navRes');if(!inp)return;let hits=[],hi=0;
+  const pages=()=>[...document.querySelectorAll('#nav button[data-p]')].map(b=>{const p=b.dataset.p,t=TITLES[p]||[];const sec=b.closest('.grp')&&b.closest('.grp').previousElementSibling;return {n:b.textContent.trim(),p,d:t[1]||'',g:sec?sec.textContent.trim():'',kw:NAVKW[p]||'',btn:b}});
+  const search=q=>{const T=nz(q).split(/\s+/).filter(Boolean);if(!T.length)return [];const L=[];
+    for(const x of pages()){const n=nz(x.n),all=n+' '+nz(x.d)+' '+x.kw+' '+nz(x.g);if(T.every(t=>all.includes(t)))L.push({...x,s:(T.every(t=>n.includes(t))?100:0)+(n.startsWith(T[0])?20:0)})}
+    for(const [n,p,a,kw] of NAVFEAT){const all=nz(n)+' '+kw+' '+(NAVKW[p]||'');if(T.every(t=>all.includes(t)))L.push({n,p,a,d:'Chức năng trong trang',g:'',s:(T.every(t=>nz(n).includes(t))?60:10)})}
+    return L.sort((a,b)=>b.s-a.s).slice(0,14)};
+  const mark=(s,q)=>{let h=esc(s);for(const t of nz(q).split(/\s+/).filter(x=>x.length>1)){const i=nz(s).indexOf(t);if(i>=0)h=esc(s.slice(0,i))+'<b>'+esc(s.slice(i,i+t.length))+'</b>'+esc(s.slice(i+t.length));break}return h};
+  const filterNav=q=>{const T=nz(q).split(/\s+/).filter(Boolean);document.querySelectorAll('#nav button[data-p]').forEach(b=>{const x=pages().find(z=>z.btn===b),all=nz(x.n+' '+x.d+' '+x.g)+' '+x.kw;b.style.display=!T.length||T.every(t=>all.includes(t))?'':'none'});
+    document.querySelectorAll('#nav .grp').forEach(g=>{g.classList.toggle('qopen',!!T.length);const any=[...g.querySelectorAll('button[data-p]')].some(b=>b.style.display!=='none');g.style.display=T.length&&!any?'none':'';const s=g.previousElementSibling;if(s&&s.classList.contains('sec'))s.style.display=T.length&&!any?'none':''})};
+  const draw=()=>{if(!hits.length){box.innerHTML=inp.value.trim()?'<div class="nr mut">Không tìm thấy chức năng</div>':'';box.classList.toggle('hide',!inp.value.trim());return}
+    box.innerHTML=hits.map((x,i)=>`<div class="nr ${i===hi?'on':''}" data-i="${i}"><span class="t">${esc(x.g||'')}</span>${mark(x.n,inp.value)}<div class="d">${esc(x.d).slice(0,140)}</div></div>`).join('');box.classList.remove('hide')};
+  const open=x=>{if(!x)return;inp.value='';hits=[];draw();filterNav('');box.classList.add('hide');if(x.a)x.a();go(x.p)};
+  inp.addEventListener('input',()=>{hits=search(inp.value);hi=0;draw();filterNav(inp.value)});
+  inp.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){hi=Math.min(hi+1,hits.length-1);draw();e.preventDefault()}else if(e.key==='ArrowUp'){hi=Math.max(hi-1,0);draw();e.preventDefault()}else if(e.key==='Enter'){open(hits[hi]);e.preventDefault()}else if(e.key==='Escape'){inp.value='';hits=[];draw();filterNav('');inp.blur()}});
+  box.addEventListener('mousedown',e=>{const r=e.target.closest('[data-i]');if(r){e.preventDefault();open(hits[+r.dataset.i])}});
+  inp.addEventListener('blur',()=>setTimeout(()=>box.classList.add('hide'),150));inp.addEventListener('focus',()=>{if(inp.value.trim())draw()});
+  document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&(e.key==='p'||e.key==='P')){e.preventDefault();if(document.body.classList.contains('mini'))document.body.classList.remove('mini');inp.focus();inp.select()}});
+})();
 const VIEWS={capex:()=>vCX(),slease:()=>vSL(),p242:()=>vP2(),payf:()=>vPF(),grec:()=>vGR(),asset:()=>vAS(),gstc:()=>vGS(),khnam:()=>vKH(),oinv:()=>vOI(),lgr:()=>vLG(),ap331:()=>vAP(),inv88:()=>vInv88(),r88:()=>vR88(),landl:()=>vLL(),adv:()=>vAdv(),staff:()=>vStaff(),fcst:()=>vFC(),vehc:vVeh,deptc:vDpt,budc:()=>vBP(),dtax:()=>vDT(),ifrs:()=>vIF(),locc:vLoc,dmc:vDM,fadj:vFA,overview:vOverview,errors:()=>vErrors(),aging:()=>vAging(true),inv:()=>vInv(true),pl:vPL,cost:()=>vCost(true),deep:vDeep,fin:vFin,cat:vCat,report:vReport,data:vData};
 (async()=>{
   META=await aq('meta');RULE=Object.fromEntries(META.rules.map(r=>[r.k,r]));

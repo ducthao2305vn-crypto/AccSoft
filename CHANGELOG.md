@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.83
+- Ô "Tìm chức năng" đầu thanh menu (phím tắt Ctrl+P): gõ có dấu hoặc không dấu, tìm theo tên trang, mô tả, từ khoá (số tài khoản, nghiệp vụ…) và cả chức năng nằm trong trang (tab, nút – vd "ngắn hạn dài hạn", "IFRS 16", "chuyển phòng ban"); menu bên trái lọc theo; ↑ ↓ chọn, Enter mở thẳng chức năng, Esc xoá.
+
 ## 4.99.82
 - Chi phí theo xe / theo vị trí: nút "⚙ Khoản mục theo dõi" – bỏ tích khoản mục không muốn theo dõi (vd khấu hao phương tiện, công tác phí), khoản mục bị loại không hiện trong bảng, danh sách lọc, tổng; lưu riêng cho từng trang, bật lại bất cứ lúc nào.
 

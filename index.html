@@ -351,7 +351,7 @@ body.focusm #uiExit{display:inline-flex}
 nav .sec{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
 nav .sec::after{content:'▾';font-size:10px;transition:transform .15s}
 nav .sec.closed::after{transform:rotate(-90deg)}
-nav .grp.closed{display:none}
+nav .grp.closed{display:none}nav .grp.closed.qopen{display:block}
 body.mini nav .grp.closed{display:block}
 nav button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .subbar .hint,.card-h .hint,.card-h .dblhint{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;max-width:100%}
@@ -368,11 +368,14 @@ nav button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #apT1 th:nth-child(2),#apT1 td:nth-child(2){min-width:320px}
 tr.lgOut td{color:#98A2B3!important;font-style:italic}
 tr.lgCur td{outline:2px solid #FA4700;outline-offset:-2px;background:#FFF6F2!important}
+#navRes .nr{padding:8px 12px;cursor:pointer;border-bottom:1px solid #F2F4F7}#navRes .nr.on,#navRes .nr:hover{background:#FFF6F2}#navRes .nr b{color:#FA4700}#navRes .nr .d{font-size:12px;color:#667085;margin-top:2px}#navRes .nr .t{font-size:11px;color:#98A2B3;float:right}
+body.mini #navFind{display:none}
 </style>
 </head>
 <body>
 <aside>
   <div class="brand"><img src="vendor/telemor-logo.svg" alt="Telemor"><div class="app">AccSoft <span id="ver"></span></div></div>
+  <div id="navFind" style="position:relative;padding:0 12px 8px"><input id="navQ" placeholder="🔍 Tìm chức năng… (Ctrl+P)" autocomplete="off" style="width:100%;box-sizing:border-box"><div id="navRes" class="hide" style="position:absolute;left:12px;right:-280px;top:38px;z-index:60;background:var(--bg,#fff);border:1px solid #E4E7EC;border-radius:10px;box-shadow:0 12px 32px rgba(16,24,40,.18);max-height:70vh;overflow:auto"></div></div>
   <nav id="nav">
     <div class="sec" data-g="0">Tổng quan</div>
     <div class="grp" data-g="0">
