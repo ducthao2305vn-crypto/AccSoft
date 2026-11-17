@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## 4.99.85
+- Phân tích tài khoản thuế:
+  - Tự động đánh dấu "Nghi ngờ (tự động)" cho mọi dòng thuộc kỳ (TK × kỳ kê khai) còn chênh lệch, nếu dòng chưa có trạng thái tay.
+  - Lọc theo từng tài khoản thuế (mọi tab, xuất Excel theo lọc).
+  - Xác nhận kỳ chính xác (từng kỳ hoặc "Xác nhận các kỳ đã khớp"): kỳ đã xác nhận – các dòng là Chính xác, không còn tính chênh lệch, ẩn được; nếu số liệu kỳ đổi sau khi xác nhận (nạp thêm / đổi kỳ) ⇒ "⚠ Đổi sau xác nhận" để xem lại; bỏ xác nhận được.
+
 ## 4.99.84
 - Trang mới "Phân tích tài khoản thuế" (Sổ sách & phân tích): chi tiết mọi dòng có vế TK thuế 333x (cấu hình được) – số chứng từ, ngày, diễn giải, TK Nợ / Có, số tiền Nợ / Có, đối tượng, người nhập.
   - Kỳ kê khai: mặc định năm_tháng ngày chứng từ; dòng nộp tiền (Nợ thuế / Có 111–113) mặc định thuộc kỳ tháng trước (nộp trễ 1 tháng, chỉnh được); đổi kỳ từng dòng hoặc hàng loạt, về kỳ mặc định. Lọc theo kỳ kê khai (kỳ 12 gồm cả tiền nộp tháng 1 năm sau).

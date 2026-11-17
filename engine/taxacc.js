@@ -6,7 +6,9 @@ const SIG = `document_no||'|'||account_date||'|'||acc_debit||'|'||acc_credit||'|
 function make(db, all) {
   const run = (q, ...a) => db.prepare(q).run(...a);
   db.exec(`CREATE TABLE IF NOT EXISTS tax_period(id INTEGER, side TEXT, period TEXT, note TEXT, sig TEXT, at TEXT, PRIMARY KEY(id, side))`);
-  try { db.exec(`ALTER TABLE tax_period ADD COLUMN st TEXT`); } catch { } // trạng thái phân tích: ok = chính xác, sus = nghi ngờ
+  try { db.exec(`ALTER TABLE tax_period ADD COLUMN st TEXT`); } catch { }
+  // xác nhận kỳ chính xác theo TK thuế × kỳ kê khai – lưu ảnh chụp số liệu lúc xác nhận để phát hiện thay đổi về sau
+  db.exec(`CREATE TABLE IF NOT EXISTS tax_ok(acc TEXT, period TEXT, credit REAL, debit REAL, n INTEGER, note TEXT, at TEXT, PRIMARY KEY(acc, period))`); // trạng thái phân tích: ok = chính xác, sus = nghi ngờ
   const get = k => { const r = all(`SELECT v FROM settings WHERE k=?`, k)[0]; try { return r && r.v ? JSON.parse(r.v) : null; } catch { return null; } };
   const accs = () => get('taxacc_accs') || ['333'];
   const setAccs = L => { db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_accs', ?)`).run(JSON.stringify(String(L || '').split(/[,; ]+/).filter(Boolean))); return accs(); };
@@ -33,17 +35,31 @@ function make(db, all) {
   }
   // tổng hợp theo TK thuế × kỳ kê khai, và theo TK × năm (năm của kỳ kê khai)
   function report(o = {}) {
-    const L = lines(o), lvl = +o.level || 0, K = a => lvl ? String(a).slice(0, lvl) : a, cash = a => /^11[123]/.test(a || '');
+    let L = lines(o); const lvl = +o.level || 0, K = a => lvl ? String(a).slice(0, lvl) : a, cash = a => /^11[123]/.test(a || ''), r2 = v => Math.round((v || 0) * 100) / 100;
+    const accList = [...new Map(L.map(x => [x.acc, x.accName || ''])).entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([a, n]) => ({ acc: a, name: n }));
+    if (o.acc) L = L.filter(x => String(x.acc).startsWith(o.acc));
+    const OK = new Map(all(`SELECT * FROM tax_ok`).map(r => [r.acc + '|' + r.period, r]));
     const byP = new Map(), byY = new Map(), name = new Map();
-    for (const x of L) { const acc = K(x.acc); if (!name.has(acc)) name.set(acc, x.accName || ''); const y = String(x.period).slice(0, 4);
-      for (const [M, key, per] of [[byP, acc + '|' + x.period, x.period], [byY, acc + '|' + y, y]]) { const g = M.get(key) || M.set(key, { acc, per, credit: 0, debit: 0, paid: 0, other: 0, n: 0, changed: 0, ok: 0, sus: 0 }).get(key); if (x.st === 'ok') g.ok++; if (x.st === 'sus') g.sus++;
+    for (const x of L) { const acc = K(x.acc); x.gk = acc + '|' + x.period; if (!name.has(acc)) name.set(acc, x.accName || ''); const y = String(x.period).slice(0, 4);
+      for (const [M, key, per] of [[byP, acc + '|' + x.period, x.period], [byY, acc + '|' + y, y]]) { const g = M.get(key) || M.set(key, { acc, per, credit: 0, debit: 0, paid: 0, other: 0, n: 0, changed: 0, ok: 0, sus: 0 }).get(key);
         g.credit += x.credit; g.debit += x.debit; if (x.debit) cash(x.other) ? g.paid += x.debit : g.other += x.debit; g.n++; if (x.changed) g.changed++; } }
+    // kỳ đã xác nhận: còn khớp ảnh chụp lúc xác nhận ⇒ "confirmed"; khác ⇒ "stale" (có thay đổi sau xác nhận – cần xem lại)
+    for (const g of byP.values()) { g.diff = g.credit - g.debit; const c = OK.get(g.acc + '|' + g.per);
+      g.conf = c ? (r2(c.credit) === r2(g.credit) && r2(c.debit) === r2(g.debit) && c.n === g.n ? 'ok' : 'stale') : ''; g.confAt = c ? c.at : ''; g.confNote = c ? c.note || '' : ''; }
+    // trạng thái dòng: tay > kỳ đã xác nhận (chính xác) > tự động nghi ngờ (kỳ còn chênh lệch)
+    for (const x of L) { const g = byP.get(x.gk); x.auto = ''; if (!x.st && g) { if (g.conf === 'ok') { x.stEff = 'ok'; x.auto = 'conf'; } else if (Math.abs(g.diff) > 0.005) { x.stEff = 'sus'; x.auto = 'diff'; } else x.stEff = ''; } else x.stEff = x.st;
+      if (g) { if (x.stEff === 'ok') g.ok++; if (x.stEff === 'sus') g.sus++; } const y = byY.get(K(x.acc) + '|' + String(x.period).slice(0, 4)); if (y) { if (x.stEff === 'ok') y.ok++; if (x.stEff === 'sus') y.sus++; } }
     const fin = M => [...M.values()].map(g => ({ ...g, name: name.get(g.acc) || '', diff: g.credit - g.debit })).sort((a, b) => a.acc.localeCompare(b.acc) || String(a.per).localeCompare(String(b.per)));
     const P = fin(byP), Y = fin(byY);
-    return { accs: accs(), lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
-      tot: { credit: L.reduce((s, x) => s + x.credit, 0), debit: L.reduce((s, x) => s + x.debit, 0), periodsOff: P.filter(g => Math.abs(g.diff) > 0.005).length, changed: L.filter(x => x.changed).length, ok: L.filter(x => x.st === 'ok').length, sus: L.filter(x => x.st === 'sus').length }, lag: lag() };
+    for (const g of Y) { const ps = P.filter(z => z.acc === g.acc && String(z.per).startsWith(g.per)); g.confN = ps.filter(z => z.conf === 'ok').length; g.pN = ps.length; }
+    return { accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
+      tot: { credit: L.reduce((s, x) => s + x.credit, 0), debit: L.reduce((s, x) => s + x.debit, 0), periodsOff: P.filter(g => Math.abs(g.diff) > 0.005 && g.conf !== 'ok').length, changed: L.filter(x => x.changed).length,
+        ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, susAuto: L.filter(x => x.auto === 'diff').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
   }
-  // đổi kỳ kê khai cho các dòng [{id, side}]; period rỗng = về mặc định (năm_tháng ngày chứng từ)
+  // xác nhận / bỏ xác nhận kỳ chính xác: [{acc, per, credit, debit, n}]
+  function confirm(groups, note, undo) { const ins = db.prepare(`INSERT OR REPLACE INTO tax_ok(acc, period, credit, debit, n, note, at) VALUES(?,?,?,?,?,?,datetime('now','localtime'))`), del = db.prepare(`DELETE FROM tax_ok WHERE acc=? AND period=?`);
+    db.exec('BEGIN'); let n = 0; try { for (const g of [].concat(groups || [])) { if (!g || !g.acc || !g.per) continue; undo ? del.run(g.acc, g.per) : ins.run(g.acc, g.per, +g.credit || 0, +g.debit || 0, +g.n || 0, note || null); n++; } db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
+    return { n }; }
   // đổi kỳ kê khai / trạng thái cho các dòng [{id, side}] – giữ thông tin còn lại; bản ghi rỗng (không kỳ, không trạng thái) bị xoá
   function upsert(items, patch) {
     const getR = db.prepare(`SELECT period, note, st FROM tax_period WHERE id=? AND side=?`), del = db.prepare(`DELETE FROM tax_period WHERE id=? AND side=?`);
@@ -60,6 +76,6 @@ function make(db, all) {
       const e = all(`SELECT id FROM entries WHERE document_no=? AND account_date=? AND acc_debit=? AND acc_credit=? AND round(coalesce(amount_acc,amount)*100)=? AND ifnull(partner_debit,'')=? AND ifnull(partner_credit,'')=? LIMIT 1`, doc, d, dr, cr, +cents, bp, bpCr)[0];
       if (e) { try { run(`UPDATE tax_period SET id=? WHERE rowid=?`, e.id, x.r); n++; } catch { } } }
     return { n }; }
-  return { lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
+  return { confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
 }
 module.exports = { make };
