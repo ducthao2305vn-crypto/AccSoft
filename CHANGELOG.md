@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.86
+- Phân tích tài khoản thuế – phân tích tự động: phần mềm tự lập hồ sơ từng TK thuế từ dữ liệu (TK đối ứng vế kê khai / vế nộp và tỉ trọng, đối tượng nhận tiền nộp, loại thuế trong diễn giải, mức số tiền thường gặp) rồi so từng dòng. Dòng lệch hồ sơ ⇒ "Nghi ngờ (tự động)" kèm lý do: diễn giải nói loại thuế khác (vd WHT nhưng hạch toán TK thuế TNCN), TK đối ứng hiếm gặp, ghi giảm thuế vào chi phí, nộp tiền cho đối tượng khác cơ quan thuế, số tiền vượt xa mức thường, số tiền âm. Dòng khớp ⇒ "Chính xác (tự động)"; kỳ kê khai ≠ nộp ⇒ "Kỳ lệch" (xem ở tổng hợp theo kỳ). Tab mới "Phân tích theo TK" (hồ sơ từng TK, số dòng nghi ngờ, nút xem ngay), cột "Lý do", lọc theo lý do; trạng thái chọn tay luôn được ưu tiên.
+
 ## 4.99.85
 - Phân tích tài khoản thuế:
   - Tự động đánh dấu "Nghi ngờ (tự động)" cho mọi dòng thuộc kỳ (TK × kỳ kê khai) còn chênh lệch, nếu dòng chưa có trạng thái tay.

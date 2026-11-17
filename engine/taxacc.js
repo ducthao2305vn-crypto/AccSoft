@@ -3,6 +3,47 @@
 // Kỳ kê khai mặc định = năm_tháng ngày chứng từ; người dùng đổi kỳ (lưu tax_period theo id bút toán + vế, kèm chữ ký nội dung để gắn lại khi nạp lại dữ liệu).
 // Tổng hợp theo TK thuế × kỳ kê khai và theo năm: Có (kê khai / phải nộp) − Nợ (nộp tiền / khấu trừ) = chênh lệch, kỳ đã khớp phải = 0.
 const SIG = `document_no||'|'||account_date||'|'||acc_debit||'|'||acc_credit||'|'||cast(round(coalesce(amount_acc,amount)*100) AS INTEGER)||'|'||ifnull(partner_debit,'')||'|'||ifnull(partner_credit,'')`;
+// nhóm loại thuế theo diễn giải (không dấu, chữ thường)
+const KW = { imp: [/import (tax|duty)/, /\bcustom/], sales: [/sales? tax/, /selective/], cit: [/corporate income/, /profit tax/, /\bcit\b/, /income tax instal/], pit: [/personal income/, /\bpit\b/, /wage tax/, /salary tax/], wht: [/withholding/, /\bwht\b/] };
+const KWN = { imp: 'thuế nhập khẩu', sales: 'thuế bán hàng / tiêu thụ', cit: 'thuế TNDN', pit: 'thuế thu nhập cá nhân', wht: 'thuế khấu trừ tại nguồn (WHT)' };
+const nz = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const kwOf = s => { const t = nz(s); return Object.keys(KW).filter(k => KW[k].some(r => r.test(t))); };
+// Hồ sơ từng TK thuế từ dữ liệu: TK đối ứng vế kê khai / vế nộp (tỉ trọng), đối tượng nhận tiền nộp chính, loại thuế chủ đạo trong diễn giải, trung vị số tiền theo (TK, vế, đối ứng)
+function autoProfile(L, cash) {
+  const A = {}, med = {}, put = (m, k, v) => (m[k] = (m[k] || 0) + v);
+  for (const x of L) { const a = A[x.acc] || (A[x.acc] = { acc: x.acc, name: x.accName || x.acc, cr: {}, dr: {}, nCr: 0, nDr: 0, payBp: {}, nPay: 0, kw: {}, nKw: 0 });
+    const o4 = String(x.other || '').slice(0, 4); if (x.side === 'cr') { put(a.cr, o4, 1); a.nCr++; } else { put(a.dr, o4, 1); a.nDr++; }
+    if (x.side === 'dr' && cash(x.other)) { put(a.payBp, x.bp || '(trống)', 1); a.nPay++; }
+    const k = kwOf(x.ds); if (k.length) { a.nKw++; for (const g of k) put(a.kw, g, 1); }
+    const mk = x.acc + '|' + x.side + '|' + o4; (med[mk] || (med[mk] = [])).push(x.credit || x.debit); }
+  for (const a of Object.values(A)) { a.kwMain = Object.keys(a.kw).filter(g => a.nKw >= 3 && a.kw[g] / a.nKw >= 0.4);
+    a.payMain = Object.entries(a.payBp).sort((p, q) => q[1] - p[1])[0]; a.payMain = a.payMain && a.nPay >= 3 && a.payMain[1] / a.nPay >= 0.6 ? a.payMain[0] : '';
+    const top = (m, n) => Object.entries(m).sort((p, q) => q[1] - p[1]).map(([k, v]) => ({ k, n: v, pct: n ? v / n : 0 }));
+    a.crTop = top(a.cr, a.nCr); a.drTop = top(a.dr, a.nDr); }
+  const dom = {}; for (const a of Object.values(A)) for (const g of a.kwMain) (dom[g] || (dom[g] = [])).push(a.acc);
+  const M = {}; for (const [k, v] of Object.entries(med)) { const s = v.slice().sort((p, q) => p - q); M[k] = { med: s[Math.floor(s.length / 2)], p95: s[Math.min(s.length - 1, Math.floor(s.length * 0.95))], n: s.length }; }
+  return { acc: A, dom, med: M };
+}
+function reasonsOf(x, P, g, cash) {
+  const W = [], a = P.acc[x.acc], o4 = String(x.other || '').slice(0, 4), amt = x.credit || x.debit, f = v => (Math.round(v * 100) / 100).toLocaleString('en-US');
+  if (g && Math.abs(g.credit - g.debit) > 0.005) W.push({ k: 'diff', t: `Kỳ ${x.period} còn chênh lệch ${f(g.credit - g.debit)} (kê khai ${f(g.credit)} / nộp ${f(g.debit)})` });
+  if (!a) return W;
+  // TK đối ứng hiếm gặp với TK thuế này (≤ 2% số dòng cùng vế và ≤ 3 dòng)
+  const tops = x.side === 'cr' ? a.crTop : a.drTop, n = x.side === 'cr' ? a.nCr : a.nDr, t = tops.find(z => z.k === o4);
+  if (n >= 20 && t && t.n <= 3 && t.pct <= 0.02) W.push({ k: 'contra', t: `TK đối ứng ${o4} hiếm gặp với ${x.acc} (${t.n}/${n} dòng ${x.side === 'cr' ? 'Có' : 'Nợ'}) – thường là ${tops.slice(0, 2).map(z => z.k).join(', ')}` });
+  // Nợ TK thuế nhưng đối ứng chi phí 6xx/8xx (giảm thuế vào chi phí) – thường là hạch toán ngược
+  if (x.side === 'dr' && /^[68]/.test(o4)) W.push({ k: 'revexp', t: `Nợ ${x.acc} / Có chi phí ${o4} – ghi giảm thuế vào chi phí, có thể hạch toán ngược` });
+  // nộp tiền cho đối tượng khác cơ quan thuế thường dùng
+  if (x.side === 'dr' && cash(x.other) && a.payMain && (x.bp || '(trống)') !== a.payMain) W.push({ k: 'paybp', t: `Nộp tiền cho đối tượng "${x.bp || '(trống)'}" – thường nộp cho "${a.payMain}"` });
+  // diễn giải nói loại thuế khác với loại thuế chủ đạo của TK này
+  const kw = kwOf(x.ds); if (kw.length && a.kwMain.length && !kw.some(k => a.kwMain.includes(k))) { const other = kw.flatMap(k => P.dom[k] || []).filter(z => z !== x.acc);
+    if (other.length) W.push({ k: 'kw', t: `Diễn giải nói ${kw.map(k => KWN[k]).join(', ')} nhưng hạch toán ${x.acc} – loại thuế này thường ở ${[...new Set(other)].join(', ')}` }); }
+  // số tiền bất thường so với các dòng cùng TK, vế, đối ứng
+  const m = P.med[x.acc + '|' + x.side + '|' + o4]; if (m && m.n >= 20 && m.med > 0 && amt > Math.max(20 * m.med, 3 * m.p95) && amt > 1000) W.push({ k: 'amt', t: `Số tiền ${f(amt)} vượt xa mức thường (trung vị ${f(m.med)}, cao ${f(m.p95)})` });
+  if (amt < 0) W.push({ k: 'neg', t: 'Số tiền âm – bút toán điều chỉnh / đảo' });
+  return W;
+}
+const WHY = { diff: 'Kỳ còn chênh lệch', contra: 'TK đối ứng hiếm gặp', revexp: 'Ghi giảm thuế vào chi phí', paybp: 'Nộp tiền sai đối tượng', kw: 'Diễn giải khác loại thuế', amt: 'Số tiền bất thường', neg: 'Số tiền âm' };
 function make(db, all) {
   const run = (q, ...a) => db.prepare(q).run(...a);
   db.exec(`CREATE TABLE IF NOT EXISTS tax_period(id INTEGER, side TEXT, period TEXT, note TEXT, sig TEXT, at TEXT, PRIMARY KEY(id, side))`);
@@ -37,7 +78,7 @@ function make(db, all) {
   function report(o = {}) {
     let L = lines(o); const lvl = +o.level || 0, K = a => lvl ? String(a).slice(0, lvl) : a, cash = a => /^11[123]/.test(a || ''), r2 = v => Math.round((v || 0) * 100) / 100;
     const accList = [...new Map(L.map(x => [x.acc, x.accName || ''])).entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([a, n]) => ({ acc: a, name: n }));
-    if (o.acc) L = L.filter(x => String(x.acc).startsWith(o.acc));
+    const LA = L; if (o.acc) L = L.filter(x => String(x.acc).startsWith(o.acc)); // hồ sơ TK luôn lập từ toàn bộ TK thuế (LA)
     const OK = new Map(all(`SELECT * FROM tax_ok`).map(r => [r.acc + '|' + r.period, r]));
     const byP = new Map(), byY = new Map(), name = new Map();
     for (const x of L) { const acc = K(x.acc); x.gk = acc + '|' + x.period; if (!name.has(acc)) name.set(acc, x.accName || ''); const y = String(x.period).slice(0, 4);
@@ -46,15 +87,22 @@ function make(db, all) {
     // kỳ đã xác nhận: còn khớp ảnh chụp lúc xác nhận ⇒ "confirmed"; khác ⇒ "stale" (có thay đổi sau xác nhận – cần xem lại)
     for (const g of byP.values()) { g.diff = g.credit - g.debit; const c = OK.get(g.acc + '|' + g.per);
       g.conf = c ? (r2(c.credit) === r2(g.credit) && r2(c.debit) === r2(g.debit) && c.n === g.n ? 'ok' : 'stale') : ''; g.confAt = c ? c.at : ''; g.confNote = c ? c.note || '' : ''; }
-    // trạng thái dòng: tay > kỳ đã xác nhận (chính xác) > tự động nghi ngờ (kỳ còn chênh lệch)
-    for (const x of L) { const g = byP.get(x.gk); x.auto = ''; if (!x.st && g) { if (g.conf === 'ok') { x.stEff = 'ok'; x.auto = 'conf'; } else if (Math.abs(g.diff) > 0.005) { x.stEff = 'sus'; x.auto = 'diff'; } else x.stEff = ''; } else x.stEff = x.st;
+    // ---- PHÂN TÍCH TỰ ĐỘNG: tự lập hồ sơ từng TK thuế từ dữ liệu, so từng dòng với hồ sơ → lý do nghi ngờ
+    const prof = autoProfile(LA, cash);
+    for (const x of L) x.why = reasonsOf(x, prof, byP.get(x.gk), cash);
+    // trạng thái dòng: tay > tự động (có lý do nghi ngờ ⇒ Nghi ngờ; kỳ đã xác nhận bỏ qua lý do 'kỳ chênh lệch'; không lý do ⇒ Chính xác)
+    for (const x of L) { const g = byP.get(x.gk); x.auto = ''; if (g && g.conf === 'ok') x.why = x.why.filter(w => w.k !== 'diff');
+      // lý do cấp dòng ⇒ Nghi ngờ; chỉ thuộc kỳ còn chênh lệch ⇒ 'Kỳ lệch' (xem ở tổng hợp kỳ, không tính là nghi ngờ từng dòng); không lý do ⇒ Chính xác
+      if (!x.st) { const own = x.why.filter(w => w.k !== 'diff'); if (own.length) { x.stEff = 'sus'; x.auto = 'rule'; } else if (x.why.length) { x.stEff = 'chk'; x.auto = 'diff'; } else { x.stEff = 'ok'; x.auto = g && g.conf === 'ok' ? 'conf' : 'rule'; } } else x.stEff = x.st;
       if (g) { if (x.stEff === 'ok') g.ok++; if (x.stEff === 'sus') g.sus++; } const y = byY.get(K(x.acc) + '|' + String(x.period).slice(0, 4)); if (y) { if (x.stEff === 'ok') y.ok++; if (x.stEff === 'sus') y.sus++; } }
     const fin = M => [...M.values()].map(g => ({ ...g, name: name.get(g.acc) || '', diff: g.credit - g.debit })).sort((a, b) => a.acc.localeCompare(b.acc) || String(a.per).localeCompare(String(b.per)));
     const P = fin(byP), Y = fin(byY);
     for (const g of Y) { const ps = P.filter(z => z.acc === g.acc && String(z.per).startsWith(g.per)); g.confN = ps.filter(z => z.conf === 'ok').length; g.pN = ps.length; }
-    return { accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
+    const why = {}; for (const x of L) for (const w of x.why) why[w.k] = (why[w.k] || 0) + 1;
+    const accTab = Object.values(prof.acc).filter(a => !o.acc || a.acc.startsWith(o.acc)).map(a => ({ ...a, sus: L.filter(x => x.acc === a.acc && x.stEff === 'sus').length, n: L.filter(x => x.acc === a.acc).length })).sort((a, b) => a.acc.localeCompare(b.acc));
+    return { why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
       tot: { credit: L.reduce((s, x) => s + x.credit, 0), debit: L.reduce((s, x) => s + x.debit, 0), periodsOff: P.filter(g => Math.abs(g.diff) > 0.005 && g.conf !== 'ok').length, changed: L.filter(x => x.changed).length,
-        ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, susAuto: L.filter(x => x.auto === 'diff').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
+        ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, chk: L.filter(x => x.stEff === 'chk').length, susAuto: L.filter(x => x.auto === 'rule' && x.stEff === 'sus').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
   }
   // xác nhận / bỏ xác nhận kỳ chính xác: [{acc, per, credit, debit, n}]
   function confirm(groups, note, undo) { const ins = db.prepare(`INSERT OR REPLACE INTO tax_ok(acc, period, credit, debit, n, note, at) VALUES(?,?,?,?,?,?,datetime('now','localtime'))`), del = db.prepare(`DELETE FROM tax_ok WHERE acc=? AND period=?`);
@@ -78,4 +126,4 @@ function make(db, all) {
     return { n }; }
   return { confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
 }
-module.exports = { make };
+module.exports = { make, WHY };

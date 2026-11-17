@@ -620,3 +620,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Tìm chức năng: NAVKW (từ khoá không dấu theo trang) và NAVFEAT ([tên, trang, việc làm sau khi mở, từ khoá]) trong app.js – thêm trang \/ tab mới thì bổ sung vào đây.
 - Phân tích TK thuế: engine\/taxacc.js, bảng tax_period(id, side, period, note, st, sig) – 1 dòng phân tích \/ vế TK thuế; settings taxacc_accs, taxacc_lag; faRebind gắn lại theo sig.
 - TK thuế: tax_ok(acc, period, credit, debit, n) = ảnh chụp lúc xác nhận; report so ảnh chụp ⇒ conf ok | stale; trạng thái hiệu lực dòng stEff: tay > kỳ xác nhận > tự động nghi ngờ (kỳ chênh ≠ 0).
+- TK thuế – phân tích tự động: autoProfile(LA) lập từ TOÀN BỘ TK thuế (không theo lọc TK) + reasonsOf(x) → x.why [{k, t}]; stEff: tay > sus (lý do cấp dòng) > chk (chỉ kỳ lệch) > ok.
