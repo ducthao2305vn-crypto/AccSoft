@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## 4.99.84
+- Trang mới "Phân tích tài khoản thuế" (Sổ sách & phân tích): chi tiết mọi dòng có vế TK thuế 333x (cấu hình được) – số chứng từ, ngày, diễn giải, TK Nợ / Có, số tiền Nợ / Có, đối tượng, người nhập.
+  - Kỳ kê khai: mặc định năm_tháng ngày chứng từ; dòng nộp tiền (Nợ thuế / Có 111–113) mặc định thuộc kỳ tháng trước (nộp trễ 1 tháng, chỉnh được); đổi kỳ từng dòng hoặc hàng loạt, về kỳ mặc định. Lọc theo kỳ kê khai (kỳ 12 gồm cả tiền nộp tháng 1 năm sau).
+  - Trạng thái phân tích từng dòng: Chính xác / Nghi ngờ (kèm ghi chú), lọc theo trạng thái.
+  - Tổng hợp theo TK thuế × kỳ kê khai và theo năm: kê khai (Có), nộp tiền, khấu trừ / khác, chênh lệch (tô đỏ kỳ ≠ 0), số dòng chính xác / nghi ngờ; nhấn đúp xem chi tiết; xuất Excel 3 sheet. Kỳ / trạng thái tự gắn lại khi nạp lại dữ liệu.
+
 ## 4.99.83
 - Ô "Tìm chức năng" đầu thanh menu (phím tắt Ctrl+P): gõ có dấu hoặc không dấu, tìm theo tên trang, mô tả, từ khoá (số tài khoản, nghiệp vụ…) và cả chức năng nằm trong trang (tab, nút – vd "ngắn hạn dài hạn", "IFRS 16", "chuyển phòng ban"); menu bên trái lọc theo; ↑ ↓ chọn, Enter mở thẳng chức năng, Esc xoá.
 

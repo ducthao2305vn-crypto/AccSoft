@@ -618,3 +618,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Chi phí theo xe / vị trí: groups(plate|location) dựng động theo khoản mục gốc (mã có plate trong dữ liệu ∪ GROUPS.plate), tên lấy từ type_of_cost \/ cost_cat; không còn dùng setting veh_groups.
 - Khoản mục loại khỏi theo dõi (xe \/ vị trí): settings grp_excl_plate \/ grp_excl_location; groups(d, withExcl) – locGroups trả cả khoản mục bị loại (excl: true).
 - Tìm chức năng: NAVKW (từ khoá không dấu theo trang) và NAVFEAT ([tên, trang, việc làm sau khi mở, từ khoá]) trong app.js – thêm trang \/ tab mới thì bổ sung vào đây.
+- Phân tích TK thuế: engine\/taxacc.js, bảng tax_period(id, side, period, note, st, sig) – 1 dòng phân tích \/ vế TK thuế; settings taxacc_accs, taxacc_lag; faRebind gắn lại theo sig.
