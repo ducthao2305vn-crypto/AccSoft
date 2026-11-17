@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.87
+- Sửa ô nhập ngày / tháng trên toàn ứng dụng: trước đây mới gõ 1 chữ số của năm (vd "2" khi định gõ 2015) đã chạy tìm kiếm với năm 0002. Nay chỉ tìm khi năm đủ 4 chữ số và đã ngừng gõ ~0,8 giây; nhấn Enter hoặc rời ô thì tìm ngay. Áp dụng cho mọi ô Từ ngày / Đến ngày / Từ tháng / Đến tháng ở tất cả các trang.
+
 ## 4.99.86
 - Phân tích tài khoản thuế – phân tích tự động: phần mềm tự lập hồ sơ từng TK thuế từ dữ liệu (TK đối ứng vế kê khai / vế nộp và tỉ trọng, đối tượng nhận tiền nộp, loại thuế trong diễn giải, mức số tiền thường gặp) rồi so từng dòng. Dòng lệch hồ sơ ⇒ "Nghi ngờ (tự động)" kèm lý do: diễn giải nói loại thuế khác (vd WHT nhưng hạch toán TK thuế TNCN), TK đối ứng hiếm gặp, ghi giảm thuế vào chi phí, nộp tiền cho đối tượng khác cơ quan thuế, số tiền vượt xa mức thường, số tiền âm. Dòng khớp ⇒ "Chính xác (tự động)"; kỳ kê khai ≠ nộp ⇒ "Kỳ lệch" (xem ở tổng hợp theo kỳ). Tab mới "Phân tích theo TK" (hồ sơ từng TK, số dòng nghi ngờ, nút xem ngay), cột "Lý do", lọc theo lý do; trạng thái chọn tay luôn được ưu tiên.
 

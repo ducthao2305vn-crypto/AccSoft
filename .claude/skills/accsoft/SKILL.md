@@ -621,3 +621,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Phân tích TK thuế: engine\/taxacc.js, bảng tax_period(id, side, period, note, st, sig) – 1 dòng phân tích \/ vế TK thuế; settings taxacc_accs, taxacc_lag; faRebind gắn lại theo sig.
 - TK thuế: tax_ok(acc, period, credit, debit, n) = ảnh chụp lúc xác nhận; report so ảnh chụp ⇒ conf ok | stale; trạng thái hiệu lực dòng stEff: tay > kỳ xác nhận > tự động nghi ngờ (kỳ chênh ≠ 0).
 - TK thuế – phân tích tự động: autoProfile(LA) lập từ TOÀN BỘ TK thuế (không theo lọc TK) + reasonsOf(x) → x.why [{k, t}]; stEff: tay > sus (lý do cấp dòng) > chk (chỉ kỳ lệch) > ok.
+- Ô date \/ month: bộ lọc toàn cục (capture) trong app.js chặn change khi năm chưa hợp lệ (regex ^(19|20|21)\\d\\d), trì hoãn 800 ms, phát ngay khi Enter \/ blur – trang mới không cần tự xử lý.

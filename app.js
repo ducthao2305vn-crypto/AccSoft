@@ -5,6 +5,18 @@
 })();
 // Chờ người dùng ngừng gõ rồi mới lọc / vẽ lại (tránh đơ khi bảng lớn)
 const deb=(fn,ms=250)=>{let t=0;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),ms)}};
+// Ô ngày / tháng (date, month, datetime-local): trình duyệt phát 'change' ngay khi đang gõ dở (gõ "2" ở năm ⇒ năm 0002) ⇒ trang tìm ngay, sai.
+// Chặn toàn ứng dụng ở pha capture: năm chưa đủ 4 số (< 1900) ⇒ bỏ; giá trị hợp lệ ⇒ chờ ngừng gõ 800 ms mới phát lại; Enter / rời ô ⇒ phát ngay.
+(function(){const T=new Set(['date','month','datetime-local','week']),ok=v=>!v||/^(19|20|21)\d\d(-|$)/.test(String(v)),pend=new Map();
+  const fire=el=>{const t=pend.get(el);if(!t)return;clearTimeout(t.id);pend.delete(el);if(!ok(el.value)||el.value===t.sent)return;el.__dtSent=el.value;el.dispatchEvent(new Event('change',{bubbles:true}))};
+  document.addEventListener('change',e=>{const el=e.target;if(!el||el.tagName!=='INPUT'||!T.has(el.type)||e.__dtOk)return;
+    if(el.__dtSent===el.value&&e.isTrusted===false){return} // sự kiện do chính bộ lọc phát lại – cho qua
+    e.stopImmediatePropagation();if(!ok(el.value)){const t=pend.get(el);if(t){clearTimeout(t.id);pend.delete(el)}return}
+    const t=pend.get(el);if(t)clearTimeout(t.id);pend.set(el,{id:setTimeout(()=>fire(el),800),sent:el.__dtSent})},true);
+  document.addEventListener('input',e=>{const el=e.target;if(el&&el.tagName==='INPUT'&&T.has(el.type)&&!ok(el.value))e.stopImmediatePropagation()},true);
+  document.addEventListener('keydown',e=>{const el=e.target;if(e.key==='Enter'&&el&&el.tagName==='INPUT'&&T.has(el.type))fire(el)},true);
+  document.addEventListener('blur',e=>{const el=e.target;if(el&&el.tagName==='INPUT'&&T.has(el.type))fire(el)},true);
+})();
 // Logic giao diện AccSoft – mọi dữ liệu lấy qua window.api (SQLite ở tiến trình chính)
 // window.api do preload.js cung cấp
 // Mọi lỗi giao diện đều ghi vào nhật ký
