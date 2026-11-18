@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.89
+- Phân tích tài khoản thuế: kỳ kê khai mặc định ưu tiên tháng ghi trong diễn giải ("Payable In September 2026", "tax in February 2026", "for month Dec-2017", "tháng 9/2026", "T03/2026"…); chỉ khi diễn giải không ghi tháng mới dùng ngày chứng từ / quy tắc nộp trễ. Sửa trường hợp tiền nộp tháng 10 cho kỳ tháng 9 bị xếp sai kỳ khi đặt "Nộp trễ" khác 1.
+
 ## 4.99.88
 - Phân tích tài khoản thuế – tab Chi tiết: thêm cột "Số tiền (±)" (Nợ dương, Có âm); dòng xếp theo TK thuế → kỳ kê khai → ngày; cuối mỗi kỳ có dòng "Cộng kỳ" = tổng ± các dòng đang hiện, kèm chênh lệch cả kỳ khi đang lọc; kỳ khớp nền xanh "✓ khớp", kỳ lệch nền đỏ "⚠ chênh lệch". Xuất Excel có cột ±.
 

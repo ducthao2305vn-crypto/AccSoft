@@ -43,6 +43,12 @@ function reasonsOf(x, P, g, cash) {
   if (amt < 0) W.push({ k: 'neg', t: 'Số tiền âm – bút toán điều chỉnh / đảo' });
   return W;
 }
+// Kỳ ghi trong diễn giải: "in September 2026", "for month Dec-2017", "Feb 2020", "tháng 9/2026", "T09/2026", "month 03/2026" → '2026_09'
+const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+function descPeriod(ds) { const t = nz(ds); let m = t.match(/\b(january|february|march|april|may|june|july|august|september|sept|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\.?[\s\-_,/]*((?:19|20)\d\d)(?!\d)/);
+  if (m) return m[2] + '_' + String(MON[m[1].slice(0, 3)]).padStart(2, '0');
+  m = t.match(/\b(?:thang|month|ky|period|t)\s*(\d{1,2})\s*[/\-.]\s*((?:19|20)\d\d)(?!\d)/); if (m && +m[1] >= 1 && +m[1] <= 12) return m[2] + '_' + String(+m[1]).padStart(2, '0');
+  return ''; }
 const WHY = { diff: 'Kỳ còn chênh lệch', contra: 'TK đối ứng hiếm gặp', revexp: 'Ghi giảm thuế vào chi phí', paybp: 'Nộp tiền sai đối tượng', kw: 'Diễn giải khác loại thuế', amt: 'Số tiền bất thường', neg: 'Số tiền âm' };
 function make(db, all) {
   const run = (q, ...a) => db.prepare(q).run(...a);
@@ -69,9 +75,9 @@ function make(db, all) {
         e.partner_debit bp, e.partner_credit bpCr, e.created_by u FROM entries e WHERE e.account_date>=? AND e.account_date<=? AND (${like('e.acc_debit', A)} OR ${like('e.acc_credit', A)}) ORDER BY e.account_date, e.document_no, e.id`, f, t, ...P, ...P);
     const ov = new Map(all(`SELECT id||'|'||side k, period, note, st FROM tax_period`).map(r => [r.k, r])), LAG = lag();
     const isT = a => A.some(p => String(a || '').startsWith(p)), out = [];
-    for (const r of rows) for (const side of ['dr', 'cr']) { const acc = side === 'dr' ? r.dr : r.cr; if (!isT(acc)) continue; const o2 = ov.get(r.id + '|' + side), pay = side === 'dr' && cash(r.cr), p0 = defP(r.d, pay ? LAG : 0);
+    for (const r of rows) for (const side of ['dr', 'cr']) { const acc = side === 'dr' ? r.dr : r.cr; if (!isT(acc)) continue; const o2 = ov.get(r.id + '|' + side), pay = side === 'dr' && cash(r.cr), pd = descPeriod(r.ds || r.dsp), p0 = pd || defP(r.d, pay ? LAG : 0), pSrc = pd ? 'desc' : pay ? 'lag' : 'date';
       out.push({ id: r.id, side, doc: r.doc, d: r.d, ds: r.ds || r.dsp || '', dr: r.dr, cr: r.cr, acc, accName: side === 'dr' ? r.drn : r.crn, other: side === 'dr' ? r.cr : r.dr,
-        debit: side === 'dr' ? r.a : 0, credit: side === 'cr' ? r.a : 0, bp: side === 'dr' ? r.bp : r.bpCr, u: r.u, pay, p0, period: o2 && o2.period ? o2.period : p0, changed: !!(o2 && o2.period), note: o2 ? o2.note || '' : '', st: o2 ? o2.st || '' : '' }); }
+        debit: side === 'dr' ? r.a : 0, credit: side === 'cr' ? r.a : 0, bp: side === 'dr' ? r.bp : r.bpCr, u: r.u, pay, pSrc, p0, period: o2 && o2.period ? o2.period : p0, changed: !!(o2 && o2.period), note: o2 ? o2.note || '' : '', st: o2 ? o2.st || '' : '' }); }
     return out.filter(x => x.period >= pf && x.period <= pt);
   }
   // tổng hợp theo TK thuế × kỳ kê khai, và theo TK × năm (năm của kỳ kê khai)

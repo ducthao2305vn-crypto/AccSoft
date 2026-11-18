@@ -622,3 +622,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - TK thuế: tax_ok(acc, period, credit, debit, n) = ảnh chụp lúc xác nhận; report so ảnh chụp ⇒ conf ok | stale; trạng thái hiệu lực dòng stEff: tay > kỳ xác nhận > tự động nghi ngờ (kỳ chênh ≠ 0).
 - TK thuế – phân tích tự động: autoProfile(LA) lập từ TOÀN BỘ TK thuế (không theo lọc TK) + reasonsOf(x) → x.why [{k, t}]; stEff: tay > sus (lý do cấp dòng) > chk (chỉ kỳ lệch) > ok.
 - Ô date \/ month: bộ lọc toàn cục (capture) trong app.js chặn change khi năm chưa hợp lệ (regex ^(19|20|21)\\d\\d), trì hoãn 800 ms, phát ngay khi Enter \/ blur – trang mới không cần tự xử lý.
+- Kỳ kê khai mặc định: descPeriod(diễn giải) > lag (dòng nộp tiền) > ngày CT; x.pSrc = desc | lag | date.
