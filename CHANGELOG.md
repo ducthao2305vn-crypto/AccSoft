@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.93
+- Phân tích tài khoản thuế › Chi tiết: lọc **nhiều trạng thái** cùng lúc (tích Chưa phân tích / Chính xác / Nghi ngờ / Kỳ lệch); nút **Trừ "Chính xác"** chọn nhanh mọi trạng thái còn lại.
+- Hiện **Tổng số tiền (±)** (Nợ − Có) của các dòng đang lọc ở thanh trên và dòng tổng cuối bảng (ghim đáy).
+
 ## 4.99.92
 - Sao kê ngân hàng: tab **Đối chiếu hạch toán 112**. Khớp tự động thu ↔ Nợ 112, chi ↔ Có 112 theo số tiền (Source Amount), ngày lệch ≤ ngưỡng (mặc định 5 ngày); nếu không có dòng lẻ thì khớp tổng các dòng cùng số CT.
 - Số dư đầu kỳ từ phần mềm tài chính: số dư cuối tháng trước của TK kế toán (fin_close) so với số dư đầu sao kê; so phát sinh thu/chi và số dư cuối.
