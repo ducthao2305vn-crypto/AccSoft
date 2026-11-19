@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.0.0
+- Phân tích tài khoản thuế › Chi tiết: nút **Xuất dữ liệu đang xem** – chỉ xuất các dòng đang hiển thị theo bộ lọc hiện tại (trạng thái, TK thuế, kỳ, ô tìm…), gồm dòng cộng từng kỳ, tổng cộng, và sheet ghi lại bộ lọc đã dùng. Nút cũ đổi tên "Xuất Excel (toàn bộ)".
+
 ## 4.99.99
 - Phân tích tài khoản thuế › Chi tiết: dòng **vừa đổi kỳ không còn "biến mất"**. Trước đây dòng chuyển sang kỳ mới nên bị bộ lọc kỳ / trạng thái ẩn đi và nhảy chỗ do sắp xếp theo kỳ. Nay dòng vừa đổi được giữ lại trên bảng (nền xanh), có thông báo kỳ mới kèm liên kết "sang kỳ …" để mở kỳ đó, báo cả dòng có kỳ mới nằm ngoài khoảng ngày lọc; nút "Ẩn các dòng này" để bỏ.
 
