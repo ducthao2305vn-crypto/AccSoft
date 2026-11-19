@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.94
+- Sao kê ngân hàng: nút **Xuất sao kê (English)** – chỉ xuất sao kê, tiếng Anh, không kèm đối chiếu: Summary, All Transactions, mỗi tài khoản 1 sheet (tiêu đề tài khoản, kỳ, Opening / Closing Balance). Nút cũ đổi tên "Xuất kèm đối chiếu".
+
 ## 4.99.93
 - Phân tích tài khoản thuế › Chi tiết: lọc **nhiều trạng thái** cùng lúc (tích Chưa phân tích / Chính xác / Nghi ngờ / Kỳ lệch); nút **Trừ "Chính xác"** chọn nhanh mọi trạng thái còn lại.
 - Hiện **Tổng số tiền (±)** (Nợ − Có) của các dòng đang lọc ở thanh trên và dòng tổng cuối bảng (ghim đáy).

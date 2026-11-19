@@ -205,4 +205,22 @@ function book(r, XLSX, rc) {
     XLSX.utils.book_append_sheet(wb, ws, n); }
   return wb;
 }
-module.exports = { parse, make, book, BANKS };
+// Statement-only export in English: Summary + All transactions + one sheet per account (no reconciliation columns)
+function bookEn(r, XLSX) {
+  const wb = XLSX.utils.book_new(), lbl = a => `${a.bank} ${a.alias || a.acc}`;
+  const sum = r.accs.map(a => ({ 'Bank': a.bank, 'Account No.': a.acc, 'Account Name': a.alias || a.name, 'Currency': a.cur, 'Opening Balance': a.open, 'Total Credit (In)': a.cr, 'Total Debit (Out)': a.dr, 'Closing Balance': a.close, 'No. of Transactions': a.rows.length, 'Data Up To': a.last }));
+  sum.push({ 'Bank': 'TOTAL', 'Opening Balance': r.accs.reduce((s, a) => s + (a.open || 0), 0), 'Total Credit (In)': r.accs.reduce((s, a) => s + a.cr, 0), 'Total Debit (Out)': r.accs.reduce((s, a) => s + a.dr, 0), 'Closing Balance': r.accs.reduce((s, a) => s + (a.close || 0), 0), 'No. of Transactions': r.accs.reduce((s, a) => s + a.rows.length, 0) });
+  const ws0 = XLSX.utils.aoa_to_sheet([['BANK STATEMENT SUMMARY'], [`Period: ${r.from} to ${r.to}`], []]);
+  XLSX.utils.sheet_add_json(ws0, sum, { origin: 'A4' }); XLSX.utils.book_append_sheet(wb, ws0, 'Summary');
+  const row = (x, i) => ({ 'No.': i + 1, 'Date': x.d, 'Time': x.t, 'Reference': x.ref, 'Description': x.ds, 'Beneficiary': x.ben, 'Credit (In)': x.cr || null, 'Debit (Out)': x.dr || null, 'Balance': x.bal });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.accs.flatMap(a => a.rows.map((x, i) => ({ 'Bank': a.bank, 'Account No.': a.acc, ...row(x, i) })))), 'All Transactions');
+  const used = new Set();
+  for (const a of r.accs) { let n = lbl(a).replace(/[\\/?*[\]:]/g, '').slice(0, 31); while (used.has(n)) n = n.slice(0, 28) + '_' + used.size; used.add(n);
+    const ws = XLSX.utils.aoa_to_sheet([[`${a.bank} – Account No. ${a.acc}`], [`Account Name: ${a.alias || a.name || ''}`, '', '', `Currency: ${a.cur || 'USD'}`], [`Period: ${r.from} to ${r.to}`], []]);
+    XLSX.utils.sheet_add_json(ws, [{ 'No.': '', 'Date': '', 'Description': 'Opening Balance', 'Balance': a.open }, ...a.rows.map(row),
+      { 'Description': 'Total', 'Credit (In)': a.cr, 'Debit (Out)': a.dr }, { 'Description': 'Closing Balance', 'Balance': a.close }], { origin: 'A5', header: ['No.', 'Date', 'Time', 'Reference', 'Description', 'Beneficiary', 'Credit (In)', 'Debit (Out)', 'Balance'] });
+    ws['!cols'] = [6, 11, 9, 18, 60, 30, 14, 14, 16].map(w => ({ wch: w }));
+    XLSX.utils.book_append_sheet(wb, ws, n); }
+  return wb;
+}
+module.exports = { parse, make, book, bookEn, BANKS };

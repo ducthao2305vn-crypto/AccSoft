@@ -2039,7 +2039,7 @@ async function vBS(){const H=$('#bsBody');H.innerHTML='<div class="card"><span c
     <button class="btn primary" id="bsImp">${ic('upload')}Nạp sao kê (chọn nhiều file)</button>
     <label>Tháng <select id="bsYm">${(M.length?M:[BSF.ym]).map(m=>`<option ${m===BSF.ym?'selected':''} value="${m}">${ymLbl(m)}</option>`).join('')}</select></label>
     <span class="mut">Ngân hàng:</span>${BK.map(b=>`<label class="chip"><input type="checkbox" data-bsb="${b}" ${BSF.banks.includes(b)?'checked':''}> ${b}</label>`).join('')}<span class="mut s">(không chọn = tất cả)</span>
-    <div style="flex:1"></div><button class="btn" id="bsXls">${ic('download')}Xuất Excel sao kê tháng</button></div></div>`;
+    <div style="flex:1"></div><button class="btn primary" id="bsXlsEn" title="Chỉ sao kê, tiếng Anh: Summary + All Transactions + mỗi tài khoản 1 sheet">${ic('download')}Xuất sao kê (English)</button><button class="btn" id="bsXls" title="Kèm cột và sheet đối chiếu hạch toán">${ic('download')}Xuất kèm đối chiếu</button></div></div>`;
   const kp=`<div class="kpis">${kpi('','wallet','Số dư đầu tháng',fmt(tot('open')),`${num(r.accs.length)} tài khoản`)}${kpi('blue','coins','Tổng thu',fmt(tot('cr')))}${kpi('','file','Tổng chi',fmt(tot('dr')))}${kpi('','wallet','Số dư cuối',fmt(tot('close')),`${num(r.accs.reduce((s,a)=>s+a.rows.length,0))} giao dịch`)}</div>`;
   const chk=a=>a.bad?`<span class="badge b-H">${a.bad} dòng lệch số dư</span>`:a.gap?`<span class="badge b-M" title="Số dư đầu tháng khác số dư cuối dữ liệu trước – thiếu ngày">Thiếu dữ liệu ${fmt2(a.gap)}</span>`:a.rows.length?'<span class="badge s-fixed">Khớp</span>':'<span class="mut">Chưa có GD</span>';
   const sum=card('Tổng hợp theo tài khoản','Số dư đầu = số dư trước giao dịch đầu tiên của tháng. Kiểm tra: số dư chạy (đầu + thu − chi) so với số dư ngân hàng từng dòng. Bấm dòng để xem chi tiết; sửa "Tên gọi / TK kế toán" trực tiếp.',
@@ -2072,6 +2072,7 @@ async function vBS(){const H=$('#bsBody');H.innerHTML='<div class="card"><span c
   else H.innerHTML=bar+tabs+kp+sum+det;
   $('#bsImp').onclick=async()=>{try{const x=await api.bsImport();if(!x)return;const L=x.res.map(o=>`${o.bank} ${o.acc}: ${num(o.n)} GD ${o.d1?vn(o.d1)+' → '+vn(o.d2):''}${o.removed?` (thay ${num(o.removed)} dòng cũ)`:''}`);alert((L.length?'Đã nạp:\n'+L.join('\n'):'')+(x.err.length?'\n\nKhông đọc được:\n'+x.err.join('\n'):''));vBS()}catch(e){alert(e.message)}};
   $('#bsXls').onclick=async()=>{try{const f=await api.bsXlsx(from,to,BSF.banks,[],+BSF.tol||5);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
+  $('#bsXlsEn').onclick=async()=>{try{const f=await api.bsXlsxEn(from,to,BSF.banks);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
   $('#bsYm').onchange=e=>{BSF.ym=e.target.value;vBS()};
   if($('#bsQ'))$('#bsQ').oninput=deb(()=>{BSF.q=$('#bsQ').value;vBS().then(()=>{const e=$('#bsQ');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}})},400);
   if($('#bsAll'))$('#bsAll').onclick=()=>{BSF.acc='';vBS()};

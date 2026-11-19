@@ -726,6 +726,7 @@ ${R.map((x, i) => `<tr><td style="${TD}">${i + 1}</td><td style="${TD}"><b>${esc
     const BS = require('./engine/bankstmt'), ok = [], err = [];
     for (const f of filePaths) { try { ok.push({ ...BS.parse(fs.readFileSync(f), path.basename(f), XLSX), file: path.basename(f) }); } catch (e) { err.push(path.basename(f) + ': ' + e.message); } }
     return { res: ok.length ? await qa('bsImport', ok) : [], err }; });
+  handle('bs:xlsxEn', async (_e, from, to, banks) => saveXlsx(`Bank_Statement_${(banks && banks.length ? banks.join('-') : 'All')}_${from}_${to}.xlsx`, require('./engine/bankstmt').bookEn(await qa('bsReport', from, to, banks || [], []), XLSX)));
   handle('bs:xlsx', async (_e, from, to, banks, accs, tol) => { const r = await qa('bsReport', from, to, banks || [], accs || []), rc = await qa('bsRecon', from, to, banks || [], tol || 5);
     return saveXlsx(`SaoKe_${(banks && banks.length ? banks.join('-') : 'TatCa')}_${from}_${to}.xlsx`, require('./engine/bankstmt').book(r, XLSX, rc)); });
   handle('bp:import', async (_e, year, mode) => { const { canceled, filePaths } = await dialog.showOpenDialog(win, { filters: [{ name: 'Excel', extensions: ['xlsx', 'xls', 'xlsb'] }], properties: ['openFile'] }); if (canceled || !filePaths[0]) return null;
