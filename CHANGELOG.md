@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.95
+- Phân tích tài khoản thuế: bảng **Kiểm tra số dư cuối kỳ** – số dư cuối TK thuế (Có − Nợ, mọi phát sinh đến ngày cuối kỳ lọc) phải bằng số phải nộp (kê khai Có) của kỳ cuối cùng; khác ⇒ Sai, kèm danh sách kỳ trước còn chênh lệch (bấm để mở chi tiết kỳ đó).
+
 ## 4.99.94
 - Sao kê ngân hàng: nút **Xuất sao kê (English)** – chỉ xuất sao kê, tiếng Anh, không kèm đối chiếu: Summary, All Transactions, mỗi tài khoản 1 sheet (tiêu đề tài khoản, kỳ, Opening / Closing Balance). Nút cũ đổi tên "Xuất kèm đối chiếu".
 

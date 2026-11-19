@@ -106,7 +106,18 @@ function make(db, all) {
     for (const g of Y) { const ps = P.filter(z => z.acc === g.acc && String(z.per).startsWith(g.per)); g.confN = ps.filter(z => z.conf === 'ok').length; g.pN = ps.length; }
     const why = {}; for (const x of L) for (const w of x.why) why[w.k] = (why[w.k] || 0) + 1;
     const accTab = Object.values(prof.acc).filter(a => !o.acc || a.acc.startsWith(o.acc)).map(a => ({ ...a, sus: L.filter(x => x.acc === a.acc && x.stEff === 'sus').length, n: L.filter(x => x.acc === a.acc).length })).sort((a, b) => a.acc.localeCompare(b.acc));
-    return { why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
+    // KIỂM TRA SỐ DƯ: số dư cuối TK thuế (Có − Nợ, mọi phát sinh đến ngày cuối) phải = số phải nộp (kê khai Có) của kỳ cuối cùng; khác ⇒ sai
+    const T = String(o.to || '9999-12-31').slice(0, 10), pt = T.slice(0, 4) + '_' + T.slice(5, 7), A = accs();
+    const bal = new Map();
+    for (const r of all(`SELECT acc_credit a, sum(amount) v FROM entries WHERE account_date<=? AND (${A.map(() => 'acc_credit LIKE ?').join(' OR ')}) GROUP BY 1`, T, ...A.map(a => a + '%'))) { const k = K(r.a); bal.set(k, (bal.get(k) || 0) + r.v); }
+    for (const r of all(`SELECT acc_debit a, sum(amount) v FROM entries WHERE account_date<=? AND (${A.map(() => 'acc_debit LIKE ?').join(' OR ')}) GROUP BY 1`, T, ...A.map(a => a + '%'))) { const k = K(r.a); bal.set(k, (bal.get(k) || 0) - r.v); }
+    const balChk = [...bal.keys()].filter(k => !o.acc || String(k).startsWith(o.acc)).sort().map(acc => {
+      const ps = P.filter(g => g.acc === acc && g.per <= pt && g.credit > 0.005), last = ps[ps.length - 1];
+      const due = last ? last.credit : 0, b = bal.get(acc), diff = b - due;
+      const prior = P.filter(g => g.acc === acc && (!last || g.per < last.per) && Math.abs(g.diff) > 0.005).map(g => ({ per: g.per, diff: g.diff }));
+      return { acc, name: name.get(acc) || '', bal: b, lastPer: last ? last.per : '', due, lastPaid: last ? last.debit : 0, diff, ok: Math.abs(diff) <= 0.01, prior };
+    });
+    return { balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
       tot: { credit: L.reduce((s, x) => s + x.credit, 0), debit: L.reduce((s, x) => s + x.debit, 0), periodsOff: P.filter(g => Math.abs(g.diff) > 0.005 && g.conf !== 'ok').length, changed: L.filter(x => x.changed).length,
         ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, chk: L.filter(x => x.stEff === 'chk').length, susAuto: L.filter(x => x.auto === 'rule' && x.stEff === 'sus').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
   }
