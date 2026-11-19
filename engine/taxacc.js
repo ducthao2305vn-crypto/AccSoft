@@ -55,6 +55,7 @@ function make(db, all) {
   db.exec(`CREATE TABLE IF NOT EXISTS tax_period(id INTEGER, side TEXT, period TEXT, note TEXT, sig TEXT, at TEXT, PRIMARY KEY(id, side))`);
   try { db.exec(`ALTER TABLE tax_period ADD COLUMN st TEXT`); } catch { }
   // xác nhận kỳ chính xác theo TK thuế × kỳ kê khai – lưu ảnh chụp số liệu lúc xác nhận để phát hiện thay đổi về sau
+  db.exec(`CREATE TABLE IF NOT EXISTS tax_auto(id INTEGER, side TEXT, st TEXT, auto TEXT, why TEXT, sig TEXT, at TEXT, PRIMARY KEY(id, side))`);
   db.exec(`CREATE TABLE IF NOT EXISTS tax_ok(acc TEXT, period TEXT, credit REAL, debit REAL, n INTEGER, note TEXT, at TEXT, PRIMARY KEY(acc, period))`); // trạng thái phân tích: ok = chính xác, sus = nghi ngờ
   const get = k => { const r = all(`SELECT v FROM settings WHERE k=?`, k)[0]; try { return r && r.v ? JSON.parse(r.v) : null; } catch { return null; } };
   const accs = () => get('taxacc_accs') || ['333'];
@@ -95,13 +96,22 @@ function make(db, all) {
       g.conf = c ? (r2(c.credit) === r2(g.credit) && r2(c.debit) === r2(g.debit) && c.n === g.n ? 'ok' : 'stale') : ''; g.confAt = c ? c.at : ''; g.confNote = c ? c.note || '' : ''; }
     // ---- PHÂN TÍCH TỰ ĐỘNG: tự lập hồ sơ từng TK thuế từ dữ liệu, so từng dòng với hồ sơ → lý do nghi ngờ
     const prof = autoProfile(LA, cash);
-    for (const x of L) x.why = reasonsOf(x, prof, byP.get(x.gk), cash);
-    // trạng thái dòng: tay > tự động (có lý do nghi ngờ ⇒ Nghi ngờ; kỳ đã xác nhận bỏ qua lý do 'kỳ chênh lệch'; không lý do ⇒ Chính xác)
-    for (const x of L) { const g = byP.get(x.gk); x.auto = ''; if (g && g.conf === 'ok') x.why = x.why.filter(w => w.k !== 'diff');
-      // lý do cấp dòng ⇒ Nghi ngờ; chỉ thuộc kỳ còn chênh lệch ⇒ 'Kỳ lệch' (xem ở tổng hợp kỳ, không tính là nghi ngờ từng dòng); không lý do ⇒ Chính xác
-      // dòng đã đổi kỳ tay: KHÔNG tự chuyển sang Chính xác – chờ người dùng xác nhận (trừ khi kỳ mới đã được xác nhận)
-      if (!x.st && x.changed && !(g && g.conf === 'ok')) { x.stEff = 'chg'; x.auto = 'chg'; }
-      else if (!x.st) { const own = x.why.filter(w => w.k !== 'diff'); if (own.length) { x.stEff = 'sus'; x.auto = 'rule'; } else if (x.why.length) { x.stEff = 'chk'; x.auto = 'diff'; } else { x.stEff = 'ok'; x.auto = g && g.conf === 'ok' ? 'conf' : 'rule'; } } else x.stEff = x.st;
+    // PHÂN TÍCH TỰ ĐỘNG CHỈ CHẠY KHI NGƯỜI DÙNG BẤM (o.run): kết quả lưu tax_auto; lần mở sau dùng lại kết quả đã lưu, không tự chạy lại
+    if (o.run) {
+      const ins = db.prepare(`INSERT OR REPLACE INTO tax_auto(id, side, st, auto, why, sig, at) VALUES(?,?,?,?,?,(SELECT ${SIG} FROM entries WHERE id=?),datetime('now','localtime'))`);
+      db.exec('BEGIN'); try { for (const x of L) { const g = byP.get(x.gk); let why = reasonsOf(x, prof, g, cash); if (g && g.conf === 'ok') why = why.filter(w => w.k !== 'diff');
+        const own = why.filter(w => w.k !== 'diff'), st = own.length ? 'sus' : why.length ? 'chk' : 'ok', au = own.length ? 'rule' : why.length ? 'diff' : g && g.conf === 'ok' ? 'conf' : 'rule';
+        ins.run(x.id, x.side, st, au, JSON.stringify(why), x.id); } db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; }
+    }
+    const AU = new Map(all(`SELECT id||'|'||side k, st, auto, why, at FROM tax_auto`).map(r => [r.k, r]));
+    let lastRun = null;
+    for (const x of L) { const g = byP.get(x.gk), a = AU.get(x.id + '|' + x.side); x.why = a ? JSON.parse(a.why || '[]') : []; x.auto = ''; x.aAt = a ? a.at : '';
+      if (a && (!lastRun || a.at > lastRun)) lastRun = a.at;
+      // dòng đã đổi kỳ tay: chờ người dùng xác nhận (trừ khi kỳ mới đã được xác nhận)
+      if (x.st) x.stEff = x.st;
+      else if (x.changed && !(g && g.conf === 'ok')) { x.stEff = 'chg'; x.auto = 'chg'; }
+      else if (a) { x.stEff = a.st; x.auto = a.auto; }
+      else x.stEff = ''; // chưa phân tích
       if (g) { if (x.stEff === 'ok') g.ok++; if (x.stEff === 'sus') g.sus++; } const y = byY.get(K(x.acc) + '|' + String(x.period).slice(0, 4)); if (y) { if (x.stEff === 'ok') y.ok++; if (x.stEff === 'sus') y.sus++; } }
     const fin = M => [...M.values()].map(g => ({ ...g, name: name.get(g.acc) || '', diff: g.credit - g.debit })).sort((a, b) => a.acc.localeCompare(b.acc) || String(a.per).localeCompare(String(b.per)));
     const P = fin(byP), Y = fin(byY);
@@ -115,11 +125,11 @@ function make(db, all) {
     for (const r of all(`SELECT acc_debit a, sum(amount) v FROM entries WHERE account_date<=? AND (${A.map(() => 'acc_debit LIKE ?').join(' OR ')}) GROUP BY 1`, T, ...A.map(a => a + '%'))) { const k = K(r.a); bal.set(k, (bal.get(k) || 0) - r.v); }
     const balChk = [...bal.keys()].filter(k => !o.acc || String(k).startsWith(o.acc)).sort().map(acc => {
       const ps = P.filter(g => g.acc === acc && g.per <= pt && g.credit > 0.005), last = ps[ps.length - 1];
-      const due = last ? last.credit : 0, b = bal.get(acc), diff = b - due;
+      const due = last ? last.credit - last.debit : 0, b = bal.get(acc), diff = b - due;
       const prior = P.filter(g => g.acc === acc && (!last || g.per < last.per) && Math.abs(g.diff) > 0.005).map(g => ({ per: g.per, diff: g.diff }));
-      return { acc, name: name.get(acc) || '', bal: b, lastPer: last ? last.per : '', due, lastPaid: last ? last.debit : 0, diff, ok: Math.abs(diff) <= 0.01, prior };
+      return { acc, name: name.get(acc) || '', bal: b, lastPer: last ? last.per : '', decl: last ? last.credit : 0, due, lastPaid: last ? last.debit : 0, diff, ok: Math.abs(diff) <= 0.01, prior };
     });
-    return { balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
+    return { lastRun, notRun: L.filter(x => !x.stEff).length, balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
       tot: { credit: L.reduce((s, x) => s + x.credit, 0), debit: L.reduce((s, x) => s + x.debit, 0), periodsOff: P.filter(g => Math.abs(g.diff) > 0.005 && g.conf !== 'ok').length, changed: L.filter(x => x.changed).length,
         ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, chk: L.filter(x => x.stEff === 'chk').length, chg: L.filter(x => x.stEff === 'chg').length, susAuto: L.filter(x => x.auto === 'rule' && x.stEff === 'sus').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
   }
@@ -139,10 +149,11 @@ function make(db, all) {
   function setStatus(items, st, note) { if (st && !['ok', 'sus'].includes(st)) throw new Error('Trạng thái không hợp lệ'); return upsert(items, note ? { st: st || null, note } : { st: st || null }); }
   // gắn lại kỳ đã đổi sau khi nạp lại dữ liệu (id bút toán đổi) theo chữ ký nội dung
   function rebind() { let n = 0;
-    for (const x of all(`SELECT k.rowid r, k.sig FROM tax_period k LEFT JOIN entries e ON e.id=k.id WHERE e.id IS NULL AND k.sig IS NOT NULL`)) { const [doc, d, dr, cr, cents, bp, bpCr] = String(x.sig).split('|');
+    for (const T of ['tax_period', 'tax_auto']) for (const x of all(`SELECT k.rowid r, k.sig FROM ${T} k LEFT JOIN entries e ON e.id=k.id WHERE e.id IS NULL AND k.sig IS NOT NULL`)) { const [doc, d, dr, cr, cents, bp, bpCr] = String(x.sig).split('|');
       const e = all(`SELECT id FROM entries WHERE document_no=? AND account_date=? AND acc_debit=? AND acc_credit=? AND round(coalesce(amount_acc,amount)*100)=? AND ifnull(partner_debit,'')=? AND ifnull(partner_credit,'')=? LIMIT 1`, doc, d, dr, cr, +cents, bp, bpCr)[0];
-      if (e) { try { run(`UPDATE tax_period SET id=? WHERE rowid=?`, e.id, x.r); n++; } catch { } } }
+      if (e) { try { run(`UPDATE ${T} SET id=? WHERE rowid=?`, e.id, x.r); n++; } catch { } } }
     return { n }; }
-  return { confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
+  const analyze = o => { const r = report({ ...o, run: true }); return { n: r.nLines, lastRun: r.lastRun }; };
+  return { analyze, confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
 }
 module.exports = { make, WHY };

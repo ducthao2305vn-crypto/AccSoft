@@ -631,3 +631,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Đối chiếu sao kê ↔ 112: `bankstmt.recon(from,to,banks,tol)` gom tài khoản NH theo `bank_acc.gl` (mặc định 1122, MOSAN 11212; so khớp theo đầu số). ERP không có chiều tài khoản NH trên dòng 112 nên các NH cùng TK được khớp chung một kho bút toán. Đánh dấu tay lưu `bank_mark` theo chữ ký dòng. Lưu ý: `tbl()` nhận mảng dòng, không `.join('')`.
 
 - Thuế: `taxacc.report().balChk` – số dư cuối (SQL toàn bộ đến `o.to`, theo mức TK) so với credit của kỳ cuối có kê khai ≤ kỳ của `o.to`; `prior` = kỳ trước còn chênh.
+
+- Thuế: trạng thái tự động lưu `tax_auto(id, side, st, auto, why, sig)`, chỉ ghi khi `txAnalyze` (= report({run:true})); report chỉ đọc. Ưu tiên: st tay > đổi kỳ chờ xác nhận (chg) > tax_auto > chưa phân tích. rebind gắn lại cả tax_period và tax_auto.

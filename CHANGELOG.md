@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.97
+- Phân tích tài khoản thuế: **phân tích tự động chỉ chạy khi bấm "Chạy phân tích tự động"**; kết quả được lưu và dùng lại, không tự chạy lại khi mở trang, đổi kỳ, đổi trạng thái hay nạp lại dữ liệu (gắn lại theo chữ ký bút toán). Dòng chưa từng phân tích hiện "Chưa phân tích"; thanh lọc báo thời điểm phân tích lần cuối và số dòng chưa phân tích.
+- Kiểm tra số dư cuối kỳ: so với **phần còn phải nộp** của kỳ cuối (kê khai − đã nộp của kỳ đó); bảng thêm cột Kê khai kỳ cuối.
+
 ## 4.99.96
 - Phân tích tài khoản thuế: dòng **đã đổi kỳ tay** không còn bị phân tích tự động chuyển sang "Chính xác". Trạng thái mới **Đã đổi kỳ – chờ xác nhận** (có trong bộ lọc trạng thái, nằm trong "Trừ Chính xác"); chỉ thành Chính xác khi bấm ✔ Chính xác hoặc xác nhận kỳ mới.
 
