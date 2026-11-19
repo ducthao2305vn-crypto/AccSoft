@@ -625,3 +625,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Kỳ kê khai mặc định: descPeriod(diễn giải) > lag (dòng nộp tiền) > ngày CT; x.pSrc = desc | lag | date.
 
 - 335 từng bút toán: `deep.lines335` (IPC `deepLines335`) dựa trên `accrual.match` (group có `accRows`/`relRows`); huỷ phân bổ FIFO theo ngày trong group. UI: Phân tích chuyên sâu › Trích trước › tab `lines`.
+
+- Sao kê ngân hàng: `engine/bankstmt.js` (parse 4 mẫu + bảng bank_acc/bank_tx/bank_imp; nạp = xoá dòng TK trong [d1,d2] rồi chèn). Mosan sắp xếp nối chuỗi số dư trước/sau. BNCTL: dòng đầu file có số dư sau GD, số dư đầu = bal − cr + dr của dòng đầu (header Opening của ngân hàng không tin được). IPC `bs:import`, `bs:xlsx`; trang `bank`.

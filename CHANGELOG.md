@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## 4.99.91
+- Mới: **Quản lý sao kê ngân hàng** (Danh mục & dữ liệu). Nạp nhiều file sao kê thô cùng lúc, tự nhận mẫu: BNCTL (CSV), BNU (CMOV CSV), Mandiri (Rekening Koran XLS), Mosan (Balance Report XLSX). Tài khoản tự tạo theo số TK trong file.
+- Nạp hàng ngày không trùng: dòng cũ của tài khoản trong khoảng ngày của file mới được thay thế.
+- Xem theo tháng, chọn ngân hàng; tổng hợp số dư đầu / thu / chi / cuối từng tài khoản, kiểm tra số dư chạy từng dòng và thiếu dữ liệu giữa các lần nạp; đặt tên gọi, TK kế toán.
+- Xuất Excel tháng: Tổng hợp, Chi tiết gộp, mỗi tài khoản 1 sheet; có cột trống Số CT hạch toán / TK đối ứng / Đã đối chiếu / Ghi chú cho nhân viên đối chiếu.
+
 ## 4.99.90
 - Phân tích 335: thêm tab "Bút toán trích / huỷ" — tổng hợp theo khoản mục, khoản mục × đối tượng; danh sách bút toán trích chưa huỷ / đã huỷ / huỷ một phần (huỷ phân bổ FIFO trong cùng đối tượng × khoản mục × kỳ DV); danh sách bút toán huỷ trích. Lọc theo khoản mục, đối tượng.
 - Excel 335 thêm 4 sheet: KM x doi tuong, BT da huy, BT chua huy, BT huy trich.

@@ -51,6 +51,8 @@ contextBridge.exposeInMainWorld('api', {
   grExport: (k, bps, o, kinds) => ipcRenderer.invoke('gr:export', k, bps, o, kinds),
   grMail: (k, bp, o) => ipcRenderer.invoke('gr:mail', k, bp, o),
   grAssignMail: (k, bps, o) => ipcRenderer.invoke('gr:assignMail', k, bps, o),
+  bsImport: () => ipcRenderer.invoke('bs:import'),
+  bsXlsx: (f, t, b, a) => ipcRenderer.invoke('bs:xlsx', f, t, b, a),
   bpImport: (year, mode) => ipcRenderer.invoke('bp:import', year, mode),
   tdImport: () => ipcRenderer.invoke('td:import'),
   slImport: mode => ipcRenderer.invoke('sl:import', mode),
