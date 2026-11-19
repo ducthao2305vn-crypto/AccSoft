@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.99
+- Phân tích tài khoản thuế › Chi tiết: dòng **vừa đổi kỳ không còn "biến mất"**. Trước đây dòng chuyển sang kỳ mới nên bị bộ lọc kỳ / trạng thái ẩn đi và nhảy chỗ do sắp xếp theo kỳ. Nay dòng vừa đổi được giữ lại trên bảng (nền xanh), có thông báo kỳ mới kèm liên kết "sang kỳ …" để mở kỳ đó, báo cả dòng có kỳ mới nằm ngoài khoảng ngày lọc; nút "Ẩn các dòng này" để bỏ.
+
 ## 4.99.98
 - Phân tích tài khoản thuế: cảnh báo **kỳ đã chọn khớp nhưng còn chênh lệch** – kỳ đã xác nhận khớp, hoặc mọi dòng đã đánh dấu Chính xác, mà Có − Nợ (kê khai − nộp) làm tròn số nguyên ≠ 0. Bảng cảnh báo ở đầu trang (bấm để mở chi tiết kỳ) và nhãn "⚠ Khớp sai" ở Tổng hợp theo kỳ kê khai.
 
