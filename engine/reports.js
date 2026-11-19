@@ -105,7 +105,11 @@ function accrualBook(r) {
     'Trích gần nhất': g.lastAcc, 'Tuổi khoản treo (ngày)': g.age, 'Người ghi chi phí thực tế': g.users.map(u => String(u).split('_')[0]).join(', '), 'Độ tin cậy': g.conf }));
   const open = r.groups.filter(g => g.remain > 0.005 && g.age != null);
   const age = AGE.map(([d, l], i) => { const xs = open.filter(g => g.age <= d && (i === 0 || g.age > AGE[i - 1][0])); return { 'Tuổi khoản trích còn treo': l, 'Số khoản': xs.length, 'Số tiền': xs.reduce((s, g) => s + g.remain, 0), 'Trong đó đã có chi phí thực tế': xs.filter(g => g.actual).reduce((s, g) => s + g.remain, 0) }; });
-  return book([['Doi chieu chi tiet', det], ['Theo ky dich vu', S('per', 'Kỳ dịch vụ')], ['Theo doi tuong', S('p', 'Đối tượng')], ['Theo khoan muc', S('t', 'Khoản mục')], ['Theo nhan vien', S('u', 'Nhân viên')], ['Tuoi khoan treo', age]]);
+  const L = r.L, LS = rows => rows.map(o => ({ 'Khoản mục': o.t, 'Đối tượng': o.p, 'Tên đối tượng': o.name, 'Số BT trích': o.n, 'Số BT chưa huỷ': o.nOpen, 'Đã trích': o.a, 'Đã huỷ': o.rev, 'Chưa huỷ': o.open, 'Chi phí thực tế': o.actual }));
+  const LR = x => ({ 'Tình trạng': x.st, 'Khoản mục': x.t, 'Đối tượng': x.p, 'Tên đối tượng': x.name, 'Kỳ DV': x.per, 'Ngày': x.d, 'Số CT': x.doc, 'Diễn giải': x.ds, 'Số trích': x.a, 'Đã huỷ': x.rev, 'Chưa huỷ': x.open, 'Tình trạng khoản': x.gst, 'Người nhập': String(x.u || '').split('_')[0] });
+  const extra = L ? [['KM x doi tuong', LS(L.byTP)], ['BT da huy', L.acr.filter(x => x.st === 'Đã huỷ').map(LR)], ['BT chua huy', L.acr.filter(x => x.st !== 'Đã huỷ').map(LR)],
+    ['BT huy trich', L.rel.map(x => ({ 'Khoản mục': x.t, 'Đối tượng': x.p, 'Tên đối tượng': x.name, 'Kỳ DV': x.per, 'Ngày': x.d, 'Số CT': x.doc, 'Diễn giải': x.ds, 'Số huỷ': x.a, 'Người nhập': String(x.u || '').split('_')[0] }))]] : [];
+  return book([['Doi chieu chi tiet', det], ['Theo ky dich vu', S('per', 'Kỳ dịch vụ')], ['Theo doi tuong', S('p', 'Đối tượng')], ['Theo khoan muc', S('t', 'Khoản mục')], ['Theo nhan vien', S('u', 'Nhân viên')], ['Tuoi khoan treo', age], ...extra]);
 }
 function errorsBook(rows, byUser) {
   return book([['Loi nhap lieu', rows.map(errRow)], ['Theo nguoi nhap', byUser]]);

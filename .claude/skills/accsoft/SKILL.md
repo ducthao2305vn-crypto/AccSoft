@@ -623,3 +623,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - TK thuế – phân tích tự động: autoProfile(LA) lập từ TOÀN BỘ TK thuế (không theo lọc TK) + reasonsOf(x) → x.why [{k, t}]; stEff: tay > sus (lý do cấp dòng) > chk (chỉ kỳ lệch) > ok.
 - Ô date \/ month: bộ lọc toàn cục (capture) trong app.js chặn change khi năm chưa hợp lệ (regex ^(19|20|21)\\d\\d), trì hoãn 800 ms, phát ngay khi Enter \/ blur – trang mới không cần tự xử lý.
 - Kỳ kê khai mặc định: descPeriod(diễn giải) > lag (dòng nộp tiền) > ngày CT; x.pSrc = desc | lag | date.
+
+- 335 từng bút toán: `deep.lines335` (IPC `deepLines335`) dựa trên `accrual.match` (group có `accRows`/`relRows`); huỷ phân bổ FIFO theo ngày trong group. UI: Phân tích chuyên sâu › Trích trước › tab `lines`.

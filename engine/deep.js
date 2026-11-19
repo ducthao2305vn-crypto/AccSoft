@@ -208,6 +208,21 @@ function make(db, { INC, all, get, okYm }) {
     for (const g of groups) if (g.status === 'Chưa huỷ trích') for (const u of g.users) { const o = byUser.get(u) || byUser.set(u, { u, n: 0, amt: 0, H: 0 }).get(u); o.n++; o.amt += Math.min(g.remain, g.actual); if (g.sev === 'H') o.H++; }
     return { groups, users: [...byUser.values()].sort((a, b) => b.amt - a.amt) };
   }
-  return { recurring, variance, accruals, prepaid, benford, staff, vendors, fx, reversal };
+  // Bút toán 335 từng dòng: phân bổ huỷ trích FIFO cho bút toán trích sớm nhất trong cùng đối tượng × khoản mục × kỳ
+  function lines335(from, to, acc = '') {
+    const { groups } = reversal(from, to, acc), acr = [], rel = [];
+    for (const g of groups) {
+      let pool = g.released;
+      for (const x of [...g.accRows].sort((a, b) => (a.d || '').localeCompare(b.d || '') || a.id - b.id)) {
+        const used = Math.min(x.a, Math.max(0, pool)); pool -= used;
+        acr.push({ ...x, p: g.p, name: g.name, t: g.t, per: g.per, rev: used, open: x.a - used, st: x.a - used <= 0.005 ? 'Đã huỷ' : used > 0.005 ? 'Huỷ một phần' : 'Chưa huỷ', gst: g.status, actual: g.actual });
+      }
+      for (const x of g.relRows) rel.push({ ...x, p: g.p, name: g.name, t: g.t, per: g.per, gst: g.status });
+    }
+    const sum = key => { const m = new Map(); for (const x of acr) { const k = key(x), o = m.get(k) || m.set(k, { k, t: x.t, p: x.p, name: x.name, n: 0, nOpen: 0, a: 0, rev: 0, open: 0, actual: 0 }).get(k); o.n++; o.a += x.a; o.rev += x.rev; o.open += x.open; if (x.open > 0.005) o.nOpen++; }
+      return [...m.values()].sort((a, b) => b.open - a.open || b.a - a.a); };
+    return { acr, rel, byT: sum(x => x.t || '(trống)'), byTP: sum(x => (x.t || '(trống)') + '|' + x.p), byP: sum(x => x.p || '(trống)') };
+  }
+  return { recurring, variance, accruals, prepaid, benford, staff, vendors, fx, reversal, lines335 };
 }
 module.exports = { make, addM };

@@ -28,13 +28,13 @@ function match(all, { tol = 1, tolPct = 0.02, acc: accSel = '' } = {}) {
     FROM entries WHERE id IN (SELECT id FROM entries WHERE acc_credit>=? AND acc_credit<? UNION SELECT id FROM entries WHERE acc_debit>=? AND acc_debit<?) AND amount<>0 AND NOT (substr(acc_debit,1,3)=substr(acc_credit,1,3) AND substr(acc_debit,1,3)='335' AND ifnull(partner_debit,'')=ifnull(partner_credit,'')) AND ifnull(source_table,'')<>'OPENING_BALANCE'`, lo, hi, lo, hi);
   const G = new Map(), byPT = new Map();
   const grp = (p, t, per) => { const k = p + '|' + t + '|' + per; let o = G.get(k);
-    if (!o) { o = { k, p, t, per, accrued: 0, released: 0, actual: 0, accDocs: new Set(), accIds: [], relDocs: new Set(), actRows: [], parsed: false, users: new Set() }; G.set(k, o); (byPT.get(p + '|' + t) || byPT.set(p + '|' + t, []).get(p + '|' + t)).push(o); }
+    if (!o) { o = { k, p, t, per, accrued: 0, released: 0, actual: 0, accDocs: new Set(), accIds: [], accRows: [], relRows: [], relDocs: new Set(), actRows: [], parsed: false, users: new Set() }; G.set(k, o); (byPT.get(p + '|' + t) || byPT.set(p + '|' + t, []).get(p + '|' + t)).push(o); }
     return o; };
   for (const r of acc) {
     const side = in335(r.cr) ? 'cr' : 'dr', p = (side === 'cr' ? r.bpCr : r.bp) || '', t = r.t || '';
     const per = period(r.ds), o = grp(p, t, per || r.ym); if (per) o.parsed = true;
-    if (side === 'cr' && r.a > 0) { o.accrued += r.a; o.accDocs.add(r.doc); o.accIds.push(r.id); o.lastAcc = !o.lastAcc || r.d > o.lastAcc ? r.d : o.lastAcc; }
-    else { o.released += Math.abs(r.a); o.relDocs.add(r.doc); o.lastRel = !o.lastRel || r.d > o.lastRel ? r.d : o.lastRel; }
+    if (side === 'cr' && r.a > 0) { o.accrued += r.a; o.accDocs.add(r.doc); o.accIds.push(r.id); o.accRows.push({ id: r.id, doc: r.doc, d: r.d, a: r.a, ds: r.ds, u: r.u }); o.lastAcc = !o.lastAcc || r.d > o.lastAcc ? r.d : o.lastAcc; }
+    else { o.released += Math.abs(r.a); o.relDocs.add(r.doc); o.relRows.push({ id: r.id, doc: r.doc, d: r.d, a: Math.abs(r.a), ds: r.ds, u: r.u }); o.lastRel = !o.lastRel || r.d > o.lastRel ? r.d : o.lastRel; }
   }
   const partners = [...new Set(acc.map(r => in335(r.cr) ? r.bpCr : r.bp).filter(Boolean))];
   if (!partners.length) return { groups: [], flagged: [] };
@@ -90,7 +90,7 @@ function match(all, { tol = 1, tolPct = 0.02, acc: accSel = '' } = {}) {
     else continue;
     const g = { key: o.k, p: o.p, t: o.t, per: o.per, accrued: o.accrued, released: o.released, remain, actual: o.actual, diff: o.actual - o.accrued, status, sev,
       conf: !sev ? '' : sev === 'H' ? 'Cao – cùng đối tượng, khoản mục, kỳ dịch vụ' : 'Trung bình – cùng đối tượng, khoản mục; kỳ suy ra',
-      accDocs: [...o.accDocs], accIds: o.accIds, relDocs: [...o.relDocs], actDocs: [...new Set(o.actRows.map(x => x.doc))], invs: [...new Set(o.actRows.map(x => x.inv).filter(Boolean))],
+      accDocs: [...o.accDocs], accIds: o.accIds, accRows: o.accRows, relRows: o.relRows, relDocs: [...o.relDocs], actDocs: [...new Set(o.actRows.map(x => x.doc))], invs: [...new Set(o.actRows.map(x => x.inv).filter(Boolean))],
       lastAcc: o.lastAcc || null, lastRel: o.lastRel || null, paid: o.paid, unpaid: Math.max(0, o.actual - o.paid), lastPay: o.lastPay, age: remain > lim ? days(o.lastAcc, asOf) : null, asOf, firstAct: o.actRows.reduce((m, x) => !m || x.d < m ? x.d : m, null), users: [...o.users] };
     groups.push(g);
     if (status === 'Chưa huỷ trích') for (const x of o.actRows) flagged.push({ ...x, g });

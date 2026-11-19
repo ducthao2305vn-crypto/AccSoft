@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 4.99.90
+- Phân tích 335: thêm tab "Bút toán trích / huỷ" — tổng hợp theo khoản mục, khoản mục × đối tượng; danh sách bút toán trích chưa huỷ / đã huỷ / huỷ một phần (huỷ phân bổ FIFO trong cùng đối tượng × khoản mục × kỳ DV); danh sách bút toán huỷ trích. Lọc theo khoản mục, đối tượng.
+- Excel 335 thêm 4 sheet: KM x doi tuong, BT da huy, BT chua huy, BT huy trich.
+
 ## 4.99.89
 - Phân tích tài khoản thuế: kỳ kê khai mặc định ưu tiên tháng ghi trong diễn giải ("Payable In September 2026", "tax in February 2026", "for month Dec-2017", "tháng 9/2026", "T03/2026"…); chỉ khi diễn giải không ghi tháng mới dùng ngày chứng từ / quy tắc nộp trễ. Sửa trường hợp tiền nộp tháng 10 cho kỳ tháng 9 bị xếp sai kỳ khi đặt "Nộp trễ" khác 1.
 
