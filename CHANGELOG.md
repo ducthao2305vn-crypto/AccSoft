@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## 4.99.92
+- Sao kê ngân hàng: tab **Đối chiếu hạch toán 112**. Khớp tự động thu ↔ Nợ 112, chi ↔ Có 112 theo số tiền (Source Amount), ngày lệch ≤ ngưỡng (mặc định 5 ngày); nếu không có dòng lẻ thì khớp tổng các dòng cùng số CT.
+- Số dư đầu kỳ từ phần mềm tài chính: số dư cuối tháng trước của TK kế toán (fin_close) so với số dư đầu sao kê; so phát sinh thu/chi và số dư cuối.
+- Danh sách sao kê chưa khớp (đánh dấu tay kèm số CT / ghi chú, giữ khi nạp lại), hạch toán 112 chưa có trên sao kê, dòng sau ngày dữ liệu hạch toán.
+- Excel sao kê điền sẵn Số CT, ngày HT, TK đối ứng, tình trạng đối chiếu; thêm sheet Doi chieu so du, SK chua khop, HT chua co tren SK.
+- Sửa: bảng ở tab "Bút toán trích / huỷ" (335) không hiển thị.
+
 ## 4.99.91
 - Mới: **Quản lý sao kê ngân hàng** (Danh mục & dữ liệu). Nạp nhiều file sao kê thô cùng lúc, tự nhận mẫu: BNCTL (CSV), BNU (CMOV CSV), Mandiri (Rekening Koran XLS), Mosan (Balance Report XLSX). Tài khoản tự tạo theo số TK trong file.
 - Nạp hàng ngày không trùng: dòng cũ của tài khoản trong khoảng ngày của file mới được thay thế.

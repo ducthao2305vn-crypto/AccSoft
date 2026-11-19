@@ -82,10 +82,11 @@ function parse(buf, file, XLSX) {
 }
 const BANKS = ['BNCTL', 'BNU', 'MANDIRI', 'MOSAN'];
 
-function make(db, all) {
+function make(db, all, FIN) {
   db.exec(`CREATE TABLE IF NOT EXISTS bank_acc(acc TEXT PRIMARY KEY, bank TEXT, name TEXT, cur TEXT, gl TEXT, alias TEXT, note TEXT);
     CREATE TABLE IF NOT EXISTS bank_tx(id INTEGER PRIMARY KEY AUTOINCREMENT, acc TEXT, d TEXT, t TEXT, seq INTEGER, ref TEXT, ds TEXT, ben TEXT, dr REAL, cr REAL, bal REAL, file TEXT, imp TEXT);
     CREATE INDEX IF NOT EXISTS ix_btx ON bank_tx(acc, d, seq);
+    CREATE TABLE IF NOT EXISTS bank_mark(sig TEXT PRIMARY KEY, st TEXT, doc TEXT, note TEXT, at TEXT);
     CREATE TABLE IF NOT EXISTS bank_imp(id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, file TEXT, bank TEXT, acc TEXT, d1 TEXT, d2 TEXT, n INTEGER, removed INTEGER);`);
   const tx = f => { db.exec('BEGIN'); try { const r = f(); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } };
   // Nạp các file đã đọc: thay dòng cũ của tài khoản trong [ngày đầu, ngày cuối] của file
@@ -124,17 +125,79 @@ function make(db, all) {
     }
     return { from, to, accs: out, banks: BANKS };
   }
+
+  const sigOf = (acc, x) => [acc, x.d, x.t || '', x.ref || '', (+x.dr || 0).toFixed(2), (+x.cr || 0).toFixed(2), (+x.bal || 0).toFixed(2)].join('|');
+  const glOf = a => a.gl || (a.bank === 'MOSAN' ? '11212' : '1122');
+  const addD = (d, n) => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+  const prevYm = ym => { let [y, m] = ym.split('-').map(Number); m--; if (!m) { m = 12; y--; } return `${y}-${String(m).padStart(2, '0')}`; };
+  const dd = (a, b) => Math.round((new Date(a) - new Date(b)) / 864e5);
+  function mark(acc, x, o) { const sig = sigOf(acc, x);
+    if (!o) { db.prepare(`DELETE FROM bank_mark WHERE sig=?`).run(sig); return true; }
+    db.prepare(`INSERT OR REPLACE INTO bank_mark(sig, st, doc, note, at) VALUES(?,?,?,?,datetime('now'))`).run(sig, o.st || 'manual', o.doc || '', o.note || ''); return true; }
+  // Đối chiếu sao kê ↔ hạch toán TK 112 (Source Amount). Thu ngân hàng ↔ Nợ 112, chi ngân hàng ↔ Có 112.
+  // Lượt 1: từng dòng cùng số tiền, ngày lệch ≤ tol (gần nhất); lượt 2: tổng các dòng cùng số CT × chiều; còn lại: chưa khớp.
+  function recon(from, to, banks = [], tol = 5) {
+    const r = report(from, to, banks, []), groups = new Map();
+    for (const a of r.accs) { const g = glOf(a); (groups.get(g) || groups.set(g, []).get(g)).push(a); }
+    const marks = new Map(all(`SELECT * FROM bank_mark`).map(m => [m.sig, m]));
+    const bookMax = (all(`SELECT max(account_date) d FROM entries`)[0] || {}).d || null;
+    const out = [];
+    for (const [gl, A] of groups) {
+      const lo = addD(from, -tol), hi = addD(to, tol), L = gl.length;
+      const E = all(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, description ds, partner_debit bp, partner_credit bpc FROM entries
+        WHERE account_date BETWEEN ? AND ? AND amount<>0 AND (substr(acc_debit,1,?)=? OR substr(acc_credit,1,?)=?)`, lo, hi, L, gl, L, gl);
+      const B = []; // phía sổ: in = Nợ 112 (tiền vào), out = Có 112
+      for (const e of E) {
+        if (e.dr.slice(0, L) === gl) B.push({ ...e, side: e.a > 0 ? 'in' : 'out', v: Math.abs(e.a), oth: e.cr, k: e.id + 'd' });
+        if (e.cr.slice(0, L) === gl) B.push({ ...e, side: e.a > 0 ? 'out' : 'in', v: Math.abs(e.a), oth: e.dr, k: e.id + 'c' });
+      }
+      const used = new Set(), byAmt = new Map(), key = (side, v) => side + Math.round(v * 100);
+      for (const b of B) (byAmt.get(key(b.side, b.v)) || byAmt.set(key(b.side, b.v), []).get(key(b.side, b.v))).push(b);
+      const T = A.flatMap(a => a.rows.map(x => ({ x, a, side: x.cr > 0 ? 'in' : 'out', v: x.cr > 0 ? x.cr : x.dr })));
+      for (const t of T) { const m = marks.get(sigOf(t.a.acc, t.x)); if (m) t.m = { st: m.st, doc: m.doc, note: m.note }; }
+      const take = (t, list, st) => { t.m = { st, doc: [...new Set(list.map(b => b.doc))].join(', '), d: list[0].d, oth: [...new Set(list.map(b => b.oth))].join(', '), ds: list[0].ds, lag: dd(list[0].d, t.x.d) }; list.forEach(b => used.add(b.k)); };
+      for (const t of T) { if (t.m) continue;
+        const c = (byAmt.get(key(t.side, t.v)) || []).filter(b => !used.has(b.k) && Math.abs(dd(b.d, t.x.d)) <= tol).sort((p, q) => Math.abs(dd(p.d, t.x.d)) - Math.abs(dd(q.d, t.x.d)));
+        if (c.length) take(t, [c[0]], 'auto'); }
+      const docs = new Map(); for (const b of B) if (!used.has(b.k)) { const k = b.doc + '|' + b.side; (docs.get(k) || docs.set(k, []).get(k)).push(b); }
+      for (const t of T) { if (t.m) continue;
+        for (const [k, list] of docs) { const fr = list.filter(b => !used.has(b.k)); if (fr.length < 2 || fr[0].side !== t.side) continue;
+          if (Math.abs(fr.reduce((s, b) => s + b.v, 0) - t.v) < 0.005 && Math.abs(dd(fr[0].d, t.x.d)) <= tol) { take(t, fr, 'group'); docs.delete(k); break; } } }
+      for (const t of T) if (!t.m) t.m = { st: bookMax && t.x.d > bookMax ? 'nobook' : 'none' };
+      const bookOpen = B.filter(b => !used.has(b.k) && b.d >= from && b.d <= to);
+      // số dư sổ: cuối tháng trước (fin_close) + phát sinh trong kỳ
+      const ym = from.slice(0, 7), sumGl = m => { let s = 0; for (const [acc, v] of m) if (acc.slice(0, L) === gl) s += v; return s; };
+      const ob = FIN ? sumGl(FIN.closeAt(prevYm(ym))) : null;
+      const inB = B.filter(b => b.d >= from && b.d <= to && b.side === 'in').reduce((s, b) => s + b.v, 0), outB = B.filter(b => b.d >= from && b.d <= to && b.side === 'out').reduce((s, b) => s + b.v, 0);
+      const bank = { open: A.reduce((s, a) => s + (a.open || 0), 0), cr: A.reduce((s, a) => s + a.cr, 0), dr: A.reduce((s, a) => s + a.dr, 0), close: A.reduce((s, a) => s + (a.close || 0), 0) };
+      out.push({ gl, accs: A.map(a => ({ acc: a.acc, bank: a.bank, alias: a.alias, name: a.name })), T, bookOpen, bookMax,
+        book: { open: ob, in: inB, out: outB, close: ob == null ? null : ob + inB - outB }, bank,
+        n: { auto: T.filter(t => t.m.st === 'auto' || t.m.st === 'group').length, manual: T.filter(t => t.m.st === 'manual').length, none: T.filter(t => t.m.st === 'none').length, nobook: T.filter(t => t.m.st === 'nobook').length } });
+    }
+    return { from, to, tol, bookMax, groups: out, accs: r.accs };
+  }
   const imports = () => all(`SELECT * FROM bank_imp ORDER BY id DESC LIMIT 200`);
-  return { importParsed, accounts, months, setAcc, removeAcc, report, imports };
+  return { importParsed, accounts, months, setAcc, removeAcc, report, imports, recon, mark, glOf };
 }
 // Sổ Excel: Tổng hợp + Chi tiết gộp + 1 sheet / tài khoản (có cột trống để nhân viên đối chiếu hạch toán)
-function book(r, XLSX) {
+function book(r, XLSX, rc) {
+  const M = new Map(); if (rc) for (const g of rc.groups) for (const t of g.T) M.set(t.x.id, t.m);
+  const ST = { auto: 'Khớp tự động', group: 'Khớp (gộp số CT)', manual: 'Đánh dấu tay', none: 'CHƯA KHỚP', nobook: 'Chưa có dữ liệu hạch toán' };
   const wb = XLSX.utils.book_new(), lbl = a => `${a.bank} ${a.alias || a.acc}`;
   const sum = r.accs.map(a => ({ 'Ngân hàng': a.bank, 'Số tài khoản': a.acc, 'Tên / ghi chú': a.alias || a.name, 'TK kế toán': a.gl || '', 'Tiền tệ': a.cur, 'Số dư đầu kỳ': a.open, 'Tổng thu (Có)': a.cr, 'Tổng chi (Nợ)': a.dr, 'Số dư cuối kỳ': a.close, 'Số giao dịch': a.rows.length, 'Dữ liệu đến ngày': a.last, 'Kiểm tra số dư': a.bad ? `${a.bad} dòng lệch số dư` : a.gap ? `Thiếu dữ liệu trước kỳ: ${a.gap.toFixed(2)}` : 'Khớp' }));
   sum.push({ 'Ngân hàng': 'TỔNG CỘNG', 'Số dư đầu kỳ': r.accs.reduce((s, a) => s + (a.open || 0), 0), 'Tổng thu (Có)': r.accs.reduce((s, a) => s + a.cr, 0), 'Tổng chi (Nợ)': r.accs.reduce((s, a) => s + a.dr, 0), 'Số dư cuối kỳ': r.accs.reduce((s, a) => s + (a.close || 0), 0) });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sum), 'Tong hop');
-  const row = (a, x, i) => ({ 'STT': i + 1, 'Ngân hàng': a.bank, 'Số tài khoản': a.acc, 'Ngày': x.d, 'Giờ': x.t, 'Số tham chiếu': x.ref, 'Diễn giải': x.ds, 'Người thụ hưởng': x.ben, 'Thu (Có)': x.cr || null, 'Chi (Nợ)': x.dr || null, 'Số dư': x.bal, 'Số CT hạch toán': '', 'TK đối ứng': '', 'Đã đối chiếu': '', 'Ghi chú': '' });
+  const row = (a, x, i) => ({ 'STT': i + 1, 'Ngân hàng': a.bank, 'Số tài khoản': a.acc, 'Ngày': x.d, 'Giờ': x.t, 'Số tham chiếu': x.ref, 'Diễn giải': x.ds, 'Người thụ hưởng': x.ben, 'Thu (Có)': x.cr || null, 'Chi (Nợ)': x.dr || null, 'Số dư': x.bal, 'Số CT hạch toán': (M.get(x.id) || {}).doc || '', 'Ngày hạch toán': (M.get(x.id) || {}).d || '', 'TK đối ứng': (M.get(x.id) || {}).oth || '', 'Đã đối chiếu': ST[(M.get(x.id) || {}).st] || '', 'Ghi chú': (M.get(x.id) || {}).note || '' });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.accs.flatMap(a => a.rows.map((x, i) => row(a, x, i)))), 'Chi tiet');
+  if (rc) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rc.groups.map(g => ({ 'TK kế toán': g.gl, 'Tài khoản NH': g.accs.map(a => a.bank + ' ' + (a.alias || a.acc)).join('; '),
+      'Đầu kỳ – sao kê': g.bank.open, 'Đầu kỳ – sổ': g.book.open, 'Chênh đầu kỳ': g.book.open == null ? null : g.bank.open - g.book.open,
+      'Thu – sao kê': g.bank.cr, 'Nợ 112 – sổ': g.book.in, 'Chi – sao kê': g.bank.dr, 'Có 112 – sổ': g.book.out,
+      'Cuối kỳ – sao kê': g.bank.close, 'Cuối kỳ – sổ': g.book.close, 'Chênh cuối kỳ': g.book.close == null ? null : g.bank.close - g.book.close,
+      'Khớp tự động': g.n.auto, 'Đánh dấu tay': g.n.manual, 'Sao kê chưa khớp': g.n.none, 'Chưa có dữ liệu HT': g.n.nobook, 'HT chưa có trên sao kê': g.bookOpen.length, 'Dữ liệu HT đến': g.bookMax }))), 'Doi chieu so du');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rc.groups.flatMap(g => g.T.filter(t => t.m.st === 'none').map(t => ({ 'TK kế toán': g.gl, 'Ngân hàng': t.a.bank, 'Số TK': t.a.acc, 'Ngày': t.x.d, 'Số tham chiếu': t.x.ref, 'Diễn giải': t.x.ds, 'Thu': t.x.cr || null, 'Chi': t.x.dr || null })))), 'SK chua khop');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rc.groups.flatMap(g => g.bookOpen.map(b => ({ 'TK kế toán': g.gl, 'Ngày HT': b.d, 'Số CT': b.doc, 'Chiều': b.side === 'in' ? 'Nợ 112 (thu)' : 'Có 112 (chi)', 'TK đối ứng': b.oth, 'Số tiền': b.v, 'Diễn giải': b.ds, 'Đối tượng': b.side === 'in' ? b.bpc : b.bp })))), 'HT chua co tren SK');
+  }
   const used = new Set();
   for (const a of r.accs) { let n = lbl(a).replace(/[\\/?*[\]:]/g, '').slice(0, 31); while (used.has(n)) n = n.slice(0, 28) + '_' + used.size; used.add(n);
     const ws = XLSX.utils.json_to_sheet([{ 'STT': '', 'Ngày': '', 'Diễn giải': 'Số dư đầu kỳ', 'Số dư': a.open }, ...a.rows.map((x, i) => { const o = row(a, x, i); delete o['Ngân hàng']; delete o['Số tài khoản']; return o; }),

@@ -52,7 +52,7 @@ contextBridge.exposeInMainWorld('api', {
   grMail: (k, bp, o) => ipcRenderer.invoke('gr:mail', k, bp, o),
   grAssignMail: (k, bps, o) => ipcRenderer.invoke('gr:assignMail', k, bps, o),
   bsImport: () => ipcRenderer.invoke('bs:import'),
-  bsXlsx: (f, t, b, a) => ipcRenderer.invoke('bs:xlsx', f, t, b, a),
+  bsXlsx: (f, t, b, a, tol) => ipcRenderer.invoke('bs:xlsx', f, t, b, a, tol),
   bpImport: (year, mode) => ipcRenderer.invoke('bp:import', year, mode),
   tdImport: () => ipcRenderer.invoke('td:import'),
   slImport: mode => ipcRenderer.invoke('sl:import', mode),
