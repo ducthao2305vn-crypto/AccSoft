@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.96
+- Phân tích tài khoản thuế: dòng **đã đổi kỳ tay** không còn bị phân tích tự động chuyển sang "Chính xác". Trạng thái mới **Đã đổi kỳ – chờ xác nhận** (có trong bộ lọc trạng thái, nằm trong "Trừ Chính xác"); chỉ thành Chính xác khi bấm ✔ Chính xác hoặc xác nhận kỳ mới.
+
 ## 4.99.95
 - Phân tích tài khoản thuế: bảng **Kiểm tra số dư cuối kỳ** – số dư cuối TK thuế (Có − Nợ, mọi phát sinh đến ngày cuối kỳ lọc) phải bằng số phải nộp (kê khai Có) của kỳ cuối cùng; khác ⇒ Sai, kèm danh sách kỳ trước còn chênh lệch (bấm để mở chi tiết kỳ đó).
 

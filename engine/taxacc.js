@@ -99,7 +99,9 @@ function make(db, all) {
     // trạng thái dòng: tay > tự động (có lý do nghi ngờ ⇒ Nghi ngờ; kỳ đã xác nhận bỏ qua lý do 'kỳ chênh lệch'; không lý do ⇒ Chính xác)
     for (const x of L) { const g = byP.get(x.gk); x.auto = ''; if (g && g.conf === 'ok') x.why = x.why.filter(w => w.k !== 'diff');
       // lý do cấp dòng ⇒ Nghi ngờ; chỉ thuộc kỳ còn chênh lệch ⇒ 'Kỳ lệch' (xem ở tổng hợp kỳ, không tính là nghi ngờ từng dòng); không lý do ⇒ Chính xác
-      if (!x.st) { const own = x.why.filter(w => w.k !== 'diff'); if (own.length) { x.stEff = 'sus'; x.auto = 'rule'; } else if (x.why.length) { x.stEff = 'chk'; x.auto = 'diff'; } else { x.stEff = 'ok'; x.auto = g && g.conf === 'ok' ? 'conf' : 'rule'; } } else x.stEff = x.st;
+      // dòng đã đổi kỳ tay: KHÔNG tự chuyển sang Chính xác – chờ người dùng xác nhận (trừ khi kỳ mới đã được xác nhận)
+      if (!x.st && x.changed && !(g && g.conf === 'ok')) { x.stEff = 'chg'; x.auto = 'chg'; }
+      else if (!x.st) { const own = x.why.filter(w => w.k !== 'diff'); if (own.length) { x.stEff = 'sus'; x.auto = 'rule'; } else if (x.why.length) { x.stEff = 'chk'; x.auto = 'diff'; } else { x.stEff = 'ok'; x.auto = g && g.conf === 'ok' ? 'conf' : 'rule'; } } else x.stEff = x.st;
       if (g) { if (x.stEff === 'ok') g.ok++; if (x.stEff === 'sus') g.sus++; } const y = byY.get(K(x.acc) + '|' + String(x.period).slice(0, 4)); if (y) { if (x.stEff === 'ok') y.ok++; if (x.stEff === 'sus') y.sus++; } }
     const fin = M => [...M.values()].map(g => ({ ...g, name: name.get(g.acc) || '', diff: g.credit - g.debit })).sort((a, b) => a.acc.localeCompare(b.acc) || String(a.per).localeCompare(String(b.per)));
     const P = fin(byP), Y = fin(byY);
@@ -119,7 +121,7 @@ function make(db, all) {
     });
     return { balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
       tot: { credit: L.reduce((s, x) => s + x.credit, 0), debit: L.reduce((s, x) => s + x.debit, 0), periodsOff: P.filter(g => Math.abs(g.diff) > 0.005 && g.conf !== 'ok').length, changed: L.filter(x => x.changed).length,
-        ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, chk: L.filter(x => x.stEff === 'chk').length, susAuto: L.filter(x => x.auto === 'rule' && x.stEff === 'sus').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
+        ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, chk: L.filter(x => x.stEff === 'chk').length, chg: L.filter(x => x.stEff === 'chg').length, susAuto: L.filter(x => x.auto === 'rule' && x.stEff === 'sus').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
   }
   // xác nhận / bỏ xác nhận kỳ chính xác: [{acc, per, credit, debit, n}]
   function confirm(groups, note, undo) { const ins = db.prepare(`INSERT OR REPLACE INTO tax_ok(acc, period, credit, debit, n, note, at) VALUES(?,?,?,?,?,?,datetime('now','localtime'))`), del = db.prepare(`DELETE FROM tax_ok WHERE acc=? AND period=?`);
