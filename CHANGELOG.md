@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 4.99.98
+- Phân tích tài khoản thuế: cảnh báo **kỳ đã chọn khớp nhưng còn chênh lệch** – kỳ đã xác nhận khớp, hoặc mọi dòng đã đánh dấu Chính xác, mà Có − Nợ (kê khai − nộp) làm tròn số nguyên ≠ 0. Bảng cảnh báo ở đầu trang (bấm để mở chi tiết kỳ) và nhãn "⚠ Khớp sai" ở Tổng hợp theo kỳ kê khai.
+
 ## 4.99.97
 - Phân tích tài khoản thuế: **phân tích tự động chỉ chạy khi bấm "Chạy phân tích tự động"**; kết quả được lưu và dùng lại, không tự chạy lại khi mở trang, đổi kỳ, đổi trạng thái hay nạp lại dữ liệu (gắn lại theo chữ ký bút toán). Dòng chưa từng phân tích hiện "Chưa phân tích"; thanh lọc báo thời điểm phân tích lần cuối và số dòng chưa phân tích.
 - Kiểm tra số dư cuối kỳ: so với **phần còn phải nộp** của kỳ cuối (kê khai − đã nộp của kỳ đó); bảng thêm cột Kê khai kỳ cuối.

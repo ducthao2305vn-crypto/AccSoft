@@ -115,6 +115,9 @@ function make(db, all) {
       if (g) { if (x.stEff === 'ok') g.ok++; if (x.stEff === 'sus') g.sus++; } const y = byY.get(K(x.acc) + '|' + String(x.period).slice(0, 4)); if (y) { if (x.stEff === 'ok') y.ok++; if (x.stEff === 'sus') y.sus++; } }
     const fin = M => [...M.values()].map(g => ({ ...g, name: name.get(g.acc) || '', diff: g.credit - g.debit })).sort((a, b) => a.acc.localeCompare(b.acc) || String(a.per).localeCompare(String(b.per)));
     const P = fin(byP), Y = fin(byY);
+    // ĐÃ CHỌN KHỚP NHƯNG CÒN CHÊNH: kỳ đã xác nhận chính xác, hoặc mọi dòng của kỳ đều 'Chính xác' – nguyên tắc: Có − Nợ làm tròn số nguyên phải = 0
+    const badMatch = P.filter(g => Math.round(g.diff) !== 0 && (g.conf === 'ok' || (g.n > 0 && g.ok === g.n))).map(g => ({ acc: g.acc, name: g.name, per: g.per, credit: g.credit, debit: g.debit, diff: g.diff, n: g.n, why: g.conf === 'ok' ? 'Kỳ đã xác nhận khớp' : 'Mọi dòng đã đánh dấu Chính xác', at: g.confAt }));
+    for (const g of P) g.badMatch = Math.round(g.diff) !== 0 && (g.conf === 'ok' || (g.n > 0 && g.ok === g.n));
     for (const g of Y) { const ps = P.filter(z => z.acc === g.acc && String(z.per).startsWith(g.per)); g.confN = ps.filter(z => z.conf === 'ok').length; g.pN = ps.length; }
     const why = {}; for (const x of L) for (const w of x.why) why[w.k] = (why[w.k] || 0) + 1;
     const accTab = Object.values(prof.acc).filter(a => !o.acc || a.acc.startsWith(o.acc)).map(a => ({ ...a, sus: L.filter(x => x.acc === a.acc && x.stEff === 'sus').length, n: L.filter(x => x.acc === a.acc).length })).sort((a, b) => a.acc.localeCompare(b.acc));
@@ -129,7 +132,7 @@ function make(db, all) {
       const prior = P.filter(g => g.acc === acc && (!last || g.per < last.per) && Math.abs(g.diff) > 0.005).map(g => ({ per: g.per, diff: g.diff }));
       return { acc, name: name.get(acc) || '', bal: b, lastPer: last ? last.per : '', decl: last ? last.credit : 0, due, lastPaid: last ? last.debit : 0, diff, ok: Math.abs(diff) <= 0.01, prior };
     });
-    return { lastRun, notRun: L.filter(x => !x.stEff).length, balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
+    return { badMatch, lastRun, notRun: L.filter(x => !x.stEff).length, balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
       tot: { credit: L.reduce((s, x) => s + x.credit, 0), debit: L.reduce((s, x) => s + x.debit, 0), periodsOff: P.filter(g => Math.abs(g.diff) > 0.005 && g.conf !== 'ok').length, changed: L.filter(x => x.changed).length,
         ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, chk: L.filter(x => x.stEff === 'chk').length, chg: L.filter(x => x.stEff === 'chg').length, susAuto: L.filter(x => x.auto === 'rule' && x.stEff === 'sus').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
   }
