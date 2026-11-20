@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.0.8
+- Phân tích tài khoản thuế › Tổng hợp theo năm: lọc **Chỉ năm chênh ≈ 0** (dùng chung ngưỡng) và nút chuyển sang Chính xác. Nút chuyển các kỳ trong các năm đó có |chênh| ≤ ngưỡng; kỳ còn chênh riêng (bù trừ trong năm) không chuyển và được báo số lượng để xem lại.
+
 ## 5.0.7
 - Phân tích tài khoản thuế › Chi tiết: thêm lọc **Chỉ kỳ chênh ≈ 0** (ngưỡng, mặc định 0.49, tính trên chênh lệch cả kỳ) và nút **✔ Chuyển các kỳ chênh ≈ 0 sang Chính xác** cho các kỳ đang hiển thị – giống tab Tổng hợp theo kỳ; dùng chung ngưỡng giữa hai tab.
 
