@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.1.1
+- Phân tích TK theo kỳ (Thuế): **333524 – thuế TNCN** chuyển sang **theo kỳ hạch toán** (như thuế nhà thầu 33381): bút toán khấu trừ hạch toán tháng 10 ghi "… in August 2026" nay vào kỳ 2026_10, không còn kéo về 2026_08; dòng nộp tiền = tháng nộp − 1. Tự thêm 333524 vào ô "TK theo kỳ hạch toán" (một lần); kỳ đã đổi tay giữ nguyên.
+
 ## 5.1.0
 - **Phân tích TK theo kỳ** (trước là Phân tích tài khoản thuế) áp dụng cho mọi nhóm tài khoản: chọn **nhóm phân tích** ở đầu trang – có sẵn Thuế (333), Chi phí trích trước (335), Phải trả khác (3388), Phải thu khác (1388); "＋ Nhóm tài khoản mới…" để tạo nhóm bất kỳ (tên + đầu số TK), đổi tên / xoá nhóm.
 - Mỗi nhóm có cài đặt riêng (TK, số tháng trễ, TK theo kỳ hạch toán) và dùng toàn bộ phương pháp của phân tích thuế: kỳ từ diễn giải / ngày, khớp Có − Nợ = 0 theo kỳ, gom theo kỳ, chọn cả kỳ, lọc nhiều trạng thái, đổi kỳ theo lô (Lưu), phân tích tự động khi bấm, cảnh báo khớp sai, kiểm tra số dư cuối kỳ, lọc / chuyển kỳ chênh ≈ 0, tổng tiền dòng chọn, xuất dữ liệu đang xem. Nhãn đổi sang Phát sinh Nợ / Có, Kỳ… với nhóm không phải thuế.
