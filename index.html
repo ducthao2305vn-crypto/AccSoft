@@ -6,6 +6,9 @@
 <title>AccSoft</title>
 <script src="vendor/chart.umd.min.js"></script>
 <style>
+.topbar>div:first-child{min-width:0;flex:1 1 auto}#pTitle,#pSub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nav button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 /* ===== TLM Design System tokens ===== */
 :root{
   --brand-25:#FFFAF7;--brand-50:#FFF4ED;--brand-100:#FFE6D6;--brand-200:#FFD4BD;--brand-300:#FF9C6B;--brand-400:#FF6929;--brand-500:#FA4700;--brand-600:#D63600;--brand-700:#A62900;--brand-800:#8A2200;
@@ -399,7 +402,7 @@ body.mini #navFind{display:none}
     <div class="sec" data-g="3">Sổ sách & phân tích</div>
     <div class="grp" data-g="3">
     <button data-p="lgr"><svg class="icon"><use href="#i-file"/></svg>Phân tích sổ chi tiết</button>
-    <button data-p="taxa"><svg class="icon"><use href="#i-file"/></svg>Phân tích TK theo kỳ (thuế, 335…)</button>
+    <button data-p="taxa"><svg class="icon"><use href="#i-file"/></svg>Phân tích TK theo kỳ</button>
     <button data-p="deep"><svg class="icon"><use href="#i-trend"/></svg>Phân tích chuyên sâu</button>
     <button data-p="inv"><svg class="icon"><use href="#i-box"/></svg>Tuổi hàng tồn kho</button>
     </div>

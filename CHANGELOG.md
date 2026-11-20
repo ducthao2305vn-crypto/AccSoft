@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 5.1.5 – rà soát UI/UX
+- Tiêu đề / mô tả trang luôn 1 dòng (cắt "…", rê chuột xem đủ) – không còn đè lên nội dung; tên menu dài cắt gọn.
+- Phân tích TK theo kỳ: tách **cài đặt** (nộp trễ, TK theo kỳ hạch toán, số tháng trễ, các TK thuộc nhóm) khỏi bộ lọc vào nút **⚙ Cài đặt nhóm** – thanh lọc gọn, nút hành động không bị đẩy xuống dòng; nhãn cài đặt ghi rõ ý nghĩa.
+
 ## 5.1.4
 - Sửa Phân tích TK theo kỳ › Chi tiết: ô "Tìm trong bảng" chung chỉ ẩn dòng trên màn hình nên tổng Nợ / Có / ± vẫn tính trên mọi dòng (vd tìm ra 2 dòng nhưng tổng là 4,200 dòng). Thay bằng ô tìm riêng của bảng: lọc thật danh sách – tổng tiền, dòng tổng cộng, chọn tất cả và xuất dữ liệu đang xem đều theo kết quả tìm; tìm được cả theo số tiền.
 
