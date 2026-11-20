@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.0.6
+- Phân tích tài khoản thuế › Tổng hợp theo kỳ kê khai: lọc **Chỉ kỳ chênh ≈ 0** với ngưỡng nhập được (mặc định 0.49 – làm tròn bằng 0). Nút **✔ Chuyển các kỳ chênh ≈ 0 sang Chính xác**: mọi dòng của các kỳ đang hiển thị trong ngưỡng đặt trạng thái Chính xác và xác nhận kỳ (hỏi lại, báo tổng chênh lệch bỏ qua).
+
 ## 5.0.5
 - Phân tích tài khoản thuế › Chi tiết: **Gom theo kỳ** (mặc định bật) – mỗi TK × kỳ kê khai là 1 dòng gồm số dòng, đếm theo trạng thái, Nợ, Có, ±, khớp / chênh lệch cả kỳ; bấm dòng kỳ để xổ / gom chi tiết, nút Mở tất cả / Gom tất cả, giữ vị trí cuộn. Bỏ tích để xem danh sách phẳng như cũ.
 - Sửa: dòng chưa chạy phân tích tự động hiện nhầm nhãn "Chính xác (tự động)" ở ô trạng thái – nay hiện "Chưa phân tích".

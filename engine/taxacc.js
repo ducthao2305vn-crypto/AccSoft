@@ -161,6 +161,10 @@ function make(db, all) {
       if (e) { try { run(`UPDATE ${T} SET id=? WHERE rowid=?`, e.id, x.r); n++; } catch { } } }
     return { n }; }
   const analyze = o => { const r = report({ ...o, run: true }); return { n: r.nLines, lastRun: r.lastRun }; };
-  return { dateFirst, setDateFirst, analyze, confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
+  // chuyển mọi dòng của các kỳ (TK|kỳ theo mức TK) sang Chính xác + xác nhận kỳ
+  function okPeriods(o, groups, note) { const lvl = +o.level || 0, K = a => lvl ? String(a).slice(0, lvl) : a, keys = new Set(groups.map(g => g.acc + '|' + g.per));
+    const items = lines(o).filter(x => keys.has(K(x.acc) + '|' + x.period)).map(x => ({ id: x.id, side: x.side }));
+    setStatus(items, 'ok', note || 'Kỳ khớp (chênh ≈ 0)'); confirm(groups, note || 'Kỳ khớp (chênh ≈ 0)'); return { n: items.length, periods: groups.length }; }
+  return { okPeriods, dateFirst, setDateFirst, analyze, confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
 }
 module.exports = { make, WHY };
