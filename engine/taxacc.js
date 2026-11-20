@@ -64,6 +64,10 @@ function make(db, all) {
   const defP = (d, back = 0) => { let y = +String(d || '').slice(0, 4), m = +String(d || '').slice(5, 7) - back; while (m < 1) { m += 12; y--; } return y + '_' + String(m).padStart(2, '0'); };
   // nộp tiền thường trễ so với kỳ kê khai: dòng Nợ thuế / Có tiền mặc định thuộc kỳ = tháng nộp − lag (mặc định 1 tháng)
   const lag = () => { const v = get('taxacc_lag'); return v == null ? 1 : Math.max(0, +v || 0); };
+  // TK ưu tiên KỲ HẠCH TOÁN (thuế nhà thầu): kỳ = tháng hạch toán; nộp tiền = tháng nộp − lag riêng; không đọc tháng trong diễn giải
+  const dateFirst = () => { const v = get('taxacc_datefirst'); return v && typeof v === 'object' ? { accs: v.accs || [], lag: v.lag == null ? 1 : +v.lag } : { accs: ['33381'], lag: 1 }; };
+  const setDateFirst = (accs, lg) => { const o = { accs: String(Array.isArray(accs) ? accs.join(',') : accs || '').split(/[,;\s]+/).map(x => x.trim()).filter(Boolean), lag: Math.max(0, +lg || 0) };
+    db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_datefirst', ?)`).run(JSON.stringify(o)); return dateFirst(); };
   const setLag = v => { db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_lag', ?)`).run(JSON.stringify(Math.max(0, +v || 0))); return lag(); };
   const cash = a => /^11[123]/.test(a || '');
   // dòng phân tích trong khoảng ngày (theo ngày chứng từ) – kỳ kê khai đã đổi có thể nằm ngoài khoảng, vẫn hiển thị theo kỳ mới
@@ -74,9 +78,9 @@ function make(db, all) {
     const f = sh(F, -1), t = sh(T, 1);
     const rows = all(`SELECT e.id, e.document_no doc, e.account_date d, e.description ds, e.description_parent dsp, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drn, e.acc_credit_name crn, e.amount a,
         e.partner_debit bp, e.partner_credit bpCr, e.created_by u FROM entries e WHERE e.account_date>=? AND e.account_date<=? AND (${like('e.acc_debit', A)} OR ${like('e.acc_credit', A)}) ORDER BY e.account_date, e.document_no, e.id`, f, t, ...P, ...P);
-    const ov = new Map(all(`SELECT id||'|'||side k, period, note, st FROM tax_period`).map(r => [r.k, r])), LAG = lag();
+    const ov = new Map(all(`SELECT id||'|'||side k, period, note, st FROM tax_period`).map(r => [r.k, r])), LAG = lag(), DF = dateFirst();
     const isT = a => A.some(p => String(a || '').startsWith(p)), out = [];
-    for (const r of rows) for (const side of ['dr', 'cr']) { const acc = side === 'dr' ? r.dr : r.cr; if (!isT(acc)) continue; const o2 = ov.get(r.id + '|' + side), pay = side === 'dr' && cash(r.cr), pd = descPeriod(r.ds || r.dsp), p0 = pd || defP(r.d, pay ? LAG : 0), pSrc = pd ? 'desc' : pay ? 'lag' : 'date';
+    for (const r of rows) for (const side of ['dr', 'cr']) { const acc = side === 'dr' ? r.dr : r.cr; if (!isT(acc)) continue; const o2 = ov.get(r.id + '|' + side), pay = side === 'dr' && cash(r.cr), df = DF.accs.some(p => String(acc).startsWith(p)), pd = df ? null : descPeriod(r.ds || r.dsp), p0 = pd || defP(r.d, pay ? (df ? DF.lag : LAG) : 0), pSrc = pd ? 'desc' : pay ? (df ? 'dflag' : 'lag') : 'date';
       out.push({ id: r.id, side, doc: r.doc, d: r.d, ds: r.ds || r.dsp || '', dr: r.dr, cr: r.cr, acc, accName: side === 'dr' ? r.drn : r.crn, other: side === 'dr' ? r.cr : r.dr,
         debit: side === 'dr' ? r.a : 0, credit: side === 'cr' ? r.a : 0, bp: side === 'dr' ? r.bp : r.bpCr, u: r.u, pay, pSrc, p0, period: o2 && o2.period ? o2.period : p0, changed: !!(o2 && o2.period), note: o2 ? o2.note || '' : '', st: o2 ? o2.st || '' : '' }); }
     return out.filter(x => x.period >= pf && x.period <= pt);
@@ -132,7 +136,7 @@ function make(db, all) {
       const prior = P.filter(g => g.acc === acc && (!last || g.per < last.per) && Math.abs(g.diff) > 0.005).map(g => ({ per: g.per, diff: g.diff }));
       return { acc, name: name.get(acc) || '', bal: b, lastPer: last ? last.per : '', decl: last ? last.credit : 0, due, lastPaid: last ? last.debit : 0, diff, ok: Math.abs(diff) <= 0.01, prior };
     });
-    return { badMatch, lastRun, notRun: L.filter(x => !x.stEff).length, balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
+    return { df: dateFirst(), badMatch, lastRun, notRun: L.filter(x => !x.stEff).length, balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
       tot: { credit: L.reduce((s, x) => s + x.credit, 0), debit: L.reduce((s, x) => s + x.debit, 0), periodsOff: P.filter(g => Math.abs(g.diff) > 0.005 && g.conf !== 'ok').length, changed: L.filter(x => x.changed).length,
         ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, chk: L.filter(x => x.stEff === 'chk').length, chg: L.filter(x => x.stEff === 'chg').length, susAuto: L.filter(x => x.auto === 'rule' && x.stEff === 'sus').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
   }
@@ -157,6 +161,6 @@ function make(db, all) {
       if (e) { try { run(`UPDATE ${T} SET id=? WHERE rowid=?`, e.id, x.r); n++; } catch { } } }
     return { n }; }
   const analyze = o => { const r = report({ ...o, run: true }); return { n: r.nLines, lastRun: r.lastRun }; };
-  return { analyze, confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
+  return { dateFirst, setDateFirst, analyze, confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
 }
 module.exports = { make, WHY };

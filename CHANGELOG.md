@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.0.4
+- Phân tích tài khoản thuế: ô **TK theo kỳ hạch toán** (mặc định 33381 – thuế nhà thầu / WHT nước ngoài) và số tháng **trễ** riêng (mặc định 1). Với các TK này kỳ kê khai = tháng hạch toán, bỏ qua tháng ghi trong diễn giải; dòng nộp tiền = tháng nộp − số tháng trễ. Kỳ đã đổi tay giữ nguyên.
+
 ## 5.0.3
 - Sửa lỗi Phân tích tài khoản thuế › Chi tiết: lọc trạng thái (vd chỉ "Chính xác") vẫn hiện các dòng vừa đổi kỳ ("Đã đổi kỳ – chờ xác nhận"). Dòng vừa đổi kỳ nay chỉ được giữ khi kỳ mới nằm ngoài bộ lọc TK / kỳ; bộ lọc trạng thái, lý do và ô tìm luôn áp dụng.
 

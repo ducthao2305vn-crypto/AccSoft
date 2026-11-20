@@ -633,3 +633,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Thuế: `taxacc.report().balChk` – số dư cuối (SQL toàn bộ đến `o.to`, theo mức TK) so với credit của kỳ cuối có kê khai ≤ kỳ của `o.to`; `prior` = kỳ trước còn chênh.
 
 - Thuế: trạng thái tự động lưu `tax_auto(id, side, st, auto, why, sig)`, chỉ ghi khi `txAnalyze` (= report({run:true})); report chỉ đọc. Ưu tiên: st tay > đổi kỳ chờ xác nhận (chg) > tax_auto > chưa phân tích. rebind gắn lại cả tax_period và tax_auto.
+
+- Thuế: setting `taxacc_datefirst` {accs, lag} – TK theo kỳ hạch toán (pSrc 'date' / 'dflag'), không dùng descPeriod.
