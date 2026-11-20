@@ -223,6 +223,35 @@ function make(db, all, get, okYm) {
       for (const [key, re] of toks) if (re.test(d)) key === k ? hitOwn = true : other.includes(key) || other.push(key);
       return !hitOwn && other.length ? 'Diễn giải nhắc tới ' + other.slice(0, 2).join(', ') : ''; };
   }
+
+  // ===== THUYẾT MINH BÊN LIÊN QUAN (IAS 24) =====
+  // cfg: passCos – công ty có nghiệp vụ thu hộ / chi hộ (vd TFU – Telemor Fintech); passAccs – TK dùng cho thu hộ / chi hộ (số dư tách riêng, không trình bày là công nợ bên liên quan);
+  //      revKw – từ khoá diễn giải nhận diện doanh thu của khách hàng do bên liên quan thu hộ nhưng ghi nhầm đối tượng
+  const RP_DEF = { passCos: ['TFU'], passAccs: ['1388', '3388'], revKw: 'thu hộ|thu ho|collect|mosan|top ?up|e-?wallet|wallet|customer|khách hàng|pulsa|recharge' };
+  const rpCfg = () => { const v = (get(`SELECT v FROM settings WHERE k='rp_cfg'`) || {}).v; let o = {}; try { o = v ? JSON.parse(v) : {}; } catch { } return { ...RP_DEF, ...o }; };
+  const rpSetCfg = o => { const c = { ...rpCfg(), ...o }; for (const k of ['passCos', 'passAccs']) if (typeof c[k] === 'string') c[k] = c[k].split(/[,;\s]+/).map(x => x.trim().toUpperCase()).filter(Boolean);
+    run(`INSERT OR REPLACE INTO settings(k, v) VALUES('rp_cfg', ?)`, JSON.stringify(c)); return rpCfg(); };
+  function rpNote(year, withTT = false) {
+    const Y = String(year), PY = String(+Y - 1), cfg = rpCfg(), kinds = withTT ? ['NB', 'TT'] : ['NB'], PASS = new Set(cfg.passCos.map(x => String(x).toUpperCase())), isPass = (k, acc) => PASS.has(String(k).toUpperCase()) && A(acc, ...cfg.passAccs);
+    // (1) giao dịch trong năm (đã áp dụng điều chỉnh loại / gán lại; không tính TK ước tính 335 / 1317)
+    const iy = internalYears([PY, Y], withTT, true, '');
+    // (2) số dư cuối năm: theo phía đối tượng; áp dụng điều chỉnh loại / gán lại; tách TK thu hộ – chi hộ của công ty thu hộ
+    const { rows, map } = rowsOfKinds(kinds, '', Y + '-12'), adj = adjMap(), ci = coIndex(map, kinds), bal = new Map(), Z = () => ({ thu: 0, tra: 0, passThu: 0, passTra: 0, accs: {} });
+    const ends = { [PY]: PY + '-12-31', [Y]: Y + '-12-31' };
+    for (const r of rows) { const ad = adjOf(adj, r); if (ad && ad.action === 'out') continue; const mv = ad && ad.action === 'move' && ci.get(ad.to_key);
+      for (const [acc, p0, sgn] of [[r.dr, r.bp, 1], [r.cr, r.bpCr, -1]]) { let p = p0, c = map.get(p); if (mv && DEBT(acc)) [p, c] = mv; if (!c || !kinds.includes(c.kind) || !ibAcc(acc) || A(acc, '335', '1317')) continue;
+        const k = coKey(c, p), o = bal.get(k) || bal.set(k, { key: k, company: coName(c, p), kind: c.kind, note: c.note || '', y: { [PY]: Z(), [Y]: Z() } }).get(k), grp = String(acc)[0] === '3' ? 'tra' : 'thu';
+        for (const yy of [PY, Y]) { if (r.d > ends[yy]) continue; const t = o.y[yy], v = grp === 'thu' ? sgn * r.a : -sgn * r.a;
+          if (isPass(k, acc)) t[grp === 'thu' ? 'passThu' : 'passTra'] += v; else { t[grp] += v; t.accs[acc] = (t.accs[acc] || 0) + v; } } } }
+    // (3) gợi ý doanh thu ghi nhầm công ty thu hộ: Có 511/512/515/711, đối tượng thuộc công ty thu hộ, diễn giải có từ khoá
+    let re; try { re = new RegExp(cfg.revKw, 'i'); } catch { re = /thu hộ|collect/i; }
+    const det = internalRows(Y + '-01', Y + '-12', withTT, '', 'Doanh thu', 50000, true).rows.filter(x => PASS.has(String(x.coKey).toUpperCase()));
+    const susRev = det.map(x => ({ ...x, sus: re.test(x.ds || '') ? 'Doanh thu khách hàng do ' + x.company + ' thu hộ?' : x.sus }));
+    const out = all(`SELECT * FROM ig_adj WHERE action='out' ORDER BY updated_at DESC`);
+    const cos = [...new Set([...iy.rows.map(o => o.key), ...bal.keys()])].map(k => { const t = iy.rows.find(o => o.key === k), b = bal.get(k);
+      return { key: k, company: (t || b).company, kind: (t || b).kind, note: b ? b.note : '', pass: PASS.has(String(k).toUpperCase()), tx: t ? t.y : null, bal: b ? b.y : null }; });
+    return { year: Y, prev: PY, cfg, cos, revAll: susRev, excluded: out };
+  }
   // Quản lý điều chỉnh
   function adjList() { try { return all(`SELECT * FROM ig_adj ORDER BY updated_at DESC`); } catch { return []; } }
   function adjSet(items, action, toKey = '', note = '') {
@@ -270,6 +299,6 @@ function make(db, all, get, okYm) {
     for (const p of parts) { const k = map.get(p)?.kind || '(chưa phân loại)'; c[k] = (c[k] || 0) + 1; }
     return { partners: parts.length, matched: map.size, byKind: c, catalog: get('SELECT count(*) n FROM partners_cat').n };
   }
-  return { list, upsert, remove, importRows, exportAll, unmatched, internal, internalRows, internalBalance, internalYears, companies, partnerTB, adjList, adjSet, adjRemove, docLines, intlPayments, kindStats, KINDS };
+  return { rpNote, rpCfg, rpSetCfg, list, upsert, remove, importRows, exportAll, unmatched, internal, internalRows, internalBalance, internalYears, companies, partnerTB, adjList, adjSet, adjRemove, docLines, intlPayments, kindStats, KINDS };
 }
 module.exports = { make, KINDS };

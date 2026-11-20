@@ -637,3 +637,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Thuế: setting `taxacc_datefirst` {accs, lag} – TK theo kỳ hạch toán (pSrc 'date' / 'dflag'), không dùng descPeriod.
 
 - Phân tích TK theo kỳ: `taxacc` có preset (`taxacc_presets`, `taxacc_active`); preset 'tax' dùng khoá cài đặt cũ, preset khác khoá `<key>@<id>`. Bảng tax_period/tax_ok/tax_auto dùng chung (khoá theo bút toán/TK). IPC txPresets/txSetActive/txSavePreset/txRemovePreset.
+
+- Thuyết minh bên liên quan: `partners.rpNote(year)` (giao dịch = internalYears có điều chỉnh, excl ước tính; số dư cuối năm áp dụng ig_adj out/move, tách TK thu hộ của công ty `rp_cfg.passCos`). UI IG.m='rp' trong vInternal.

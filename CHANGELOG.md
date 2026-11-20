@@ -1,5 +1,13 @@
 # Lịch sử phiên bản
 
+## 5.2.0
+- **Thuyết minh bên liên quan (IAS 24)** – Phân tích chuyên sâu › Giao dịch nội bộ › tab đầu tiên (tìm nhanh Ctrl+P "thuyết minh bên liên quan"):
+  - Giao dịch trong năm so với năm trước theo từng bên liên quan (nhóm mẹ – con / cùng tập đoàn): bán hàng – doanh thu, mua dịch vụ – chi phí, mua hàng hoá – tài sản.
+  - Số dư phải thu / phải trả 31/12 năm nay và năm trước.
+  - **Thu hộ – chi hộ** của công ty thu hộ (mặc định TFU – Telemor Fintech, TK 1388, 3388) tách riêng, không trình bày là công nợ bên liên quan.
+  - Danh sách doanh thu ghi cho đơn vị thu hộ, tự đánh dấu dòng nghi là doanh thu khách hàng do Fintech thu hộ (từ khoá diễn giải); chọn → **Loại khỏi nội bộ** để bỏ khỏi thuyết minh (cả giao dịch và số dư).
+  - Cài đặt công ty / TK thu hộ, từ khoá; xuất Excel 5 sheet (Giao dịch, Số dư, Thu hộ chi hộ, Doanh thu đơn vị thu hộ, Đã loại trừ).
+
 ## 5.1.6 – UI/UX (tiếp)
 - Thông báo "N tháng chưa phân tích" gọn còn 1 dòng (rê chuột xem đủ danh sách tháng) với nút Phân tích ngay.
 - Tổng quan: bỏ thẻ "Dòng có cảnh báo" trùng số liệu với khung tổng.
