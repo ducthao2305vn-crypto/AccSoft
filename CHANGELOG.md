@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.1.4
+- Sửa Phân tích TK theo kỳ › Chi tiết: ô "Tìm trong bảng" chung chỉ ẩn dòng trên màn hình nên tổng Nợ / Có / ± vẫn tính trên mọi dòng (vd tìm ra 2 dòng nhưng tổng là 4,200 dòng). Thay bằng ô tìm riêng của bảng: lọc thật danh sách – tổng tiền, dòng tổng cộng, chọn tất cả và xuất dữ liệu đang xem đều theo kết quả tìm; tìm được cả theo số tiền.
+
 ## 5.1.3
 - Phân tích TK theo kỳ › Chi tiết: cột **Diễn giải sai kỳ** – báo khi tháng ghi trong diễn giải khác kỳ đang gán ("Diễn giải ghi kỳ 2026_08 – kỳ đúng 2026_10"). Lọc **Chỉ diễn giải sai kỳ**; cả "Xuất dữ liệu đang xem" và "Xuất Excel (toàn bộ)" có thêm cột Diễn giải sai kỳ và Kỳ trong diễn giải để gửi điều chỉnh.
 
