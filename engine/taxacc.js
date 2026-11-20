@@ -58,17 +58,30 @@ function make(db, all) {
   db.exec(`CREATE TABLE IF NOT EXISTS tax_auto(id INTEGER, side TEXT, st TEXT, auto TEXT, why TEXT, sig TEXT, at TEXT, PRIMARY KEY(id, side))`);
   db.exec(`CREATE TABLE IF NOT EXISTS tax_ok(acc TEXT, period TEXT, credit REAL, debit REAL, n INTEGER, note TEXT, at TEXT, PRIMARY KEY(acc, period))`); // trạng thái phân tích: ok = chính xác, sus = nghi ngờ
   const get = k => { const r = all(`SELECT v FROM settings WHERE k=?`, k)[0]; try { return r && r.v ? JSON.parse(r.v) : null; } catch { return null; } };
-  const accs = () => get('taxacc_accs') || ['333'];
-  const setAccs = L => { db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_accs', ?)`).run(JSON.stringify(String(L || '').split(/[,; ]+/).filter(Boolean))); return accs(); };
+  // NHÓM PHÂN TÍCH (preset): cùng một bộ máy phân tích theo kỳ (kỳ từ diễn giải / ngày, khớp kỳ Có − Nợ = 0, trạng thái, xác nhận…) áp dụng cho nhiều nhóm tài khoản.
+  // 'tax' dùng khoá cũ; nhóm khác dùng khoá có hậu tố @id. Bảng tax_period / tax_ok / tax_auto khoá theo bút toán / TK nên dùng chung.
+  const DEF_PRESETS = [{ id: 'tax', name: 'Thuế (333)' }, { id: 'p335', name: 'Chi phí trích trước (335)', accs: ['335'] }, { id: 'p3388', name: 'Phải trả khác (3388)', accs: ['3388'] }, { id: 'p1388', name: 'Phải thu khác (1388)', accs: ['1388'] }];
+  const presets = () => { const v = get('taxacc_presets'); return Array.isArray(v) && v.length ? v : DEF_PRESETS; };
+  const active = () => { const a = get('taxacc_active'), P = presets(); return P.find(p => p.id === a) || P[0]; };
+  const KEY = k => { const a = active(); return a.id === 'tax' ? k : k + '@' + a.id; };
+  const setActive = id => { db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_active', ?)`).run(JSON.stringify(id)); return active(); };
+  const savePreset = o => { const P = presets().slice(), name = String(o.name || '').trim(); if (!name) throw new Error('Nhập tên nhóm');
+    let id = o.id; if (!id) { id = 'p' + Date.now().toString(36); P.push({ id, name }); } else { const x = P.find(p => p.id === id); if (x) x.name = name; }
+    db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_presets', ?)`).run(JSON.stringify(P.map(p => ({ id: p.id, name: p.name, accs: p.accs }))));
+    if (o.accs) { setActive(id); setAccs(o.accs); } return presets(); };
+  const removePreset = id => { if (id === 'tax') throw new Error('Không xoá được nhóm Thuế'); const P = presets().filter(p => p.id !== id);
+    db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_presets', ?)`).run(JSON.stringify(P)); if (active().id === id) setActive('tax'); return presets(); };
+  const accs = () => get(KEY('taxacc_accs')) || active().accs || ['333'];
+  const setAccs = L => { db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES(?, ?)`).run(KEY('taxacc_accs'), JSON.stringify(String(L || '').split(/[,; ]+/).filter(Boolean))); return accs(); };
   const like = (col, A) => '(' + A.map(() => `${col} LIKE ?`).join(' OR ') + ')';
   const defP = (d, back = 0) => { let y = +String(d || '').slice(0, 4), m = +String(d || '').slice(5, 7) - back; while (m < 1) { m += 12; y--; } return y + '_' + String(m).padStart(2, '0'); };
   // nộp tiền thường trễ so với kỳ kê khai: dòng Nợ thuế / Có tiền mặc định thuộc kỳ = tháng nộp − lag (mặc định 1 tháng)
-  const lag = () => { const v = get('taxacc_lag'); return v == null ? 1 : Math.max(0, +v || 0); };
+  const lag = () => { const v = get(KEY('taxacc_lag')); return v == null ? 1 : Math.max(0, +v || 0); };
   // TK ưu tiên KỲ HẠCH TOÁN (thuế nhà thầu): kỳ = tháng hạch toán; nộp tiền = tháng nộp − lag riêng; không đọc tháng trong diễn giải
-  const dateFirst = () => { const v = get('taxacc_datefirst'); return v && typeof v === 'object' ? { accs: v.accs || [], lag: v.lag == null ? 1 : +v.lag } : { accs: ['33381'], lag: 1 }; };
+  const dateFirst = () => { const v = get(KEY('taxacc_datefirst')); return v && typeof v === 'object' ? { accs: v.accs || [], lag: v.lag == null ? 1 : +v.lag } : { accs: active().id === 'tax' ? ['33381'] : [], lag: 1 }; };
   const setDateFirst = (accs, lg) => { const o = { accs: String(Array.isArray(accs) ? accs.join(',') : accs || '').split(/[,;\s]+/).map(x => x.trim()).filter(Boolean), lag: Math.max(0, +lg || 0) };
-    db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_datefirst', ?)`).run(JSON.stringify(o)); return dateFirst(); };
-  const setLag = v => { db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_lag', ?)`).run(JSON.stringify(Math.max(0, +v || 0))); return lag(); };
+    db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES(?, ?)`).run(KEY('taxacc_datefirst'), JSON.stringify(o)); return dateFirst(); };
+  const setLag = v => { db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES(?, ?)`).run(KEY('taxacc_lag'), JSON.stringify(Math.max(0, +v || 0))); return lag(); };
   const cash = a => /^11[123]/.test(a || '');
   // dòng phân tích trong khoảng ngày (theo ngày chứng từ) – kỳ kê khai đã đổi có thể nằm ngoài khoảng, vẫn hiển thị theo kỳ mới
   function lines(o = {}) {
@@ -136,7 +149,7 @@ function make(db, all) {
       const prior = P.filter(g => g.acc === acc && (!last || g.per < last.per) && Math.abs(g.diff) > 0.005).map(g => ({ per: g.per, diff: g.diff }));
       return { acc, name: name.get(acc) || '', bal: b, lastPer: last ? last.per : '', decl: last ? last.credit : 0, due, lastPaid: last ? last.debit : 0, diff, ok: Math.abs(diff) <= 0.01, prior };
     });
-    return { df: dateFirst(), badMatch, lastRun, notRun: L.filter(x => !x.stEff).length, balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
+    return { preset: active(), presets: presets(), df: dateFirst(), badMatch, lastRun, notRun: L.filter(x => !x.stEff).length, balChk, why, accTab, accs: accs(), accList, lines: L.length > 20000 && !o.all ? null : L, nLines: L.length, byPeriod: P, byYear: Y,
       tot: { credit: L.reduce((s, x) => s + x.credit, 0), debit: L.reduce((s, x) => s + x.debit, 0), periodsOff: P.filter(g => Math.abs(g.diff) > 0.005 && g.conf !== 'ok').length, changed: L.filter(x => x.changed).length,
         ok: L.filter(x => x.stEff === 'ok').length, sus: L.filter(x => x.stEff === 'sus').length, chk: L.filter(x => x.stEff === 'chk').length, chg: L.filter(x => x.stEff === 'chg').length, susAuto: L.filter(x => x.auto === 'rule' && x.stEff === 'sus').length, conf: P.filter(g => g.conf === 'ok').length, stale: P.filter(g => g.conf === 'stale').length }, lag: lag() };
   }
@@ -165,6 +178,6 @@ function make(db, all) {
   function okPeriods(o, groups, note) { const lvl = +o.level || 0, K = a => lvl ? String(a).slice(0, lvl) : a, keys = new Set(groups.map(g => g.acc + '|' + g.per));
     const items = lines(o).filter(x => keys.has(K(x.acc) + '|' + x.period)).map(x => ({ id: x.id, side: x.side }));
     setStatus(items, 'ok', note || 'Kỳ khớp (chênh ≈ 0)'); confirm(groups, note || 'Kỳ khớp (chênh ≈ 0)'); return { n: items.length, periods: groups.length }; }
-  return { okPeriods, dateFirst, setDateFirst, analyze, confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
+  return { presets, setActive, savePreset, removePreset, okPeriods, dateFirst, setDateFirst, analyze, confirm, lines, report, setPeriod, setStatus, rebind, accs, setAccs, lag, setLag };
 }
 module.exports = { make, WHY };

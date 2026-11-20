@@ -635,3 +635,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Thuế: trạng thái tự động lưu `tax_auto(id, side, st, auto, why, sig)`, chỉ ghi khi `txAnalyze` (= report({run:true})); report chỉ đọc. Ưu tiên: st tay > đổi kỳ chờ xác nhận (chg) > tax_auto > chưa phân tích. rebind gắn lại cả tax_period và tax_auto.
 
 - Thuế: setting `taxacc_datefirst` {accs, lag} – TK theo kỳ hạch toán (pSrc 'date' / 'dflag'), không dùng descPeriod.
+
+- Phân tích TK theo kỳ: `taxacc` có preset (`taxacc_presets`, `taxacc_active`); preset 'tax' dùng khoá cài đặt cũ, preset khác khoá `<key>@<id>`. Bảng tax_period/tax_ok/tax_auto dùng chung (khoá theo bút toán/TK). IPC txPresets/txSetActive/txSavePreset/txRemovePreset.
