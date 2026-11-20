@@ -6,6 +6,7 @@
 <title>AccSoft</title>
 <script src="vendor/chart.umd.min.js"></script>
 <style>
+.btn.primary.demoted{background:#fff!important;color:var(--brand-700)!important;border-color:var(--brand-300)!important;box-shadow:none!important}[data-theme=dark] .btn.primary.demoted{background:transparent!important}
 .topbar>div:first-child{min-width:0;flex:1 1 auto}#pTitle,#pSub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #nav button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
@@ -89,6 +90,7 @@ input[type=checkbox]{accent-color:var(--brand-500);width:16px;height:16px}
 .kpi .lb{font-size:13px;color:var(--gray-600);font-weight:500}
 .kpi .v{font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
 .kpi .s{font-size:12px;color:var(--gray-500)}
+.kpis.compact{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}.kpis.compact .kpi>*{text-align:left!important;align-self:stretch}.kpis.compact .kpi{padding:10px 14px;gap:2px;display:block}.kpis.compact .kpi .ic{display:none}.kpis.compact .kpi .v{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kpis.compact .kpi .lb{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kpis.compact .kpi .s{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hero{border-radius:16px;padding:28px 32px;color:#fff;background:linear-gradient(120deg,var(--brand-600) 0%,var(--brand-500) 55%,var(--brand-400) 100%);position:relative;overflow:hidden;box-shadow:var(--shadow-sm)}
 .hero::after{content:"";position:absolute;right:-60px;top:-80px;width:320px;height:320px;border-radius:50%;background:rgba(255,255,255,.08)}
 .hero::before{content:"";position:absolute;right:120px;bottom:-120px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.06)}
@@ -197,6 +199,7 @@ td,th{user-select:text}
 .side-rv b{color:var(--brand-700);display:block;font-size:13px}
 .pendNote{border-color:var(--brand-300);background:var(--brand-50);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .pendNote b{color:var(--brand-700)}
+.pendNote{padding:8px 12px!important;flex-wrap:nowrap;font-size:13px;margin:0 0 12px!important}.pendNote .icon{width:16px;height:16px;flex:none}
 .grptabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
 .grptabs button{text-align:left;border:1px solid var(--gray-200);background:#fff;border-radius:12px;padding:14px 16px;cursor:pointer;display:flex;gap:12px;align-items:flex-start}
 .grptabs button .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--gray-100);color:var(--gray-600)}
@@ -365,6 +368,7 @@ nav button{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi{display:grid!important;grid-template-columns:38px 1fr;column-gap:12px;row-gap:2px;padding:14px 16px!important;align-items:center}
 .kpi .ic{grid-row:1/span 2;width:38px;height:38px}
 .kpi .lb,.kpi .v{grid-column:2}
+.kpis.compact .kpi{display:block!important;padding:10px 14px!important}.kpis.compact .kpi>*{grid-column:auto!important;margin:0!important}.kpis.compact .kpi .v{font-size:16px!important}
 .kpi .v{font-size:22px!important}
 .kpi .s{grid-column:1/-1;margin-top:4px}
 .kpi .s:empty{display:none}
@@ -480,17 +484,19 @@ body.mini #navFind{display:none}
       <div class="card-h"><div class="tabs" id="stTabs"></div><div class="sp"></div>
         <select class="input" id="fGroup" style="width:auto"><option value="">Từng dòng lỗi</option><option value="doc">Gộp theo chứng từ</option></select></div>
       <div class="filters">
+        <select class="input" id="fMonth"><option value="">Tất cả tháng</option></select>
         <select class="input" id="fSev"><option value="">Mọi mức độ</option><option value="H">Mức cao</option><option value="M">Trung bình</option><option value="L">Thấp</option></select>
         <select class="input" id="fRule"><option value="">Tất cả loại lỗi</option></select>
         <select class="input" id="fUser"><option value="">Tất cả người nhập</option></select>
-        <select class="input" id="fMonth"><option value="">Tất cả tháng</option></select>
+        <input class="input" id="fText" placeholder="Tìm chứng từ, diễn giải, ghi chú…">
+      </div>
+      <details id="fMore" class="fmore"><summary class="btn sm ghost" style="list-style:none;cursor:pointer;margin-top:8px">＋ Thêm bộ lọc <span id="fMoreN" class="badge b-M hide"></span></summary><div class="filters" style="margin-top:8px">
         <select class="input" id="fDept"><option value="">Tất cả bộ phận</option></select>
         <input class="input" id="fAcc" placeholder="Tài khoản (vd 627, 331)">
         <input class="input" id="fTcost" list="dlTcost" placeholder="Khoản mục (Type of cost) – gõ mã / tên, hoặc (trống)"><datalist id="dlTcost"></datalist>
         <input class="input" id="fMin" type="number" placeholder="Số tiền từ">
         <input class="input" id="fMax" type="number" placeholder="Số tiền đến">
-        <input class="input" id="fText" placeholder="Tìm chứng từ, diễn giải, ghi chú…" style="grid-column:span 2">
-      </div>
+      </div></details>
       <div class="row" style="margin:14px 0 12px">
         <span id="errCount" class="mut"></span><div class="sp"></div>
         <button class="btn sm ghost" id="fReset"><svg class="icon"><use href="#i-x"/></svg>Xoá bộ lọc</button>

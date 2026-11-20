@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## 5.1.6 – UI/UX (tiếp)
+- Thông báo "N tháng chưa phân tích" gọn còn 1 dòng (rê chuột xem đủ danh sách tháng) với nút Phân tích ngay.
+- Tổng quan: bỏ thẻ "Dòng có cảnh báo" trùng số liệu với khung tổng.
+- Lỗi nhập liệu: chỉ để sẵn 5 bộ lọc hay dùng (tháng, mức độ, loại lỗi, người nhập, tìm); bộ phận, tài khoản, khoản mục, số tiền vào **＋ Thêm bộ lọc** (có số bộ lọc phụ đang dùng, tự mở khi có).
+- Phân tích TK theo kỳ: thẻ số liệu thu gọn 1 hàng, bảng chính lên cao hơn.
+- Mỗi khu vực chỉ 1 nút chính (cam đặc): các nút phụ (Xuất dữ liệu đang xem, Xuất sao kê English, Chuyển kỳ ≈ 0…) đổi kiểu viền; hàng có từ 3 nút chính trở lên tự giữ nút đầu là nút chính.
+
 ## 5.1.5 – rà soát UI/UX
 - Tiêu đề / mô tả trang luôn 1 dòng (cắt "…", rê chuột xem đủ) – không còn đè lên nội dung; tên menu dài cắt gọn.
 - Phân tích TK theo kỳ: tách **cài đặt** (nộp trễ, TK theo kỳ hạch toán, số tháng trễ, các TK thuộc nhóm) khỏi bộ lọc vào nút **⚙ Cài đặt nhóm** – thanh lọc gọn, nút hành động không bị đẩy xuống dòng; nhãn cài đặt ghi rõ ý nghĩa.
