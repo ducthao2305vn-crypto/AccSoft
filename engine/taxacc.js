@@ -79,9 +79,12 @@ function make(db, all) {
   const lag = () => { const v = get(KEY('taxacc_lag')); return v == null ? 1 : Math.max(0, +v || 0); };
   // TK ưu tiên KỲ HẠCH TOÁN (thuế nhà thầu): kỳ = tháng hạch toán; nộp tiền = tháng nộp − lag riêng; không đọc tháng trong diễn giải
   // nâng cấp 1 lần: thuế TNCN (333524) khấu trừ khi ghi nhận chi phí/lương ⇒ theo kỳ hạch toán như thuế nhà thầu
+  if (!get('taxacc_df_v3')) { const v = get('taxacc_datefirst') || { accs: ['33381', '333524'], lag: 1 }, add = ['333524', '333522', '33342'].filter(a => !(v.accs || []).includes(a));
+    if (add.length) db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_datefirst', ?)`).run(JSON.stringify({ ...v, accs: [...(v.accs || []), ...add] }));
+    db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_df_v3', '1')`).run(); db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_df_v2', '1')`).run(); }
   if (!get('taxacc_df_v2')) { const v = get('taxacc_datefirst'); if (v && Array.isArray(v.accs) && !v.accs.includes('333524')) db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_datefirst', ?)`).run(JSON.stringify({ ...v, accs: [...v.accs, '333524'] }));
     db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES('taxacc_df_v2', '1')`).run(); }
-  const dateFirst = () => { const v = get(KEY('taxacc_datefirst')); return v && typeof v === 'object' ? { accs: v.accs || [], lag: v.lag == null ? 1 : +v.lag } : { accs: active().id === 'tax' ? ['33381', '333524'] : [], lag: 1 }; };
+  const dateFirst = () => { const v = get(KEY('taxacc_datefirst')); return v && typeof v === 'object' ? { accs: v.accs || [], lag: v.lag == null ? 1 : +v.lag } : { accs: active().id === 'tax' ? ['33381', '333524', '333522', '33342'] : [], lag: 1 }; };
   const setDateFirst = (accs, lg) => { const o = { accs: String(Array.isArray(accs) ? accs.join(',') : accs || '').split(/[,;\s]+/).map(x => x.trim()).filter(Boolean), lag: Math.max(0, +lg || 0) };
     db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES(?, ?)`).run(KEY('taxacc_datefirst'), JSON.stringify(o)); return dateFirst(); };
   const setLag = v => { db.prepare(`INSERT OR REPLACE INTO settings(k, v) VALUES(?, ?)`).run(KEY('taxacc_lag'), JSON.stringify(Math.max(0, +v || 0))); return lag(); };

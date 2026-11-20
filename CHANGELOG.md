@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.1.2
+- Phân tích TK theo kỳ (Thuế): thêm **333522** (Withholding Tax Domestic) và **33342** (thuế lợi tức) vào "TK theo kỳ hạch toán" – kỳ = tháng hạch toán, nộp tiền = tháng nộp − số tháng trễ (mặc định 1). Tự thêm một lần vào cài đặt hiện có.
+
 ## 5.1.1
 - Phân tích TK theo kỳ (Thuế): **333524 – thuế TNCN** chuyển sang **theo kỳ hạch toán** (như thuế nhà thầu 33381): bút toán khấu trừ hạch toán tháng 10 ghi "… in August 2026" nay vào kỳ 2026_10, không còn kéo về 2026_08; dòng nộp tiền = tháng nộp − 1. Tự thêm 333524 vào ô "TK theo kỳ hạch toán" (một lần); kỳ đã đổi tay giữ nguyên.
 
