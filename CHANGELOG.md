@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.0.2
+- Phân tích tài khoản thuế › Chi tiết: sửa kỳ ở từng dòng **không tự lưu nữa** – ô kỳ đã sửa tô vàng, thanh "✎ N dòng đã sửa kỳ – chưa lưu" (ghim trên bảng) với nút **Lưu** / **Huỷ thay đổi**; bảng chỉ cập nhật khi bấm Lưu. Sau khi lưu (và khi đổi trạng thái) giữ nguyên vị trí cuộn để không phải tìm lại chỗ đang làm.
+
 ## 5.0.1
 - Phân tích tài khoản thuế › Chi tiết: tích chọn dòng → thanh trên hiện ngay tổng Nợ, Có và **Tổng (±)** của các dòng đã chọn (báo ✓ = 0 khi làm tròn bằng 0).
 
