@@ -101,7 +101,7 @@ function make(db, all) {
     const isT = a => A.some(p => String(a || '').startsWith(p)), out = [];
     for (const r of rows) for (const side of ['dr', 'cr']) { const acc = side === 'dr' ? r.dr : r.cr; if (!isT(acc)) continue; const o2 = ov.get(r.id + '|' + side), pay = side === 'dr' && cash(r.cr), df = DF.accs.some(p => String(acc).startsWith(p)), pd = df ? null : descPeriod(r.ds || r.dsp), p0 = pd || defP(r.d, pay ? (df ? DF.lag : LAG) : 0), pSrc = pd ? 'desc' : pay ? (df ? 'dflag' : 'lag') : 'date';
       out.push({ id: r.id, side, doc: r.doc, d: r.d, ds: r.ds || r.dsp || '', dr: r.dr, cr: r.cr, acc, accName: side === 'dr' ? r.drn : r.crn, other: side === 'dr' ? r.cr : r.dr,
-        debit: side === 'dr' ? r.a : 0, credit: side === 'cr' ? r.a : 0, bp: side === 'dr' ? r.bp : r.bpCr, u: r.u, pay, pSrc, p0, period: o2 && o2.period ? o2.period : p0, changed: !!(o2 && o2.period), note: o2 ? o2.note || '' : '', st: o2 ? o2.st || '' : '' }); }
+        debit: side === 'dr' ? r.a : 0, credit: side === 'cr' ? r.a : 0, bp: side === 'dr' ? r.bp : r.bpCr, u: r.u, pay, pSrc, p0, dsPer: descPeriod(r.ds || r.dsp) || '', period: o2 && o2.period ? o2.period : p0, changed: !!(o2 && o2.period), note: o2 ? o2.note || '' : '', st: o2 ? o2.st || '' : '' }); }
     return out.filter(x => x.period >= pf && x.period <= pt);
   }
   // tổng hợp theo TK thuế × kỳ kê khai, và theo TK × năm (năm của kỳ kê khai)

@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.1.3
+- Phân tích TK theo kỳ › Chi tiết: cột **Diễn giải sai kỳ** – báo khi tháng ghi trong diễn giải khác kỳ đang gán ("Diễn giải ghi kỳ 2026_08 – kỳ đúng 2026_10"). Lọc **Chỉ diễn giải sai kỳ**; cả "Xuất dữ liệu đang xem" và "Xuất Excel (toàn bộ)" có thêm cột Diễn giải sai kỳ và Kỳ trong diễn giải để gửi điều chỉnh.
+
 ## 5.1.2
 - Phân tích TK theo kỳ (Thuế): thêm **333522** (Withholding Tax Domestic) và **33342** (thuế lợi tức) vào "TK theo kỳ hạch toán" – kỳ = tháng hạch toán, nộp tiền = tháng nộp − số tháng trễ (mặc định 1). Tự thêm một lần vào cài đặt hiện có.
 
