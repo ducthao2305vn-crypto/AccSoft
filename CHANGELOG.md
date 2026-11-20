@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 5.0.5
+- Phân tích tài khoản thuế › Chi tiết: **Gom theo kỳ** (mặc định bật) – mỗi TK × kỳ kê khai là 1 dòng gồm số dòng, đếm theo trạng thái, Nợ, Có, ±, khớp / chênh lệch cả kỳ; bấm dòng kỳ để xổ / gom chi tiết, nút Mở tất cả / Gom tất cả, giữ vị trí cuộn. Bỏ tích để xem danh sách phẳng như cũ.
+- Sửa: dòng chưa chạy phân tích tự động hiện nhầm nhãn "Chính xác (tự động)" ở ô trạng thái – nay hiện "Chưa phân tích".
+
 ## 5.0.4
 - Phân tích tài khoản thuế: ô **TK theo kỳ hạch toán** (mặc định 33381 – thuế nhà thầu / WHT nước ngoài) và số tháng **trễ** riêng (mặc định 1). Với các TK này kỳ kê khai = tháng hạch toán, bỏ qua tháng ghi trong diễn giải; dòng nộp tiền = tháng nộp − số tháng trễ. Kỳ đã đổi tay giữ nguyên.
 
