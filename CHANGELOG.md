@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.0.1
+- Phân tích tài khoản thuế › Chi tiết: tích chọn dòng → thanh trên hiện ngay tổng Nợ, Có và **Tổng (±)** của các dòng đã chọn (báo ✓ = 0 khi làm tròn bằng 0).
+
 ## 5.0.0
 - Phân tích tài khoản thuế › Chi tiết: nút **Xuất dữ liệu đang xem** – chỉ xuất các dòng đang hiển thị theo bộ lọc hiện tại (trạng thái, TK thuế, kỳ, ô tìm…), gồm dòng cộng từng kỳ, tổng cộng, và sheet ghi lại bộ lọc đã dùng. Nút cũ đổi tên "Xuất Excel (toàn bộ)".
 
