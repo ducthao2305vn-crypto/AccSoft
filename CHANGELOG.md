@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.0.9
+- Phân tích tài khoản thuế › Chi tiết (Gom theo kỳ): ô tích ở **dòng kỳ** chọn cả kỳ (mọi dòng, kể cả khi chưa xổ) – dùng ngay với ✔ Chính xác / ? Nghi ngờ / Đổi kỳ kê khai, thanh tổng tiền cộng theo. Ô "chọn tất cả" ở đầu bảng chọn mọi dòng của mọi kỳ đang hiển thị.
+
 ## 5.0.8
 - Phân tích tài khoản thuế › Tổng hợp theo năm: lọc **Chỉ năm chênh ≈ 0** (dùng chung ngưỡng) và nút chuyển sang Chính xác. Nút chuyển các kỳ trong các năm đó có |chênh| ≤ ngưỡng; kỳ còn chênh riêng (bù trừ trong năm) không chuyển và được báo số lượng để xem lại.
 
