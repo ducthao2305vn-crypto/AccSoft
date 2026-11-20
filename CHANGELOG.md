@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.0.3
+- Sửa lỗi Phân tích tài khoản thuế › Chi tiết: lọc trạng thái (vd chỉ "Chính xác") vẫn hiện các dòng vừa đổi kỳ ("Đã đổi kỳ – chờ xác nhận"). Dòng vừa đổi kỳ nay chỉ được giữ khi kỳ mới nằm ngoài bộ lọc TK / kỳ; bộ lọc trạng thái, lý do và ô tìm luôn áp dụng.
+
 ## 5.0.2
 - Phân tích tài khoản thuế › Chi tiết: sửa kỳ ở từng dòng **không tự lưu nữa** – ô kỳ đã sửa tô vàng, thanh "✎ N dòng đã sửa kỳ – chưa lưu" (ghim trên bảng) với nút **Lưu** / **Huỷ thay đổi**; bảng chỉ cập nhật khi bấm Lưu. Sau khi lưu (và khi đổi trạng thái) giữ nguyên vị trí cuộn để không phải tìm lại chỗ đang làm.
 
