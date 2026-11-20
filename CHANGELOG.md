@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.0.7
+- Phân tích tài khoản thuế › Chi tiết: thêm lọc **Chỉ kỳ chênh ≈ 0** (ngưỡng, mặc định 0.49, tính trên chênh lệch cả kỳ) và nút **✔ Chuyển các kỳ chênh ≈ 0 sang Chính xác** cho các kỳ đang hiển thị – giống tab Tổng hợp theo kỳ; dùng chung ngưỡng giữa hai tab.
+
 ## 5.0.6
 - Phân tích tài khoản thuế › Tổng hợp theo kỳ kê khai: lọc **Chỉ kỳ chênh ≈ 0** với ngưỡng nhập được (mặc định 0.49 – làm tròn bằng 0). Nút **✔ Chuyển các kỳ chênh ≈ 0 sang Chính xác**: mọi dòng của các kỳ đang hiển thị trong ngưỡng đặt trạng thái Chính xác và xác nhận kỳ (hỏi lại, báo tổng chênh lệch bỏ qua).
 
