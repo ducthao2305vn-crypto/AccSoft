@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.6.0
+- Gộp **Chi phí theo phòng ban** vào trang **Kế hoạch – thực hiện & chi phí phòng ban** (menu chỉ còn 1 mục): các tab Dashboard · So sánh kế hoạch – thực hiện · **Chi phí theo phòng ban (thực hiện)** · Kế hoạch. Tab chi phí phòng ban giữ đủ chức năng (lọc, nhấn đúp xem / điều chỉnh bút toán, Gán lại sai phòng ban, chuyển theo quy tắc khoản mục, báo cáo theo mẫu, xuất Excel). Tìm nhanh (Ctrl+P) "chi phí theo phòng ban" mở thẳng tab này.
+
 ## 5.5.2
 - Kế hoạch – thực hiện › tab So sánh (xem *chi tiết theo phòng ban* hoặc *một phòng ban*): nút **⇄ PB** ở dòng có kế hoạch – chọn phòng ban đích để chuyển kế hoạch của khoản mục đó sang phòng ban khác ngay trên bảng (hỏi lại kèm KH năm).
 
