@@ -762,7 +762,9 @@ ${R.map((x, i) => `<tr><td style="${TD}">${i + 1}</td><td style="${TD}"><b>${esc
     return saveXlsx(`SaoKe_${(banks && banks.length ? banks.join('-') : 'TatCa')}_${from}_${to}.xlsx`, require('./engine/bankstmt').book(r, XLSX, rc)); });
   handle('bp:import', async (_e, year, mode) => { const { canceled, filePaths } = await dialog.showOpenDialog(win, { filters: [{ name: 'Excel', extensions: ['xlsx', 'xls', 'xlsb'] }], properties: ['openFile'] }); if (canceled || !filePaths[0]) return null;
     const wb = XLSX.read(fs.readFileSync(filePaths[0]), { type: 'buffer' }), ws = wb.Sheets[wb.SheetNames.find(n => !wb.Sheets[n]['!hidden']) || wb.SheetNames[0]];
-    return { ...(await qa('bpImport', XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true }), year, mode)), file: path.basename(filePaths[0]) }; });
+    const r = { ...(await qa('bpImport', XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true }), year, mode)), file: path.basename(filePaths[0]) };
+    const st = wb.SheetNames.find(n => /DM_CP/i.test(n)); if (st) try { r.tree = (await qa('bpImportTree', XLSX.utils.sheet_to_json(wb.Sheets[st], { header: 1, defval: '', raw: false }))).n; } catch { }
+    return r; });
   handle('td:import', async () => { const { canceled, filePaths } = await dialog.showOpenDialog(win, { filters: [{ name: 'Excel', extensions: ['xlsx', 'xls', 'xlsb'] }], properties: ['openFile'] }); if (canceled || !filePaths[0]) return null;
     const wb = XLSX.read(fs.readFileSync(filePaths[0]), { type: 'buffer' }), ws = wb.Sheets[wb.SheetNames.find(n => !wb.Sheets[n]['!hidden']) || wb.SheetNames[0]];
     return { ...(await qa('tdImport', XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false }))), file: path.basename(filePaths[0]) }; });

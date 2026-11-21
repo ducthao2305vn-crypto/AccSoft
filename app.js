@@ -2267,7 +2267,7 @@ async function bpStmtTab(H,tabs,yearSel,bind,D){
 
 // Thông báo chi phí cho trưởng bộ phận: ghép trưởng phòng ↔ nhân viên, xem trước PDF, gửi email
 async function bpNoticeTab(H,tabs,yearSel,bind){
-  const [r,HD,ST]=await Promise.all([aq('bpCompare',{year:BPF.year,from:BPF.from,to:BPF.to,view:'bydept',dept:''}),aq('bpHeads'),aq('staffList',{})]);
+  const [r,HD,ST,TR]=await Promise.all([aq('bpCompare',{year:BPF.year,from:BPF.from,to:BPF.to,view:'bydept',dept:''}),aq('bpHeads'),aq('staffList',{}),aq('bpTree')]);const TRn=(TR||[]).filter(t=>t.code).length;
   const G=new Map(r.groups.map(g=>[g.dept,g])),S=(ST.rows||[]).filter(x=>x.status!=='inactive'),SN=new Map(S.map(x=>[x.code,x]));
   const pc=(a,p)=>Math.abs(p)>0.004?(a/p*100).toFixed(1)+'%':'–',sel=new Set(ls.get('bpNtSel',[])),NT=Object.assign({subject:'Thông báo tình hình sử dụng chi phí {period} – {dept}',body:'Kính gửi Anh/Chị,\nPhòng Tài chính thông báo tình hình sử dụng chi phí của bộ phận như sau:',cc:''},ls.get('bpNt',{}));
   const rows=HD.map(h=>{const g=G.get(h.dept)||{P:0,A:0,PY:0};return {...h,P:g.P,A:g.A,PY:g.PY,remain:g.PY-g.A,over:g.A>g.P+0.004}}).filter(x=>x.P||x.A||x.PY||x.staff_code);
@@ -2275,6 +2275,7 @@ async function bpNoticeTab(H,tabs,yearSel,bind){
   H.innerHTML=`<div class="card"><div class="subbar"><span class="crumb">Thông báo chi phí cho trưởng bộ phận</span><span class="hint">Ghép trưởng bộ phận với nhân viên (lấy email từ Danh mục nhân viên), xem trước PDF rồi gửi. Nội dung: KH – TH kỳ, vượt / không vượt, khoản mục vượt, số còn được sử dụng các tháng còn lại (KH năm − TH).</span></div>${tabs}
     <div class="filterrow" style="margin-top:8px">${yearSel}<label>Từ tháng <select id="ntF">${[...Array(12)].map((_,i)=>`<option value="${i+1}" ${+BPF.from===i+1?'selected':''}>${i+1}</option>`).join('')}</select></label><label>Đến tháng <select id="ntT">${[...Array(12)].map((_,i)=>`<option value="${i+1}" ${+BPF.to===i+1?'selected':''}>${i+1}</option>`).join('')}</select></label>
       <span class="mut s">Nhanh:</span><button class="btn sm ghost" data-bpp="ytd">Luỹ kế đến nay</button>${[1,2,3,4].map(q=>`<button class="btn sm ghost" data-bpp="q${q}">Q${q}</button>`).join('')}</div></div>
+    <div class="card"><div class="row" style="gap:8px;align-items:center">${TRn?`<span class="mut s">Cây ngân sách: ${num(TRn)} khoản mục – PDF nhóm theo cây.</span>`:`<span class="neg">Chưa nạp cây ngân sách (sheet DM_CP_PB) – PDF sẽ không nhóm được theo nhóm chi phí.</span>`}<button class="btn sm ghost" id="ntTree">${TRn?'Nạp lại':'Nạp'} cây ngân sách</button></div></div>
     <div class="card"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label style="flex:1;min-width:320px">Tiêu đề <input id="ntSub" value="${esc(NT.subject)}" style="width:100%"></label><label>CC chung <input id="ntCc" value="${esc(NT.cc)}" placeholder="email; email" style="width:260px"></label></div>
       <label style="display:block;margin-top:8px">Lời mở đầu email<textarea id="ntBody" rows="2" style="width:100%">${esc(NT.body)}</textarea></label>
       <div class="row" style="margin-top:8px;gap:8px;align-items:center"><span class="mut s">{period} = kỳ, {dept} = tên bộ phận</span><div style="flex:1"></div><span id="ntSel" class="mut"></span><button class="btn sm primary" id="ntSend" disabled>Gửi thông báo các bộ phận đã chọn</button></div></div>
@@ -2293,6 +2294,7 @@ async function bpNoticeTab(H,tabs,yearSel,bind){
     if(e.target.dataset.nth!=null){const v=e.target.value.trim();if(v&&!SN.has(v))return alert('Mã nhân viên không có trong Danh mục nhân viên');await aq('bpSetHead',d,v,null);return vBP()}
     if(e.target.dataset.ntc!=null){const x=rows.find(z=>z.dept===d);await aq('bpSetHead',d,x.staff_code||'',e.target.value)}};
   H.onclick=async e=>{const b=e.target.closest('[data-ntp]');if(!b)return;save();const d=b.closest('tr').dataset.ntd;b.disabled=true;b.textContent='Đang tạo…';try{await api.bpNoticePreview(BPF.year,BPF.from,BPF.to,d,{})}catch(err){alert(err.message)}b.disabled=false;b.textContent='Xem PDF'};
+  $('#ntTree').onclick=async()=>{try{const x=await api.bpTreeImport();if(x){alert(`Đã nạp ${num(x.n)} dòng cây ngân sách từ sheet ${x.sheet}`);vBP()}}catch(err){alert(err.message)}};
   $('#ntSend').onclick=async()=>{save();const D=[...sel];if(!await ask(`Gửi thông báo chi phí ${per} cho ${num(D.length)} bộ phận?\nNên bấm "Xem PDF" kiểm tra trước khi gửi.`))return;const b=$('#ntSend');b.disabled=true;b.textContent='Đang gửi…';
     try{const res=await api.bpNoticeSend(BPF.year,BPF.from,BPF.to,D,{subject:NT.subject,body:NT.body,cc:NT.cc});const ok=res.filter(x=>x.ok),bad=res.filter(x=>!x.ok);alert(`Đã gửi ${ok.length} / ${res.length} bộ phận`+(bad.length?'\n\nKhông gửi được:\n'+bad.map(x=>`• ${x.dept}: ${x.error||''}`).join('\n'):''))}catch(err){alert(err.message)}vBP()};
 }

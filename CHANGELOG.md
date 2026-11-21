@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.8.3
+- Nhập kế hoạch ngân sách tự nạp cây khoản mục nếu file có sheet DM_CP_PB; tab Thông báo có cảnh báo + nút nạp cây; chưa có cây thì PDF không gom hết vào "Khác".
+
 ## 5.8.2
 - Thông báo chi phí (PDF/email): làm tròn số nguyên; bảng khoản mục vượt kế hoạch cũng nhóm theo cây chi phí.
 

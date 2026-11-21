@@ -10,12 +10,13 @@ const nm = s => String(s || '').replace(/^VTL_[A-Z]+_?\d+_/, '');
 function treeRows(tree, rows) {
   const M = new Map(rows.map(x => [String(x.code).toUpperCase(), x])), used = new Set(), out = [], nz = x => Math.abs(x.P) + Math.abs(x.A) + Math.abs(x.PY) > 0.004;
   const T = (tree || []).filter(t => t.lvl > 0);
+  if (!T.length) return rows.filter(nz).map(x => ({ ...x, stt: '', lvl: 1, leaf: true, name: x.vn || x.en }));
   for (let i = 0; i < T.length; i++) { const t = T[i];
     if (t.code) { const x = M.get(String(t.code).toUpperCase()); if (x && nz(x)) { used.add(String(t.code).toUpperCase()); out.push({ ...x, stt: t.stt, lvl: t.lvl, leaf: true, name: t.vn || x.vn || t.en, en: t.en || x.en }); } continue; }
     let P = 0, A = 0, PY = 0; for (let j = i + 1; j < T.length && T[j].lvl > t.lvl; j++) if (T[j].code) { const x = M.get(String(T[j].code).toUpperCase()); if (x) { P += x.P; A += x.A; PY += x.PY; } }
     if (Math.abs(P) + Math.abs(A) + Math.abs(PY) > 0.004) out.push({ stt: t.stt, lvl: t.lvl, leaf: false, name: t.vn, en: t.en, P, A, PY, remain: PY - A, over: A > P + 0.004 }); }
   const rest = rows.filter(x => !used.has(String(x.code).toUpperCase()) && nz(x));
-  if (rest.length) { out.push({ stt: '', lvl: 1, leaf: false, name: 'KHÁC (chưa có trong cây ngân sách)', en: 'OTHERS', P: rest.reduce((a, x) => a + x.P, 0), A: rest.reduce((a, x) => a + x.A, 0), PY: rest.reduce((a, x) => a + x.PY, 0) }); out.at(-1).remain = out.at(-1).PY - out.at(-1).A;
+  if (rest.length) { out.push({ stt: '', lvl: 1, leaf: false, name: 'KHÁC (mã không có trong sheet DM_CP_PB)', en: 'OTHERS', P: rest.reduce((a, x) => a + x.P, 0), A: rest.reduce((a, x) => a + x.A, 0), PY: rest.reduce((a, x) => a + x.PY, 0) }); out.at(-1).remain = out.at(-1).PY - out.at(-1).A;
     for (const x of rest) out.push({ ...x, stt: '', lvl: 2, leaf: true, name: x.vn || x.en }); }
   return out;
 }
