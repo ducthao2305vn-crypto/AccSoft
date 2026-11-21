@@ -51,6 +51,9 @@ function make(db, all) {
       ((all(`SELECT max(ord) o FROM bud_plan WHERE year=?`, +r.year)[0] || {}).o || 0) + 1, code, norm(r.en), norm(r.vn), raw, dc, m, norm(r.note));
     return { ok: 1 };
   }
+  // Đổi phòng ban các dòng kế hoạch của (năm, mã khoản mục, phòng ban cũ) → phòng ban mới
+  function moveDept(year, code, from, to) { to = norm(to); if (!to) throw new Error('Chọn phòng ban đích'); const nm = ((all(`SELECT name FROM dept_cat WHERE code=?`, to)[0] || {}).name || to);
+    return tx(() => ({ n: run(`UPDATE bud_plan SET dept_code=?, dept_raw=?, updated_at=datetime('now','localtime') WHERE year=? AND code=? AND ifnull(dept_code,'')=?`, to, nm, +year, norm(code), norm(from)).changes })); }
   const remove = ids => tx(() => ({ n: [].concat(ids || []).reduce((s, id) => s + run(`DELETE FROM bud_plan WHERE id=?`, +id).changes, 0) }));
   // Lập kế hoạch năm mới từ năm có sẵn (giữ mã, tên, phòng ban; số theo hệ số, mặc định 0)
   function copyYear(from, to, factor = 0) {
@@ -97,6 +100,6 @@ function make(db, all) {
       FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept' WHERE e.ym>=? AND e.ym<=? AND ${NORM(CODE)}=? AND (${EXP('debit')} OR ${EXP('credit')}) ORDER BY e.account_date, e.id`, from, to, code === '(không có khoản mục)' ? '' : code)
       .filter(r => !dept || catOf(r.dept) === dept).map(r => ({ ...r, v: (/^[68]/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) ? r.a : 0) }));
   }
-  return { years, list, importAoa, save, remove, copyYear, compare, lines };
+  return { moveDept, years, list, importAoa, save, remove, copyYear, compare, lines };
 }
 module.exports = { make };

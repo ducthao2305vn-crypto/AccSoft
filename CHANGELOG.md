@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.5.2
+- Kế hoạch – thực hiện › tab So sánh (xem *chi tiết theo phòng ban* hoặc *một phòng ban*): nút **⇄ PB** ở dòng có kế hoạch – chọn phòng ban đích để chuyển kế hoạch của khoản mục đó sang phòng ban khác ngay trên bảng (hỏi lại kèm KH năm).
+
 ## 5.5.1
 - Kế hoạch chi phí › tab Kế hoạch: **đổi phòng ban hàng loạt** – lọc theo phòng ban (hoặc "⚠ Chưa khớp danh mục"), tích chọn dòng (ô đầu bảng chọn mọi dòng đang lọc), chọn phòng ban đích → **Đổi phòng ban** (hỏi lại kèm tổng KH). Vẫn sửa được phòng ban từng dòng ở cột Phòng ban.
 
