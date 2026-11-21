@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 5.4.2
+- Chi phí theo phòng ban: chỉ hiển thị **phòng ban danh mục** (phòng ban quản trị) – các tên phòng ban gốc (Department Sub) đã ánh xạ được gộp vào phòng ban danh mục, bỏ cột "Phòng ban danh mục" gây nhầm; phòng ban gốc chưa ánh xạ hiện riêng "(chưa ánh xạ)". Nhấn đúp vẫn ra đủ bút toán của mọi phòng ban gốc gộp vào.
+- Dòng có khoản mục đã gán **phòng ban cố định** (quy tắc khoản mục) nhưng hạch toán sai phòng ban: nhãn đỏ "⚠ N bút toán sai PB" (rê chuột xem khoản mục → phòng ban đúng) và nút **Gán lại** – chuyển ngay về phòng ban đúng (ghi điều chỉnh, hoàn tác được ở Điều chỉnh dữ liệu).
+
 ## 5.4.1
 - Kết quả hoạt động: phần **tổng hợp trên cùng** – Tổng doanh thu, Tổng chi phí (không gồm thuế TNDN), LNTT, Thuế TNDN, LNST (theo từng kỳ, tổng, so sánh, xuất Excel). Thuế TNDN = TK 821 hoặc khoản mục E17.1.11.4.3, tách khỏi chi phí thành phần riêng.
 - Tích **Hiện TK**: hiện mã tài khoản hạch toán (chỉ mã) dưới mỗi khoản mục kèm số tiền từng kỳ; xuất Excel kèm các dòng TK.

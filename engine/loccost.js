@@ -69,7 +69,7 @@ function make(db, all, get, okYm) {
     return setting('loc_groups', GROUPS[d] || GROUPS.location);
   }
   const norms = () => setting('veh_norm', {}); // định mức chi phí / xe / tháng theo nhóm
-  function matrix(d, from, to, keys = []) {
+  function matrix(d, from, to, keys = [], byCat = true) {
     const f = okYm(from), t = okYm(to), G = groups(d); if (!f || !t) return { months: [], rows: [], groups: G };
     const Gs = G.filter(g => !keys.length || keys.includes(g.k)), gm = new Map(); for (const g of Gs) for (const c of g.codes) gm.set(c, g.k);
     const isDept = d === 'dept', other = isDept && Gs.some(g => g.k === '(khoản mục ngoài danh mục)');
@@ -91,6 +91,15 @@ function make(db, all, get, okYm) {
       const dm = dmap && dmap.get(o.k);
       return { k: o.k, label: o.k || D(d).none, cat: dm ? dm.code + ' – ' + (dm.name || '') : '', g: o.g, gn: gn[o.g] || o.g, v: Object.fromEntries(months.map(x => [x, o.v[x] || 0])), tot, avg, n: o.n, gaps, high, over, lim, tcRows: o.tcv ? Object.entries(o.tcv).map(([tc, V]) => ({ tc, v: Object.fromEntries(months.map(x => [x, V[x] || 0])), tot: months.reduce((q, x) => q + (V[x] || 0), 0) })).filter(x => months.some(m => Math.abs(x.v[m]) > 0.004)).sort((a, b) => String(a.tc).localeCompare(String(b.tc))) : [], tcs: o.tc ? Object.entries(o.tc).filter(([, a]) => Math.abs(a) > 0.004).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1])).map(([tc, a]) => ({ tc, a })) : [] };
     }).filter(o => months.some(x => Math.abs(o.v[x]) > 0.004) || o.gaps.length);
+    // phòng ban: gộp các phòng ban gốc (Department Sub) theo PHÒNG BAN DANH MỤC đang quản trị – chỉ hiện phòng ban danh mục; k = danh sách phòng ban gốc
+    if (isDept && byCat) { const mg = new Map();
+      for (const o of rows) { const lab = o.cat || ((o.k || D(d).none) + ' (chưa ánh xạ)'), key = lab + '|' + o.g, x = mg.get(key);
+        if (!x) { mg.set(key, { ...o, label: lab, cat: o.cat ? '' : '', k: [o.k], v: { ...o.v }, tcRows: (o.tcRows || []).map(t => ({ ...t, v: { ...t.v } })), tcs: (o.tcs || []).map(t => ({ ...t })), mapped: !!o.cat }); continue; }
+        x.k.push(o.k); x.tot += o.tot; x.n += o.n; for (const m2 of months) x.v[m2] = (x.v[m2] || 0) + (o.v[m2] || 0);
+        for (const t of o.tcRows || []) { const y = x.tcRows.find(z => z.tc === t.tc); if (y) { y.tot += t.tot; for (const m2 of months) y.v[m2] = (y.v[m2] || 0) + (t.v[m2] || 0); } else x.tcRows.push({ ...t, v: { ...t.v } }); }
+        for (const t of o.tcs || []) { const y = x.tcs.find(z => z.tc === t.tc); if (y) y.a += t.a; else x.tcs.push({ ...t }); } }
+      rows = [...mg.values()].map(o => { const inP = months.filter(x => Math.abs(o.v[x] || 0) > 0.004), avg = inP.length ? o.tot / inP.length : 0;
+        if (o.k.every(x => !x)) o.k = ''; return { ...o, avg, high: months.filter(x => avg > 0 && (o.v[x] || 0) > 1.8 * avg && inP.length >= 3) }; }); }
     // so với cả đội xe / toàn bộ phòng ban: tổng kỳ của dòng so với trung vị các dòng cùng nhóm
     const byG = new Map(); for (const o of rows) if (o.k) (byG.get(o.g) || byG.set(o.g, []).get(o.g)).push(o.tot);
     const med = a => { const s = [...a].sort((x, y) => x - y), i = s.length >> 1; return s.length ? (s.length % 2 ? s[i] : (s[i - 1] + s[i]) / 2) : 0; };
@@ -107,7 +116,7 @@ function make(db, all, get, okYm) {
     else { if (!codes.length) return []; W = ` AND ${CODE} IN (${codes.map(() => '?').join(',')})`; A = codes; }
     return all(`SELECT e.id, e.ym, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.acc_debit_name drName, e.acc_credit_name crName, e.amount a, e.partner_debit bp, e.partner_credit bpCr,
         e.description ds, e.created_by u, e.type_of_cost t, e.location, e.plate, e.department_sub dept, e.department deptAcc, ${VAL(d)} val, f.value newVal, mk.st mk, mk.note mkNote, mk.at mkAt
-      FROM entries e ${FJ(d)} LEFT JOIN dim_mark mk ON mk.id=e.id AND mk.dim='${DIMS[d] ? d : ''}' WHERE e.ym>=? AND e.ym<=?${W} AND (${EXP('debit')} OR ${EXP('credit')})${key == null ? '' : ` AND ${VAL(d)}=?`}${tc == null ? '' : ` AND ${NORM("coalesce(e.type_of_cost,'')")}=${NORM('?')}`} ORDER BY e.account_date, e.id LIMIT 100000`, okYm(from), okYm(to), ...A, ...(key == null ? [] : [key || '']), ...(tc == null ? [] : [tc]))
+      FROM entries e ${FJ(d)} LEFT JOIN dim_mark mk ON mk.id=e.id AND mk.dim='${DIMS[d] ? d : ''}' WHERE e.ym>=? AND e.ym<=?${W} AND (${EXP('debit')} OR ${EXP('credit')})${key == null ? '' : Array.isArray(key) ? ` AND ${VAL(d)} IN (${key.map(() => '?').join(',')})` : ` AND ${VAL(d)}=?`}${tc == null ? '' : ` AND ${NORM("coalesce(e.type_of_cost,'')")}=${NORM('?')}`} ORDER BY e.account_date, e.id LIMIT 100000`, okYm(from), okYm(to), ...A, ...(key == null ? [] : Array.isArray(key) ? key.map(x => x || '') : [key || '']), ...(tc == null ? [] : [tc]))
       .map(r => ({ ...r, orig: d === 'location' ? r.location : d === 'plate' ? r.plate : r.dept, v: (/^[68]/.test(r.dr) && !/^911/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) && !/^911/.test(r.cr) ? r.a : 0) }));
   }
   // Giá trị đang dùng của chiều (để chọn khi điều chỉnh); phòng ban kèm tên danh mục
