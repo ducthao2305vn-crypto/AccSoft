@@ -643,3 +643,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Trường mới: entries.bank_account / bank_account_cr (SRC bankDr/bankCr). bank_acc.erp = danh sách TK ngân hàng ERP ghép (phân cách |). agg.srev = sales_region; phân tích doanh thu dùng coalesce(srev, trev); KQKD vẫn theo trev (mẫu).
 
 - Kết quả hoạt động: `engine/opres.js` (bảng or_cat nạp từ sheet DM; report từ agg: rev = coalesce(srev,trev) TK 5/7 Có−Nợ, exp = tcost TK 6/8 Nợ−Có; mã = phần trước '_'). Ledger kind 'or'. Trang `opres`.
+
+- NGUYÊN TẮC: mọi dữ liệu người dùng gắn với bút toán phải sống sót khi nạp lại (id đổi). Bảng mới khoá theo id → thêm vào KEEP trong queries.js (cột sig + trigger + rebindKeep chạy trong faRebind sau finalize), hoặc khoá theo chữ ký nội dung ngay từ đầu.

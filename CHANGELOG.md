@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 5.6.5
+- **Giữ nguyên mọi điều chỉnh của người dùng khi nạp lại dữ liệu**: bổ sung chữ ký nội dung bút toán + tự gắn lại sau mỗi lần nạp cho các bảng còn khoá theo id: đối chiếu sổ (lg_line), bút toán ghi sai / miễn quá hạn 1388, lỗi thêm tay, đánh dấu rà soát vị trí – xe – phòng ban, xác nhận dòng tiền, kỳ thuế, kết quả phân tích tự động. Trigger tự điền chữ ký ngay khi ghi nên nạp lại trong cùng phiên cũng không mất.
+- Đã có sẵn (theo chữ ký nội dung, không phụ thuộc id): điều chỉnh phòng ban / vị trí / xe / hợp đồng… (field_adj), điều chỉnh dòng tiền (cf_adj), điều chỉnh nội bộ (ig_adj), trạng thái lỗi, đánh dấu sao kê; kế hoạch, danh mục, quy tắc khoản mục, cài đặt lưu riêng.
+
 ## 5.6.4
 - Sửa lỗi "Provided value cannot be bound to SQLite parameter 6" khi **Chuyển phòng ban** bút toán từ cửa sổ thực hiện (KH – TH): gửi đủ thông tin bút toán (số chứng từ, ngày, số tiền, phòng ban gốc) để ghi điều chỉnh và gắn lại được sau khi nạp lại dữ liệu; ghi điều chỉnh không còn lỗi khi thiếu số chứng từ / ngày.
 
