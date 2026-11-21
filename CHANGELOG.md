@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 5.4.1
+- Kết quả hoạt động: phần **tổng hợp trên cùng** – Tổng doanh thu, Tổng chi phí (không gồm thuế TNDN), LNTT, Thuế TNDN, LNST (theo từng kỳ, tổng, so sánh, xuất Excel). Thuế TNDN = TK 821 hoặc khoản mục E17.1.11.4.3, tách khỏi chi phí thành phần riêng.
+- Tích **Hiện TK**: hiện mã tài khoản hạch toán (chỉ mã) dưới mỗi khoản mục kèm số tiền từng kỳ; xuất Excel kèm các dòng TK.
+
 ## 5.4.0
 - Trang mới **Kết quả hoạt động (doanh thu – chi phí)** theo mẫu Operation_Result: doanh thu theo **Sales Region** (thiếu thì Type of revenue), chi phí theo **Type of cost**, nhóm Level 1 → Level 2 → khoản mục theo danh mục (nạp từ sheet **DM** của file mẫu: TYPE, CATEGORY, CATEGORY_VN, Level 1, Level 2).
   - Xem theo **tháng / quý / năm** trong khoảng chọn; **so sánh 2 kỳ** bất kỳ (A − B, %); dòng Tổng doanh thu, Tổng chi phí, Lợi nhuận trước thuế; tên tiếng Việt / English; gom / mở nhóm.

@@ -28,12 +28,15 @@ function make(db, all) {
   const cat = () => all(`SELECT * FROM or_cat ORDER BY ord`);
   const months = () => all(`SELECT DISTINCT ym FROM agg WHERE ym IS NOT NULL ORDER BY ym`).map(r => r.ym);
   // Số liệu theo khoản mục × tháng
+  // Thuế TNDN (profit tax): TK 821 hoặc khoản mục E17.1.11.4.3 – tách khỏi chi phí để ra LNTT → thuế → LNST
+  const TAX_CODES = ['E17.1.11.4.3'], isTax = (acc, code) => /^821/.test(acc || '') || TAX_CODES.includes(code);
   function data(from, to) {
     const rows = all(`SELECT ym, side, acc, tcost, coalesce(srev, trev) rv, sum(amount) a FROM agg WHERE ym>=? AND ym<=? AND substr(acc,1,1) IN ('5','6','7','8') GROUP BY 1,2,3,4,5`, from, to);
-    const M = new Map(), names = new Map(), add = (kind, code, nm, ym, v) => { const k = kind + '|' + code; const o = M.get(k) || M.set(k, { kind, code, m: {} }).get(k); o.m[ym] = (o.m[ym] || 0) + v; if (nm && !names.has(k)) names.set(k, nm); };
+    const M = new Map(), names = new Map(), add = (kind, code, nm, ym, v, acc) => { const k = kind + '|' + code; const o = M.get(k) || M.set(k, { kind, code, m: {}, acc: {} }).get(k); o.m[ym] = (o.m[ym] || 0) + v;
+      const a = o.acc[acc] || (o.acc[acc] = {}); a[ym] = (a[ym] || 0) + v; if (nm && !names.has(k)) names.set(k, nm); };
     for (const r of rows) {
-      if (isRevAcc(r.acc)) add('rev', codeOf(r.rv) || '(TRỐNG)', nameOf(r.rv), r.ym, r.side === 'cr' ? r.a : -r.a);
-      else if (isExpAcc(r.acc)) add('exp', codeOf(r.tcost) || '(TRỐNG)', nameOf(r.tcost), r.ym, r.side === 'dr' ? r.a : -r.a);
+      if (isRevAcc(r.acc)) add('rev', codeOf(r.rv) || '(TRỐNG)', nameOf(r.rv), r.ym, r.side === 'cr' ? r.a : -r.a, r.acc);
+      else if (isExpAcc(r.acc)) { const c = codeOf(r.tcost) || '(TRỐNG)'; add(isTax(r.acc, c) ? 'tax' : 'exp', c, nameOf(r.tcost), r.ym, r.side === 'dr' ? r.a : -r.a, r.acc); }
     }
     return { M, names };
   }
@@ -50,11 +53,13 @@ function make(db, all) {
     const allPers = [...new Set(ms.map(m => perOf(m, g)))];
     const val = (o2, p) => { let s = 0; for (const [ym, v] of Object.entries(o2.m)) if (perOf(ym, g) === p) s += v; return s; };
     const items = [];
-    for (const [k, x] of M) { const c = CM.get(x.code), kind = c ? c.kind : x.kind;
+    for (const [k, x] of M) { const c = CM.get(x.code), kind = x.kind === 'tax' ? 'tax' : c ? c.kind : x.kind;
       const v = Object.fromEntries([...pers, ...cmp].map(p => [p, val(x, p)])), tot = pers.reduce((s, p) => s + v[p], 0);
       if (!Object.values(v).some(z => Math.abs(z) > 0.004)) continue;
-      items.push({ kind, code: x.code, en: c ? c.en : names.get(k) || '', vn: c ? c.vn : '', lv1: c ? c.lv1 : (kind === 'rev' ? 'DOANH THU CHƯA CÓ TRONG DANH MỤC' : 'CHI PHÍ CHƯA CÓ TRONG DANH MỤC'), lv2: c ? c.lv2 : '(chưa có trong danh mục)', ord: c ? c.ord : 1e6, mapped: !!c, v, tot }); }
-    items.sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'rev' ? -1 : 1) || a.ord - b.ord || a.code.localeCompare(b.code));
+      items.push({ kind, code: x.code, en: c ? c.en : names.get(k) || '', vn: c ? c.vn : '', lv1: c ? c.lv1 : (kind === 'rev' ? 'DOANH THU CHƯA CÓ TRONG DANH MỤC' : 'CHI PHÍ CHƯA CÓ TRONG DANH MỤC'), lv2: c ? c.lv2 : '(chưa có trong danh mục)', ord: c ? c.ord : 1e6, mapped: !!c, v, tot,
+        accs: Object.entries(x.acc).map(([acc, am]) => { const av = Object.fromEntries([...pers, ...cmp].map(p => [p, val({ m: am }, p)])); return { acc, v: av, tot: pers.reduce((s, p) => s + av[p], 0) }; }).filter(a => Object.values(a.v).some(z => Math.abs(z) > 0.004)).sort((a, b) => a.acc.localeCompare(b.acc)) }); }
+    const KO = { rev: 0, exp: 1, tax: 2 };
+    items.sort((a, b) => KO[a.kind] - KO[b.kind] || a.ord - b.ord || a.code.localeCompare(b.code));
     return { gran: g, from, to, pers, allPers, cmp, items, nCat: C.length, unmapped: items.filter(i => !i.mapped).length };
   }
   return { importCat, cat, months, report };

@@ -2182,10 +2182,13 @@ async function vOR(){const H=$('#orBody');H.innerHTML='<div class="card"><span c
       rows.push(`<tr data-orc="${esc(k)}" style="font-weight:700;background:#FFF6F2;cursor:pointer"><td>${op?'▾':'▸'}</td><td>${esc(l1)} <span class=mut style="font-weight:400">(${num(L1.length)})</span></td>${tds(v1,1)}</tr>`);xrow('',l1,v1,1);
       const l2s=[...new Set(L1.map(i=>i.lv2))];for(const l2 of l2s){const L2=L1.filter(i=>i.lv2===l2),sub=l2s.length>1||l2!==l1;
         if(sub){const v2=cols(L2);if(op)rows.push(`<tr style="font-weight:600;background:#FAFAFA"><td></td><td style="padding-left:18px">${esc(l2)}</td>${tds(v2)}</tr>`);xrow('',l2,v2,2)}
-        for(const i of L2){const vi=cols([i]);if(op)rows.push(`<tr class="dbl" data-ori="${esc(i.code)}" data-ork="${i.kind}"><td class="mut" style="font-size:12px">${esc(i.code)}</td><td style="padding-left:${sub?32:18}px">${esc(nm(i))}${i.mapped?'':' <span class="badge b-M">chưa có danh mục</span>'}</td>${tds(vi)}</tr>`);xrow(i.code,nm(i),vi,3)}}}
+        for(const i of L2){const vi=cols([i]);if(op)rows.push(`<tr class="dbl" data-ori="${esc(i.code)}" data-ork="${i.kind}"><td class="mut" style="font-size:12px">${esc(i.code)}</td><td style="padding-left:${sub?32:18}px">${esc(nm(i))}${i.mapped?'':' <span class="badge b-M">chưa có danh mục</span>'}</td>${tds(vi)}</tr>`);xrow(i.code,nm(i),vi,3);
+          if(ORF.acc)for(const ac of i.accs||[]){const va=cols([ac]);if(op)rows.push(`<tr style="color:var(--gray-500);font-size:12px"><td></td><td style="padding-left:${sub?52:38}px">TK ${esc(ac.acc)}</td>${tds(va)}</tr>`);xrow('','TK '+ac.acc,va,4)}}}}
     return vT};
-  const vR=sect('rev','TỔNG DOANH THU'),vE=sect('exp','TỔNG CHI PHÍ'),vP=vR.map((v,k)=>v-vE[k]);
-  rows.push(`<tr style="font-weight:800;background:#ECFDF3"><td></td><td>LỢI NHUẬN TRƯỚC THUẾ (Doanh thu − Chi phí)</td>${tds(vP,1)}</tr>`);xrow('','LỢI NHUẬN TRƯỚC THUẾ',vP,0);
+  const vR=sect('rev','TỔNG DOANH THU'),vE=sect('exp','TỔNG CHI PHÍ (không gồm thuế TNDN)'),vT=r.items.some(i=>i.kind==='tax')?sect('tax','THUẾ TNDN (Profit tax – TK 821 / E17.1.11.4.3)'):cols([]),vP=vR.map((v,k)=>v-vE[k]),vN=vP.map((v,k)=>v-vT[k]);
+  const top=[['TỔNG DOANH THU',vR,'#FFE4D5'],['TỔNG CHI PHÍ (không gồm thuế TNDN)',vE,'#FFE4D5'],['LỢI NHUẬN TRƯỚC THUẾ (LNTT)',vP,'#ECFDF3'],['THUẾ TNDN (Profit tax)',vT,'#FFF6F2'],['LỢI NHUẬN SAU THUẾ (LNST)',vN,'#D1FADF']];
+  const topRows=top.map(([t,v,bg])=>`<tr style="font-weight:800;background:${bg}"><td></td><td>${t}</td>${tds(v,1)}</tr>`).concat(`<tr><td colspan=${head.length+(hasC?0:0)} style="padding:2px;background:#fff"></td></tr>`);
+  const xtop=top.map(([t,v])=>{const o0=xl.length;xrow('',t,v,0);return xl.splice(o0,1)[0]});xl.unshift(...xtop,{});rows.unshift(...topRows);
   const opt=(L,v,lab)=>L.map(p=>`<option value="${p}" ${p===v?'selected':''}>${lab?lab(p):p}</option>`).join('');
   const AP=r.allPers.slice().reverse();
   H.innerHTML=`<div class="card"><div class="filterrow">
@@ -2193,12 +2196,12 @@ async function vOR(){const H=$('#orBody');H.innerHTML='<div class="card"><span c
     <label>Từ tháng <select id="orF">${opt(ms.slice().reverse(),ORF.from,ymLbl)}</select></label><label>Đến tháng <select id="orT">${opt(ms.slice().reverse(),ORF.to,ymLbl)}</select></label>
     <label>So sánh <select id="orA"><option value="">—</option>${opt(AP,A,pl)}</select></label><label>với <select id="orB"><option value="">—</option>${opt(AP,B,pl)}</select></label>
     <label>Tên <select id="orL"><option value="vn" ${ORF.lang==='vn'?'selected':''}>Tiếng Việt</option><option value="en" ${ORF.lang==='en'?'selected':''}>English</option></select></label>
-    <span style="flex:1"></span><button class="btn sm ghost" id="orCo">Gom tất cả</button><button class="btn sm ghost" id="orEx">Mở tất cả</button><button class="btn sm" id="orCat">Nạp danh mục (sheet DM)</button><button class="btn sm primary" id="orX">${ic('download')}Xuất Excel</button></div>
+    <label class="chip" style="cursor:pointer" title="Hiện các tài khoản hạch toán (mã TK) dưới mỗi khoản mục"><input type="checkbox" id="orAcc" ${ORF.acc?'checked':''}> Hiện TK</label><span style="flex:1"></span><button class="btn sm ghost" id="orCo">Gom tất cả</button><button class="btn sm ghost" id="orEx">Mở tất cả</button><button class="btn sm" id="orCat">Nạp danh mục (sheet DM)</button><button class="btn sm primary" id="orX">${ic('download')}Xuất Excel</button></div>
     <div class="hint" style="margin-top:6px">Doanh thu: Sales Region (thiếu thì Type of revenue), Có − Nợ TK 5xx/7xx; Chi phí: Type of cost, Nợ − Có TK 6xx/8xx; đã loại kết chuyển 911. Danh mục: ${num(r.nCat)} khoản mục${r.unmapped?` · <b class="neg">${num(r.unmapped)} mã chưa có trong danh mục</b> (nhóm riêng cuối mỗi phần)`:''}. Nhấn đúp khoản mục để xem bút toán.</div></div>
     <div class="card"><div class="tbl" style="max-height:calc(100vh - 250px)"><table style="font-size:12.5px"><thead><tr>${head.map((h,k)=>`<th${k>1?' class=n':''}>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div></div>`;
   const re=()=>vOR();
   $('#orG').onchange=e=>{ORF.gran=e.target.value;ORF.a=ORF.b='';re()};$('#orF').onchange=e=>{ORF.from=e.target.value;re()};$('#orT').onchange=e=>{ORF.to=e.target.value;re()};
-  $('#orA').onchange=e=>{ORF.a=e.target.value;re()};$('#orB').onchange=e=>{ORF.b=e.target.value;re()};$('#orL').onchange=e=>{ORF.lang=e.target.value;re()};
+  $('#orA').onchange=e=>{ORF.a=e.target.value;re()};$('#orB').onchange=e=>{ORF.b=e.target.value;re()};$('#orL').onchange=e=>{ORF.lang=e.target.value;re()};$('#orAcc').onchange=e=>{ORF.acc=e.target.checked;re()};
   $('#orCo').onclick=()=>{ORF.closed=[...new Set(r.items.map(i=>'1|'+i.kind+'|'+i.lv1))];re()};$('#orEx').onclick=()=>{ORF.closed=[];re()};
   $('#orCat').onclick=async()=>{try{const x=await api.orImportCat();if(x){alert(`Đã nạp ${num(x.n)} khoản mục từ sheet ${x.sheet} – ${x.file}`);re()}}catch(e){alert(e.message)}};
   $('#orX').onclick=async()=>{try{const f=await api.xlsxSheets(`KetQuaHoatDong_${ORF.gran.toUpperCase()}_${ORF.from}_${ORF.to}${hasC?'_'+A+'_vs_'+B:''}.xlsx`,[['Ket qua hoat dong',xl]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
