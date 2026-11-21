@@ -36,7 +36,7 @@ function treeRows(tree, rows) {
   const T = (tree || []).filter(t => t.lvl > 0);
   if (!T.length) return rows.filter(nz).map(x => ({ ...x, stt: '', lvl: 1, leaf: true, name: x.vn || x.en }));
   for (let i = 0; i < T.length; i++) { const t = T[i];
-    if (t.code) { const x = M.get(String(t.code).toUpperCase()); if (x && nz(x)) { used.add(String(t.code).toUpperCase()); out.push({ ...x, stt: t.stt, lvl: t.lvl, leaf: true, name: t.vn || x.vn || t.en, en: t.en || x.en }); } continue; }
+    if (t.code) { const x = M.get(String(t.code).toUpperCase()); if (x && nz(x)) { used.add(String(t.code).toUpperCase()); out.push({ ...x, stt: t.stt, lvl: t.lvl, leaf: true, name: t.vn || x.vn || t.en, en: x.en || t.en }); } continue; }
     let P = 0, A = 0, PY = 0; for (let j = i + 1; j < T.length && T[j].lvl > t.lvl; j++) if (T[j].code) { const x = M.get(String(T[j].code).toUpperCase()); if (x) { P += x.P; A += x.A; PY += x.PY; } }
     if (Math.abs(P) + Math.abs(A) + Math.abs(PY) > 0.004) out.push({ stt: t.stt, lvl: t.lvl, leaf: false, name: t.vn, en: t.en, P, A, PY, remain: PY - A, over: A > P + 0.004 }); }
   const rest = rows.filter(x => !used.has(String(x.code).toUpperCase()) && nz(x));

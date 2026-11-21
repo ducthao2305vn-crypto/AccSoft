@@ -71,7 +71,8 @@ function make(db, all) {
   // Nội dung thông báo cho 1 phòng ban: KH – TH kỳ, vượt / không, khoản mục vượt, KH năm còn lại cho các tháng còn lại
   function notice(year, from, to, dept) {
     const r = compare({ year, from, to, view: 'dept', dept }), T = r.total, g = r.groups[0] || { rows: [] };
-    const rows = g.rows.filter(x => Math.abs(x.P) + Math.abs(x.A) + Math.abs(x.PY) > 0.004).map(x => ({ code: x.code, vn: x.vn, en: x.en, P: x.P, A: x.A, PY: x.PY, over: x.A > x.P + 0.004, remain: x.PY - x.A, inPlan: x.inPlan }));
+    const CC = new Map(); try { for (const r of all(`SELECT code, name FROM cost_cat WHERE ifnull(name,'')<>''`)) CC.set(String(r.code).toUpperCase(), r.name); } catch { }
+    const rows = g.rows.filter(x => Math.abs(x.P) + Math.abs(x.A) + Math.abs(x.PY) > 0.004).map(x => ({ code: x.code, vn: x.vn, en: CC.get(String(x.code).toUpperCase()) || x.en, P: x.P, A: x.A, PY: x.PY, over: x.A > x.P + 0.004, remain: x.PY - x.A, inPlan: x.inPlan }));
     const h = heads().find(z => z.dept === dept) || { dept, name: dept };
     return { year: r.year, from: r.from, to: r.to, dept, deptName: h.name, head: h, P: T.P, A: T.A, PY: T.PY, over: T.A > T.P + 0.004, remain: T.PY - T.A, monthsLeft: 12 - r.to,
       tree: tree(), rows, overRows: rows.filter(x => x.over).sort((a, b) => (b.A - b.P) - (a.A - a.P)), outPlan: rows.filter(x => !x.inPlan && x.A > 0.004), hasPlan: r.hasPlan };

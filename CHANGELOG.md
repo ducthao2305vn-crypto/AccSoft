@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.8.6
+- Thông báo chi phí bản English: tên khoản mục lấy cột English của Danh mục khoản mục chi phí (cost_cat.name), thiếu mới dùng tên trong kế hoạch / cây ngân sách.
+
 ## 5.8.5
 - Thông báo chi phí: chọn ngôn ngữ Tiếng Việt / English cho cả PDF và email; email trình bày chuyên nghiệp (số liệu chính, cảnh báo, khoản mục vượt lớn nhất, đề nghị, chữ ký); CC chung và CC riêng từng bộ phận chọn nhiều người từ Danh mục nhân viên.
 

@@ -657,3 +657,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - bp:import tự gọi bpImportTree khi có sheet DM_CP_PB; treeRows: cây rỗng → danh sách phẳng.
 - bpnotice.pdfHtml: thead display:table-header-group (lặp tiêu đề), tr break-inside:avoid; mục đánh số La Mã; khổ dọc.
 - bpnotice: T.vi \/ T.en, o.lang; mailHtml(n, body, o); fileBase(n, o). UI notice: NT.lang, NT[lang].subject\/body, CC chips (email1||email2) qua datalist ntCcList.
+- bpNotice: en = cost_cat.name ưu tiên; treeRows leaf en = x.en || tree.en.
