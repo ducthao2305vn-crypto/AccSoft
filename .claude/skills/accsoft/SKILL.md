@@ -639,3 +639,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Phân tích TK theo kỳ: `taxacc` có preset (`taxacc_presets`, `taxacc_active`); preset 'tax' dùng khoá cài đặt cũ, preset khác khoá `<key>@<id>`. Bảng tax_period/tax_ok/tax_auto dùng chung (khoá theo bút toán/TK). IPC txPresets/txSetActive/txSavePreset/txRemovePreset.
 
 - Thuyết minh bên liên quan: `partners.rpNote(year)` (giao dịch = internalYears có điều chỉnh, excl ước tính; số dư cuối năm áp dụng ig_adj out/move, tách TK thu hộ của công ty `rp_cfg.passCos`). UI IG.m='rp' trong vInternal.
+
+- Trường mới: entries.bank_account / bank_account_cr (SRC bankDr/bankCr). bank_acc.erp = danh sách TK ngân hàng ERP ghép (phân cách |). agg.srev = sales_region; phân tích doanh thu dùng coalesce(srev, trev); KQKD vẫn theo trev (mẫu).

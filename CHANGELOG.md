@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 5.3.0
+- Nạp dữ liệu: thêm 2 trường **Bank Account** (ngân hàng phía Nợ) và **Bank Account Credit** (ngân hàng phía Có) – có ở nạp mới và **nạp bổ sung trường** cho dữ liệu đã nạp (không cần nạp lại).
+- Sao kê ngân hàng: tab **Ghép ngân hàng ERP** – danh mục ngân hàng trên ERP (số dòng / số tiền thu – chi, gần nhất), chọn tài khoản sao kê tương ứng. Sau khi ghép, đối chiếu 112 chỉ khớp sao kê với bút toán đúng ngân hàng (thu: Nợ 112 + Bank Account; chi: Có 112 + Bank Account Credit) và có bảng số dư sổ ↔ sao kê **theo từng tài khoản**.
+- Phân tích doanh thu (Doanh thu – chi phí theo khoản mục, biến động) dùng **Sales Region** làm khoản mục doanh thu (thiếu thì dùng Type of revenue). Bảng tổng hợp được dựng lại một lần khi mở bản mới, và sau khi nạp bổ sung Sales Region.
+
 ## 5.2.0
 - **Thuyết minh bên liên quan (IAS 24)** – Phân tích chuyên sâu › Giao dịch nội bộ › tab đầu tiên (tìm nhanh Ctrl+P "thuyết minh bên liên quan"):
   - Giao dịch trong năm so với năm trước theo từng bên liên quan (nhóm mẹ – con / cùng tập đoàn): bán hàng – doanh thu, mua dịch vụ – chi phí, mua hàng hoá – tài sản.

@@ -48,7 +48,7 @@ function make(db, { INC, all, get, okYm }) {
       rows = all(`SELECT coalesce(e.type_of_cost,'(chưa phân loại)')||' · '||coalesce(e.partner_credit,e.partner_debit,'(không đối tượng)') g, e.ym, sum(e.amount) v
         FROM entries e WHERE ${INC} AND NOT (e.acc_debit=e.acc_credit AND ifnull(e.partner_debit,'')=ifnull(e.partner_credit,'')) AND e.ym>=? AND e.ym<=? AND ${EXP_D} AND ${AUTO} GROUP BY 1,2`, from, ym);
     } else {
-      const G = by === 'acc' ? 'coalesce(e.acc_name,e.acc)' : by === 'dept' ? `coalesce(e.dept,'(trống)')` : kind === 'rev' ? `coalesce(e.trev,'(chưa phân loại)')` : `coalesce(e.tcost,'(chưa phân loại)')`;
+      const G = by === 'acc' ? 'coalesce(e.acc_name,e.acc)' : by === 'dept' ? `coalesce(e.dept,'(trống)')` : kind === 'rev' ? `coalesce(e.srev,e.trev,'(chưa phân loại)')` : `coalesce(e.tcost,'(chưa phân loại)')`;
       rows = all(`SELECT ${G} g, e.ym, sum(e.amount*${sign}) v FROM agg e WHERE ${INC} AND e.ym>=? AND e.ym<=? AND ${accF} GROUP BY 1,2`, from, ym);
     }
     const g = new Map();

@@ -14,7 +14,7 @@ const COLS = [
   ['product', 'product', 'TEXT'], ['uom', 'uom', 'TEXT'], ['loc', 'locator', 'TEXT'], ['locCr', 'locator_credit', 'TEXT'],
   ['distFrom', 'dist_from', 'TEXT'], ['distTo', 'dist_to', 'TEXT'], ['currency', 'currency', 'TEXT'], ['rate', 'rate', 'REAL'], ['rateVnd', 'rate_vnd', 'REAL'],
   ['grpCost', 'group_cost', 'TEXT'], ['services', 'services', 'TEXT'], ['location', 'location', 'TEXT'], ['project', 'project', 'TEXT'], ['period', 'period', 'TEXT'], ['plate', 'plate', 'TEXT'],
-  ['asset', 'asset', 'TEXT'], ['salesRegion', 'sales_region', 'TEXT'], // Sales Region = mã khoản mục doanh thu (A0xx_…) dùng cho báo cáo theo mẫu / phòng ban
+  ['asset', 'asset', 'TEXT'], ['salesRegion', 'sales_region', 'TEXT'], ['bankDr', 'bank_account', 'TEXT'], ['bankCr', 'bank_account_cr', 'TEXT'], // Bank Account = ngân hàng phía Nợ, Bank Account Credit = ngân hàng phía Có // Sales Region = mã khoản mục doanh thu (A0xx_…) dùng cho báo cáo theo mẫu / phòng ban
   ['amtAcc', 'amount_acc', 'REAL'], ['amtSrc', 'amount_src', 'REAL'], ['codeBooking', 'code_booking', 'TEXT'], // v5.0: Accounted Amount, Source Amount, Code Booking (amount = số dùng cho báo cáo theo cài đặt amount_basis) // v4.88: mã / tên tài sản (cột Asset của file ERP) – báo cáo tài sản & khấu hao
 ];
 const SEL_ENTRY = 'e.id, e.ym, (SELECT schema FROM imports i WHERE i.id=e.import_id) AS _schema, e.enriched AS _enriched, ' + COLS.map(c => 'e.' + c[1] + ' AS "' + c[0] + '"').join(', ');
@@ -117,7 +117,7 @@ function open(file, { cleanup = false, light = false } = {}) {
     CREATE TABLE IF NOT EXISTS fin_pmv(ym TEXT, a3 TEXT, p TEXT, v REAL);
     CREATE INDEX IF NOT EXISTS ix_finpmv ON fin_pmv(ym, a3);
     CREATE TABLE IF NOT EXISTS fin_close(ym TEXT, acc TEXT, ob REAL, dr REAL, cr REAL, cb REAL, PRIMARY KEY(ym, acc)) WITHOUT ROWID;
-    CREATE TABLE IF NOT EXISTS agg(ym TEXT, side TEXT, acc TEXT, acc_name TEXT, dept TEXT, tcost TEXT, trev TEXT, amount REAL, n INTEGER);
+    CREATE TABLE IF NOT EXISTS agg(ym TEXT, side TEXT, acc TEXT, acc_name TEXT, dept TEXT, tcost TEXT, trev TEXT, amount REAL, n INTEGER, srev TEXT);
     CREATE INDEX IF NOT EXISTS ix_agg_ym ON agg(ym);
     CREATE INDEX IF NOT EXISTS ix_e_accd ON entries(acc_debit);
     CREATE INDEX IF NOT EXISTS ix_e_accc ON entries(acc_credit);
@@ -126,6 +126,8 @@ function open(file, { cleanup = false, light = false } = {}) {
   // v3.9: ghi sẵn tháng / người nhập / bộ phận / chứng từ / trạng thái vào bảng lỗi → đếm, lọc lỗi không phải nối với bảng entries (1,5 triệu dòng)
   const xcols = db.prepare('PRAGMA table_info(errors)').all().map(c => c.name);
   for (const c of ['ym', 'u', 'dept', 'doc', 'st']) if (!xcols.includes(c)) db.exec(`ALTER TABLE errors ADD COLUMN ${c} TEXT`);
+  // v5.3: agg.srev = Sales Region (khoản mục doanh thu) – dựng lại agg một lần để phân tích doanh thu theo Sales Region
+  if (!db.prepare('PRAGMA table_info(agg)').all().some(c => c.name === 'srev')) { db.exec(`ALTER TABLE agg ADD COLUMN srev TEXT`); try { if (db.prepare('SELECT count(*) n FROM entries').get().n) rebuildAgg(db); } catch { } }
   db.exec(`DROP INDEX IF EXISTS ix_err_ym;`);
   fillErrCols(db); createErrIndexes(db);
   // bảng đếm lỗi / bút toán (err_sum, ent_sum) được dựng ở tác vụ nền buildAgg khi khởi động nếu còn thiếu – không khoá cửa sổ
@@ -150,9 +152,9 @@ function rebuildAgg(db, months = null) {
   db.exec('BEGIN');
   db.exec(`DELETE FROM agg WHERE 1${IN}`);
   for (const [side, col] of [['dr', 'debit'], ['cr', 'credit']])
-    db.exec(`INSERT INTO agg SELECT ym, '${side}', acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue, sum(amount), count(*) FROM entries
+    db.exec(`INSERT INTO agg(ym, side, acc, acc_name, dept, tcost, trev, amount, n, srev) SELECT ym, '${side}', acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue, sum(amount), count(*), sales_region FROM entries
       WHERE substr(acc_${col},1,1) IN ('5','6','7','8') AND ifnull(source_table,'')<>'OPENING_BALANCE' AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%' AND ym IS NOT NULL${IN}
-      GROUP BY ym, acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue`);
+      GROUP BY ym, acc_${col}, acc_${col}_name, department, type_of_cost, type_of_revenue, sales_region`);
   db.exec('COMMIT');
   rebuildFin(db, months);
   // Đếm bút toán theo tháng × người nhập (Tổng quan, Chấm điểm nhân viên không phải đếm hàng triệu dòng)

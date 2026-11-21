@@ -45,7 +45,7 @@ const SRC = {
   drName: ['Account', str], crName: ['Account credit', str], amtAcc: ['Accounted Amount', num], amtSrc: ['Source Amount', num], codeBooking: ['Code Booking', str], qty: ['Quantity', num], price: ['Unit Price', num],
   bp: ['Business Partner', str], bpCr: ['Bpartner credit', str], desc: ['Description', str], descP: ['DescriptionParent', str],
   dept: ['Department', str], deptSub: ['Department Sub', str], table: ['Table', str], tcost: ['Type of cost', str],
-  salesRegion: [['Sales Region', 'Sale Region', 'SalesRegion'], str], trev: ['Type of revenue ERP', str], trev2: ['Type of revenue BCCS', str], inv: ['Invoice', str], adv: ['Advance Request', str],
+  salesRegion: [['Sales Region', 'Sale Region', 'SalesRegion'], str], bankDr: [['Bank Account', 'BankAccount', 'C_BankAccount_ID'], str], bankCr: [['Bank Account Credit', 'BankAccount Credit', 'Bank Account Cr'], str], trev: ['Type of revenue ERP', str], trev2: ['Type of revenue BCCS', str], inv: ['Invoice', str], adv: ['Advance Request', str],
   contract: ['Contract', str], user: ['Created By', str], updUser: ['Updated By', str], cf: ['Cashflow activities', str], bts: ['BTS Site', str],
   product: ['Product', str], uom: ['UOM', str], loc: ['Locator', str], locCr: ['Locator Credit', str],
   distFrom: ['Distribution From', isoDate], distTo: ['Distribution To', isoDate], currency: ['Currency', str], rate: ['Rate', num], rateVnd: ['RateToVND', num],
@@ -292,10 +292,10 @@ async function enrichFile({ file, name }) {
   const rows = /\.csv$|\.txt$/i.test(name) ? csvRows(file, b => read += b) : xlsxRows(file, b => read += b);
   // Khớp theo số chứng từ + line + TK Nợ + TK Có + số tiền
   const find = db.prepare(`SELECT id, product, uom, locator, locator_credit, location, plate, asset FROM entries WHERE document_no IS ? AND line_no IS ? AND acc_debit=? AND acc_credit=? AND abs(coalesce(amount_acc,amount)-?)<0.005`);
-  const updAmt = db.prepare(`UPDATE entries SET amount_acc=coalesce(?,amount_acc), amount_src=coalesce(?,amount_src), code_booking=coalesce(?,code_booking), amount=? WHERE id=?`); let amtUpd = 0;
+  const updAmt = db.prepare(`UPDATE entries SET amount_acc=coalesce(?,amount_acc), amount_src=coalesce(?,amount_src), code_booking=coalesce(?,code_booking), amount=? WHERE id=?`); let amtUpd = 0, srN = 0;
   const upd = db.prepare(`UPDATE entries SET product=coalesce(?,product), uom=coalesce(?,uom), locator=coalesce(?,locator), locator_credit=coalesce(?,locator_credit),
     dist_from=coalesce(?,dist_from), dist_to=coalesce(?,dist_to), currency=coalesce(?,currency), rate=coalesce(?,rate), rate_vnd=coalesce(?,rate_vnd),
-    group_cost=coalesce(?,group_cost), services=coalesce(?,services), location=coalesce(?,location), project=coalesce(?,project), period=coalesce(?,period), plate=coalesce(?,plate), asset=coalesce(?,asset), sales_region=coalesce(?,sales_region), enriched=1 WHERE id=?`);
+    group_cost=coalesce(?,group_cost), services=coalesce(?,services), location=coalesce(?,location), project=coalesce(?,project), period=coalesce(?,period), plate=coalesce(?,plate), asset=coalesce(?,asset), sales_region=coalesce(?,sales_region), bank_account=coalesce(?,bank_account), bank_account_cr=coalesce(?,bank_account_cr), enriched=1 WHERE id=?`);
   const samples = [];
   db.exec('BEGIN');
   try {
@@ -305,11 +305,11 @@ async function enrichFile({ file, name }) {
       const r = normalize(vals, map); n++;
       const hit = find.all(r.doc ?? null, r.line ?? null, r.dr, r.cr, r.amtAcc ?? r.amt); // dữ liệu cũ lưu Accounted Amount
       if (!hit.length) { notFound++; if (samples.length < 20) samples.push(`${r.doc} line ${r.line} · ${r.dr}/${r.cr} · ${r.amt}`); continue; }
-      if (hit.length > 1) ambiguous++;
+      if (hit.length > 1) ambiguous++; if (r.salesRegion) srN++;
       matched++;
       if (r.amtSrc != null || r.codeBooking) for (const h of hit) { updAmt.run(r.amtAcc, r.amtSrc, r.codeBooking, r.amt, h.id); amtUpd++; } // Source Amount / Code Booking; amount theo cài đặt
-      if (!r.product && !r.loc && !r.locCr && !r.uom && !r.location && !r.plate && !r.asset && !r.salesRegion && r.amtSrc == null && !r.codeBooking) skipped++; // file gốc cũng không có mã hàng/kho: chỉ đánh dấu đã đối chiếu
-      for (const h of hit) { upd.run(r.product, r.uom, r.loc, r.locCr, r.distFrom, r.distTo, r.currency, r.rate, r.rateVnd, r.grpCost, r.services, r.location, r.project, r.period, r.plate, r.asset, r.salesRegion, h.id); if (h.product !== r.product || h.uom !== r.uom || h.locator !== r.loc || h.locator_credit !== r.locCr || (r.location && h.location !== r.location) || (r.plate && h.plate !== r.plate) || (r.asset && h.asset !== r.asset)) updated++; }
+      if (!r.product && !r.loc && !r.locCr && !r.uom && !r.location && !r.plate && !r.asset && !r.salesRegion && !r.bankDr && !r.bankCr && r.amtSrc == null && !r.codeBooking) skipped++; // file gốc cũng không có mã hàng/kho: chỉ đánh dấu đã đối chiếu
+      for (const h of hit) { upd.run(r.product, r.uom, r.loc, r.locCr, r.distFrom, r.distTo, r.currency, r.rate, r.rateVnd, r.grpCost, r.services, r.location, r.project, r.period, r.plate, r.asset, r.salesRegion, r.bankDr, r.bankCr, h.id); if (h.product !== r.product || h.uom !== r.uom || h.locator !== r.loc || h.locator_credit !== r.locCr || (r.location && h.location !== r.location) || (r.plate && h.plate !== r.plate) || (r.asset && h.asset !== r.asset)) updated++; }
       if (n % BATCH === 0) {
         db.exec('COMMIT'); db.exec('BEGIN');
         if (Date.now() - lastPost > 400) { lastPost = Date.now(); post({ type: 'progress', rows: n, pct: Math.min(99, read / size * 100), secs: (Date.now() - t0) / 1000 }); }
@@ -320,7 +320,7 @@ async function enrichFile({ file, name }) {
   if (!map) throw new Error('Không đúng định dạng file hạch toán (thiếu cột Account / Accounted Amount).');
   // Thông tin hàng tồn kho thay đổi → các tháng liên quan cần phân tích lại
   db.exec(`UPDATE months SET analyzed_ver=NULL WHERE ym IN (SELECT DISTINCT ym FROM entries WHERE enriched=1)`);
-  if (amtUpd) { post({ type: 'progress', label: 'Đang tổng hợp lại sổ theo số tiền mới…' }); rebuildAgg(db); }
+  if (amtUpd || srN) { post({ type: 'progress', label: 'Đang tổng hợp lại sổ (số tiền / Sales Region mới)…' }); rebuildAgg(db); }
   return { rows: n, matched, updated, notFound, ambiguous, skipped, samples, amtUpd, secs: (Date.now() - t0) / 1000 };
 }
 

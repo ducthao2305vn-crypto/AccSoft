@@ -83,11 +83,12 @@ function parse(buf, file, XLSX) {
 const BANKS = ['BNCTL', 'BNU', 'MANDIRI', 'MOSAN'];
 
 function make(db, all, FIN) {
-  db.exec(`CREATE TABLE IF NOT EXISTS bank_acc(acc TEXT PRIMARY KEY, bank TEXT, name TEXT, cur TEXT, gl TEXT, alias TEXT, note TEXT);
+  db.exec(`CREATE TABLE IF NOT EXISTS bank_acc(acc TEXT PRIMARY KEY, bank TEXT, name TEXT, cur TEXT, gl TEXT, alias TEXT, note TEXT, erp TEXT);
     CREATE TABLE IF NOT EXISTS bank_tx(id INTEGER PRIMARY KEY AUTOINCREMENT, acc TEXT, d TEXT, t TEXT, seq INTEGER, ref TEXT, ds TEXT, ben TEXT, dr REAL, cr REAL, bal REAL, file TEXT, imp TEXT);
     CREATE INDEX IF NOT EXISTS ix_btx ON bank_tx(acc, d, seq);
     CREATE TABLE IF NOT EXISTS bank_mark(sig TEXT PRIMARY KEY, st TEXT, doc TEXT, note TEXT, at TEXT);
     CREATE TABLE IF NOT EXISTS bank_imp(id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT, file TEXT, bank TEXT, acc TEXT, d1 TEXT, d2 TEXT, n INTEGER, removed INTEGER);`);
+  if (!all(`PRAGMA table_info(bank_acc)`).some(c => c.name === 'erp')) db.exec(`ALTER TABLE bank_acc ADD COLUMN erp TEXT`);
   const tx = f => { db.exec('BEGIN'); try { const r = f(); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; } };
   // Nạp các file đã đọc: thay dòng cũ của tài khoản trong [ngày đầu, ngày cuối] của file
   function importParsed(list) {
@@ -107,7 +108,7 @@ function make(db, all, FIN) {
   }
   const accounts = () => all(`SELECT a.*, (SELECT min(d) FROM bank_tx WHERE acc=a.acc) d1, (SELECT max(d) FROM bank_tx WHERE acc=a.acc) d2, (SELECT count(*) FROM bank_tx WHERE acc=a.acc) n FROM bank_acc a ORDER BY instr('BNCTL BNU MANDIRI MOSAN', a.bank), a.acc`);
   const months = () => all(`SELECT DISTINCT substr(d,1,7) ym FROM bank_tx ORDER BY 1 DESC`).map(r => r.ym);
-  function setAcc(acc, o) { for (const k of ['gl', 'alias', 'note', 'name', 'bank']) if (o[k] !== undefined) db.prepare(`UPDATE bank_acc SET ${k}=? WHERE acc=?`).run(o[k], acc); return true; }
+  function setAcc(acc, o) { for (const k of ['gl', 'alias', 'note', 'name', 'bank', 'erp']) if (o[k] !== undefined) db.prepare(`UPDATE bank_acc SET ${k}=? WHERE acc=?`).run(o[k], acc); return true; }
   function removeAcc(acc) { return tx(() => { db.prepare(`DELETE FROM bank_tx WHERE acc=?`).run(acc); db.prepare(`DELETE FROM bank_acc WHERE acc=?`).run(acc); return true; }); }
   // Sao kê kỳ [from, to] (yyyy-mm-dd) cho các ngân hàng / tài khoản chọn
   function report(from, to, banks = [], accs = []) {
@@ -144,24 +145,27 @@ function make(db, all, FIN) {
     const out = [];
     for (const [gl, A] of groups) {
       const lo = addD(from, -tol), hi = addD(to, tol), L = gl.length;
-      const E = all(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, description ds, partner_debit bp, partner_credit bpc FROM entries
+      const E = all(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, description ds, partner_debit bp, partner_credit bpc, bank_account bk, bank_account_cr bkc FROM entries
         WHERE account_date BETWEEN ? AND ? AND amount<>0 AND (substr(acc_debit,1,?)=? OR substr(acc_credit,1,?)=?)`, lo, hi, L, gl, L, gl);
       const B = []; // phía sổ: in = Nợ 112 (tiền vào), out = Có 112
       for (const e of E) {
-        if (e.dr.slice(0, L) === gl) B.push({ ...e, side: e.a > 0 ? 'in' : 'out', v: Math.abs(e.a), oth: e.cr, k: e.id + 'd' });
-        if (e.cr.slice(0, L) === gl) B.push({ ...e, side: e.a > 0 ? 'out' : 'in', v: Math.abs(e.a), oth: e.dr, k: e.id + 'c' });
+        if (e.dr.slice(0, L) === gl) B.push({ ...e, side: e.a > 0 ? 'in' : 'out', v: Math.abs(e.a), oth: e.cr, k: e.id + 'd', bkey: e.bk || '' });
+        if (e.cr.slice(0, L) === gl) B.push({ ...e, side: e.a > 0 ? 'out' : 'in', v: Math.abs(e.a), oth: e.dr, k: e.id + 'c', bkey: e.bkc || '' });
       }
       const used = new Set(), byAmt = new Map(), key = (side, v) => side + Math.round(v * 100);
       for (const b of B) (byAmt.get(key(b.side, b.v)) || byAmt.set(key(b.side, b.v), []).get(key(b.side, b.v))).push(b);
       const T = A.flatMap(a => a.rows.map(x => ({ x, a, side: x.cr > 0 ? 'in' : 'out', v: x.cr > 0 ? x.cr : x.dr })));
+      // TK ngân hàng ERP (Bank Account / Bank Account Credit) đã ghép với tài khoản sao kê → chỉ khớp với bút toán đúng ngân hàng; TK chưa ghép dùng các bút toán chưa thuộc ngân hàng nào đã ghép
+      const ES = a => new Set(String(a.erp || '').split('|').map(x => x.trim()).filter(Boolean)), MAP = new Map(A.map(a => [a.acc, ES(a)])), MAPPED = new Set(A.flatMap(a => [...ES(a)]));
+      const okB = (a, b) => { const m = MAP.get(a.acc); return m.size ? m.has(b.bkey) : !MAPPED.has(b.bkey); };
       for (const t of T) { const m = marks.get(sigOf(t.a.acc, t.x)); if (m) t.m = { st: m.st, doc: m.doc, note: m.note }; }
       const take = (t, list, st) => { t.m = { st, doc: [...new Set(list.map(b => b.doc))].join(', '), d: list[0].d, oth: [...new Set(list.map(b => b.oth))].join(', '), ds: list[0].ds, lag: dd(list[0].d, t.x.d) }; list.forEach(b => used.add(b.k)); };
       for (const t of T) { if (t.m) continue;
-        const c = (byAmt.get(key(t.side, t.v)) || []).filter(b => !used.has(b.k) && Math.abs(dd(b.d, t.x.d)) <= tol).sort((p, q) => Math.abs(dd(p.d, t.x.d)) - Math.abs(dd(q.d, t.x.d)));
+        const c = (byAmt.get(key(t.side, t.v)) || []).filter(b => !used.has(b.k) && okB(t.a, b) && Math.abs(dd(b.d, t.x.d)) <= tol).sort((p, q) => Math.abs(dd(p.d, t.x.d)) - Math.abs(dd(q.d, t.x.d)));
         if (c.length) take(t, [c[0]], 'auto'); }
       const docs = new Map(); for (const b of B) if (!used.has(b.k)) { const k = b.doc + '|' + b.side; (docs.get(k) || docs.set(k, []).get(k)).push(b); }
       for (const t of T) { if (t.m) continue;
-        for (const [k, list] of docs) { const fr = list.filter(b => !used.has(b.k)); if (fr.length < 2 || fr[0].side !== t.side) continue;
+        for (const [k, list] of docs) { const fr = list.filter(b => !used.has(b.k) && okB(t.a, b)); if (fr.length < 2 || fr[0].side !== t.side) continue;
           if (Math.abs(fr.reduce((s, b) => s + b.v, 0) - t.v) < 0.005 && Math.abs(dd(fr[0].d, t.x.d)) <= tol) { take(t, fr, 'group'); docs.delete(k); break; } } }
       for (const t of T) if (!t.m) t.m = { st: bookMax && t.x.d > bookMax ? 'nobook' : 'none' };
       const bookOpen = B.filter(b => !used.has(b.k) && b.d >= from && b.d <= to);
@@ -170,14 +174,31 @@ function make(db, all, FIN) {
       const ob = FIN ? sumGl(FIN.closeAt(prevYm(ym))) : null;
       const inB = B.filter(b => b.d >= from && b.d <= to && b.side === 'in').reduce((s, b) => s + b.v, 0), outB = B.filter(b => b.d >= from && b.d <= to && b.side === 'out').reduce((s, b) => s + b.v, 0);
       const bank = { open: A.reduce((s, a) => s + (a.open || 0), 0), cr: A.reduce((s, a) => s + a.cr, 0), dr: A.reduce((s, a) => s + a.dr, 0), close: A.reduce((s, a) => s + (a.close || 0), 0) };
-      out.push({ gl, accs: A.map(a => ({ acc: a.acc, bank: a.bank, alias: a.alias, name: a.name })), T, bookOpen, bookMax,
+      // số liệu sổ theo từng tài khoản ngân hàng (chỉ khi đã ghép TK ngân hàng ERP): đầu kỳ = Nợ − Có 112 có Bank Account tương ứng trước ngày đầu kỳ
+      const perAcc = A.map(a => { const m = [...MAP.get(a.acc)]; if (!m.length) return { acc: a.acc, mapped: false };
+        const ph = m.map(() => '?').join(','), q = (col, bcol, cond, ...x) => (all(`SELECT sum(amount) v FROM entries WHERE substr(${col},1,?)=? AND ${bcol} IN (${ph}) AND ${cond}`, L, gl, ...m, ...x)[0] || {}).v || 0;
+        const open = q('acc_debit', 'bank_account', 'account_date<?', from) - q('acc_credit', 'bank_account_cr', 'account_date<?', from);
+        const inn = q('acc_debit', 'bank_account', 'account_date BETWEEN ? AND ?', from, to), outt = q('acc_credit', 'bank_account_cr', 'account_date BETWEEN ? AND ?', from, to);
+        return { acc: a.acc, mapped: true, erp: m, open, in: inn, out: outt, close: open + inn - outt, bank: { open: a.open, cr: a.cr, dr: a.dr, close: a.close } }; });
+      out.push({ gl, accs: A.map(a => ({ acc: a.acc, bank: a.bank, alias: a.alias, name: a.name, erp: a.erp })), perAcc, T, bookOpen, bookMax,
         book: { open: ob, in: inB, out: outB, close: ob == null ? null : ob + inB - outB }, bank,
         n: { auto: T.filter(t => t.m.st === 'auto' || t.m.st === 'group').length, manual: T.filter(t => t.m.st === 'manual').length, none: T.filter(t => t.m.st === 'none').length, nobook: T.filter(t => t.m.st === 'nobook').length } });
     }
     return { from, to, tol, bookMax, groups: out, accs: r.accs };
   }
+  // Danh mục ngân hàng trên ERP (Bank Account / Bank Account Credit của bút toán TK 112) và tài khoản sao kê đã ghép
+  function erpBanks() {
+    const m = new Map(), A = accounts();
+    for (const r of all(`SELECT bank_account b, count(*) n, max(account_date) d, sum(amount) v FROM entries WHERE bank_account IS NOT NULL AND bank_account<>'' AND acc_debit LIKE '112%' GROUP BY 1`)) m.set(r.b, { b: r.b, nIn: r.n, vIn: r.v, last: r.d, nOut: 0, vOut: 0 });
+    for (const r of all(`SELECT bank_account_cr b, count(*) n, max(account_date) d, sum(amount) v FROM entries WHERE bank_account_cr IS NOT NULL AND bank_account_cr<>'' AND acc_credit LIKE '112%' GROUP BY 1`)) { const o = m.get(r.b) || m.set(r.b, { b: r.b, nIn: 0, vIn: 0, last: r.d, nOut: 0, vOut: 0 }).get(r.b); o.nOut = r.n; o.vOut = r.v; if (!o.last || r.d > o.last) o.last = r.d; }
+    const has = all(`SELECT count(*) n FROM entries WHERE bank_account IS NOT NULL OR bank_account_cr IS NOT NULL`)[0].n;
+    return { has, list: [...m.values()].map(o => ({ ...o, acc: (A.find(a => String(a.erp || '').split('|').includes(o.b)) || {}).acc || '' })).sort((a, b) => (b.nIn + b.nOut) - (a.nIn + a.nOut)) };
+  }
+  function mapErp(erpBank, acc) { // ghép 1 TK ngân hàng ERP vào tài khoản sao kê (acc rỗng = bỏ ghép)
+    for (const a of accounts()) { const L = String(a.erp || '').split('|').filter(x => x && x !== erpBank); if (a.acc === acc) L.push(erpBank); const v = L.join('|'); if (v !== (a.erp || '')) db.prepare(`UPDATE bank_acc SET erp=? WHERE acc=?`).run(v || null, a.acc); }
+    return true; }
   const imports = () => all(`SELECT * FROM bank_imp ORDER BY id DESC LIMIT 200`);
-  return { importParsed, accounts, months, setAcc, removeAcc, report, imports, recon, mark, glOf };
+  return { erpBanks, mapErp, importParsed, accounts, months, setAcc, removeAcc, report, imports, recon, mark, glOf };
 }
 // Sổ Excel: Tổng hợp + Chi tiết gộp + 1 sheet / tài khoản (có cột trống để nhân viên đối chiếu hạch toán)
 function book(r, XLSX, rc) {
