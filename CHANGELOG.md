@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.8.4
+- PDF thông báo chi phí trình bày theo văn bản hành chính: tiêu ngữ, số văn bản, mục I–V (Tổng quan, Đánh giá, Khoản mục vượt, Chi tiết theo nhóm, Đề nghị), chữ ký; bảng lặp tiêu đề cột khi sang trang, có hàng chỉ số cột, khổ dọc A4.
+
 ## 5.8.3
 - Nhập kế hoạch ngân sách tự nạp cây khoản mục nếu file có sheet DM_CP_PB; tab Thông báo có cảnh báo + nút nạp cây; chưa có cây thì PDF không gom hết vào "Khác".
 
