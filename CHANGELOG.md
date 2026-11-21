@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.8.2
+- Thông báo chi phí (PDF/email): làm tròn số nguyên; bảng khoản mục vượt kế hoạch cũng nhóm theo cây chi phí.
+
 ## 5.8.1
 - Mẫu tờ trình song ngữ (Word) theo biểu mẫu chuẩn: điền sẵn bảng ngân sách từ khoản mục đã chọn; mẫu trống gửi các đơn vị.
 

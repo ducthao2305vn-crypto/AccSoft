@@ -653,3 +653,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Cây ngân sách: bảng bud_tree (nạp từ DM_CP_PB); bpnotice.treeRows / app bpTreeRows (nhóm cha cộng con, bỏ 0). Tab tờ trình BPF.tab='stmt' (bpStmtTab).
 
 - Tờ trình Word: engine/totrinh.js build(vendor\/totrinh_tpl.docx), IPC bp:stmtDocx; tab stmt nút #stDoc/#stBlank. Mẫu dựng bằng python-docx, placeholder {{UNIT}},{{TITLE}},{{R_NO}}...
+- bpnotice: f() làm tròn số nguyên; trow dùng chung cho bảng chi tiết và bảng vượt (treeRows).

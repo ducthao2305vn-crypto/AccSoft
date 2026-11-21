@@ -1,7 +1,7 @@
 'use strict';
 // Thông báo tình hình sử dụng chi phí cho trưởng bộ phận (PDF + nội dung email)
 const e = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-const f = v => (Math.round((+v || 0) * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const f = v => Math.round(+v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const pc = (a, p) => Math.abs(p) > 0.004 ? (a / p * 100).toFixed(1) + '%' : '–';
 const per = n => n.from === n.to ? `tháng ${n.to}/${n.year}` : `tháng ${n.from} – ${n.to}/${n.year}`;
 const nm = s => String(s || '').replace(/^VTL_[A-Z]+_?\d+_/, '');
@@ -41,6 +41,7 @@ function warnings(n) {
 }
 function pdfHtml(n, o = {}) {
   const W = warnings(n), row = (x, i) => `<tr${x.over ? ' class=ov' : ''}><td class=c>${i + 1}</td><td>${e(x.code)}</td><td>${e(x.vn || x.en)}</td><td class=n>${f(x.P)}</td><td class=n>${f(x.A)}</td><td class=n>${f(x.A - x.P)}</td><td class=n>${Math.abs(x.P) < 0.005 && x.A > 0.004 ? 'Ngoài KH' : pc(x.A, x.P)}</td><td class=n>${f(x.PY)}</td><td class=n>${f(x.remain)}</td></tr>`;
+  const trow = x => `<tr class="${x.leaf ? (x.over ? 'ov' : '') : 'g' + Math.min(x.lvl, 3)}"><td>${e(x.stt)}</td><td>${x.leaf ? e(x.code) : ''}</td><td style="padding-left:${6 + (x.lvl - 1) * 10}px">${x.leaf ? '' : '<b>'}${e(x.name)}${x.leaf ? '' : '</b>'}</td><td class=n>${f(x.P)}</td><td class=n>${f(x.A)}</td><td class=n>${f(x.A - x.P)}</td><td class=n>${Math.abs(x.P) < 0.005 && x.A > 0.004 ? 'Ngoài KH' : pc(x.A, x.P)}</td><td class=n>${f(x.PY)}</td><td class=n>${f(x.remain)}</td></tr>`;
   const head = `<tr><th>STT</th><th>Mã</th><th>Khoản mục</th><th>KH kỳ</th><th>TH kỳ</th><th>Chênh lệch</th><th>% TH/KH</th><th>KH năm</th><th>Còn lại năm</th></tr>`;
   return `<style>body{font-family:'Segoe UI',Arial,sans-serif;font-size:11.5px;color:#101828}h1{font-size:17px;text-align:center;margin:4px 0}.c{text-align:center}.m{color:#475467}
     table{width:100%;border-collapse:collapse;margin-top:8px}th,td{border:1px solid #D0D5DD;padding:4px 6px}th{background:#FFF1EB;font-size:10.5px}td.n{text-align:right;white-space:nowrap}tr.ov td{background:#FEF3F2}tr.g1 td{background:#FFE4D5;font-weight:700}tr.g2 td{background:#FFF1EB;font-weight:600}tr.g3 td{background:#FFF8F4}
@@ -50,8 +51,8 @@ function pdfHtml(n, o = {}) {
     <div class=k><div>KH kỳ<b>${f(n.P)}</b></div><div>TH kỳ<b style="color:${n.over ? '#B42318' : '#067647'}">${f(n.A)}</b>${pc(n.A, n.P)}</div><div>KH năm<b>${f(n.PY)}</b></div><div>Còn lại ${n.monthsLeft} tháng<b style="color:${n.remain < 0 ? '#B42318' : '#101828'}">${f(n.remain)}</b></div></div>
     <p>${summary(n).join('<br>')}</p>
     ${W.length ? `<div class=box><b>⚠ Cảnh báo</b><ul style="margin:4px 0 0 18px;padding:0">${W.map(x => `<li>${e(x)}</li>`).join('')}</ul></div>` : `<div class="box ok"><b>✓ Chi phí trong kế hoạch.</b></div>`}
-    ${n.overRows.length ? `<h3 style="margin:14px 0 0">Khoản mục vượt kế hoạch kỳ</h3><table>${head}${n.overRows.map(row).join('')}</table>` : ''}
-    <h3 style="margin:14px 0 0">Chi tiết theo nhóm quản trị và khoản mục</h3><table><tr><th>STT</th><th>Mã</th><th>Nhóm / khoản mục</th><th>KH kỳ</th><th>TH kỳ</th><th>Chênh lệch</th><th>% TH/KH</th><th>KH năm</th><th>Còn lại năm</th></tr>${treeRows(n.tree, n.rows).map(x => `<tr class="${x.leaf ? (x.over ? 'ov' : '') : 'g' + Math.min(x.lvl, 3)}"><td>${e(x.stt)}</td><td>${x.leaf ? e(x.code) : ''}</td><td style="padding-left:${6 + (x.lvl - 1) * 10}px">${x.leaf ? '' : '<b>'}${e(x.name)}${x.leaf ? '' : '</b>'}</td><td class=n>${f(x.P)}</td><td class=n>${f(x.A)}</td><td class=n>${f(x.A - x.P)}</td><td class=n>${Math.abs(x.P) < 0.005 && x.A > 0.004 ? 'Ngoài KH' : pc(x.A, x.P)}</td><td class=n>${f(x.PY)}</td><td class=n>${f(x.remain)}</td></tr>`).join('')}<tr style="font-weight:700;background:#F9FAFB"><td colspan=3>Tổng cộng</td><td class=n>${f(n.P)}</td><td class=n>${f(n.A)}</td><td class=n>${f(n.A - n.P)}</td><td class=n>${pc(n.A, n.P)}</td><td class=n>${f(n.PY)}</td><td class=n>${f(n.remain)}</td></tr></table>
+    ${n.overRows.length ? `<h3 style="margin:14px 0 0">Khoản mục vượt kế hoạch kỳ</h3><table>${head.replace('Khoản mục','Nhóm / khoản mục')}${treeRows(n.tree, n.overRows).map(trow).join('')}</table>` : ''}
+    <h3 style="margin:14px 0 0">Chi tiết theo nhóm quản trị và khoản mục</h3><table><tr><th>STT</th><th>Mã</th><th>Nhóm / khoản mục</th><th>KH kỳ</th><th>TH kỳ</th><th>Chênh lệch</th><th>% TH/KH</th><th>KH năm</th><th>Còn lại năm</th></tr>${treeRows(n.tree, n.rows).map(trow).join('')}<tr style="font-weight:700;background:#F9FAFB"><td colspan=3>Tổng cộng</td><td class=n>${f(n.P)}</td><td class=n>${f(n.A)}</td><td class=n>${f(n.A - n.P)}</td><td class=n>${pc(n.A, n.P)}</td><td class=n>${f(n.PY)}</td><td class=n>${f(n.remain)}</td></tr></table>
     <p class=m style="margin-top:10px;font-size:10.5px">Số thực hiện: chi phí TK 6xx/8xx (không gồm kết chuyển 911, thuế TNDN) theo phòng ban sau điều chỉnh. Còn lại năm = KH năm − TH ${per(n)}. ${e(o.note || 'Đề nghị bộ phận rà soát, giải trình các khoản mục vượt và điều chỉnh kế hoạch chi tiêu các tháng còn lại; phản hồi Phòng Tài chính nếu số liệu chưa đúng.')}</p>`;
 }
 function mailHtml(n, body) {
