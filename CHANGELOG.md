@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.8.5
+- Thông báo chi phí: chọn ngôn ngữ Tiếng Việt / English cho cả PDF và email; email trình bày chuyên nghiệp (số liệu chính, cảnh báo, khoản mục vượt lớn nhất, đề nghị, chữ ký); CC chung và CC riêng từng bộ phận chọn nhiều người từ Danh mục nhân viên.
+
 ## 5.8.4
 - PDF thông báo chi phí trình bày theo văn bản hành chính: tiêu ngữ, số văn bản, mục I–V (Tổng quan, Đánh giá, Khoản mục vượt, Chi tiết theo nhóm, Đề nghị), chữ ký; bảng lặp tiêu đề cột khi sang trang, có hàng chỉ số cột, khổ dọc A4.
 

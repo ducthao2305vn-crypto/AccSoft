@@ -732,14 +732,14 @@ ${R.map((x, i) => `<tr><td style="${TD}">${i + 1}</td><td style="${TD}"><b>${esc
 
   // ===== Thông báo chi phí cho trưởng bộ phận (KH – TH): xem trước PDF, gửi email kèm PDF =====
   async function bpNoticePdf(n, o) { const BN = require('./engine/bpnotice'), w = new BrowserWindow({ show: false, width: 1100, height: 1400, webPreferences: { sandbox: true } });
-    try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(BRAND.pdfHtml(BRAND.html(BN.pdfHtml(n, o || {}))))); return Buffer.from(await w.webContents.printToPDF(BRAND.pdfOpts(false))); } finally { w.destroy(); } }
+    try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(BRAND.pdfHtml(BRAND.html(BN.pdfHtml(n, o || {}))))); return Buffer.from(await w.webContents.printToPDF(BRAND.pdfOpts(!!(o && o.lang === 'en')))); } finally { w.destroy(); } }
   handle('bp:stmtDocx', async (_e, o = {}) => { const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `ToTrinh_${String(o.ucode || 'MAU').replace(/[^\w\-]+/g, '_')}_${o.year || ''}${o.items && o.items.length ? '' : '_MauTrang'}.docx`, filters: [{ name: 'Word', extensions: ['docx'] }] }); if (canceled) return null;
     fs.writeFileSync(filePath, require('./engine/totrinh').build(fs.readFileSync(path.join(__dirname, 'vendor', 'totrinh_tpl.docx')), o)); shell.openPath(filePath); return filePath; });
   handle('bp:treeImport', async () => { const { canceled, filePaths } = await dialog.showOpenDialog(win, { title: 'Chọn file ngân sách có sheet DM_CP_PB (cây khoản mục)', filters: [{ name: 'Excel', extensions: ['xlsx', 'xlsb', 'xls'] }], properties: ['openFile'] }); if (canceled || !filePaths[0]) return null;
     const wb = XLSX.read(fs.readFileSync(filePaths[0]), { type: 'buffer' }), sh = wb.SheetNames.find(n => /DM_CP/i.test(n)) || wb.SheetNames[0];
     return { ...(await qa('bpImportTree', XLSX.utils.sheet_to_json(wb.Sheets[sh], { header: 1, defval: '', raw: false }))), sheet: sh, file: path.basename(filePaths[0]) }; });
   handle('bp:noticePreview', async (_e, year, from, to, dept, o) => { const n = await qa('bpNotice', year, from, to, dept), BN = require('./engine/bpnotice');
-    const fp = path.join(os.tmpdir(), `${BN.fileBase(n)}_${Date.now()}.pdf`); fs.writeFileSync(fp, await bpNoticePdf(n, o));
+    const fp = path.join(os.tmpdir(), `${BN.fileBase(n, o)}_${Date.now()}.pdf`); fs.writeFileSync(fp, await bpNoticePdf(n, o));
     const er = await shell.openPath(fp); if (er) throw new Error('Không mở được PDF: ' + er); setTimeout(() => { try { fs.unlinkSync(fp); } catch { } }, 30 * 60e3).unref?.(); return fp; });
   handle('bp:noticeSend', async (_e, year, from, to, depts, o = {}) => { const BN = require('./engine/bpnotice'), cfg = mailer.getConfig(Q);
     if (!cfg.host) throw new Error('Chưa cấu hình máy chủ gửi mail (SMTP). Vào Báo cáo → Máy chủ gửi mail (SMTP) để thiết lập.');
@@ -747,9 +747,9 @@ ${R.map((x, i) => `<tr><td style="${TD}">${i + 1}</td><td style="${TD}"><b>${esc
     for (const dept of [].concat(depts || [])) { const n = await qa('bpNotice', year, from, to, dept);
       if (!n.head || !n.head.email) { out.push({ dept, ok: false, error: 'Chưa có email trưởng bộ phận' }); continue; }
       const cc = [...new Set([...String(n.head.cc || '').split(/[;,\s]+/), ...String(o.cc || '').split(/[;,\s]+/)].map(x => x.trim()).filter(x => /@/.test(x) && x !== n.head.email))];
-      const subj = String(o.subject || 'Thông báo tình hình sử dụng chi phí {period} – {dept}').replace(/\{period\}/g, BN.per(n)).replace(/\{dept\}/g, n.deptName || dept);
+      const subj = String(o.subject || (o.lang === 'en' ? 'Expense utilisation notice {period} – {dept}' : 'Thông báo tình hình sử dụng chi phí {period} – {dept}')).replace(/\{period\}/g, BN.per(n, o.lang === 'en')).replace(/\{dept\}/g, n.deptName || dept);
       const pdf = await bpNoticePdf(n, o);
-      const res = (await mailer.sendAll(Q, [{ to: n.head.email, cc: cc.length ? cc.join(', ') : undefined, subject: subj, html: BN.mailHtml(n, o.body), employee: dept, count: n.overRows.length, attachments: [{ name: BN.fileBase(n) + '.pdf', base64: pdf.toString('base64') }] }]))[0];
+      const res = (await mailer.sendAll(Q, [{ to: n.head.email, cc: cc.length ? cc.join(', ') : undefined, subject: subj, html: BN.mailHtml(n, o.body, o), employee: dept, count: n.overRows.length, attachments: [{ name: BN.fileBase(n, o) + '.pdf', base64: pdf.toString('base64') }] }]))[0];
       if (res && res.ok) await qa('bpMarkSent', dept, n.head.email);
       out.push({ dept, ok: !!(res && res.ok), to: n.head.email, error: res && res.error }); }
     return out; });
