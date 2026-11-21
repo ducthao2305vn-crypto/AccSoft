@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.6.3
+- Cửa sổ bút toán thực hiện (KH – TH): đổi nhãn "Gán phòng ban" thành **"Chuyển sang phòng ban" / nút "Chuyển phòng ban"** cho rõ nghĩa; câu hỏi xác nhận ghi cả mã và tên phòng ban đích.
+
 ## 5.6.2
 - Kế hoạch – thực hiện (tab So sánh và Dashboard): **bấm số KH** → mở các dòng kế hoạch của khoản mục × phòng ban, đổi phòng ban từng dòng (lưu ngay); **bấm số TH** → mở bút toán thực hiện, tích chọn và **Gán phòng ban** đúng (ghi điều chỉnh, hoàn tác ở Điều chỉnh dữ liệu). Đóng cửa sổ là bảng tự tính lại.
 - **Thuế TNDN** (khoản mục E17.1.11.4.3 / TK 821) không giao cho phòng ban: loại khỏi so sánh kế hoạch – thực hiện và Dashboard (cả kế hoạch lẫn thực hiện); xem ở Kết quả hoạt động (LNTT → thuế TNDN → LNST).
