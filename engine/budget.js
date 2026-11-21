@@ -53,6 +53,19 @@ function make(db, all) {
       ((all(`SELECT max(ord) o FROM bud_plan WHERE year=?`, +r.year)[0] || {}).o || 0) + 1, code, norm(r.en), norm(r.vn), raw, dc, m, norm(r.note));
     return { ok: 1 };
   }
+  // Trưởng bộ phận nhận thông báo chi phí: phòng ban danh mục → nhân viên (danh mục nhân viên)
+  db.exec(`CREATE TABLE IF NOT EXISTS dept_head(dept_code TEXT PRIMARY KEY, staff_code TEXT, cc TEXT, note TEXT, sent_at TEXT, sent_to TEXT)`);
+  const heads = () => all(`SELECT c.code dept, c.name, h.staff_code, h.cc, h.sent_at, h.sent_to, s.name sname, s.position, coalesce(nullif(s.email1,''), s.email2) email FROM dept_cat c LEFT JOIN dept_head h ON h.dept_code=c.code LEFT JOIN staff s ON s.code=h.staff_code ORDER BY c.code`);
+  const setHead = (dept, staff, cc) => { run(`INSERT INTO dept_head(dept_code, staff_code, cc) VALUES(?,?,?) ON CONFLICT(dept_code) DO UPDATE SET staff_code=excluded.staff_code, cc=coalesce(excluded.cc, dept_head.cc)`, norm(dept), norm(staff) || null, cc == null ? null : norm(cc)); return { ok: 1 }; };
+  const markSent = (dept, to) => run(`UPDATE dept_head SET sent_at=datetime('now','localtime'), sent_to=? WHERE dept_code=?`, to, dept);
+  // Nội dung thông báo cho 1 phòng ban: KH – TH kỳ, vượt / không, khoản mục vượt, KH năm còn lại cho các tháng còn lại
+  function notice(year, from, to, dept) {
+    const r = compare({ year, from, to, view: 'dept', dept }), T = r.total, g = r.groups[0] || { rows: [] };
+    const rows = g.rows.filter(x => Math.abs(x.P) + Math.abs(x.A) + Math.abs(x.PY) > 0.004).map(x => ({ code: x.code, vn: x.vn, en: x.en, P: x.P, A: x.A, PY: x.PY, over: x.A > x.P + 0.004, remain: x.PY - x.A, inPlan: x.inPlan }));
+    const h = heads().find(z => z.dept === dept) || { dept, name: dept };
+    return { year: r.year, from: r.from, to: r.to, dept, deptName: h.name, head: h, P: T.P, A: T.A, PY: T.PY, over: T.A > T.P + 0.004, remain: T.PY - T.A, monthsLeft: 12 - r.to,
+      rows, overRows: rows.filter(x => x.over).sort((a, b) => (b.A - b.P) - (a.A - a.P)), outPlan: rows.filter(x => !x.inPlan && x.A > 0.004), hasPlan: r.hasPlan };
+  }
   // Đổi phòng ban các dòng kế hoạch của (năm, mã khoản mục, phòng ban cũ) → phòng ban mới
   function moveDept(year, code, from, to) { to = norm(to); if (!to) throw new Error('Chọn phòng ban đích'); const nm = ((all(`SELECT name FROM dept_cat WHERE code=?`, to)[0] || {}).name || to);
     return tx(() => ({ n: run(`UPDATE bud_plan SET dept_code=?, dept_raw=?, updated_at=datetime('now','localtime') WHERE year=? AND code=? AND ifnull(dept_code,'')=?`, to, nm, +year, norm(code), norm(from)).changes })); }
@@ -103,6 +116,6 @@ function make(db, all) {
       FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept' WHERE e.ym>=? AND e.ym<=? AND ${NORM(CODE)}=? AND (${EXP('debit')} OR ${EXP('credit')}) ORDER BY e.account_date, e.id`, from, to, code === '(không có khoản mục)' ? '' : code)
       .filter(r => !dept || catOf(r.dept) === dept).map(r => ({ ...r, v: (/^[68]/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) ? r.a : 0) }));
   }
-  return { moveDept, years, list, importAoa, save, remove, copyYear, compare, lines };
+  return { heads, setHead, markSent, notice, moveDept, years, list, importAoa, save, remove, copyYear, compare, lines };
 }
 module.exports = { make };

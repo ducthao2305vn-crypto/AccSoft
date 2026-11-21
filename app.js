@@ -2213,6 +2213,38 @@ async function vOR(){const H=$('#orBody');H.innerHTML='<div class="card"><span c
   H.ondblclick=e=>{const tr=e.target.closest('[data-ori]');if(!tr)return;const code=tr.dataset.ori,kind=tr.dataset.ork;openLedger(code+' – '+tr.cells[1].innerText.trim(),`${kind==='rev'?'Doanh thu (Sales Region)':'Chi phí (Type of cost)'} · ${ymLbl(ORF.from)} → ${ymLbl(ORF.to)}`,{kind:'or',code,rk:kind,from:ORF.from,to:ORF.to},-1)};
 }
 
+
+// Thông báo chi phí cho trưởng bộ phận: ghép trưởng phòng ↔ nhân viên, xem trước PDF, gửi email
+async function bpNoticeTab(H,tabs,yearSel,bind){
+  const [r,HD,ST]=await Promise.all([aq('bpCompare',{year:BPF.year,from:BPF.from,to:BPF.to,view:'bydept',dept:''}),aq('bpHeads'),aq('staffList',{})]);
+  const G=new Map(r.groups.map(g=>[g.dept,g])),S=(ST.rows||[]).filter(x=>x.status!=='inactive'),SN=new Map(S.map(x=>[x.code,x]));
+  const pc=(a,p)=>Math.abs(p)>0.004?(a/p*100).toFixed(1)+'%':'–',sel=new Set(ls.get('bpNtSel',[])),NT=Object.assign({subject:'Thông báo tình hình sử dụng chi phí {period} – {dept}',body:'Kính gửi Anh/Chị,\nPhòng Tài chính thông báo tình hình sử dụng chi phí của bộ phận như sau:',cc:''},ls.get('bpNt',{}));
+  const rows=HD.map(h=>{const g=G.get(h.dept)||{P:0,A:0,PY:0};return {...h,P:g.P,A:g.A,PY:g.PY,remain:g.PY-g.A,over:g.A>g.P+0.004}}).filter(x=>x.P||x.A||x.PY||x.staff_code);
+  const per=`T${r.from}–T${r.to}/${r.year}`;
+  H.innerHTML=`<div class="card"><div class="subbar"><span class="crumb">Thông báo chi phí cho trưởng bộ phận</span><span class="hint">Ghép trưởng bộ phận với nhân viên (lấy email từ Danh mục nhân viên), xem trước PDF rồi gửi. Nội dung: KH – TH kỳ, vượt / không vượt, khoản mục vượt, số còn được sử dụng các tháng còn lại (KH năm − TH).</span></div>${tabs}
+    <div class="filterrow" style="margin-top:8px">${yearSel}<label>Từ tháng <select id="ntF">${[...Array(12)].map((_,i)=>`<option value="${i+1}" ${+BPF.from===i+1?'selected':''}>${i+1}</option>`).join('')}</select></label><label>Đến tháng <select id="ntT">${[...Array(12)].map((_,i)=>`<option value="${i+1}" ${+BPF.to===i+1?'selected':''}>${i+1}</option>`).join('')}</select></label>
+      <span class="mut s">Nhanh:</span><button class="btn sm ghost" data-bpp="ytd">Luỹ kế đến nay</button>${[1,2,3,4].map(q=>`<button class="btn sm ghost" data-bpp="q${q}">Q${q}</button>`).join('')}</div></div>
+    <div class="card"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label style="flex:1;min-width:320px">Tiêu đề <input id="ntSub" value="${esc(NT.subject)}" style="width:100%"></label><label>CC chung <input id="ntCc" value="${esc(NT.cc)}" placeholder="email; email" style="width:260px"></label></div>
+      <label style="display:block;margin-top:8px">Lời mở đầu email<textarea id="ntBody" rows="2" style="width:100%">${esc(NT.body)}</textarea></label>
+      <div class="row" style="margin-top:8px;gap:8px;align-items:center"><span class="mut s">{period} = kỳ, {dept} = tên bộ phận</span><div style="flex:1"></div><span id="ntSel" class="mut"></span><button class="btn sm primary" id="ntSend" disabled>Gửi thông báo các bộ phận đã chọn</button></div></div>
+    <div class="card"><datalist id="ntStaff">${S.map(x=>`<option value="${esc(x.code)}">${esc((x.name||'')+' · '+(x.position||'')+' · '+(x.dept||''))}</option>`).join('')}</datalist>
+      ${tbl0(['<input type="checkbox" id="ntAll">','Bộ phận','Trưởng bộ phận (mã nhân viên)','Email','CC riêng','#KH '+per,'#TH '+per,'#% TH/KH','Đánh giá','#Còn lại năm ('+(12-r.to)+' tháng)','Đã gửi',''],rows.map(x=>`<tr data-ntd="${esc(x.dept)}"><td><input type="checkbox" data-nts ${sel.has(x.dept)?'checked':''} ${x.email?'':'disabled title="Chưa có email"'}></td><td><b>${esc(x.dept)}</b><div class="mut s">${esc(x.name||'')}</div></td>
+        <td><input list="ntStaff" data-nth value="${esc(x.staff_code||'')}" placeholder="gõ mã / tên…" style="width:150px"><div class="mut s">${esc(x.sname||'')}${x.position?' · '+esc(x.position):''}</div></td><td style="font-size:12px">${x.email?esc(x.email):'<span class=neg>chưa có</span>'}</td>
+        <td><input data-ntc value="${esc(x.cc||'')}" placeholder="email" style="width:150px"></td><td class=n>${fmt2(x.P)}</td><td class=n><b>${fmt2(x.A)}</b></td><td class=n>${pc(x.A,x.P)}</td><td>${x.over?'<span class="badge b-H">Vượt KH</span>':x.P||x.A?'<span class="badge s-fixed">Trong KH</span>':''}</td><td class="n ${x.remain<0?'neg':''}">${fmt2(x.remain)}</td><td class=mut style="font-size:11px">${x.sent_at?esc(x.sent_at):''}</td><td><button class="btn sm" data-ntp>Xem PDF</button></td></tr>`),'Chưa có phòng ban danh mục')}</div>`;
+  bind();
+  const save=()=>{NT.subject=$('#ntSub').value;NT.cc=$('#ntCc').value;NT.body=$('#ntBody').value;ls.set('bpNt',NT)};['#ntSub','#ntCc','#ntBody'].forEach(q=>$(q).addEventListener('change',e=>{e.stopPropagation();save()}));
+  const upd=()=>{ls.set('bpNtSel',[...sel]);$('#ntSel').textContent=sel.size?`Đã chọn ${num(sel.size)} bộ phận`:'Chưa chọn bộ phận';$('#ntSend').disabled=!sel.size};upd();
+  $('#ntF').onchange=e=>{BPF.from=+e.target.value;BPF.to=Math.max(BPF.from,BPF.to);vBP()};$('#ntT').onchange=e=>{BPF.to=Math.max(BPF.from,+e.target.value);vBP()};
+  H.querySelectorAll('[data-bpp]').forEach(b=>b.onclick=async()=>{const v=b.dataset.bpp;if(v==='ytd'){const ms=(await aq('months')).map(m=>m.ym).filter(m=>m.startsWith(String(BPF.year))).sort();BPF.from=1;BPF.to=ms.length?+ms.at(-1).slice(5):12}else{const q=+v.slice(1);BPF.from=q*3-2;BPF.to=q*3}vBP()});
+  $('#ntAll').onchange=e=>{H.querySelectorAll('[data-nts]:not([disabled])').forEach(c=>{c.checked=e.target.checked;const d=c.closest('tr').dataset.ntd;e.target.checked?sel.add(d):sel.delete(d)});upd()};
+  H.onchange=async e=>{const tr=e.target.closest('tr[data-ntd]');if(!tr)return;e.stopPropagation();const d=tr.dataset.ntd;
+    if(e.target.dataset.nts!=null){e.target.checked?sel.add(d):sel.delete(d);return upd()}
+    if(e.target.dataset.nth!=null){const v=e.target.value.trim();if(v&&!SN.has(v))return alert('Mã nhân viên không có trong Danh mục nhân viên');await aq('bpSetHead',d,v,null);return vBP()}
+    if(e.target.dataset.ntc!=null){const x=rows.find(z=>z.dept===d);await aq('bpSetHead',d,x.staff_code||'',e.target.value)}};
+  H.onclick=async e=>{const b=e.target.closest('[data-ntp]');if(!b)return;save();const d=b.closest('tr').dataset.ntd;b.disabled=true;b.textContent='Đang tạo…';try{await api.bpNoticePreview(BPF.year,BPF.from,BPF.to,d,{})}catch(err){alert(err.message)}b.disabled=false;b.textContent='Xem PDF'};
+  $('#ntSend').onclick=async()=>{save();const D=[...sel];if(!await ask(`Gửi thông báo chi phí ${per} cho ${num(D.length)} bộ phận?\nNên bấm "Xem PDF" kiểm tra trước khi gửi.`))return;const b=$('#ntSend');b.disabled=true;b.textContent='Đang gửi…';
+    try{const res=await api.bpNoticeSend(BPF.year,BPF.from,BPF.to,D,{subject:NT.subject,body:NT.body,cc:NT.cc});const ok=res.filter(x=>x.ok),bad=res.filter(x=>!x.ok);alert(`Đã gửi ${ok.length} / ${res.length} bộ phận`+(bad.length?'\n\nKhông gửi được:\n'+bad.map(x=>`• ${x.dept}: ${x.error||''}`).join('\n'):''))}catch(err){alert(err.message)}vBP()};
+}
 async function bpDash(H,tabs,yearSel,bind){
   const r=await aq('bpCompare',{year:BPF.year,from:BPF.from,to:BPF.to,view:'bydept',dept:''}),T=r.total,G=r.groups.filter(g=>Math.abs(g.P)+Math.abs(g.A)+Math.abs(g.PY)>0.004);
   const pc=(a,p)=>Math.abs(p)>0.004?a/p*100:null,P1=v=>v==null?'–':v.toFixed(1)+'%',F=v=>fmt(v),M=[];for(let k=r.from;k<=r.to;k++)M.push(k);
@@ -2242,13 +2274,14 @@ async function bpDash(H,tabs,yearSel,bind){
 }
 async function vBP(){const H=$('#bpBody');ls.set('bpPick',BPF);H.innerHTML='<div class="card"><span class="spin"></span></div>';
   const [Y,D]=await Promise.all([aq('bpYears'),aq('dmDeptList')]),ys=[...new Set([...Y.map(y=>y.year),BPF.year,new Date().getFullYear(),new Date().getFullYear()+1])].sort();
-  const tabs=`<div class="row" style="gap:6px">${[['dash','Dashboard'],['cmp','So sánh kế hoạch – thực hiện'],['dept','Chi phí theo phòng ban (thực hiện)'],['plan','Kế hoạch (nạp / sửa / bổ sung)']].map(([k,l])=>`<button class="btn sm ${BPF.tab===k?'primary':''}" data-bt="${k}">${l}</button>`).join('')}</div>`;
+  const tabs=`<div class="row" style="gap:6px">${[['dash','Dashboard'],['cmp','So sánh kế hoạch – thực hiện'],['dept','Chi phí theo phòng ban (thực hiện)'],['plan','Kế hoạch (nạp / sửa / bổ sung)'],['notice','Thông báo trưởng bộ phận']].map(([k,l])=>`<button class="btn sm ${BPF.tab===k?'primary':''}" data-bt="${k}">${l}</button>`).join('')}</div>`;
   const yearSel=`<label>Năm <select id="bpY">${ys.map(y=>`<option ${+BPF.year===y?'selected':''}>${y}</option>`).join('')}</select></label>`;
   const dsel=(id,v,all)=>`<select id="${id}" class="srch" data-auto="1" style="max-width:320px">${all?`<option value="">${all}</option>`:''}${D.map(x=>`<option value="${esc(x.code)}" ${v===x.code?'selected':''}>${esc(x.code)} – ${esc(x.name||'')}</option>`).join('')}</select>`;
   const bind=()=>{H.querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{BPF.tab=b.dataset.bt;vBP()});$('#bpY').onchange=e=>{BPF.year=+e.target.value;vBP()}};
   if(BPF.view==='dept'&&!BPF.dept&&D[0])BPF.dept=D[0].code;
   if(BPF.tab==='plan')return bpPlan(H,tabs,yearSel,D,dsel,bind,Y);
   if(BPF.tab==='dash')return bpDash(H,tabs,yearSel,bind);
+  if(BPF.tab==='notice')return bpNoticeTab(H,tabs,yearSel,bind);
   if(BPF.tab==='dept'){H.innerHTML=`<div class="card" style="padding:10px 16px">${tabs}</div><div id="bpDept" style="display:flex;flex-direction:column;gap:16px"></div>`;H.querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{BPF.tab=b.dataset.bt;vBP()});const p2=n=>String(n).padStart(2,'0');DIMF.dept.from=`${BPF.year}-${p2(BPF.from)}`;DIMF.dept.to=`${BPF.year}-${p2(BPF.to)}`;return vDim('dept')}
   const r=await aq('bpCompare',{year:BPF.year,from:BPF.from,to:BPF.to,view:BPF.view,dept:BPF.view==='dept'?BPF.dept:''}),T=r.total,mn=k=>'T'+k;
   const pct=(a,p)=>Math.abs(p)>0.004?(a/p*100).toFixed(1)+'%':'',cell=v=>Math.abs(v||0)>0.004?fmt2(v):'',df=(a,p)=>{const d=a-p;return `<td class="n ${d>0.004&&p>0?'neg':''}">${cell(d)}</td>`};

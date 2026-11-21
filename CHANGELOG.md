@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## 5.7.0
+- Kế hoạch – thực hiện & chi phí phòng ban: tab **Thông báo trưởng bộ phận**.
+  - Ghép trưởng bộ phận cho từng phòng ban danh mục bằng mã nhân viên (gõ mã / tên, lấy email từ Danh mục nhân viên); CC riêng từng bộ phận + CC chung.
+  - Bảng theo kỳ đang chọn: KH kỳ, TH kỳ, % TH/KH, vượt / trong KH, còn lại năm cho các tháng còn lại (KH năm − TH), lần gửi gần nhất.
+  - **Xem PDF** trước khi gửi: thông báo gồm KH – TH kỳ, vượt hay không, **cảnh báo** (vượt kỳ, vượt năm, tốc độ chi nhanh hơn tiến độ thời gian, khoản mục ngoài KH), bảng khoản mục vượt, chi tiết theo khoản mục, số còn được sử dụng (bình quân / tháng).
+  - Gửi email hàng loạt cho các bộ phận đã chọn (tiêu đề, lời mở đầu sửa được; {period}, {dept}), kèm PDF; nội dung email tóm tắt KH – TH, cảnh báo, khoản mục vượt. Không gồm thuế TNDN.
+
 ## 5.6.6 – rà soát toàn bộ
 - Kiểm thử tự động mở 38 trang và các tab: không có lỗi hiển thị; kiểm tra khớp toàn bộ lệnh giao diện ↔ xử lý (READ/WRITE, preload, kênh IPC); chạy các báo cáo chính trên ~1,3 triệu dòng – không lỗi, báo cáo IFRS chậm nhất ~4 giây.
 - Trang Dữ liệu: danh sách sao lưu không làm lỗi trang nếu không đọc được thư mục sao lưu.
