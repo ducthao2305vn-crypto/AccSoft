@@ -658,3 +658,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - bpnotice.pdfHtml: thead display:table-header-group (lặp tiêu đề), tr break-inside:avoid; mục đánh số La Mã; khổ dọc.
 - bpnotice: T.vi \/ T.en, o.lang; mailHtml(n, body, o); fileBase(n, o). UI notice: NT.lang, NT[lang].subject\/body, CC chips (email1||email2) qua datalist ntCcList.
 - bpNotice: en = cost_cat.name ưu tiên; treeRows leaf en = x.en || tree.en.
+- treeRows(tree, rows, cat): nhóm en = cat[PFX+stt] (PFX suy từ lá có code kết thúc bằng .stt); n.catEn từ cost_cat.name.

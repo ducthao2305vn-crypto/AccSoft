@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.8.7
+- Thông báo chi phí bản English: dòng nhóm cũng lấy tên English từ Danh mục khoản mục chi phí (mã nhóm = E17.1. + STT trong cây, vd 4.6 → E17.1.4.6).
+
 ## 5.8.6
 - Thông báo chi phí bản English: tên khoản mục lấy cột English của Danh mục khoản mục chi phí (cost_cat.name), thiếu mới dùng tên trong kế hoạch / cây ngân sách.
 

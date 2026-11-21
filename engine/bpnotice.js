@@ -31,14 +31,16 @@ const T = {
     mail: { hi: 'Dear', fig: 'Key figures', item: 'Indicator', amt: 'Amount (USD)', top: 'Largest items exceeding the budget', over: 'Over', att: 'Details by cost group and item are in the attached PDF.', bye: 'Best regards,', more: k => `… and ${k} more item(s) (see PDF).`, auto: 'This email was sent from AccSoft – Finance & Accounting Department.' } } };
 const L = o => T[o && o.lang === 'en' ? 'en' : 'vi'];
 // Sắp các khoản mục theo cây ngân sách (DM_CP_PB): nhóm cha có cộng nhóm, bỏ nhóm / khoản mục bằng 0; khoản mục ngoài cây cho vào "Khác"
-function treeRows(tree, rows) {
+function treeRows(tree, rows, cat) {
   const M = new Map(rows.map(x => [String(x.code).toUpperCase(), x])), used = new Set(), out = [], nz = x => Math.abs(x.P) + Math.abs(x.A) + Math.abs(x.PY) > 0.004;
   const T = (tree || []).filter(t => t.lvl > 0);
+  const pl = T.find(t => t.code && String(t.code).endsWith('.' + t.stt)), PFX = pl ? String(pl.code).slice(0, String(pl.code).length - pl.stt.length) : 'E17.1.';
   if (!T.length) return rows.filter(nz).map(x => ({ ...x, stt: '', lvl: 1, leaf: true, name: x.vn || x.en }));
   for (let i = 0; i < T.length; i++) { const t = T[i];
     if (t.code) { const x = M.get(String(t.code).toUpperCase()); if (x && nz(x)) { used.add(String(t.code).toUpperCase()); out.push({ ...x, stt: t.stt, lvl: t.lvl, leaf: true, name: t.vn || x.vn || t.en, en: x.en || t.en }); } continue; }
     let P = 0, A = 0, PY = 0; for (let j = i + 1; j < T.length && T[j].lvl > t.lvl; j++) if (T[j].code) { const x = M.get(String(T[j].code).toUpperCase()); if (x) { P += x.P; A += x.A; PY += x.PY; } }
-    if (Math.abs(P) + Math.abs(A) + Math.abs(PY) > 0.004) out.push({ stt: t.stt, lvl: t.lvl, leaf: false, name: t.vn, en: t.en, P, A, PY, remain: PY - A, over: A > P + 0.004 }); }
+    const gen = (cat && cat[(PFX + t.stt).toUpperCase()]) || t.en;
+    if (Math.abs(P) + Math.abs(A) + Math.abs(PY) > 0.004) out.push({ stt: t.stt, lvl: t.lvl, leaf: false, name: t.vn, en: gen, P, A, PY, remain: PY - A, over: A > P + 0.004 }); }
   const rest = rows.filter(x => !used.has(String(x.code).toUpperCase()) && nz(x));
   if (rest.length) { out.push({ stt: '', lvl: 1, leaf: false, name: 'KHÁC (mã không có trong sheet DM_CP_PB)', en: 'OTHERS (codes not in DM_CP_PB)', P: rest.reduce((a, x) => a + x.P, 0), A: rest.reduce((a, x) => a + x.A, 0), PY: rest.reduce((a, x) => a + x.PY, 0) }); out.at(-1).remain = out.at(-1).PY - out.at(-1).A;
     for (const x of rest) out.push({ ...x, stt: '', lvl: 2, leaf: true, name: x.vn || x.en }); }
@@ -84,8 +86,8 @@ function pdfHtml(n, o = {}) {
     ${H(0)}<div class=k><div>${t.kP}<b>${f(n.P)}</b></div><div>${t.kA}<b style="color:${n.over ? '#B42318' : '#067647'}">${f(n.A)}</b>${pc(n.A, n.P)} ${t.ofP}</div><div>${t.kY(n.year)}<b>${f(n.PY)}</b>${t.used} ${pc(n.A, n.PY)}</div><div>${t.kR(n.monthsLeft)}<b style="color:${n.remain < 0 ? '#B42318' : '#101828'}">${f(n.remain)}</b></div></div>
     <ul>${summary(n, o).map(x => `<li>${x}</li>`).join('')}</ul>
     ${H(1)}${W.length ? `<div class=box><ul>${W.map(x => `<li>${e(x)}</li>`).join('')}</ul></div>` : `<div class="box ok">${t.ok}</div>`}
-    ${n.overRows.length ? H(2) + table(treeRows(n.tree, n.overRows), false) : ''}
-    ${H(3)}${table(treeRows(n.tree, n.rows), true)}
+    ${n.overRows.length ? H(2) + table(treeRows(n.tree, n.overRows, n.catEn), false) : ''}
+    ${H(3)}${table(treeRows(n.tree, n.rows, n.catEn), true)}
     ${H(4)}<ul>${(o.note ? [e(o.note)] : t.req).map(x => `<li>${x}</li>`).join('')}</ul>
     <div class=sig><div><b>${t.fin}</b><br><i style="font-size:9.5px">${t.sign}</i></div></div>
     <div class=note>${t.note(P)}</div>`;

@@ -75,7 +75,7 @@ function make(db, all) {
     const rows = g.rows.filter(x => Math.abs(x.P) + Math.abs(x.A) + Math.abs(x.PY) > 0.004).map(x => ({ code: x.code, vn: x.vn, en: CC.get(String(x.code).toUpperCase()) || x.en, P: x.P, A: x.A, PY: x.PY, over: x.A > x.P + 0.004, remain: x.PY - x.A, inPlan: x.inPlan }));
     const h = heads().find(z => z.dept === dept) || { dept, name: dept };
     return { year: r.year, from: r.from, to: r.to, dept, deptName: h.name, head: h, P: T.P, A: T.A, PY: T.PY, over: T.A > T.P + 0.004, remain: T.PY - T.A, monthsLeft: 12 - r.to,
-      tree: tree(), rows, overRows: rows.filter(x => x.over).sort((a, b) => (b.A - b.P) - (a.A - a.P)), outPlan: rows.filter(x => !x.inPlan && x.A > 0.004), hasPlan: r.hasPlan };
+      tree: tree(), catEn: Object.fromEntries(CC), rows, overRows: rows.filter(x => x.over).sort((a, b) => (b.A - b.P) - (a.A - a.P)), outPlan: rows.filter(x => !x.inPlan && x.A > 0.004), hasPlan: r.hasPlan };
   }
   // Đổi phòng ban các dòng kế hoạch của (năm, mã khoản mục, phòng ban cũ) → phòng ban mới
   function moveDept(year, code, from, to) { to = norm(to); if (!to) throw new Error('Chọn phòng ban đích'); const nm = ((all(`SELECT name FROM dept_cat WHERE code=?`, to)[0] || {}).name || to);
