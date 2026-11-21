@@ -9,6 +9,8 @@ const NORM = x => `trim(replace(replace(replace(replace(${x}, char(160), ' '), c
 const EXP = s => `(e.acc_${s} GLOB '[68]*' AND e.acc_debit NOT LIKE '911%' AND e.acc_credit NOT LIKE '911%')`;
 const num = v => { const n = typeof v === 'number' ? v : +String(v ?? '').replace(/,/g, ''); return isFinite(n) ? n : 0; };
 
+// Thuế TNDN (Profit tax): không giao cho phòng ban nào – loại khỏi so sánh kế hoạch – thực hiện (xem ở Kết quả hoạt động: LNTT → thuế → LNST)
+const TAX = ['E17.1.11.4.3'];
 function make(db, all) {
   const run = (q, ...a) => db.prepare(q).run(...a);
   db.exec(`CREATE TABLE IF NOT EXISTS bud_plan(id INTEGER PRIMARY KEY AUTOINCREMENT, year INTEGER, ord INTEGER, code TEXT, en TEXT, vn TEXT, dept_raw TEXT, dept_code TEXT, m TEXT, note TEXT, updated_at TEXT);
@@ -69,14 +71,15 @@ function make(db, all) {
     const ym = k => `${year}-${String(k).padStart(2, '0')}`;
     const toCat = new Map(all(`SELECT src, code FROM dept_map`).map(r => [key(r.src), r.code])), cats = all(`SELECT code, name FROM dept_cat`), catSet = new Set(cats.map(c => c.code)), dName = new Map(cats.map(c => [c.code, c.name]));
     const catOf = v => toCat.get(key(v)) || (catSet.has(norm(v)) ? norm(v) : '');
+    const isTax = c => TAX.includes(c);
     const ccName = new Map(); try { for (const r of all(`SELECT code, name, vn FROM cost_cat`)) ccName.set(r.code, r); } catch { }
     const A = new Map(), P = new Map(), names = new Map(), add = (M, k, mi, v) => { const o = M.get(k) || M.set(k, Array(13).fill(0)).get(k); o[mi] += v; };
     for (const r of all(`SELECT e.ym, ${NORM('coalesce(f.value, e.department_sub, \'\')')} dv, ${NORM(CODE)} c, e.type_of_cost tc,
         sum(CASE WHEN ${EXP('debit')} THEN e.amount ELSE 0 END) - sum(CASE WHEN ${EXP('credit')} THEN e.amount ELSE 0 END) v
-      FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept' WHERE e.ym>=? AND e.ym<=? AND (${EXP('debit')} OR ${EXP('credit')}) GROUP BY 1,2,3,4`, ym(1), ym(12))) {
-      const dc = catOf(r.dv) || '(chưa ánh xạ)', c = r.c || '(không có khoản mục)'; if (dept && dc !== dept) continue;
+      FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept' WHERE e.ym>=? AND e.ym<=? AND (${EXP('debit')} OR ${EXP('credit')}) AND e.acc_debit NOT LIKE '821%' AND e.acc_credit NOT LIKE '821%' GROUP BY 1,2,3,4`, ym(1), ym(12))) {
+      const dc = catOf(r.dv) || '(chưa ánh xạ)', c = r.c || '(không có khoản mục)'; if ((dept && dc !== dept) || isTax(c)) continue;
       add(A, c + '|' + dc, +r.ym.slice(5), r.v); if (r.tc && !names.has(c)) names.set(c, { en: norm(String(r.tc).slice(String(r.tc).indexOf('_') + 1)) }); }
-    for (const r of all(`SELECT * FROM bud_plan WHERE year=?`, year)) { const dc = r.dept_code || '(chưa ánh xạ)'; if (dept && dc !== dept) continue;
+    for (const r of all(`SELECT * FROM bud_plan WHERE year=?`, year)) { const dc = r.dept_code || '(chưa ánh xạ)'; if ((dept && dc !== dept) || isTax(r.code)) continue;
       JSON.parse(r.m || '[]').forEach((v, i) => add(P, r.code + '|' + dc, i + 1, num(v))); const nm = names.get(r.code) || {}; if (!nm.vn) names.set(r.code, { en: r.en || nm.en, vn: r.vn }); }
     const keys = new Set([...A.keys(), ...P.keys()]), sum = (a, x, y) => { let s = 0; for (let k = x; k <= y; k++) s += a ? a[k] : 0; return s; };
     const lines = [...keys].map(k => { const [code, dc] = k.split('|'), a = A.get(k), p = P.get(k), nm = names.get(code) || {}, cc = ccName.get(code) || {};
