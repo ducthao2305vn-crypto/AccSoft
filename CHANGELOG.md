@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.6.1
+- Kế hoạch – thực hiện & chi phí phòng ban: **đồng bộ kỳ** giữa các tab – năm / từ tháng / đến tháng chọn ở Dashboard, So sánh, Kế hoạch dùng luôn cho tab Chi phí theo phòng ban và ngược lại (kỳ chọn ở tab phòng ban vượt sang năm khác thì cắt về tháng 12 của năm bắt đầu).
+
 ## 5.6.0
 - Gộp **Chi phí theo phòng ban** vào trang **Kế hoạch – thực hiện & chi phí phòng ban** (menu chỉ còn 1 mục): các tab Dashboard · So sánh kế hoạch – thực hiện · **Chi phí theo phòng ban (thực hiện)** · Kế hoạch. Tab chi phí phòng ban giữ đủ chức năng (lọc, nhấn đúp xem / điều chỉnh bút toán, Gán lại sai phòng ban, chuyển theo quy tắc khoản mục, báo cáo theo mẫu, xuất Excel). Tìm nhanh (Ctrl+P) "chi phí theo phòng ban" mở thẳng tab này.
 

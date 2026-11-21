@@ -1696,7 +1696,7 @@ const DIMU={
 };
 const DIMF={};for(const d in DIMU)DIMF[d]=Object.assign({from:'',to:'',g:[],key:'',q:'',only:false},ls.get('dimPick_'+d,{}));
 const DIMR={};
-async function vDim(d){const U=DIMU[d],F=DIMF[d],yms=(await aq('months')).map(m=>m.ym).sort();if(!F.to)F.to=yms.at(-1)||'';if(!F.from)F.from=yms.filter(m=>m.slice(0,4)===F.to.slice(0,4))[0]||F.to;
+async function vDim(d){if(d==='dept'){const F0=DIMF.dept;if(/^\d{4}-\d{2}$/.test(F0.from||'')&&/^\d{4}-\d{2}$/.test(F0.to||'')){const y=+F0.from.slice(0,4);if(F0.to.slice(0,4)!==F0.from.slice(0,4))F0.to=y+'-12';BPF.year=y;BPF.from=+F0.from.slice(5);BPF.to=Math.max(BPF.from,+F0.to.slice(5));ls.set('bpPick',BPF)}}const U=DIMU[d],F=DIMF[d],yms=(await aq('months')).map(m=>m.ym).sort();if(!F.to)F.to=yms.at(-1)||'';if(!F.from)F.from=yms.filter(m=>m.slice(0,4)===F.to.slice(0,4))[0]||F.to;
   $('#'+U.page).innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp…</div>';DIMR[d]=await aq('locMatrix',d,F.from,F.to,[]);if(d==='dept'){try{DIMR[d].scan=await aq('tdScan',F.from,F.to)}catch{}}/* lấy mọi khoản mục, lọc liên hoàn ở giao diện */ls.set('dimPick_'+d,F);dimDraw(d)}
 function dimDraw(d){const U=DIMU[d],F=DIMF[d],r=DIMR[d],H=$('#'+U.page),q=F.q.trim().toLowerCase(),M=r.months,isV=d==='plate',isL=d==='location',isD=d==='dept',byG=!isD;
   r.rows.forEach((o,i)=>o._i=i);/* giữ chỉ số gốc – byTc tạo bản sao */
@@ -2248,7 +2248,7 @@ async function vBP(){const H=$('#bpBody');ls.set('bpPick',BPF);H.innerHTML='<div
   if(BPF.view==='dept'&&!BPF.dept&&D[0])BPF.dept=D[0].code;
   if(BPF.tab==='plan')return bpPlan(H,tabs,yearSel,D,dsel,bind,Y);
   if(BPF.tab==='dash')return bpDash(H,tabs,yearSel,bind);
-  if(BPF.tab==='dept'){H.innerHTML=`<div class="card" style="padding:10px 16px">${tabs}</div><div id="bpDept" style="display:flex;flex-direction:column;gap:16px"></div>`;H.querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{BPF.tab=b.dataset.bt;vBP()});return vDim('dept')}
+  if(BPF.tab==='dept'){H.innerHTML=`<div class="card" style="padding:10px 16px">${tabs}</div><div id="bpDept" style="display:flex;flex-direction:column;gap:16px"></div>`;H.querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{BPF.tab=b.dataset.bt;vBP()});const p2=n=>String(n).padStart(2,'0');DIMF.dept.from=`${BPF.year}-${p2(BPF.from)}`;DIMF.dept.to=`${BPF.year}-${p2(BPF.to)}`;return vDim('dept')}
   const r=await aq('bpCompare',{year:BPF.year,from:BPF.from,to:BPF.to,view:BPF.view,dept:BPF.view==='dept'?BPF.dept:''}),T=r.total,mn=k=>'T'+k;
   const pct=(a,p)=>Math.abs(p)>0.004?(a/p*100).toFixed(1)+'%':'',cell=v=>Math.abs(v||0)>0.004?fmt2(v):'',df=(a,p)=>{const d=a-p;return `<td class="n ${d>0.004&&p>0?'neg':''}">${cell(d)}</td>`};
   const q=BPF.q.toLowerCase(),ok=x=>(!q||[x.code,x.vn,x.en,x.deptName].join(' ').toLowerCase().includes(q))&&(!BPF.over||x.A>x.P+0.004),M=[];for(let k=r.from;k<=r.to;k++)M.push(k);
