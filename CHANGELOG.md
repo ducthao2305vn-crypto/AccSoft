@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## 5.5.0
+- Kế hoạch – thực hiện chi phí: tab **Dashboard** (tab đầu) theo giai đoạn chọn (tháng, Q1–Q4, luỹ kế đến nay, cả năm):
+  - Thẻ: KH kỳ, TH kỳ (% KH), chênh lệch, KH năm (% đã thực hiện), số phòng ban / khoản mục vượt KH.
+  - Biểu đồ KH – TH từng tháng kèm đường luỹ kế; biểu đồ KH – TH theo phòng ban (đỏ = vượt).
+  - Bảng **đánh giá từng phòng ban**: KH, TH, chênh lệch, thanh % TH/KH, % năm, xếp loại (Vượt KH > 100% · Sát KH 90–100% · Trong KH 50–90% · Thực hiện thấp < 50%), số khoản mục vượt.
+  - Top 15 khoản mục vượt KH và Top 15 khoản mục chưa thực hiện / thấp; nhấn đúp mở bảng so sánh chi tiết của phòng ban.
+
 ## 5.4.3
 - Kế hoạch – thực hiện chi phí: ô **Chi tiết** chọn *Chỉ tổng kỳ / Theo tháng / Theo quý* (cột KH – TH từng tháng hoặc từng quý trong kỳ); nút nhanh **Luỹ kế đến nay** (tháng 1 → tháng có dữ liệu mới nhất), **Q1–Q4**, **Cả năm**. Xuất Excel theo đúng cột đang xem.
 
