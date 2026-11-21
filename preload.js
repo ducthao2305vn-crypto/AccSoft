@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('api', {
   grExport: (k, bps, o, kinds) => ipcRenderer.invoke('gr:export', k, bps, o, kinds),
   grMail: (k, bp, o) => ipcRenderer.invoke('gr:mail', k, bp, o),
   grAssignMail: (k, bps, o) => ipcRenderer.invoke('gr:assignMail', k, bps, o),
+  orImportCat: () => ipcRenderer.invoke('or:importCat'),
   bsImport: () => ipcRenderer.invoke('bs:import'),
   bsXlsxEn: (f, t, b) => ipcRenderer.invoke('bs:xlsxEn', f, t, b),
   bsXlsx: (f, t, b, a, tol) => ipcRenderer.invoke('bs:xlsx', f, t, b, a, tol),

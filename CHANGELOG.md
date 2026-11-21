@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## 5.4.0
+- Trang mới **Kết quả hoạt động (doanh thu – chi phí)** theo mẫu Operation_Result: doanh thu theo **Sales Region** (thiếu thì Type of revenue), chi phí theo **Type of cost**, nhóm Level 1 → Level 2 → khoản mục theo danh mục (nạp từ sheet **DM** của file mẫu: TYPE, CATEGORY, CATEGORY_VN, Level 1, Level 2).
+  - Xem theo **tháng / quý / năm** trong khoảng chọn; **so sánh 2 kỳ** bất kỳ (A − B, %); dòng Tổng doanh thu, Tổng chi phí, Lợi nhuận trước thuế; tên tiếng Việt / English; gom / mở nhóm.
+  - Mã chưa có trong danh mục gom riêng cuối mỗi phần để bổ sung; nhấn đúp khoản mục mở bút toán; xuất Excel đúng bố cục đang xem.
+- Ô chọn tháng / quý / năm không còn thêm ô "Gõ để tìm…" (đỡ rối bộ lọc mọi trang).
+
 ## 5.3.0
 - Nạp dữ liệu: thêm 2 trường **Bank Account** (ngân hàng phía Nợ) và **Bank Account Credit** (ngân hàng phía Có) – có ở nạp mới và **nạp bổ sung trường** cho dữ liệu đã nạp (không cần nạp lại).
 - Sao kê ngân hàng: tab **Ghép ngân hàng ERP** – danh mục ngân hàng trên ERP (số dòng / số tiền thu – chi, gần nhất), chọn tài khoản sao kê tương ứng. Sau khi ghép, đối chiếu 112 chỉ khớp sao kê với bút toán đúng ngân hàng (thu: Nợ 112 + Bank Account; chi: Có 112 + Bank Account Credit) và có bảng số dư sổ ↔ sao kê **theo từng tài khoản**.

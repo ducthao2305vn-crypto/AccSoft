@@ -641,3 +641,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Thuyết minh bên liên quan: `partners.rpNote(year)` (giao dịch = internalYears có điều chỉnh, excl ước tính; số dư cuối năm áp dụng ig_adj out/move, tách TK thu hộ của công ty `rp_cfg.passCos`). UI IG.m='rp' trong vInternal.
 
 - Trường mới: entries.bank_account / bank_account_cr (SRC bankDr/bankCr). bank_acc.erp = danh sách TK ngân hàng ERP ghép (phân cách |). agg.srev = sales_region; phân tích doanh thu dùng coalesce(srev, trev); KQKD vẫn theo trev (mẫu).
+
+- Kết quả hoạt động: `engine/opres.js` (bảng or_cat nạp từ sheet DM; report từ agg: rev = coalesce(srev,trev) TK 5/7 Có−Nợ, exp = tcost TK 6/8 Nợ−Có; mã = phần trước '_'). Ledger kind 'or'. Trang `opres`.
