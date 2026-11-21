@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.4.3
+- Kế hoạch – thực hiện chi phí: ô **Chi tiết** chọn *Chỉ tổng kỳ / Theo tháng / Theo quý* (cột KH – TH từng tháng hoặc từng quý trong kỳ); nút nhanh **Luỹ kế đến nay** (tháng 1 → tháng có dữ liệu mới nhất), **Q1–Q4**, **Cả năm**. Xuất Excel theo đúng cột đang xem.
+
 ## 5.4.2
 - Chi phí theo phòng ban: chỉ hiển thị **phòng ban danh mục** (phòng ban quản trị) – các tên phòng ban gốc (Department Sub) đã ánh xạ được gộp vào phòng ban danh mục, bỏ cột "Phòng ban danh mục" gây nhầm; phòng ban gốc chưa ánh xạ hiện riêng "(chưa ánh xạ)". Nhấn đúp vẫn ra đủ bút toán của mọi phòng ban gốc gộp vào.
 - Dòng có khoản mục đã gán **phòng ban cố định** (quy tắc khoản mục) nhưng hạch toán sai phòng ban: nhãn đỏ "⚠ N bút toán sai PB" (rê chuột xem khoản mục → phòng ban đúng) và nút **Gán lại** – chuyển ngay về phòng ban đúng (ghi điều chỉnh, hoàn tác được ở Điều chỉnh dữ liệu).
