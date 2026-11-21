@@ -2296,7 +2296,7 @@ async function bpLines(x,dept,r,after){CUR=-1;const Dw=$('#drawer');Dw.classList
   $('#dPane tbody').onchange=e=>{const i=e.target.dataset.bli;if(i==null)return;e.target.checked?sel.add(+i):sel.delete(+i);upd()};
   $('#blAll').onchange=e=>{$$('#dPane [data-bli]').forEach(c=>{c.checked=e.target.checked;e.target.checked?sel.add(+c.dataset.bli):sel.delete(+c.dataset.bli)});upd()};
   $('#blGo').onclick=async()=>{const to=$('#blTo').value;if(!to)return alert('Chọn phòng ban đúng');const P=[...sel].map(i=>L[i]);if(!await ask(`Chuyển ${num(P.length)} bút toán (${fmt2(P.reduce((s2,y)=>s2+y.v,0))}) sang phòng ban ${to} – ${(D.find(d=>d.code===to)||{}).name||''}?\n(ghi điều chỉnh – hoàn tác ở Điều chỉnh dữ liệu)`))return;
-    try{await aq('faSet',P.map(y=>({id:y.id,dr:y.dr,cr:y.cr})),'dept',to,$('#blNote').value.trim());chg=true;await bpLines(x,dept,r,after);$('#dClose').onclick=()=>{closeDetail();(after||vBP)()}}catch(err){alert(err.message)}};}
+    try{await aq('faSet',P.map(y=>({id:y.id,doc:y.doc,d:y.d,dr:y.dr,cr:y.cr,a:y.a,aa:y.aa??y.a,bp:y.bp||'',bpCr:y.bpCr||'',dept:y.dept0??null})),'dept',to,$('#blNote').value.trim());chg=true;await bpLines(x,dept,r,after);$('#dClose').onclick=()=>{closeDetail();(after||vBP)()}}catch(err){alert(err.message)}};}
 // Dòng kế hoạch của (mã khoản mục × phòng ban): đổi phòng ban từng dòng
 async function bpPlanRows(x,dept,after){CUR=-1;const Dw=$('#drawer');Dw.classList.remove('full');Dw.classList.remove('hide');$('#dPane').innerHTML='<div class="card"><span class="spin"></span></div>';
   const [L0,D]=await Promise.all([aq('bpList',BPF.year),aq('dmDeptList')]),L=L0.filter(z=>z.code===x.code&&(!dept||(z.dept_code||'(chưa ánh xạ)')===dept));let chg=false;

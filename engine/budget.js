@@ -99,7 +99,7 @@ function make(db, all) {
   // Bút toán thực hiện của 1 mã khoản mục (và phòng ban danh mục) trong kỳ
   function lines(code, dept, from, to) {
     const toCat = new Map(all(`SELECT src, code FROM dept_map`).map(r => [key(r.src), r.code])), catSet = new Set(all(`SELECT code FROM dept_cat`).map(r => r.code)), catOf = v => toCat.get(key(v)) || (catSet.has(norm(v)) ? norm(v) : '') || '(chưa ánh xạ)';
-    return all(`SELECT e.id, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.amount a, e.partner_debit bp, e.partner_credit bpCr, e.description ds, e.created_by u, ${NORM('coalesce(f.value, e.department_sub, \'\')')} dept
+    return all(`SELECT e.id, e.account_date d, e.document_no doc, e.acc_debit dr, e.acc_credit cr, e.amount a, coalesce(e.amount_acc, e.amount) aa, e.department_sub dept0, e.partner_debit bp, e.partner_credit bpCr, e.description ds, e.created_by u, ${NORM('coalesce(f.value, e.department_sub, \'\')')} dept
       FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept' WHERE e.ym>=? AND e.ym<=? AND ${NORM(CODE)}=? AND (${EXP('debit')} OR ${EXP('credit')}) ORDER BY e.account_date, e.id`, from, to, code === '(không có khoản mục)' ? '' : code)
       .filter(r => !dept || catOf(r.dept) === dept).map(r => ({ ...r, v: (/^[68]/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) ? r.a : 0) }));
   }

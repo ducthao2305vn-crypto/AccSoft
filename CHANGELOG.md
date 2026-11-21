@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.6.4
+- Sửa lỗi "Provided value cannot be bound to SQLite parameter 6" khi **Chuyển phòng ban** bút toán từ cửa sổ thực hiện (KH – TH): gửi đủ thông tin bút toán (số chứng từ, ngày, số tiền, phòng ban gốc) để ghi điều chỉnh và gắn lại được sau khi nạp lại dữ liệu; ghi điều chỉnh không còn lỗi khi thiếu số chứng từ / ngày.
+
 ## 5.6.3
 - Cửa sổ bút toán thực hiện (KH – TH): đổi nhãn "Gán phòng ban" thành **"Chuyển sang phòng ban" / nút "Chuyển phòng ban"** cho rõ nghĩa; câu hỏi xác nhận ghi cả mã và tên phòng ban đích.
 

@@ -75,7 +75,7 @@ function make(db, all, run, okYm, FIN) {
       const r = diff.length ? FIN.cfAdjSet(diff.map(x => ({ ...x, sig: 'c:' + sigOf(x) })), value, note) : { n: 0 }; r.same = same.length; return r; }
     db.exec('BEGIN'); try { let n = 0;
       for (const x of items) { run(`INSERT OR REPLACE INTO field_adj(id, field, value, orig, sig, doc, d, ym, note, updated_at) VALUES(?,?,?,?,?,?,?,?,?,datetime('now','localtime'))`,
-        x.id, field, String(value ?? '').trim(), x[field] ?? null, sigOf(x), x.doc, x.d, String(x.d || '').slice(0, 7), note || ''); n++; }
+        x.id, field, String(value ?? '').trim(), x[field] ?? null, sigOf(x), x.doc ?? null, x.d ?? null, String(x.d || '').slice(0, 7), note || ''); n++; }
       db.exec('COMMIT'); return { n }; } catch (e) { db.exec('ROLLBACK'); throw e; }
   }
   function remove(keys) { let n = 0;
