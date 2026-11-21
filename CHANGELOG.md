@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.5.1
+- Kế hoạch chi phí › tab Kế hoạch: **đổi phòng ban hàng loạt** – lọc theo phòng ban (hoặc "⚠ Chưa khớp danh mục"), tích chọn dòng (ô đầu bảng chọn mọi dòng đang lọc), chọn phòng ban đích → **Đổi phòng ban** (hỏi lại kèm tổng KH). Vẫn sửa được phòng ban từng dòng ở cột Phòng ban.
+
 ## 5.5.0
 - Kế hoạch – thực hiện chi phí: tab **Dashboard** (tab đầu) theo giai đoạn chọn (tháng, Q1–Q4, luỹ kế đến nay, cả năm):
   - Thẻ: KH kỳ, TH kỳ (% KH), chênh lệch, KH năm (% đã thực hiện), số phòng ban / khoản mục vượt KH.
