@@ -2214,6 +2214,54 @@ async function vOR(){const H=$('#orBody');H.innerHTML='<div class="card"><span c
 }
 
 
+// Cây ngân sách (giống engine/bpnotice.treeRows): nhóm cha có cộng nhóm, bỏ dòng bằng 0, khoản mục ngoài cây vào "Khác"
+function bpTreeRows(tree,rows){const M=new Map(rows.map(x=>[String(x.code).toUpperCase(),x])),used=new Set(),out=[],nz=x=>Math.abs(x.P)+Math.abs(x.A)+Math.abs(x.PY)>0.004,T=(tree||[]).filter(t=>t.lvl>0);
+  for(let i=0;i<T.length;i++){const t=T[i];if(t.code){const x=M.get(String(t.code).toUpperCase());if(x&&nz(x)){used.add(String(t.code).toUpperCase());out.push({...x,stt:t.stt,lvl:t.lvl,leaf:true,name:t.vn||x.vn||t.en,en:t.en||x.en})}continue}
+    let P=0,A=0,PY=0;for(let j=i+1;j<T.length&&T[j].lvl>t.lvl;j++)if(T[j].code){const x=M.get(String(T[j].code).toUpperCase());if(x){P+=x.P;A+=x.A;PY+=x.PY}}
+    if(Math.abs(P)+Math.abs(A)+Math.abs(PY)>0.004)out.push({stt:t.stt,lvl:t.lvl,leaf:false,name:t.vn,en:t.en,P,A,PY})}
+  const rest=rows.filter(x=>!used.has(String(x.code).toUpperCase())&&nz(x));if(rest.length){out.push({stt:'',lvl:1,leaf:false,name:'KHÁC (chưa có trong cây ngân sách)',en:'OTHERS',P:rest.reduce((a,x)=>a+x.P,0),A:rest.reduce((a,x)=>a+x.A,0),PY:rest.reduce((a,x)=>a+x.PY,0)});for(const x of rest)out.push({...x,stt:'',lvl:2,leaf:true,name:x.vn||x.en})}
+  return out}
+// Ngân sách còn lại / tờ trình (mẫu MAU1): chọn phòng ban → khoản mục; chọn 1 hoặc nhiều khoản mục → KH năm, đã sử dụng, đề xuất, còn lại sau đề xuất
+async function bpStmtTab(H,tabs,yearSel,bind,D){
+  const SF=Object.assign({dept:'',sel:[],prop:0,note:'',lang:'vn',q:''},ls.get('bpStmt',{}));if(!SF.dept&&D[0])SF.dept=D[0].code;
+  const [r,T]=await Promise.all([aq('bpCompare',{year:BPF.year,from:1,to:BPF.to,view:'dept',dept:SF.dept}),aq('bpTree')]);
+  const rows=(r.groups[0]||{rows:[]}).rows.filter(x=>Math.abs(x.PY)+Math.abs(x.A)>0.004).map(x=>({...x,P:x.PY}));
+  const TR=bpTreeRows(T,rows),sel=new Set(SF.sel.filter(c=>rows.some(x=>x.code===c))),save=()=>{SF.sel=[...sel];ls.set('bpStmt',SF)},q=SF.q.toLowerCase();
+  const F2=v=>(Math.round((v||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const dn=(D.find(d=>d.code===SF.dept)||{}).name||SF.dept,EN=SF.lang==='en';
+  const block=()=>{const X=rows.filter(x=>sel.has(x.code));if(!X.length)return '<div class="mut" style="padding:20px">Tích chọn 1 hoặc nhiều khoản mục ở bảng bên trái.</div>';
+    const PY=X.reduce((s,x)=>s+x.PY,0),A=X.reduce((s,x)=>s+x.A,0),pr=+SF.prop||0,rem=PY-A-pr,nm=x=>EN?(x.en||x.vn):(x.vn||x.en),names=X.map(nm).join(' + ');
+    const L=EN?{t:['No','Contents','Amount ($)','Notes'],b:`Budget from the beginning of ${r.year}`,s:'Spent amount',p:'The amount proposed in this Statements',r:'Remaining Budget Amount'}:{t:['No','Nội dung','Số tiền ($)','Ghi chú'],b:`Ngân sách từ đầu năm ${r.year}`,s:'Số tiền đã sử dụng ở các tờ trình trước',p:'Số tiền đề xuất ở tờ trình này',r:'Số tiền ngân sách còn lại'};
+    const tr=(no,c,v,n,st)=>`<tr${st?` style="${st}"`:''}><td class=c>${no}</td><td>${c}</td><td class="n ${v<0?'neg':''}">${F2(v)}</td><td>${n||''}</td></tr>`;
+    return `<table id="stT" class="stT"><thead><tr>${L.t.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>
+      ${tr('1',`${L.b}${X.length===1?' – '+esc(nm(X[0])):' ('+esc(names)+')'}`,PY,'','font-weight:700')}${X.length>1?X.map((x,i)=>tr('1.'+(i+1),`${L.b} (${esc(nm(x))})`,x.PY,esc(x.code))).join(''):''}
+      ${tr('2',`${L.s} (${esc(names)})`,A,EN?`Accumulated Jan – ${['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][r.to]} ${r.year}`:`Luỹ kế T1 – T${r.to}/${r.year}`)}
+      ${tr('3',L.p,pr,esc(SF.note))}${tr('4',L.r,rem,rem<0?(EN?'Exceeds budget':'Vượt ngân sách'):'','font-weight:700'+(rem<0?';background:#FEF3F2':''))}</tbody></table>
+      <div class="kpis compact" style="margin-top:10px">${kpi('','coins','KH năm',F2(PY))}${kpi('','coins','Đã sử dụng',F2(A),PY?(A/PY*100).toFixed(1)+'%':'')}${kpi(PY-A<0?'red':'green','wallet','Còn lại trước đề xuất',F2(PY-A))}${kpi(rem<0?'red':'green','wallet','Còn lại sau đề xuất',F2(rem))}</div>`};
+  H.innerHTML=`<div class="card"><div class="subbar"><span class="crumb">Ngân sách còn lại – lập tờ trình</span><span class="hint">Chọn phòng ban → tích khoản mục (một hoặc nhiều) → nhập số đề xuất: ra bảng theo mẫu tờ trình (Ngân sách đầu năm · Đã sử dụng · Đề xuất · Còn lại). Đã sử dụng = luỹ kế T1 → tháng "Đến tháng". Nhóm theo cây ngân sách (DM_CP_PB), bỏ khoản mục bằng 0.</span></div>${tabs}
+    <div class="filterrow" style="margin-top:8px">${yearSel}<label>Đã sử dụng đến tháng <select id="stTo">${[...Array(12)].map((_,i)=>`<option value="${i+1}" ${+BPF.to===i+1?'selected':''}>${i+1}</option>`).join('')}</select></label>
+      <label>Phòng ban <select id="stD" class="srch" data-auto="1" style="max-width:320px">${D.map(d=>`<option value="${esc(d.code)}" ${d.code===SF.dept?'selected':''}>${esc(d.code+' – '+(d.name||''))}</option>`).join('')}</select></label>
+      <button class="btn sm ghost" id="stTree" title="Nạp cây khoản mục ngân sách từ sheet DM_CP_PB">Nạp cây ngân sách (DM_CP_PB)${T.length?` · ${num(T.length)} dòng`:''}</button></div></div>
+    <div class="grid g2" style="align-items:start"><div class="card"><div class="row" style="gap:8px;margin-bottom:8px"><input id="stQ" placeholder="Tìm khoản mục…" value="${esc(SF.q)}" style="width:220px"><span class="mut s">${esc(dn)} · ${num(rows.length)} khoản mục có số liệu</span><div style="flex:1"></div><button class="btn sm ghost" id="stNone">Bỏ chọn</button></div>
+      <div class="tbl" style="max-height:calc(100vh - 330px)"><table style="font-size:12.5px"><thead><tr><th></th><th>STT</th><th>Nhóm / khoản mục</th><th class=n>KH năm</th><th class=n>Đã sử dụng</th><th class=n>Còn lại</th></tr></thead><tbody>
+      ${TR.filter(x=>!q||!x.leaf||[x.code,x.name,x.en].join(' ').toLowerCase().includes(q)).map(x=>`<tr style="${x.leaf?'':'font-weight:'+(x.lvl<=1?800:600)+';background:'+(x.lvl<=1?'#FFE4D5':'#FFF6F2')}">${x.leaf?`<td><input type="checkbox" data-stc="${esc(x.code)}" ${sel.has(x.code)?'checked':''}></td>`:'<td></td>'}<td class=mut style="font-size:11px">${esc(x.stt)}</td><td style="padding-left:${6+(x.lvl-1)*12}px">${esc(x.name)}${x.leaf?`<div class="mut" style="font-size:11px">${esc(x.code)} · ${esc(x.en||'')}</div>`:''}</td><td class=n>${fmt2(x.PY)}</td><td class=n>${fmt2(x.A)}</td><td class="n ${x.PY-x.A<0?'neg':''}">${fmt2(x.PY-x.A)}</td></tr>`).join('')}</tbody></table></div></div>
+      <div class="card"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><label>Số đề xuất tờ trình này <input id="stP" type="number" step="0.01" value="${SF.prop||''}" style="width:140px"></label><label>Ghi chú <input id="stN" value="${esc(SF.note)}" style="width:200px"></label><label>Ngôn ngữ <select id="stL"><option value="vn">Tiếng Việt</option><option value="en" ${EN?'selected':''}>English</option></select></label></div>
+        <div id="stB" style="margin-top:10px">${block()}</div><div class="row" style="gap:8px;margin-top:10px"><button class="btn sm primary" id="stCopy">Sao chép bảng (dán vào Word / Excel)</button><button class="btn sm" id="stX">${ic('download')}Xuất Excel</button></div></div></div>`;
+  bind();
+  const re=()=>{save();$('#stB').innerHTML=block()};
+  $('#stTo').onchange=e=>{BPF.to=+e.target.value;BPF.from=1;vBP()};$('#stD').onchange=e=>{SF.dept=e.target.value;SF.sel=[];save();vBP()};
+  $('#stQ').oninput=deb(()=>{SF.q=$('#stQ').value;save();vBP().then(()=>{const e=$('#stQ');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length)}})},400);
+  $('#stNone').onclick=()=>{sel.clear();H.querySelectorAll('[data-stc]').forEach(c=>c.checked=false);re()};
+  H.onchange=e=>{const c=e.target.dataset.stc;if(c!=null){e.stopPropagation();e.target.checked?sel.add(c):sel.delete(c);re();return}
+    if(e.target.id==='stP'){SF.prop=+e.target.value||0;re()}if(e.target.id==='stN'){SF.note=e.target.value;re()}if(e.target.id==='stL'){SF.lang=e.target.value;re()}};
+  $('#stP').oninput=()=>{SF.prop=+$('#stP').value||0;re()};
+  $('#stTree').onclick=async()=>{try{const x=await api.bpTreeImport();if(x){alert(`Đã nạp ${num(x.n)} dòng cây ngân sách từ sheet ${x.sheet}`);vBP()}}catch(err){alert(err.message)}};
+  $('#stCopy').onclick=async()=>{const t=$('#stT');if(!t)return alert('Chưa chọn khoản mục');const html=`<table border=1 style="border-collapse:collapse;font-family:Arial;font-size:11pt">${t.innerHTML}</table>`;
+    try{await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([t.innerText],{type:'text/plain'})})]);alert('Đã sao chép – dán (Ctrl+V) vào tờ trình')}catch{const rg=document.createRange();rg.selectNode(t);getSelection().removeAllRanges();getSelection().addRange(rg);document.execCommand('copy');getSelection().removeAllRanges();alert('Đã sao chép')}};
+  $('#stX').onclick=async()=>{const t=$('#stT');if(!t)return alert('Chưa chọn khoản mục');const L=[...t.querySelectorAll('tr')].map(tr=>[...tr.cells].map(c=>c.innerText));const hd=L.shift();
+    try{const f=await api.xlsxSheets(`ToTrinh_NganSach_${SF.dept}_${r.year}_T${r.to}.xlsx`,[['To trinh',L.map(x=>Object.fromEntries(hd.map((h,i)=>[h,i===2?+String(x[i]).replace(/,/g,''):x[i]])))]]);if(f)alert('Đã xuất: '+f)}catch(err){alert(err.message)}};
+}
+
 // Thông báo chi phí cho trưởng bộ phận: ghép trưởng phòng ↔ nhân viên, xem trước PDF, gửi email
 async function bpNoticeTab(H,tabs,yearSel,bind){
   const [r,HD,ST]=await Promise.all([aq('bpCompare',{year:BPF.year,from:BPF.from,to:BPF.to,view:'bydept',dept:''}),aq('bpHeads'),aq('staffList',{})]);
@@ -2274,7 +2322,7 @@ async function bpDash(H,tabs,yearSel,bind){
 }
 async function vBP(){const H=$('#bpBody');ls.set('bpPick',BPF);H.innerHTML='<div class="card"><span class="spin"></span></div>';
   const [Y,D]=await Promise.all([aq('bpYears'),aq('dmDeptList')]),ys=[...new Set([...Y.map(y=>y.year),BPF.year,new Date().getFullYear(),new Date().getFullYear()+1])].sort();
-  const tabs=`<div class="row" style="gap:6px">${[['dash','Dashboard'],['cmp','So sánh kế hoạch – thực hiện'],['dept','Chi phí theo phòng ban (thực hiện)'],['plan','Kế hoạch (nạp / sửa / bổ sung)'],['notice','Thông báo trưởng bộ phận']].map(([k,l])=>`<button class="btn sm ${BPF.tab===k?'primary':''}" data-bt="${k}">${l}</button>`).join('')}</div>`;
+  const tabs=`<div class="row" style="gap:6px">${[['dash','Dashboard'],['cmp','So sánh kế hoạch – thực hiện'],['dept','Chi phí theo phòng ban (thực hiện)'],['plan','Kế hoạch (nạp / sửa / bổ sung)'],['stmt','Ngân sách còn lại – tờ trình'],['notice','Thông báo trưởng bộ phận']].map(([k,l])=>`<button class="btn sm ${BPF.tab===k?'primary':''}" data-bt="${k}">${l}</button>`).join('')}</div>`;
   const yearSel=`<label>Năm <select id="bpY">${ys.map(y=>`<option ${+BPF.year===y?'selected':''}>${y}</option>`).join('')}</select></label>`;
   const dsel=(id,v,all)=>`<select id="${id}" class="srch" data-auto="1" style="max-width:320px">${all?`<option value="">${all}</option>`:''}${D.map(x=>`<option value="${esc(x.code)}" ${v===x.code?'selected':''}>${esc(x.code)} – ${esc(x.name||'')}</option>`).join('')}</select>`;
   const bind=()=>{H.querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{BPF.tab=b.dataset.bt;vBP()});$('#bpY').onchange=e=>{BPF.year=+e.target.value;vBP()}};
@@ -2282,6 +2330,7 @@ async function vBP(){const H=$('#bpBody');ls.set('bpPick',BPF);H.innerHTML='<div
   if(BPF.tab==='plan')return bpPlan(H,tabs,yearSel,D,dsel,bind,Y);
   if(BPF.tab==='dash')return bpDash(H,tabs,yearSel,bind);
   if(BPF.tab==='notice')return bpNoticeTab(H,tabs,yearSel,bind);
+  if(BPF.tab==='stmt')return bpStmtTab(H,tabs,yearSel,bind,D);
   if(BPF.tab==='dept'){H.innerHTML=`<div class="card" style="padding:10px 16px">${tabs}</div><div id="bpDept" style="display:flex;flex-direction:column;gap:16px"></div>`;H.querySelectorAll('[data-bt]').forEach(b=>b.onclick=()=>{BPF.tab=b.dataset.bt;vBP()});const p2=n=>String(n).padStart(2,'0');DIMF.dept.from=`${BPF.year}-${p2(BPF.from)}`;DIMF.dept.to=`${BPF.year}-${p2(BPF.to)}`;return vDim('dept')}
   const r=await aq('bpCompare',{year:BPF.year,from:BPF.from,to:BPF.to,view:BPF.view,dept:BPF.view==='dept'?BPF.dept:''}),T=r.total,mn=k=>'T'+k;
   const pct=(a,p)=>Math.abs(p)>0.004?(a/p*100).toFixed(1)+'%':'',cell=v=>Math.abs(v||0)>0.004?fmt2(v):'',df=(a,p)=>{const d=a-p;return `<td class="n ${d>0.004&&p>0?'neg':''}">${cell(d)}</td>`};

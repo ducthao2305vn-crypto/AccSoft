@@ -1,5 +1,10 @@
 # Lịch sử phiên bản
 
+## 5.8.0
+- **Cây ngân sách** theo sheet DM_CP_PB (STT phân cấp · Funding Type · Group Cost · Erp Code · tên EN/VN · phòng ban): nút "Nạp cây ngân sách (DM_CP_PB)".
+- Thông báo trưởng bộ phận (PDF): bảng chi tiết theo **nhóm quản trị** (cây ngân sách) có cộng từng nhóm, **bỏ các khoản mục / nhóm bằng 0**; khoản mục ngoài cây vào nhóm "Khác".
+- Tab mới **Ngân sách còn lại – tờ trình** (mẫu MAU1): chọn phòng ban → chỉ hiện khoản mục của phòng ban đó (nhóm theo cây, bỏ dòng 0) với KH năm, đã sử dụng (luỹ kế T1 → tháng chọn), còn lại; tích 1 hoặc nhiều khoản mục + nhập số đề xuất → bảng tờ trình: 1 Ngân sách đầu năm (1.1, 1.2… từng khoản mục khi chọn nhiều), 2 Đã sử dụng, 3 Đề xuất tờ trình này, 4 Còn lại sau đề xuất (đỏ khi vượt); thẻ còn lại trước / sau đề xuất; tiếng Việt / English; sao chép dán vào Word / Excel, xuất Excel.
+
 ## 5.7.1
 - Sửa lỗi mất điều chỉnh khi chuyển sang bản mới: CSDL dùng chế độ WAL nên các thay đổi gần nhất nằm ở file phụ `accsoft.db-wal` – nếu chỉ sao chép `accsoft.db` sang thư mục bản mới thì mất các thay đổi đó. Nay ứng dụng ghi hẳn vào `accsoft.db` (checkpoint) ngay sau mỗi lần sửa (~1,5 giây) và khi thoát.
 

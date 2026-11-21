@@ -53,6 +53,16 @@ function make(db, all) {
       ((all(`SELECT max(ord) o FROM bud_plan WHERE year=?`, +r.year)[0] || {}).o || 0) + 1, code, norm(r.en), norm(r.vn), raw, dc, m, norm(r.note));
     return { ok: 1 };
   }
+  // Cây ngân sách (sheet DM_CP_PB): STT phân cấp · Funding Type · Group Cost · Erp Code · tên EN / VN · phòng ban phụ trách
+  db.exec(`CREATE TABLE IF NOT EXISTS bud_tree(ord INTEGER PRIMARY KEY, stt TEXT, lvl INTEGER, code TEXT, en TEXT, vn TEXT, funding TEXT, grp TEXT, dept_raw TEXT)`);
+  function importTree(aoa) { let h = -1; for (let i = 0; i < Math.min(aoa.length, 15); i++) { const r = aoa[i].map(x => norm(x).toUpperCase()); if (r.includes('STT') && r.some(x => x.startsWith('ERP CODE'))) { h = i; break; } }
+    if (h < 0) throw new Error('Không thấy tiêu đề (STT, Funding Type, Group Cost, Erp Code, Type of cost, Khoản mục, PHONG BAN) – như sheet DM_CP_PB');
+    const H = aoa[h].map(x => norm(x).toUpperCase()), ix = re => H.findIndex(x => re.test(x)), c = { stt: ix(/^STT/), fund: ix(/FUNDING/), grp: ix(/GROUP COST/), code: ix(/^ERP CODE/), en: ix(/^TYPE OF COST/), vn: ix(/TI(Ế|E)NG VI/), dept: ix(/PH(Ò|O)NG BAN/) };
+    return tx(() => { run(`DELETE FROM bud_tree`); let n = 0; const ins = db.prepare(`INSERT INTO bud_tree(ord, stt, lvl, code, en, vn, funding, grp, dept_raw) VALUES(?,?,?,?,?,?,?,?,?)`);
+      for (const r of aoa.slice(h + 1)) { const stt = norm(r[c.stt]), en = norm(r[c.en]), vn = norm(r[c.vn]); if (!stt && !en && !vn) continue; if (/^[a-z]$/.test(stt)) continue;
+        const code = norm(r[c.code]); ins.run(++n, stt, /^[A-Z]$/.test(stt) ? 0 : stt.split('.').length, code || null, en, vn, norm(r[c.fund]), norm(r[c.grp]), code ? norm(r[c.dept]) : ''); }
+      return { n }; }); }
+  const tree = () => all(`SELECT * FROM bud_tree ORDER BY ord`);
   // Trưởng bộ phận nhận thông báo chi phí: phòng ban danh mục → nhân viên (danh mục nhân viên)
   db.exec(`CREATE TABLE IF NOT EXISTS dept_head(dept_code TEXT PRIMARY KEY, staff_code TEXT, cc TEXT, note TEXT, sent_at TEXT, sent_to TEXT)`);
   const heads = () => all(`SELECT c.code dept, c.name, h.staff_code, h.cc, h.sent_at, h.sent_to, s.name sname, s.position, coalesce(nullif(s.email1,''), s.email2) email FROM dept_cat c LEFT JOIN dept_head h ON h.dept_code=c.code LEFT JOIN staff s ON s.code=h.staff_code ORDER BY c.code`);
@@ -64,7 +74,7 @@ function make(db, all) {
     const rows = g.rows.filter(x => Math.abs(x.P) + Math.abs(x.A) + Math.abs(x.PY) > 0.004).map(x => ({ code: x.code, vn: x.vn, en: x.en, P: x.P, A: x.A, PY: x.PY, over: x.A > x.P + 0.004, remain: x.PY - x.A, inPlan: x.inPlan }));
     const h = heads().find(z => z.dept === dept) || { dept, name: dept };
     return { year: r.year, from: r.from, to: r.to, dept, deptName: h.name, head: h, P: T.P, A: T.A, PY: T.PY, over: T.A > T.P + 0.004, remain: T.PY - T.A, monthsLeft: 12 - r.to,
-      rows, overRows: rows.filter(x => x.over).sort((a, b) => (b.A - b.P) - (a.A - a.P)), outPlan: rows.filter(x => !x.inPlan && x.A > 0.004), hasPlan: r.hasPlan };
+      tree: tree(), rows, overRows: rows.filter(x => x.over).sort((a, b) => (b.A - b.P) - (a.A - a.P)), outPlan: rows.filter(x => !x.inPlan && x.A > 0.004), hasPlan: r.hasPlan };
   }
   // Đổi phòng ban các dòng kế hoạch của (năm, mã khoản mục, phòng ban cũ) → phòng ban mới
   function moveDept(year, code, from, to) { to = norm(to); if (!to) throw new Error('Chọn phòng ban đích'); const nm = ((all(`SELECT name FROM dept_cat WHERE code=?`, to)[0] || {}).name || to);
@@ -116,6 +126,6 @@ function make(db, all) {
       FROM entries e LEFT JOIN field_adj f ON f.id=e.id AND f.field='dept' WHERE e.ym>=? AND e.ym<=? AND ${NORM(CODE)}=? AND (${EXP('debit')} OR ${EXP('credit')}) ORDER BY e.account_date, e.id`, from, to, code === '(không có khoản mục)' ? '' : code)
       .filter(r => !dept || catOf(r.dept) === dept).map(r => ({ ...r, v: (/^[68]/.test(r.dr) ? r.a : 0) - (/^[68]/.test(r.cr) ? r.a : 0) }));
   }
-  return { heads, setHead, markSent, notice, moveDept, years, list, importAoa, save, remove, copyYear, compare, lines };
+  return { importTree, tree, heads, setHead, markSent, notice, moveDept, years, list, importAoa, save, remove, copyYear, compare, lines };
 }
 module.exports = { make };

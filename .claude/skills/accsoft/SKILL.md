@@ -649,3 +649,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Thông báo chi phí trưởng bộ phận: bảng dept_head (dept_code → staff_code, cc, sent_at); budget.notice(); engine/bpnotice.js (pdfHtml / mailHtml); IPC bp:noticePreview, bp:noticeSend; tab BPF.tab='notice'.
 
 - CSDL WAL: main.js tự checkpoint (qa('walCheckpoint')) 1,5 s sau mỗi WRITE và khi before-quit, để accsoft.db luôn đủ dữ liệu khi người dùng sao chép sang bản mới.
+
+- Cây ngân sách: bảng bud_tree (nạp từ DM_CP_PB); bpnotice.treeRows / app bpTreeRows (nhóm cha cộng con, bỏ 0). Tab tờ trình BPF.tab='stmt' (bpStmtTab).
