@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.8.1
+- Mẫu tờ trình song ngữ (Word) theo biểu mẫu chuẩn: điền sẵn bảng ngân sách từ khoản mục đã chọn; mẫu trống gửi các đơn vị.
+
 ## 5.8.0
 - **Cây ngân sách** theo sheet DM_CP_PB (STT phân cấp · Funding Type · Group Cost · Erp Code · tên EN/VN · phòng ban): nút "Nạp cây ngân sách (DM_CP_PB)".
 - Thông báo trưởng bộ phận (PDF): bảng chi tiết theo **nhóm quản trị** (cây ngân sách) có cộng từng nhóm, **bỏ các khoản mục / nhóm bằng 0**; khoản mục ngoài cây vào nhóm "Khác".
