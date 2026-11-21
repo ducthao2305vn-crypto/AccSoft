@@ -647,3 +647,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - NGUYÊN TẮC: mọi dữ liệu người dùng gắn với bút toán phải sống sót khi nạp lại (id đổi). Bảng mới khoá theo id → thêm vào KEEP trong queries.js (cột sig + trigger + rebindKeep chạy trong faRebind sau finalize), hoặc khoá theo chữ ký nội dung ngay từ đầu.
 
 - Thông báo chi phí trưởng bộ phận: bảng dept_head (dept_code → staff_code, cc, sent_at); budget.notice(); engine/bpnotice.js (pdfHtml / mailHtml); IPC bp:noticePreview, bp:noticeSend; tab BPF.tab='notice'.
+
+- CSDL WAL: main.js tự checkpoint (qa('walCheckpoint')) 1,5 s sau mỗi WRITE và khi before-quit, để accsoft.db luôn đủ dữ liệu khi người dùng sao chép sang bản mới.

@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.7.1
+- Sửa lỗi mất điều chỉnh khi chuyển sang bản mới: CSDL dùng chế độ WAL nên các thay đổi gần nhất nằm ở file phụ `accsoft.db-wal` – nếu chỉ sao chép `accsoft.db` sang thư mục bản mới thì mất các thay đổi đó. Nay ứng dụng ghi hẳn vào `accsoft.db` (checkpoint) ngay sau mỗi lần sửa (~1,5 giây) và khi thoát.
+
 ## 5.7.0
 - Kế hoạch – thực hiện & chi phí phòng ban: tab **Thông báo trưởng bộ phận**.
   - Ghép trưởng bộ phận cho từng phòng ban danh mục bằng mã nhân viên (gõ mã / tên, lấy email từ Danh mục nhân viên); CC riêng từng bộ phận + CC chung.

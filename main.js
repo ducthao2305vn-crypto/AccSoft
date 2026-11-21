@@ -32,10 +32,13 @@ let qEpoch = 0;
 const WARM = [['overview', []], ['errorFacets', []], ['analysisStatus', []], ['months', []], ['stats', []], ['reviewPeriod', []], ['report', []], ['pl', []]];
 // Khoá bộ nhớ đệm: bỏ các ô lọc trống ('' / null) để { group: '', rule: '' } trùng với {} (dùng chung kết quả tính sẵn)
 const qKey = (name, args) => name + '\u0000' + JSON.stringify(args, (k, v) => (k && (v === '' || v == null) ? undefined : v));
+// Ghi hẳn thay đổi vào file accsoft.db (checkpoint WAL) ngay sau mỗi lần sửa và khi thoát – tránh mất điều chỉnh khi chỉ sao chép file .db sang bản mới
+let walT = 0;
 function qa(name, ...args) {
   const cacheable = READ.includes(name), key = cacheable ? qKey(name, args) : null;
   if (key && qCache.has(key)) return Promise.resolve(qCache.get(key));
   if (key && qInflight.has(key)) return qInflight.get(key);
+  if (!cacheable && name !== 'walCheckpoint') { clearTimeout(walT); walT = setTimeout(() => qa('walCheckpoint').catch(() => {}), 1500); }
   if (!cacheable) { qCache.clear(); qEpoch++; if (process.env.ACCSOFT_QDEBUG) fs.appendFileSync(process.env.ACCSOFT_QDEBUG, `${new Date().toISOString().slice(11, 23)} CLEAR by ${name}\n`); } // truy vấn ghi → kết quả cũ không còn đúng
   const p = new Promise((resolve, reject) => { qQueue.push({ id: ++qSeq, name, args, key, epoch: qEpoch, resolve, reject, t: Date.now() }); pump(); });
   if (key) { qInflight.set(key, p); p.finally(() => qInflight.delete(key)).catch(() => {}); }
@@ -860,4 +863,6 @@ app.whenReady().then(init).then(async needRecheck => {
   app.quit();
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+let walDone = false;
+app.on('before-quit', e => { if (walDone || !dbFile) return; e.preventDefault(); walDone = true; try { const { DatabaseSync } = require('node:sqlite'); const d = new DatabaseSync(dbFile); d.exec('PRAGMA busy_timeout=5000; PRAGMA wal_checkpoint(TRUNCATE)'); d.close(); } catch { } app.quit(); });
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
