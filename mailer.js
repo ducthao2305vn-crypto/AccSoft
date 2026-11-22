@@ -37,11 +37,16 @@ async function sendAll(store, msgs) {
   const out = [];
   for (const m of msgs) {
     try {
-      const info = await t.sendMail({
-        // CC mặc định trong cấu hình chỉ thêm khi người dùng tick "Kèm CC mặc định" ở màn gửi
-        from: fromOf(c), to: m.to, cc: m.cc || undefined, subject: m.subject, html: m.html,
-        attachments: (m.attachments || (m.attachment ? [m.attachment] : [])).map(x => ({ filename: x.name, content: Buffer.from(x.base64, 'base64'), ...(x.cid ? { cid: x.cid } : {}) })),
-      });
+      // CC mặc định trong cấu hình chỉ thêm khi người dùng tick "Kèm CC mặc định" ở màn gửi
+      const mail = { from: fromOf(c), to: m.to, cc: m.cc || undefined, subject: m.subject, html: m.html,
+        attachments: (m.attachments || (m.attachment ? [m.attachment] : [])).map(x => ({ filename: x.name, content: Buffer.from(x.base64, 'base64'), ...(x.cid ? { cid: x.cid } : {}) })) };
+      // Máy chủ ngắt kết nối giữa chừng (ECONNRESET / timeout) → mở kết nối mới, gửi lại tối đa 2 lần
+      let info, err;
+      for (let k = 0; k < 3; k++) {
+        try { info = await (k ? transport(store).t : t).sendMail(mail); err = null; break; }
+        catch (e) { err = e; if (!/ECONNRESET|ETIMEDOUT|ESOCKET|ECONNECTION|EPIPE|socket hang up|Connection closed/i.test(String(e.code || '') + ' ' + String(e.message || e))) break; await new Promise(r => setTimeout(r, 1500 * (k + 1))); }
+      }
+      if (err) { if (/ECONNRESET|socket hang up|Connection closed/i.test(String(err.message || err))) err = new Error(`${err.message || err} – máy chủ mail ngắt kết nối (đã thử lại 3 lần). Kiểm tra mạng / VPN, cổng và SSL/TLS trong cấu hình SMTP (587 = STARTTLS bỏ tick SSL; 465 = tick SSL), hoặc dung lượng tệp đính kèm.`); throw err; }
       store.logMail(m.employee, m.to, m.subject, m.count, 'ok', info.messageId || '');
       out.push({ to: m.to, ok: true });
     } catch (e) {

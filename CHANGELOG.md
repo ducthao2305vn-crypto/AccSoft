@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.8.9
+- Gửi email: tự gửi lại tối đa 3 lần (kết nối mới) khi máy chủ mail ngắt kết nối (ECONNRESET, timeout); thông báo lỗi kèm gợi ý kiểm tra cấu hình SMTP.
+
 ## 5.8.8
 - Sửa lỗi email gửi đi không có tiêu đề và nội dung (lỗi từ 4.97.2, ảnh hưởng mọi chức năng gửi mail): chú thích trong mailer.js nuốt mất subject/html.
 
