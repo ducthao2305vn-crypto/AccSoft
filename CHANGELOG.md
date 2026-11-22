@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.8.8
+- Sửa lỗi email gửi đi không có tiêu đề và nội dung (lỗi từ 4.97.2, ảnh hưởng mọi chức năng gửi mail): chú thích trong mailer.js nuốt mất subject/html.
+
 ## 5.8.7
 - Thông báo chi phí bản English: dòng nhóm cũng lấy tên English từ Danh mục khoản mục chi phí (mã nhóm = E17.1. + STT trong cây, vd 4.6 → E17.1.4.6).
 

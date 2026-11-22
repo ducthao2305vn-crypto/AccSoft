@@ -659,3 +659,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - bpnotice: T.vi \/ T.en, o.lang; mailHtml(n, body, o); fileBase(n, o). UI notice: NT.lang, NT[lang].subject\/body, CC chips (email1||email2) qua datalist ntCcList.
 - bpNotice: en = cost_cat.name ưu tiên; treeRows leaf en = x.en || tree.en.
 - treeRows(tree, rows, cat): nhóm en = cat[PFX+stt] (PFX suy từ lá có code kết thúc bằng .stt); n.catEn từ cost_cat.name.
+- mailer.sendAll: KHÔNG đặt chú thích // trên cùng dòng với thuộc tính sendMail (từng làm mất subject/html từ 4.97.2 đến 5.8.7).
