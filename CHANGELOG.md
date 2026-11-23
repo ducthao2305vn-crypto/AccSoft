@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.9.3
+- Toàn bộ app: mọi thao tác ghi dữ liệu (lưu, xoá, đổi trạng thái, ghép, nhập…) đều phải xác nhận trước khi ghi; thao tác đã có hộp xác nhận riêng thì không hỏi lại; Huỷ → không ghi, trang vẽ lại về số cũ.
+
 ## 5.9.2
 - Quỹ khen thưởng – phúc lợi: sửa loại / năm quỹ / số KT (từng dòng hoặc hàng loạt) chỉ ghi nháp, dòng tô vàng; bấm "Lưu thay đổi" → xác nhận danh sách thay đổi rồi mới ghi. Dòng vừa lưu vẫn hiện (nền xanh) dù không còn khớp bộ lọc, không tự nhảy. Về tự động, đổi TK quỹ, lưu số dư đầu kỳ đều hỏi xác nhận.
 

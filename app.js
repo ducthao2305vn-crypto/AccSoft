@@ -21,11 +21,21 @@ const deb=(fn,ms=250)=>{let t=0;return function(...a){clearTimeout(t);t=setTimeo
 // window.api do preload.js cung cấp
 // Mọi lỗi giao diện đều ghi vào nhật ký
 window.addEventListener('error',e=>api.logError(e.message,e.error&&e.error.stack||`${e.filename}:${e.lineno}`));
-window.addEventListener('unhandledrejection',e=>api.logError(String(e.reason&&e.reason.message||e.reason),e.reason&&e.reason.stack));
+window.addEventListener('unhandledrejection',e=>{if(e.reason&&e.reason.cancelled){e.preventDefault();return}api.logError(String(e.reason&&e.reason.message||e.reason),e.reason&&e.reason.stack)});
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 // Theo dõi số truy vấn đang chạy của trang để hiện thanh tiến độ tải dữ liệu
 const QT={n:0,done:0};
-const aq=(...a)=>{QT.n++;return window.api.q(...a).finally(()=>{QT.done++})};
+// Nguyên tắc: mọi lệnh GHI dữ liệu từ giao diện phải được người dùng xác nhận. Thao tác đã có hộp xác nhận riêng (ask / askText) trong vài giây trước thì không hỏi lại;
+// lệnh chỉ lưu trạng thái xem / tính toán (WSILENT) không hỏi. Huỷ → vẽ lại trang để bỏ giá trị vừa gõ.
+const WOPS=new Set(['f353Set','f353Reset','f353SetCfg','bpImportTree','bpSetHead','bpMoveDept','orImportCat','bsMapErp','rpSetCfg','bsMark','bsImport','bsSetAcc','bsRemoveAcc','txConfirm','txSetStatus','txSetLag','txSetDateFirst','txOkPeriods','txSavePreset','txRemovePreset','txSetPeriod','txSetAccs','locSetExcl','ifApplyL16','ifClearL16','ifUseSched','ifSetLt','ifCopyLt','ifSetRules','ifResetRules','ifSetCfg','ifSetJe','ifSetMeta','ifSetCfAdj','dtxSetCfg','dtxSetYear','pfSetKind','tdApply','bpImport','bpSave','bpRemove','bpCopy','tdImport','tdSet','tdClear','locMark','faConfirmCf','setStatusKeys','excSave','excRemove','excApply','cxSnap','cxDelVer','cxSetLimit','cxLink','slAddMap','cxSave','cxCell','cxRemove','cxMove','cxRoll','cxImport','slPayMark','slSetWht','slSave','slRemove','slImport','slAutoMap','slSetMap','slSetRate','setAmountBasis','piImportBanks','grAssign','grSetStatus','grSetSigners','apAssign','piSave','piRemove','piImport','faAssetImport','gsSetRules','gsSetAdj','khSetPlan01','khSetPlan06','khSetNbMap','oiSetM01','oiProcSave','lgSetLine','r88SetExempt','apSetStatus','apSetContract','apSetPartner','invSetRules','invBccsNeg','invImport','invSetMap','r88SetWrong','advSetAr','advSetBackup','llSave','llClear','llImport','advSetRecon','advClearRecon','staffSetMap','staffAutoMatch','staffUpsert','staffRemove','staffImport','locSetNorms','kqSetAutoRev','kqSetMap','kqClearMap','kqSetParams','kqImportTpl','dmDeptUpsert','dmDeptRemove','dmDeptMapSet','dmDeptAutoMap','dmCostUpsert','dmCostRemove','dmImport','faSet','faRemove','faRebind','cfAdjSet','cfAdjRemove','igAdjSet','igAdjRemove','catUpsert','catRemove','catImport','setB09Info','setThresholds','setReviews','setStatusWhere','setStatusDoc']);
+const WLBL={Remove:'Xoá',Import:'Nhập dữ liệu',Set:'Lưu thay đổi',Save:'Lưu',Upsert:'Lưu',Map:'Lưu ghép / ánh xạ',Mark:'Đánh dấu',Status:'Đổi trạng thái',Clear:'Xoá',Apply:'Áp dụng',Assign:'Giao việc',Copy:'Sao chép',Move:'Di chuyển / chuyển',Confirm:'Xác nhận',Reset:'Khôi phục mặc định',Roll:'Chuyển số sang năm sau',Rebind:'Gắn lại dữ liệu đã chỉnh'};
+window.__okAt=0;
+const wLabel=n=>{const k=Object.keys(WLBL).find(k=>new RegExp(k).test(n));const pg=TITLES&&TITLES[PAGE]?TITLES[PAGE][0]:'';return `${k?WLBL[k]:'Lưu thay đổi'}${pg?' – '+pg:''}`};
+const aq=async(...a)=>{
+  if(WOPS.has(a[0])&&Date.now()-window.__okAt>6000){const ok=await uiModal(`Xác nhận: ${wLabel(a[0])}?\n\nThay đổi sẽ được ghi vào dữ liệu.`,{ok:'Đồng ý',cancel:'Huỷ',kind:'warn'});
+    if(!ok){setTimeout(()=>{try{VIEWS[PAGE]&&VIEWS[PAGE]()}catch{}},0);const e=new Error('Đã huỷ – chưa ghi thay đổi');e.cancelled=true;throw e}}
+  if(WOPS.has(a[0]))window.__okAt=Date.now();
+  QT.n++;return window.api.q(...a).finally(()=>{QT.done++})};
 const fmt=v=>v==null||isNaN(v)?'':Math.round(v).toLocaleString('en-US');
 const fmt2=v=>v==null?'':(+v).toLocaleString('en-US',{maximumFractionDigits:2});
 const pct=v=>isFinite(v)?(v*100).toFixed(1)+'%':'–';
@@ -2679,8 +2689,8 @@ function uiModal(msg,{ok='Đồng ý',cancel=null,kind='info'}={}){return new Pr
   const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();done(!cancel)}else if(e.key==='Enter'){e.preventDefault();e.stopPropagation();done(true)}};
   document.addEventListener('keydown',key,true);w.onclick=e=>{const b=e.target.closest('[data-r]');if(b)done(b.dataset.r==='1');else if(e.target===w&&cancel)done(false)};
   setTimeout(()=>w.querySelector('.btn.primary').focus(),30)})}
-async function ask(msg){return uiModal(msg,{ok:'Đồng ý',cancel:'Huỷ',kind:'warn'})}
-window.alert=msg=>{const s=String(msg??'');uiModal(s,{kind:/lỗi|error|không|chưa/i.test(s)&&!/^Đã/.test(s)?'err':'info'})};
+async function ask(msg){const r=await uiModal(msg,{ok:'Đồng ý',cancel:'Huỷ',kind:'warn'});if(r)window.__okAt=Date.now();return r}
+window.alert=msg=>{const s=String(msg??'');if(/^Đã huỷ – chưa ghi/.test(s))return;uiModal(s,{kind:/lỗi|error|không|chưa/i.test(s)&&!/^Đã/.test(s)?'err':'info'})};
 
 // Chế độ sáng / tối + thu gọn menu + chế độ tập trung (ẩn menu và thanh trên) – ghi nhớ
 (function(){const S=k=>ls.get('ui_'+k,false),put=(k,v)=>ls.set('ui_'+k,v),R=document.documentElement;
@@ -3056,6 +3066,7 @@ function advMail(keys,r){const L=keys.map(k=>(r.rows||[]).find(x=>x.key===k)).fi
 
 // Hộp nhập chữ trong ứng dụng (Electron không hỗ trợ prompt())
 function askText(msg,def=''){return new Promise(res=>{const w=document.createElement('div');w.className='mdl-wrap';w.innerHTML=`<div class="mdl"><div class="mdl-ic">✎</div><div class="mdl-msg"></div><input id="mdlIn" style="grid-column:1/-1;width:100%" value="${esc(def)}"><div class="mdl-act"><button class="btn" data-r="0">Huỷ</button><button class="btn primary" data-r="1">Đồng ý</button></div></div>`;
+{const _f=askText;askText=async(...a)=>{const r=await _f(...a);if(r!=null)window.__okAt=Date.now();return r}}
   w.querySelector('.mdl-msg').textContent=msg;document.body.appendChild(w);const i=w.querySelector('#mdlIn');setTimeout(()=>i.focus(),30);
   const done=v=>{w.remove();res(v)};w.onclick=e=>{const b=e.target.closest('[data-r]');if(b)done(b.dataset.r==='1'?i.value:null)};i.onkeydown=e=>{if(e.key==='Enter')done(i.value);if(e.key==='Escape')done(null)}})}
 
