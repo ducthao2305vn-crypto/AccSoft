@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.9.6
+- Thông báo chi phí (PDF / email): làm tròn USD ở từng khoản mục trước khi cộng nhóm và tổng cộng; chênh lệch, còn lại, KPI, nhận xét tính từ số đã làm tròn → cộng tay khớp từng đồng (trước đây lệch 1 do làm tròn).
+
 ## 5.9.5
 - Quỹ khen thưởng – phúc lợi: bấm vào bất kỳ ô số / năm nào ở tab Tổng hợp (theo năm quỹ, chi năm nào từ quỹ năm nào, theo năm chứng từ, số dư đầu kỳ) → mở tab Chứng từ lọc sẵn đúng các chứng từ tạo nên số đó, có nhãn "Từ tổng hợp: …".
 

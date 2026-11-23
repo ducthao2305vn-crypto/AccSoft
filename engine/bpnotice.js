@@ -70,7 +70,14 @@ const CSS = `body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#
     ul{margin:2px 0 0 18px;padding:0}li{margin:2px 0}.box{border:1px solid #FDA29B;background:#FEF3F2;border-radius:4px;padding:6px 10px}.ok{border-color:#ABEFC6;background:#ECFDF3}
     .sig{display:flex;justify-content:flex-end;margin-top:18px;page-break-inside:avoid}.sig div{width:45%;text-align:center}.note{color:#475467;font-size:9.5px;margin-top:14px;border-top:1px solid #EAECF0;padding-top:5px}`;
 const today = () => { const d = new Date(), z = x => String(x).padStart(2, '0'); return [z(d.getDate()), z(d.getMonth() + 1), d.getFullYear()]; };
-function pdfHtml(n, o = {}) {
+// Làm tròn đến USD ở từng khoản mục TRƯỚC khi cộng: nhóm / tổng cộng = tổng các số đã làm tròn, chênh lệch & còn lại tính từ số đã làm tròn → cộng tay khớp từng đồng
+function rnd(n) {
+  const R = x => Math.round(+x || 0), rows = n.rows.map(x => { const P = R(x.P), A = R(x.A), PY = R(x.PY); return { ...x, P, A, PY, remain: PY - A, over: A > P }; });
+  const by = new Map(rows.map(x => [x.code, x])), P = rows.reduce((a, x) => a + x.P, 0), A = rows.reduce((a, x) => a + x.A, 0), PY = rows.reduce((a, x) => a + x.PY, 0);
+  return { ...n, rows, overRows: n.overRows.map(x => by.get(x.code) || x).filter(x => x.over), outPlan: n.outPlan.map(x => by.get(x.code) || x), P, A, PY, remain: PY - A, over: A > P };
+}
+function pdfHtml(n0, o = {}) {
+  const n = rnd(n0);
   const t = L(o), en = t === T.en, P = per(n, en), W = warnings(n, o), num = x => `<td class=n>${f(x)}</td>`, name = x => en ? (x.en || x.name) : x.name;
   const trow = x => `<tr class="${x.leaf ? (x.over ? 'ov' : '') : 'g g' + Math.min(x.lvl, 3)}"><td class=c>${e(x.stt)}</td><td>${x.leaf ? e(x.code) : ''}</td><td style="padding-left:${6 + (x.lvl - 1) * 12}px">${e(name(x))}</td>${num(x.P)}${num(x.A)}<td class="n${x.A - x.P > 0.5 ? ' neg' : ''}">${f(x.A - x.P)}</td><td class=n>${Math.abs(x.P) < 0.005 && x.A > 0.004 ? t.out : pc(x.A, x.P)}</td>${num(x.PY)}<td class="n${x.remain < -0.5 ? ' neg' : ''}">${f(x.remain)}</td></tr>`;
   const table = (rows, total) => `<div class=unit>${t.unit}</div><table><colgroup><col style="width:6%"><col style="width:11%"><col><col style="width:9%"><col style="width:9%"><col style="width:9%"><col style="width:7%"><col style="width:9%"><col style="width:9%"></colgroup>
@@ -93,7 +100,8 @@ function pdfHtml(n, o = {}) {
     <div class=note>${t.note(P)}</div>`;
 }
 // Email gửi kèm PDF: cùng bố cục (lời chào, số liệu chính, cảnh báo, khoản mục vượt lớn nhất, đề nghị, chữ ký)
-function mailHtml(n, body, o = {}) {
+function mailHtml(n0, body, o = {}) {
+  const n = rnd(n0);
   const t = L(o), en = t === T.en, m = t.mail, W = warnings(n, o), P = per(n, en), b = 'border:1px solid #D0D5DD;padding:5px 8px', th = b + ';background:#FFF1EB;text-align:left', r = b + ';text-align:right;white-space:nowrap';
   const who = nm(n.head.sname) || t.head, top = n.overRows.slice(0, 10);
   const kv = [[t.kP, f(n.P)], [t.kA, `<b style="color:${n.over ? '#B42318' : '#067647'}">${f(n.A)}</b> (${pc(n.A, n.P)})`], [t.kY(n.year), f(n.PY)], [t.kR(n.monthsLeft), `<b style="color:${n.remain < 0 ? '#B42318' : '#101828'}">${f(n.remain)}</b>`]];
