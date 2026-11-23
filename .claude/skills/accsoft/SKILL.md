@@ -666,3 +666,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Nguyên tắc UI: thay đổi dữ liệu phải ghi nháp + nút Lưu + ask() xác nhận; không tự lưu khi change, không để dòng nhảy khỏi bộ lọc sau khi lưu (FQP\/FQMV như TXPEND\/TXMV).
 - aq(): WOPS = lệnh ghi cần xác nhận (uiModal), bỏ qua nếu ask/askText được đồng ý trong 6 s (cửa sổ trượt); Huỷ ném lỗi cancelled, vẽ lại VIEWS[PAGE]. Lệnh ghi mới thêm vào main.js WRITE thì thêm vào WOPS (trừ lệnh chỉ lưu trạng thái xem).
 - Bộ lọc lưu localStorage: luôn kiểm giá trị còn nằm trong danh sách chọn, không thì bỏ (tránh select hiện "Tất cả" mà vẫn lọc).
+- vFQ: data-fqgo trên ô tổng hợp → FQF {amt (kt|pl|un: phần >0 của CT, gồm CT trích chung đã tách), side, fy, y, nob (bỏ CT số dư), lbl}.

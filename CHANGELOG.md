@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.9.5
+- Quỹ khen thưởng – phúc lợi: bấm vào bất kỳ ô số / năm nào ở tab Tổng hợp (theo năm quỹ, chi năm nào từ quỹ năm nào, theo năm chứng từ, số dư đầu kỳ) → mở tab Chứng từ lọc sẵn đúng các chứng từ tạo nên số đó, có nhãn "Từ tổng hợp: …".
+
 ## 5.9.4
 - Quỹ khen thưởng – phúc lợi: sửa lỗi tab Chứng từ không hiện gì dù bộ lọc ghi "Tất cả" (bộ lọc còn giữ năm không còn trong danh sách); thêm nút "Bỏ lọc".
 
