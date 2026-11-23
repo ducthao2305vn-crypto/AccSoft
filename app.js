@@ -2446,7 +2446,10 @@ const FQT={kt:'Khen thưởng',pl:'Phúc lợi',mix:'Trích chung (tách KT/PL)'
 const fqLines=Ls=>`<table style="width:100%;font-size:12px"><tr><th>Ngày</th><th>Nợ</th><th>Có</th><th>Đối tượng</th><th>Phòng ban</th><th>Diễn giải</th><th class=n>Số tiền</th></tr>${Ls.map(l=>`<tr><td>${esc(l.d)}</td><td>${esc(l.dr)}</td><td>${esc(l.cr)}</td><td>${esc(l.bp||'')}</td><td>${esc(l.dept||'')}</td><td style="white-space:normal">${esc(l.ds||'')}</td><td class=n>${fmt2(l.v)}</td></tr>`).join('')}</table>`;
 async function vFQ(){const H=$('#fqBody');H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp TK 353…</div>';
   let R;try{R=await aq('f353Report')}catch(e){H.innerHTML=`<div class="card neg">${esc(e.message)}</div>`;return}
-  ls.set('fqF',FQF);const D=R.docs,yrs=[...new Set(D.flatMap(x=>[x.y,x.fy]))].sort(),f0=v=>Math.abs(v)<0.005?'':fmt2(v),neg=v=>v<-0.005?' neg':'';
+  const D=R.docs,yrs=[...new Set(D.flatMap(x=>[x.y,x.fy]))].sort(),f0=v=>Math.abs(v)<0.005?'':fmt2(v),neg=v=>v<-0.005?' neg':'';
+  // bộ lọc còn giữ giá trị không có trong danh sách (vd năm quỹ đã đổi hết) → ô chọn hiện "Tất cả" nhưng vẫn lọc → bỏ giá trị đó
+  {const ok={side:['','cr','dr','ob'],typ:['','kt','pl','mix','un'],only:['','edit','auto']};for(const k in ok)if(!ok[k].includes(FQF[k]??''))FQF[k]='';for(const k of ['fy','y'])if(FQF[k]&&!yrs.includes(+FQF[k]))FQF[k]='';if(typeof FQF.q!=='string')FQF.q=''}
+  ls.set('fqF',FQF);
   const tabs=`<div class="tabs">${[['sum','Tổng hợp theo năm'],['docs','Chứng từ ('+num(D.length)+')']].map(([k,v])=>`<button data-fqtab="${k}" class="${FQF.tab===k?'on':''}">${v}</button>`).join('')}</div>`;
   const head=`<div class="card"><div class="subbar"><span class="crumb">Quỹ khen thưởng – phúc lợi (TK ${esc(R.cfg.accs.join(', '))})</span><span class="hint">Có ${esc(R.cfg.accs.join('/'))} = tăng quỹ (trích lập, hoàn lại) · Nợ = chi quỹ. Mỗi chứng từ tự phân loại Khen thưởng / Phúc lợi theo diễn giải và gán năm quỹ = năm ghi trong diễn giải (không có thì lấy năm chứng từ). Sửa tay được giữ khi nạp lại dữ liệu.</span></div>
     <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">${tabs}<div style="flex:1"></div>
@@ -2485,7 +2488,7 @@ async function vFQ(){const H=$('#fqBody');H.innerHTML='<div class="card"><span c
     H.innerHTML=head+`<div class="card"><div class="filterrow"><label>Vế <select id="fqSide">${opt(FQF.side,[['','Tất cả'],['cr','Tăng quỹ (Có 353)'],['dr','Chi quỹ (Nợ 353)'],['ob','Số dư đầu kỳ (TK OB)']])}</select></label>
       <label>Loại <select id="fqTyp">${opt(FQF.typ,[['','Tất cả'],['kt','Khen thưởng'],['pl','Phúc lợi'],['mix','Trích chung'],['un','Chưa phân loại']])}</select></label>
       <label>Năm quỹ <select id="fqFy">${opt(FQF.fy,[['','Tất cả'],...yrs.map(y=>[y,y])])}</select></label><label>Năm CT <select id="fqY">${opt(FQF.y,[['','Tất cả'],...yrs.map(y=>[y,y])])}</select></label>
-      <label>Nguồn <select id="fqOnly">${opt(FQF.only,[['','Tất cả'],['edit','Đã sửa tay'],['auto','Tự động']])}</select></label><label style="flex:1">Tìm <input id="fqQ" value="${esc(FQF.q)}" placeholder="số CT, diễn giải, TK đối ứng, phòng ban…" style="width:100%"></label></div>
+      <label>Nguồn <select id="fqOnly">${opt(FQF.only,[['','Tất cả'],['edit','Đã sửa tay'],['auto','Tự động']])}</select></label><button class="btn sm ghost" id="fqClr" ${FQF.side||FQF.typ||FQF.fy||FQF.y||FQF.only||FQF.q?'':'disabled'}>Bỏ lọc</button><label style="flex:1">Tìm <input id="fqQ" value="${esc(FQF.q)}" placeholder="số CT, diễn giải, TK đối ứng, phòng ban…" style="width:100%"></label></div>
       <div class="row" style="gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"><span class="mut">${num(L.length)} chứng từ · Tăng − chi: <b>${fmt2(sum('v'))}</b> (KT ${fmt2(sum('kt'))} · PL ${fmt2(sum('pl'))} · Chưa PL ${fmt2(sum('un'))})</span><div style="flex:1"></div>
       <span class="mut s">${sel.length?`Đã chọn ${num(sel.length)} CT – ${fmt2(sel.reduce((a,x)=>a+x.v,0))}`:'Chọn chứng từ để sửa hàng loạt'}</span>
       <select id="fqBT" ${sel.length?'':'disabled'}>${opt('',[['','Đặt loại…'],['kt','Khen thưởng'],['pl','Phúc lợi'],['mix','Trích chung'],['un','Chưa phân loại']])}</select><input id="fqBY" type="number" placeholder="Năm quỹ" style="width:90px" ${sel.length?'':'disabled'}><button class="btn sm primary" id="fqBA" ${sel.length?'':'disabled'}>Áp dụng</button><button class="btn sm ghost" id="fqBR" ${sel.length?'':'disabled'}>↺ Về tự động</button></div></div>
@@ -2503,6 +2506,7 @@ async function vFQ(){const H=$('#fqBody');H.innerHTML='<div class="card"><span c
     try{const f=await api.xlsxSheets('QuyKhenThuongPhucLoi_353.xlsx',[['Theo nam quy',S],['Chi theo nam quy',X],['Chung tu',C]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
   if(FQF.tab!=='docs')return;
   const setF=(k,v)=>{FQF[k]=v;FQMV.clear();vFQ()};
+  $('#fqClr').onclick=()=>{Object.assign(FQF,{side:'',typ:'',fy:'',y:'',only:'',q:''});FQMV.clear();vFQ()};
   [['#fqSide','side'],['#fqTyp','typ'],['#fqFy','fy'],['#fqY','y'],['#fqOnly','only']].forEach(([s,k])=>$(s).onchange=e=>setF(k,e.target.value));
   let tq;$('#fqQ').oninput=e=>{clearTimeout(tq);tq=setTimeout(()=>{FQF.q=e.target.value;vFQ().then(()=>{const i=$('#fqQ');i.focus();i.setSelectionRange(i.value.length,i.value.length)})},350)};
   const keep=async fn=>{const t=H.querySelector('.tbl'),y=t?t.scrollTop:0,w=window.scrollY;await fn();await vFQ();const t2=H.querySelector('.tbl');if(t2)t2.scrollTop=y;window.scrollTo(0,w)};

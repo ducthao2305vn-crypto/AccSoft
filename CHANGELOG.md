@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.9.4
+- Quỹ khen thưởng – phúc lợi: sửa lỗi tab Chứng từ không hiện gì dù bộ lọc ghi "Tất cả" (bộ lọc còn giữ năm không còn trong danh sách); thêm nút "Bỏ lọc".
+
 ## 5.9.3
 - Toàn bộ app: mọi thao tác ghi dữ liệu (lưu, xoá, đổi trạng thái, ghép, nhập…) đều phải xác nhận trước khi ghi; thao tác đã có hộp xác nhận riêng thì không hỏi lại; Huỷ → không ghi, trang vẽ lại về số cũ.
 
