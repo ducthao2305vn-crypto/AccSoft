@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.9.1
+- Quỹ khen thưởng – phúc lợi: thêm cột Số dư đầu kỳ / Số dư cuối kỳ từng năm quỹ. Số dư đầu kỳ TK 353 = bút toán đối ứng TK OB (tách KT/PL như trích chung) + số nhập tay (KT, PL, chưa tách); bút toán OB không còn tính là tăng quỹ.
+
 ## 5.9.0
 - Trang mới "Quỹ khen thưởng – phúc lợi (353)": gom bút toán TK 353 theo số chứng từ; tự phân loại Khen thưởng / Phúc lợi theo diễn giải, gán năm quỹ (năm ghi trong diễn giải, không có thì năm chứng từ); chứng từ trích lập chung nhập số khen thưởng để tách; sửa từng dòng hoặc hàng loạt, giữ khi nạp lại dữ liệu. Tổng hợp theo năm quỹ (tăng / chi / còn, luỹ kế), bảng chi năm nào lấy từ quỹ năm nào, theo năm chứng từ; xuất Excel.
 
