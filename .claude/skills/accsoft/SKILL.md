@@ -661,3 +661,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - treeRows(tree, rows, cat): nhóm en = cat[PFX+stt] (PFX suy từ lá có code kết thúc bằng .stt); n.catEn từ cost_cat.name.
 - mailer.sendAll: KHÔNG đặt chú thích // trên cùng dòng với thuộc tính sendMail (từng làm mất subject/html từ 4.97.2 đến 5.8.7).
 - mailer.sendAll: retry 3 lần với transport mới cho lỗi kết nối.
+- fund353.js: fund_cls(doc, side, y) lưu typ (kt|pl|mix|none), fy, kt; mix chưa nhập kt → tính chưa phân loại. Trang fund353 (vFQ), cấu hình TK quỹ settings.fund353_cfg.
