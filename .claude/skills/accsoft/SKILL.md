@@ -663,3 +663,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - mailer.sendAll: retry 3 lần với transport mới cho lỗi kết nối.
 - fund353.js: fund_cls(doc, side, y) lưu typ (kt|pl|mix|none), fy, kt; mix chưa nhập kt → tính chưa phân loại. Trang fund353 (vFQ), cấu hình TK quỹ settings.fund353_cfg.
 - fund353: doc.ob khi mọi dòng đối ứng OB; report.ob {kt,pl,un,tot,data,manual}; byFund dk/ktDk/plDk + cum = cuối kỳ; cfg.ob nhập tay.
+- Nguyên tắc UI: thay đổi dữ liệu phải ghi nháp + nút Lưu + ask() xác nhận; không tự lưu khi change, không để dòng nhảy khỏi bộ lọc sau khi lưu (FQP\/FQMV như TXPEND\/TXMV).

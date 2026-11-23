@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.9.2
+- Quỹ khen thưởng – phúc lợi: sửa loại / năm quỹ / số KT (từng dòng hoặc hàng loạt) chỉ ghi nháp, dòng tô vàng; bấm "Lưu thay đổi" → xác nhận danh sách thay đổi rồi mới ghi. Dòng vừa lưu vẫn hiện (nền xanh) dù không còn khớp bộ lọc, không tự nhảy. Về tự động, đổi TK quỹ, lưu số dư đầu kỳ đều hỏi xác nhận.
+
 ## 5.9.1
 - Quỹ khen thưởng – phúc lợi: thêm cột Số dư đầu kỳ / Số dư cuối kỳ từng năm quỹ. Số dư đầu kỳ TK 353 = bút toán đối ứng TK OB (tách KT/PL như trích chung) + số nhập tay (KT, PL, chưa tách); bút toán OB không còn tính là tăng quỹ.
 

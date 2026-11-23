@@ -2430,7 +2430,7 @@ async function bpPlan(H,tabs,yearSel,D,dsel,bind,Y){const L=await aq('bpList',BP
 const vLoc=()=>vDim('location'),vVeh=()=>vDim('plate'),vDpt=()=>vDim('dept');
 // ======== Tìm chức năng (Ctrl+P): tìm theo tên trang, mô tả, từ khoá, cả các chức năng nằm trong trang (tab, nút) – không phân biệt dấu ========
 // Quỹ khen thưởng – phúc lợi (TK 353 hạch toán chung): tách Khen thưởng / Phúc lợi, năm của quỹ, gom theo số chứng từ – chỉ theo năm
-const FQF=Object.assign({tab:'sum',side:'',typ:'',fy:'',y:'',q:'',only:''},ls.get('fqF',{}));const FQSEL=new Set();const FQOPEN=new Set();const FQLN=new Map();
+const FQF=Object.assign({tab:'sum',side:'',typ:'',fy:'',y:'',q:'',only:''},ls.get('fqF',{}));const FQSEL=new Set();const FQOPEN=new Set();const FQLN=new Map();const FQP=new Map();const FQMV=new Set();
 const fqNz=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
 const FQT={kt:'Khen thưởng',pl:'Phúc lợi',mix:'Trích chung (tách KT/PL)','':'Chưa phân loại'};
 const fqLines=Ls=>`<table style="width:100%;font-size:12px"><tr><th>Ngày</th><th>Nợ</th><th>Có</th><th>Đối tượng</th><th>Phòng ban</th><th>Diễn giải</th><th class=n>Số tiền</th></tr>${Ls.map(l=>`<tr><td>${esc(l.d)}</td><td>${esc(l.dr)}</td><td>${esc(l.cr)}</td><td>${esc(l.bp||'')}</td><td>${esc(l.dept||'')}</td><td style="white-space:normal">${esc(l.ds||'')}</td><td class=n>${fmt2(l.v)}</td></tr>`).join('')}</table>`;
@@ -2440,7 +2440,7 @@ async function vFQ(){const H=$('#fqBody');H.innerHTML='<div class="card"><span c
   const tabs=`<div class="tabs">${[['sum','Tổng hợp theo năm'],['docs','Chứng từ ('+num(D.length)+')']].map(([k,v])=>`<button data-fqtab="${k}" class="${FQF.tab===k?'on':''}">${v}</button>`).join('')}</div>`;
   const head=`<div class="card"><div class="subbar"><span class="crumb">Quỹ khen thưởng – phúc lợi (TK ${esc(R.cfg.accs.join(', '))})</span><span class="hint">Có ${esc(R.cfg.accs.join('/'))} = tăng quỹ (trích lập, hoàn lại) · Nợ = chi quỹ. Mỗi chứng từ tự phân loại Khen thưởng / Phúc lợi theo diễn giải và gán năm quỹ = năm ghi trong diễn giải (không có thì lấy năm chứng từ). Sửa tay được giữ khi nạp lại dữ liệu.</span></div>
     <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">${tabs}<div style="flex:1"></div>
-      ${R.nUn?`<span class="badge b-H">${num(R.nUn)} chứng từ chưa phân loại</span>`:'<span class="badge s-fixed">Đã phân loại hết</span>'}<span class="mut s">${num(R.nEdit)} chứng từ đã sửa tay</span>
+      ${FQP.size?`<span class="badge" style="background:#FFFAEB;color:#B54708">${num(FQP.size)} thay đổi chưa lưu</span>`:''}${R.nUn?`<span class="badge b-H">${num(R.nUn)} chứng từ chưa phân loại</span>`:'<span class="badge s-fixed">Đã phân loại hết</span>'}<span class="mut s">${num(R.nEdit)} chứng từ đã sửa tay</span>
       <label class="mut s">TK quỹ <input id="fqAccs" value="${esc(R.cfg.accs.join(', '))}" style="width:90px"></label><button class="btn sm" id="fqXls">Xuất Excel</button></div></div>`;
   if(FQF.tab==='sum'){
     const T=k=>R.byFund.reduce((a,r)=>a+r[k],0),cols=['ktIn','ktOut','kt','plIn','plOut','pl','unIn','unOut','bal'];
@@ -2461,10 +2461,11 @@ async function vFQ(){const H=$('#fqBody');H.innerHTML='<div class="card"><span c
       <div class="card"><h3 style="margin:0 0 6px">Theo năm chứng từ</h3><div class="tbl"><table><thead><tr><th>Năm CT</th><th class=n>KT tăng</th><th class=n>KT chi</th><th class=n>PL tăng</th><th class=n>PL chi</th><th class=n>Chưa PL tăng</th><th class=n>Chưa PL chi</th><th class=n>Tăng − chi</th></tr></thead>
       <tbody>${R.byDoc.map(r=>`<tr><td><b>${r.y}</b></td>${['ktIn','ktOut','plIn','plOut','unIn','unOut','bal'].map(k=>`<td class="n${neg(r[k])}">${f0(r[k])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
   }else{
-    const q=fqNz(FQF.q),L=D.filter(x=>(!FQF.side||(FQF.side==='ob'?x.ob:!x.ob&&x.side===FQF.side))&&(FQF.typ===''||FQF.typ==null||(FQF.typ==='un'?!['kt','pl','mix'].includes(x.typ):x.typ===FQF.typ))&&(!FQF.fy||x.fy===+FQF.fy)&&(!FQF.y||x.y===+FQF.y)&&(!FQF.only||(FQF.only==='edit'?x.edited:!x.edited))&&(!q||fqNz(x.doc+' '+x.ds+' '+x.other+' '+x.dept+' '+x.bp).includes(q)));
+    const q=fqNz(FQF.q),L=D.filter(x=>(!FQF.side||(FQF.side==='ob'?x.ob:!x.ob&&x.side===FQF.side))&&(FQMV.has(x.key)||FQF.typ===''||FQF.typ==null||(FQF.typ==='un'?!['kt','pl','mix'].includes(x.typ):x.typ===FQF.typ))&&(FQMV.has(x.key)||!FQF.fy||x.fy===+FQF.fy)&&(!FQF.y||x.y===+FQF.y)&&(!FQF.only||(FQF.only==='edit'?x.edited:!x.edited))&&(!q||fqNz(x.doc+' '+x.ds+' '+x.other+' '+x.dept+' '+x.bp).includes(q)));
     const sum=k=>L.reduce((a,x)=>a+(x.side==='cr'?1:-1)*x[k],0),sel=L.filter(x=>FQSEL.has(x.key));
     const opt=(v,o)=>o.map(([k,t])=>`<option value="${k}" ${String(v)===String(k)?'selected':''}>${t}</option>`).join('');
-    const row=x=>{const o=FQOPEN.has(x.key);return `<tr data-fqk="${esc(x.key)}" class="${x.typ===''?'warnrow':''}"><td><input type="checkbox" data-fqs ${FQSEL.has(x.key)?'checked':''}></td>
+    const row=x0=>{const o=FQOPEN.has(x0.key),pp=FQP.get(x0.key),x=pp?{...x0,typ:pp.typ!==undefined?(pp.typ==='none'?'':pp.typ):x0.typ,fy:pp.fy!==undefined?pp.fy:x0.fy,split:pp.kt!==undefined?true:x0.split,kt:pp.kt!==undefined?pp.kt:x0.kt}:x0;if(pp&&x.typ==='mix'&&x.split)x.pl=x.v-x.kt;
+      return `<tr data-fqk="${esc(x.key)}" class="${x.typ===''?'warnrow':''}" style="${pp?'background:#FFF8E1':FQMV.has(x.key)?'background:#ECFDF3':''}" title="${pp?'Đã sửa – chưa lưu':FQMV.has(x.key)?'Vừa lưu':''}"><td><input type="checkbox" data-fqs ${FQSEL.has(x.key)?'checked':''}></td>
       <td><a href="#" data-fqo>${o?'▾':'▸'} <b>${esc(x.doc)}</b></a><div class="mut s">${esc(x.d1)}${x.d2!==x.d1?' → '+esc(x.d2):''} · ${num(x.n)} dòng</div></td><td>${x.y}</td>
       <td>${x.ob?'<span class="badge b-M">Số dư đầu kỳ</span>':x.side==='cr'?'<span class="badge s-fixed">Tăng quỹ</span>':'<span class="badge">Chi quỹ</span>'}</td><td class=s>${esc(x.other)}</td>
       <td style="max-width:420px"><div style="white-space:normal;font-size:12px">${esc(x.ds)}</div>${x.nDs>1?`<div class="mut s">+${x.nDs-1} diễn giải dòng khác</div>`:''}</td><td class="n"><b>${fmt2(x.v)}</b></td>
@@ -2478,33 +2479,39 @@ async function vFQ(){const H=$('#fqBody');H.innerHTML='<div class="card"><span c
       <div class="row" style="gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"><span class="mut">${num(L.length)} chứng từ · Tăng − chi: <b>${fmt2(sum('v'))}</b> (KT ${fmt2(sum('kt'))} · PL ${fmt2(sum('pl'))} · Chưa PL ${fmt2(sum('un'))})</span><div style="flex:1"></div>
       <span class="mut s">${sel.length?`Đã chọn ${num(sel.length)} CT – ${fmt2(sel.reduce((a,x)=>a+x.v,0))}`:'Chọn chứng từ để sửa hàng loạt'}</span>
       <select id="fqBT" ${sel.length?'':'disabled'}>${opt('',[['','Đặt loại…'],['kt','Khen thưởng'],['pl','Phúc lợi'],['mix','Trích chung'],['un','Chưa phân loại']])}</select><input id="fqBY" type="number" placeholder="Năm quỹ" style="width:90px" ${sel.length?'':'disabled'}><button class="btn sm primary" id="fqBA" ${sel.length?'':'disabled'}>Áp dụng</button><button class="btn sm ghost" id="fqBR" ${sel.length?'':'disabled'}>↺ Về tự động</button></div></div>
+      ${FQP.size?`<div class="card" style="position:sticky;top:0;z-index:5;border:1px solid #F79009;background:#FFFAEB"><div class="row" style="gap:8px;align-items:center"><b>${num(FQP.size)} chứng từ đã sửa – chưa lưu</b><span class="mut s">Dòng nền vàng là dòng đã sửa. Số liệu tổng hợp chỉ thay đổi sau khi bấm Lưu.</span><div style="flex:1"></div><button class="btn sm ghost" id="fqPX">Huỷ thay đổi</button><button class="btn sm primary" id="fqPS">Lưu thay đổi</button></div></div>`:''}
       <div class="card">${tbl0(['<input type="checkbox" id="fqAll">','Số chứng từ','Năm CT','Vế','TK đối ứng','Diễn giải','#Số tiền','Khen thưởng / Phúc lợi','Năm quỹ',''],L.map(row),'Không có chứng từ phù hợp')}</div>`;
   }
   // sự kiện
   H.querySelectorAll('[data-fqtab]').forEach(b=>b.onclick=()=>{FQF.tab=b.dataset.fqtab;vFQ()});
   H.querySelectorAll('[data-fqy]').forEach(b=>b.onclick=()=>{Object.assign(FQF,{tab:'docs',fy:b.dataset.fqy,y:'',typ:'',side:''});vFQ()});
-  if($('#fqObSave'))$('#fqObSave').onclick=async()=>{await aq('f353SetCfg',{ob:{kt:$('#fqObKt').value,pl:$('#fqObPl').value,un:$('#fqObUn').value}});vFQ()};
-  $('#fqAccs').onchange=async e=>{await aq('f353SetCfg',{accs:e.target.value});vFQ()};
+  if($('#fqObSave'))$('#fqObSave').onclick=async()=>{if(!await ask(`Lưu số dư đầu kỳ nhập tay: KT ${fmt2(+$('#fqObKt').value||0)} · PL ${fmt2(+$('#fqObPl').value||0)} · Chưa tách ${fmt2(+$('#fqObUn').value||0)}?`))return;await aq('f353SetCfg',{ob:{kt:$('#fqObKt').value,pl:$('#fqObPl').value,un:$('#fqObUn').value}});vFQ()};
+  $('#fqAccs').onchange=async e=>{if(!await ask(`Đổi TK quỹ phân tích thành "${e.target.value}"?`)){e.target.value=R.cfg.accs.join(', ');return}await aq('f353SetCfg',{accs:e.target.value});vFQ()};
   $('#fqXls').onclick=async()=>{const S=[['Số dư đầu kỳ TK 353','KT',R.ob.kt,'PL',R.ob.pl,'Chưa tách',R.ob.un,'Tổng',R.ob.tot],[],['Năm quỹ','Số dư đầu kỳ','KT tăng','KT chi','KT còn','PL tăng','PL chi','PL còn','Chưa PL tăng','Chưa PL chi','Còn lại năm','Số dư cuối kỳ'],...R.byFund.map(r=>[r.y,r.dk,r.ktIn,r.ktOut,r.kt,r.plIn,r.plOut,r.pl,r.unIn,r.unOut,r.bal,r.cum])];
     const C=[['Số chứng từ','Ngày đầu','Ngày cuối','Năm CT','Vế','TK quỹ','TK đối ứng','Diễn giải','Phòng ban','Số dòng','Số tiền','Loại','Khen thưởng','Phúc lợi','Chưa phân loại','Năm quỹ','Sửa tay'],...D.map(x=>[x.doc,x.d1,x.d2,x.y,x.ob?'Số dư đầu kỳ':x.side==='cr'?'Tăng quỹ':'Chi quỹ',x.accs,x.other,x.ds,x.dept,x.n,x.v,FQT[['kt','pl','mix'].includes(x.typ)?x.typ:''],x.kt,x.pl,x.un,x.fy,x.edited?'x':''])];
     const X=[['Năm chi','Năm quỹ','Khen thưởng','Phúc lợi','Chưa phân loại'],...R.cross.map(x=>[x.y,x.fy,x.kt,x.pl,x.un])];
     try{const f=await api.xlsxSheets('QuyKhenThuongPhucLoi_353.xlsx',[['Theo nam quy',S],['Chi theo nam quy',X],['Chung tu',C]]);if(f)alert('Đã xuất: '+f)}catch(e){alert(e.message)}};
   if(FQF.tab!=='docs')return;
-  const setF=(k,v)=>{FQF[k]=v;vFQ()};
+  const setF=(k,v)=>{FQF[k]=v;FQMV.clear();vFQ()};
   [['#fqSide','side'],['#fqTyp','typ'],['#fqFy','fy'],['#fqY','y'],['#fqOnly','only']].forEach(([s,k])=>$(s).onchange=e=>setF(k,e.target.value));
   let tq;$('#fqQ').oninput=e=>{clearTimeout(tq);tq=setTimeout(()=>{FQF.q=e.target.value;vFQ().then(()=>{const i=$('#fqQ');i.focus();i.setSelectionRange(i.value.length,i.value.length)})},350)};
   const keep=async fn=>{const t=H.querySelector('.tbl'),y=t?t.scrollTop:0,w=window.scrollY;await fn();await vFQ();const t2=H.querySelector('.tbl');if(t2)t2.scrollTop=y;window.scrollTo(0,w)};
   const mapT=v=>v==='un'?'none':v;
   $('#fqAll').onchange=e=>{H.querySelectorAll('[data-fqs]').forEach(c=>{c.checked=e.target.checked;const k=c.closest('tr').dataset.fqk;e.target.checked?FQSEL.add(k):FQSEL.delete(k)});vFQ()};
-  $('#fqBA').onclick=()=>{const t=$('#fqBT').value,y=$('#fqBY').value;if(!t&&!y)return alert('Chọn loại hoặc nhập năm quỹ');keep(()=>aq('f353Set',[...FQSEL].map(k=>({key:k,...(t?{typ:mapT(t)}:{}),...(y?{fy:+y}:{})}))))};
-  $('#fqBR').onclick=async()=>{if(!await ask(`Bỏ sửa tay của ${FQSEL.size} chứng từ, về phân loại tự động?`))return;keep(async()=>{await aq('f353Reset',[...FQSEL]);FQSEL.clear()})};
+  const pend=(k,o)=>FQP.set(k,Object.assign(FQP.get(k)||{},o));
+  $('#fqBA').onclick=()=>{const t=$('#fqBT').value,y=$('#fqBY').value;if(!t&&!y)return alert('Chọn loại hoặc nhập năm quỹ');for(const k of FQSEL)pend(k,{...(t?{typ:mapT(t)}:{}),...(y?{fy:+y}:{})});keep(async()=>{})};
+  if($('#fqPX'))$('#fqPX').onclick=async()=>{if(!await ask(`Huỷ ${FQP.size} thay đổi chưa lưu?`))return;FQP.clear();keep(async()=>{})};
+  if($('#fqPS'))$('#fqPS').onclick=async()=>{const ch=[...FQP].map(([k,o])=>{const x=D.find(z=>z.key===k)||{doc:k};return `• ${x.doc}: `+[o.typ!==undefined?`loại → ${FQT[o.typ==='none'?'':o.typ]}`:'',o.fy!==undefined?`năm quỹ ${x.fy} → ${o.fy}`:'',o.kt!==undefined?`KT ${fmt2(o.kt)}`:''].filter(Boolean).join(', ')});
+    if(!await ask(`Lưu ${FQP.size} thay đổi?\n\n${ch.slice(0,15).join('\n')}${ch.length>15?`\n… và ${ch.length-15} chứng từ khác`:''}`))return;
+    const L2=[...FQP].map(([key,o])=>({key,...o}));keep(async()=>{await aq('f353Set',L2);L2.forEach(x=>FQMV.add(x.key));FQP.clear()})};
+  $('#fqBR').onclick=async()=>{if(!await ask(`Bỏ sửa tay của ${FQSEL.size} chứng từ, về phân loại tự động?`))return;keep(async()=>{await aq('f353Reset',[...FQSEL]);FQSEL.forEach(k=>FQP.delete(k));FQSEL.clear()})};
   H.onchange=e=>{const tr=e.target.closest('tr[data-fqk]');if(!tr)return;const k=tr.dataset.fqk;
-    if(e.target.dataset.fqs!=null){e.target.checked?FQSEL.add(k):FQSEL.delete(k);return vFQ()}
-    if(e.target.dataset.fqt!=null)return keep(()=>aq('f353Set',[{key:k,typ:e.target.value||'none'}]));
-    if(e.target.dataset.fqkt!=null)return keep(()=>aq('f353Set',[{key:k,kt:+e.target.value||0}]));
-    if(e.target.dataset.fqy2!=null)return keep(()=>aq('f353Set',[{key:k,fy:+e.target.value}]))};
+    if(e.target.dataset.fqs!=null){e.target.checked?FQSEL.add(k):FQSEL.delete(k);return keep(async()=>{})}
+    if(e.target.dataset.fqt!=null){pend(k,{typ:e.target.value||'none'});return keep(async()=>{})}
+    if(e.target.dataset.fqkt!=null){pend(k,{kt:+e.target.value||0});return keep(async()=>{})}
+    if(e.target.dataset.fqy2!=null){const v=+e.target.value;if(!(v>=2000&&v<=2100)){alert('Năm quỹ không hợp lệ');return keep(async()=>{})}pend(k,{fy:v});return keep(async()=>{})}};
   H.onclick=async e=>{const tr=e.target.closest('tr[data-fqk]');if(!tr)return;const k=tr.dataset.fqk;
-    if(e.target.closest('[data-fqr]'))return keep(()=>aq('f353Reset',[k]));
+    if(e.target.closest('[data-fqr]')){if(!await ask('Bỏ sửa tay của chứng từ này, về phân loại tự động?'))return;FQP.delete(k);return keep(()=>aq('f353Reset',[k]))}
     if(e.target.closest('[data-fqo]')){e.preventDefault();FQOPEN.has(k)?FQOPEN.delete(k):FQOPEN.add(k);const sv=new Map(FQLN);await keep(async()=>{});sv.forEach((v,kk)=>FQLN.set(kk,v));if(!FQOPEN.has(k))return;
       if(!FQLN.has(k)){FQLN.set(k,await aq('f353Lines',k));const c=H.querySelector(`tr[data-fqd="${CSS.escape(k)}"] td:last-child`);if(c)c.innerHTML=fqLines(FQLN.get(k))}}};
 }
