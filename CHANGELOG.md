@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.9.7
+- Sao kê ngân hàng nhanh hơn: tab Ghép ngân hàng ERP 15 s → 0,1 s (truy vấn dùng chỉ mục TK thay vì quét toàn bộ bút toán); tab Đối chiếu 112 khoảng 7 s → 0,7 s (kết quả gửi về giao diện từ 14,7 MB còn 0,2 MB – mỗi giao dịch không còn mang kèm cả sao kê của tài khoản). Kết quả đối chiếu không đổi.
+
 ## 5.9.6
 - Thông báo chi phí (PDF / email): làm tròn USD ở từng khoản mục trước khi cộng nhóm và tổng cộng; chênh lệch, còn lại, KPI, nhận xét tính từ số đã làm tròn → cộng tay khớp từng đồng (trước đây lệch 1 do làm tròn).
 

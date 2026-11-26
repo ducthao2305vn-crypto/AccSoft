@@ -668,3 +668,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Bộ lọc lưu localStorage: luôn kiểm giá trị còn nằm trong danh sách chọn, không thì bỏ (tránh select hiện "Tất cả" mà vẫn lọc).
 - vFQ: data-fqgo trên ô tổng hợp → FQF {amt (kt|pl|un: phần >0 của CT, gồm CT trích chung đã tách), side, fy, y, nob (bỏ CT số dư), lbl}.
 - bpnotice.rnd(n): báo cáo hiển thị số nguyên thì làm tròn ở dòng lá trước, tổng = tổng số đã làm tròn.
+- Hiệu năng: lọc TK theo khoảng (acc>='112' AND acc<'113') để dùng ix_e_accd\/ix_e_accc, không dùng LIKE '112%' hay substr(); không trả object lồng (vd t.a chứa a.rows) qua IPC.

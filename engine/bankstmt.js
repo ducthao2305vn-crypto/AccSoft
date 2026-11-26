@@ -145,8 +145,10 @@ function make(db, all, FIN) {
     const out = [];
     for (const [gl, A] of groups) {
       const lo = addD(from, -tol), hi = addD(to, tol), L = gl.length;
-      const E = all(`SELECT id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, description ds, partner_debit bp, partner_credit bpc, bank_account bk, bank_account_cr bkc FROM entries
-        WHERE account_date BETWEEN ? AND ? AND amount<>0 AND (substr(acc_debit,1,?)=? OR substr(acc_credit,1,?)=?)`, lo, hi, L, gl, L, gl);
+      // lấy bút toán TK tiền gửi theo chỉ mục TK (khoảng gl … gl+'~'), 2 vế gộp lại, bỏ trùng theo id
+      const COLS = `id, document_no doc, account_date d, acc_debit dr, acc_credit cr, amount a, description ds, partner_debit bp, partner_credit bpc, bank_account bk, bank_account_cr bkc`, gh = gl + '\uffff', EM = new Map();
+      for (const c of ['acc_debit', 'acc_credit']) for (const e of all(`SELECT ${COLS} FROM entries WHERE ${c}>=? AND ${c}<? AND account_date BETWEEN ? AND ? AND amount<>0`, gl, gh, lo, hi)) EM.set(e.id, e);
+      const E = [...EM.values()].sort((p, q) => p.id - q.id); // giữ thứ tự dòng như trước (ảnh hưởng chọn bút toán khi trùng số tiền)
       const B = []; // phía sổ: in = Nợ 112 (tiền vào), out = Có 112
       for (const e of E) {
         if (e.dr.slice(0, L) === gl) B.push({ ...e, side: e.a > 0 ? 'in' : 'out', v: Math.abs(e.a), oth: e.cr, k: e.id + 'd', bkey: e.bk || '' });
@@ -176,11 +178,14 @@ function make(db, all, FIN) {
       const bank = { open: A.reduce((s, a) => s + (a.open || 0), 0), cr: A.reduce((s, a) => s + a.cr, 0), dr: A.reduce((s, a) => s + a.dr, 0), close: A.reduce((s, a) => s + (a.close || 0), 0) };
       // số liệu sổ theo từng tài khoản ngân hàng (chỉ khi đã ghép TK ngân hàng ERP): đầu kỳ = Nợ − Có 112 có Bank Account tương ứng trước ngày đầu kỳ
       const perAcc = A.map(a => { const m = [...MAP.get(a.acc)]; if (!m.length) return { acc: a.acc, mapped: false };
-        const ph = m.map(() => '?').join(','), q = (col, bcol, cond, ...x) => (all(`SELECT sum(amount) v FROM entries WHERE substr(${col},1,?)=? AND ${bcol} IN (${ph}) AND ${cond}`, L, gl, ...m, ...x)[0] || {}).v || 0;
+        const ph = m.map(() => '?').join(','), q = (col, bcol, cond, ...x) => (all(`SELECT sum(amount) v FROM entries WHERE ${col}>=? AND ${col}<? AND ${bcol} IN (${ph}) AND ${cond}`, gl, gl + '\uffff', ...m, ...x)[0] || {}).v || 0;
         const open = q('acc_debit', 'bank_account', 'account_date<?', from) - q('acc_credit', 'bank_account_cr', 'account_date<?', from);
         const inn = q('acc_debit', 'bank_account', 'account_date BETWEEN ? AND ?', from, to), outt = q('acc_credit', 'bank_account_cr', 'account_date BETWEEN ? AND ?', from, to);
         return { acc: a.acc, mapped: true, erp: m, open, in: inn, out: outt, close: open + inn - outt, bank: { open: a.open, cr: a.cr, dr: a.dr, close: a.close } }; });
-      out.push({ gl, accs: A.map(a => ({ acc: a.acc, bank: a.bank, alias: a.alias, name: a.name, erp: a.erp })), perAcc, T, bookOpen, bookMax,
+      // mỗi giao dịch chỉ mang thông tin tài khoản gọn (trước đây mang cả sao kê của tài khoản → kết quả hàng chục MB, trang đối chiếu rất chậm)
+      const AL = new Map(A.map(a => [a.acc, { acc: a.acc, bank: a.bank, alias: a.alias, name: a.name, erp: a.erp, cur: a.cur }]));
+      const TT = T.map(t => ({ ...t, a: AL.get(t.a.acc) }));
+      out.push({ gl, accs: [...AL.values()], perAcc, T: TT, bookOpen, bookMax,
         book: { open: ob, in: inB, out: outB, close: ob == null ? null : ob + inB - outB }, bank,
         n: { auto: T.filter(t => t.m.st === 'auto' || t.m.st === 'group').length, manual: T.filter(t => t.m.st === 'manual').length, none: T.filter(t => t.m.st === 'none').length, nobook: T.filter(t => t.m.st === 'nobook').length } });
     }
@@ -189,9 +194,10 @@ function make(db, all, FIN) {
   // Danh mục ngân hàng trên ERP (Bank Account / Bank Account Credit của bút toán TK 112) và tài khoản sao kê đã ghép
   function erpBanks() {
     const m = new Map(), A = accounts();
-    for (const r of all(`SELECT bank_account b, count(*) n, max(account_date) d, sum(amount) v FROM entries WHERE bank_account IS NOT NULL AND bank_account<>'' AND acc_debit LIKE '112%' GROUP BY 1`)) m.set(r.b, { b: r.b, nIn: r.n, vIn: r.v, last: r.d, nOut: 0, vOut: 0 });
-    for (const r of all(`SELECT bank_account_cr b, count(*) n, max(account_date) d, sum(amount) v FROM entries WHERE bank_account_cr IS NOT NULL AND bank_account_cr<>'' AND acc_credit LIKE '112%' GROUP BY 1`)) { const o = m.get(r.b) || m.set(r.b, { b: r.b, nIn: 0, vIn: 0, last: r.d, nOut: 0, vOut: 0 }).get(r.b); o.nOut = r.n; o.vOut = r.v; if (!o.last || r.d > o.last) o.last = r.d; }
-    const has = all(`SELECT count(*) n FROM entries WHERE bank_account IS NOT NULL OR bank_account_cr IS NOT NULL`)[0].n;
+    for (const r of all(`SELECT bank_account b, count(*) n, max(account_date) d, sum(amount) v FROM entries WHERE acc_debit>='112' AND acc_debit<'113' AND bank_account<>'' GROUP BY 1`)) m.set(r.b, { b: r.b, nIn: r.n, vIn: r.v, last: r.d, nOut: 0, vOut: 0 });
+    for (const r of all(`SELECT bank_account_cr b, count(*) n, max(account_date) d, sum(amount) v FROM entries WHERE acc_credit>='112' AND acc_credit<'113' AND bank_account_cr<>'' GROUP BY 1`)) { const o = m.get(r.b) || m.set(r.b, { b: r.b, nIn: 0, vIn: 0, last: r.d, nOut: 0, vOut: 0 }).get(r.b); o.nOut = r.n; o.vOut = r.v; if (!o.last || r.d > o.last) o.last = r.d; }
+    // chỉ cần biết dữ liệu có cột Bank Account hay không (dừng ở dòng đầu tiên, không đếm cả bảng)
+    const has = m.size || (all(`SELECT 1 x FROM entries WHERE acc_debit>='112' AND acc_debit<'113' AND bank_account IS NOT NULL LIMIT 1`).length + all(`SELECT 1 x FROM entries WHERE acc_credit>='112' AND acc_credit<'113' AND bank_account_cr IS NOT NULL LIMIT 1`).length);
     return { has, list: [...m.values()].map(o => ({ ...o, acc: (A.find(a => String(a.erp || '').split('|').includes(o.b)) || {}).acc || '' })).sort((a, b) => (b.nIn + b.nOut) - (a.nIn + a.nOut)) };
   }
   function mapErp(erpBank, acc) { // ghép 1 TK ngân hàng ERP vào tài khoản sao kê (acc rỗng = bỏ ghép)
