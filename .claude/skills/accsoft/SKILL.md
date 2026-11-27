@@ -674,3 +674,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - Bộ lọc lưu localStorage khai báo bằng lsF(key, defaults) (đăng ký FREG, ghi nhận trang dùng qua Proxy); go() gọi staleFix() + fltBtn(). Trường FKEEP (tab, view…) và FDATE (from, to, asOf, year…) không bị Bỏ lọc.
 - Menu: navExtra() dựng #navX (ghim ls navPins, gần đây ls navRecent) bằng bản sao nút gốc; gọi trong go().
 - draftBar(anchor, n, txt, onSave, onCancel): thanh nháp dùng chung (class draftBar, tìm theo anchor). Bảng nhập nhiều ô dùng nháp + Lưu, không aq() trong onchange.
+- qcache + data_ver (trigger UPDATE\/DELETE entries = e; mỗi lệnh ghi từ giao diện = w, qworker gọi bumpVer khi job.w). persist(name, fn, eOnly) bọc hàm nặng (inventory eOnly, fcCompute); args.refresh bỏ qua đệm. Giữ tối đa 300 kết quả.

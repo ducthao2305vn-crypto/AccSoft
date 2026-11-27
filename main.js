@@ -48,7 +48,7 @@ function pump() {
   for (const w of qPool) {
     if (w.job) continue;
     const job = qQueue.shift() || warmJob(); if (!job) return;
-    w.job = job; w.worker.postMessage({ id: job.id, name: job.name, args: job.args });
+    w.job = job; w.worker.postMessage({ id: job.id, name: job.name, args: job.args, w: !job.key && job.name !== 'walCheckpoint' });
   }
 }
 function warmJob() {

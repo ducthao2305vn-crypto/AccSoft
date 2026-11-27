@@ -57,7 +57,7 @@ function make(all, okYm, INC, plRange, run) {
   // Số dư từng đối tượng của TK lưỡng tính đến cuối tháng `at` → {tk: {dr: tổng dư Nợ, cr: tổng dư Có}}
   const dsCache = new Map();
   function dualSplit(at) {
-    const ver = (all(`SELECT max(id) m, count(*) n FROM entries`)[0] || {}), key = at + '|' + ver.m + '|' + ver.n; if (dsCache.has(key)) return dsCache.get(key); at = String(at);
+    const ver = (all(`SELECT max(id) m, (SELECT count(*) FROM imports) || ':' || ifnull((SELECT group_concat(k || '=' || v) FROM data_ver), '') n FROM entries`)[0] || {}), key = at + '|' + ver.m + '|' + ver.n; if (dsCache.has(key)) return dsCache.get(key); at = String(at);
     const d1 = at + '-31', o = {};
     for (const p of DUAL) { const hi = p.slice(0, -1) + String.fromCharCode(p.charCodeAt(p.length - 1) + 1), m = new Map();
       for (const r of all(`SELECT partner_debit p, sum(amount) v FROM entries WHERE acc_debit>=? AND acc_debit<? AND account_date<=? GROUP BY 1`, p, hi, d1)) m.set(r.p || '', (m.get(r.p || '') || 0) + r.v);

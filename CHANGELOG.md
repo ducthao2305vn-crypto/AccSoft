@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.10.3
+- Tồn kho (4 s → 0,45 s) và Dự báo dòng tiền (4,8 s → 0,13 s), trang Dữ liệu (3,9 s → 0,4 s): kết quả tính được lưu sẵn trong DB (giữ qua lần mở app sau), chỉ tính lại khi dữ liệu thay đổi; tự tính trước ở chế độ nền sau khi mở app. Nút tính lại ở trang Dự báo vẫn tính mới.
+
 ## 5.10.2
 - Bảng nhập Kế hoạch ngân sách (tab Kế hoạch) và Kế hoạch đầu tư: sửa ô chỉ ghi nháp (tô vàng), thanh "… đã sửa – chưa lưu" với Lưu (xác nhận 1 lần cho cả đợt) / Huỷ; không còn hỏi / ghi từng ô.
 

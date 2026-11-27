@@ -6,7 +6,7 @@ const { make } = require('./queries');
 
 const { db } = open(workerData.dbPath, { light: true });
 const Q = make(db);
-parentPort.on('message', ({ id, name, args }) => {
-  try { parentPort.postMessage({ id, ok: true, result: Q[name](...(args || [])) }); }
+parentPort.on('message', ({ id, name, args, w }) => {
+  try { const result = Q[name](...(args || [])); if (w) Q.bumpVer(); parentPort.postMessage({ id, ok: true, result }); }
   catch (e) { parentPort.postMessage({ id, ok: false, error: String(e && e.message || e), stack: String(e && e.stack || e) }); }
 });

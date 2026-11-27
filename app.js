@@ -126,6 +126,9 @@ function draftBar(anchor,n,txt,onSave,onCancel){if(!anchor||!anchor.parentNode)r
   if(!b){b=document.createElement('div');b.className='card draftBar';b.style.cssText='position:sticky;top:0;z-index:6;border:1px solid #F79009;background:#FFFAEB;padding:10px 14px';anchor.parentNode.insertBefore(b,anchor)}
   b.innerHTML=`<div class="row" style="gap:8px;align-items:center"><b>${n} ${txt} đã sửa – chưa lưu</b><span class="mut s">Ô nền vàng là ô đã sửa. Số tổng cập nhật sau khi Lưu.</span><div style="flex:1"></div><button class="btn sm ghost" data-dx>Huỷ thay đổi</button><button class="btn sm primary" data-ds>Lưu thay đổi</button></div>`;
   b.querySelector('[data-ds]').onclick=onSave;b.querySelector('[data-dx]').onclick=onCancel}
+const fcArgs=()=>({h:FCF.h,model:FCF.model,fromYear:FCF.fromYear,skipPartial:FCF.skipPartial,costByRatio:FCF.costByRatio,bsMode:FCF.bsMode,capexMaint:FCF.capexMaint,inv:FCF.inv,divPct:+FCF.divPct||0,costFloor:FCF.costFloor,fixed:FCF.fixed,fixedBase:FCF.fixedBase,fixedG:+FCF.fixedG||0,fixedKeys:FCF.fixedKeys,adj:{rev:+FCF.adjRev||0,cost:+FCF.adjCost||0},refresh:false});
+// Tính trước ở chế độ nền (sau khi mở app 8 giây): trang Tồn kho và Dự báo dòng tiền – chỉ thực sự tính khi kết quả lưu sẵn đã cũ (vd vừa nạp dữ liệu)
+setTimeout(()=>{try{aq('overview').then(o=>o&&o.dmax&&aq('inventory',o.dmax,'product','l1')).catch(()=>{});aq('fcCompute',fcArgs()).catch(()=>{})}catch{}},8000);
 async function go(p){{const _b=document.getElementById('lgSelBar');if(_b)_b.remove()}
   PAGE=p;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   try{if(p!=='overview')ls.set('navRecent',[p,...NAVX.rec().filter(x=>x!==p)].slice(0,8));navExtra()}catch{}
@@ -816,7 +819,7 @@ async function vData(){
       <button class="btn sm danger" data-delm="${m.ym}">Xoá tháng</button></div>`).join('')+'</div>').join('')||'<div class="empty"><h2>Chưa có dữ liệu</h2><p>Bấm "Nạp dữ liệu" để bắt đầu.</p></div>';
   $('#tImports').innerHTML='<thead><tr><th>File</th><th class=n>Số dòng</th><th>Từ ngày</th><th>Đến ngày</th><th>Nạp lúc</th><th></th></tr></thead><tbody>'+
     imps.map(i=>`<tr><td>${esc(i.file)}</td><td class=n>${num(i.rows)}</td><td>${vn(i.from)}</td><td>${vn(i.to)}</td><td class=nw>${esc(i.at)}</td><td><button class="btn sm danger" data-deli="${i.id}">Xoá</button></td></tr>`).join('')+'</tbody>';
-  aq('inventory',new Date().toISOString().slice(0,10),'product','l1').then(r=>{$('#enrichInfo').innerHTML=r.oldImportRows?`<span class=neg>${num(r.oldImportRows)} dòng hàng tồn kho chưa có mã hàng/kho (nạp bằng phiên bản cũ).</span>`:'<span class=pos>✓ Tất cả dòng hàng tồn kho đã có thông tin mã hàng/kho.</span>'});
+  aq('overview').then(o=>o&&o.dmax?aq('inventory',o.dmax,'product','l1'):{}).then(r=>{$('#enrichInfo').innerHTML=r.oldImportRows?`<span class=neg>${num(r.oldImportRows)} dòng hàng tồn kho chưa có mã hàng/kho (nạp bằng phiên bản cũ).</span>`:'<span class=pos>✓ Tất cả dòng hàng tồn kho đã có thông tin mã hàng/kho.</span>'});
   loadTh();loadBk();
   $('#dbInfo').innerHTML=`<div>File CSDL</div><div><code>${esc(info.dbFile)}</code>${info.fallback?'<div class="neg" style="font-size:12px">Không ghi được vào thư mục ứng dụng ('+esc(info.appDir)+') nên đang lưu ở thư mục người dùng. Hãy đặt AccSoft ở thư mục có quyền ghi (vd D:\\AccSoft).</div>':''}${info.migratedFrom?'<div class="pos" style="font-size:12px">Đã chuyển dữ liệu từ '+esc(info.migratedFrom)+'</div>':''}</div><div>Dòng hạch toán</div><div>${num(s.entries)}</div><div>Cảnh báo</div><div>${num(s.errors)}</div><div>Phiên bản</div><div>${esc(info.version)}</div>`;
 }
@@ -2784,7 +2787,7 @@ window.alert=msg=>{const s=String(msg??'');if(/^Đã huỷ – chưa ghi/.test(s
 /* ===== v4.34: Dự báo báo cáo tài chính (B02 + B01) – nhiều mô hình ===== */
 const FCF=lsF('fcPick',{inv:[],divPct:0,costFloor:true,fixed:true,fixedBase:'dec',fixedG:0,fixedKeys:[],h:3,model:'ens',fromYear:'',skipPartial:false,costByRatio:false,adjRev:0,adjCost:0,show:'pl'});
 async function vFC(refresh){const H=$('#fcBody');H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp lịch sử B01 / B02 theo từng năm và chạy các mô hình dự báo…</div>';
-  try{const r=await aq('fcCompute',{h:FCF.h,model:FCF.model,fromYear:FCF.fromYear,skipPartial:FCF.skipPartial,costByRatio:FCF.costByRatio,bsMode:FCF.bsMode,capexMaint:FCF.capexMaint,inv:FCF.inv,divPct:+FCF.divPct||0,costFloor:FCF.costFloor,fixed:FCF.fixed,fixedBase:FCF.fixedBase,fixedG:+FCF.fixedG||0,fixedKeys:FCF.fixedKeys,adj:{rev:+FCF.adjRev||0,cost:+FCF.adjCost||0},refresh:!!refresh});ls.set('fcPick',FCF);fcDraw(r)}
+  try{const r=await aq('fcCompute',{...fcArgs(),refresh:!!refresh});ls.set('fcPick',FCF);fcDraw(r)}
   catch(e){H.innerHTML=`<div class="card neg">Lỗi dự báo: ${esc(e.message)}</div>`}}
 function fcDraw(r){const H=$('#fcBody');if(!r.hist.length){H.innerHTML='<div class="card mut">Chưa có dữ liệu để dự báo.</div>';return}
   const Y=r.hist.map(x=>x.y),FY=r.fc.map(x=>x.y),pct=v=>v==null?'–':(v*100).toFixed(1)+'%',acc=v=>v==null?'–':Math.max(0,100-v*100).toFixed(0)+'%';
