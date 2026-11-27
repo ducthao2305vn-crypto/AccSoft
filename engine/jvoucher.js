@@ -43,14 +43,14 @@ function make(db, all, get) {
     const f = { y: d0.getUTCFullYear(), m: d0.getUTCMonth() }, t = { y: d1.getUTCFullYear(), m: d1.getUTCMonth() }, sh = s => shiftText(s, f, t);
     const hdr = { ...j.hdr, [C.docno]: '', [C.date]: dmy(d1), [C.desc]: sh(j.hdr[C.desc]) };
     return save({ kind: j.kind, hdr, lines: j.lines.map(l => ({ ...l, [C.ldesc]: sh(l[C.ldesc]) })), src: j.id }); }
-  // Phiếu huỷ trích từ phiếu trích: đảo TK Nợ ↔ Có và đối tượng Nợ ↔ Có, cùng số tiền; diễn giải thêm tiền tố
+  // Phiếu huỷ trích từ phiếu trích (theo cách hạch toán của đơn vị): giữ nguyên TK Nợ / Có, đối tượng Nợ / Có, khoản mục…; số tiền ÂM; diễn giải thêm "Adjust" ở đầu
   function reverse(id, o = {}) { const j = one(id); if (!j) throw new Error('Không tìm thấy phiếu');
     const d0 = parseDmy(j.hdr[C.date]) || new Date(), d1 = o.date ? parseDmy(o.date) : eom(d0.getUTCFullYear(), d0.getUTCMonth() + 1);
     if (!d1) throw new Error('Ngày hạch toán không hợp lệ (dd/mm/yyyy)');
-    const pre = o.prefix ?? 'Reverse: ', px = s => s ? pre + String(s).replace(/^VTL:\s*/, m => m) : s;
+    const pre = o.prefix ?? 'VTL: Adjust ', px = s => s ? pre + String(s).replace(/^VTL[:_\s]*/i, '') : s;
     const hdr = { ...j.hdr, [C.docno]: '', [C.date]: dmy(d1), [C.desc]: px(j.hdr[C.desc]) };
-    const lines = j.lines.map(l => ({ ...l, [C.dr]: l[C.cr], [C.cr]: l[C.dr], [C.bpDr]: l[C.bpCr], [C.bpCr]: l[C.bpDr], [C.ldesc]: px(l[C.ldesc]) }));
-    return save({ kind: j.kind === 'rev' ? 'acc' : 'rev', hdr, lines, src: j.id }); }
+    const lines = j.lines.map(l => ({ ...l, [C.amt]: -Math.abs(+l[C.amt] || 0), [C.ldesc]: px(l[C.ldesc]) }));
+    return save({ kind: 'rev', hdr, lines, src: j.id }); }
   // Đọc file ERP (sheet đầu, dòng 1 = tiêu đề cột) → phiếu (chưa lưu) để người dùng xem lại rồi Lưu
   function fromAoa(aoa) { const H = (aoa[0] || []).map(x => String(x || '').trim()); if (!H.includes(C.docno) || !H.includes(C.amt)) throw new Error('File không đúng mẫu GL Journal (thiếu cột DocumentNo / GL_JournalLine>AmtSource)');
     const rows = aoa.slice(1).filter(r => r.some(v => v !== '' && v != null)), val = v => v instanceof Date ? dmy(new Date(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()))) : v;

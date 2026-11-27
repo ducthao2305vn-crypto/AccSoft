@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 5.12.1
+- Xuất file huỷ trích 335 (Phân tích chuyên sâu → Trích – huỷ trích 335 → chọn khoản "Chưa huỷ trích" → Xuất file huỷ trích): mỗi số chứng từ trích gốc = 1 phiếu (phần chung 1 dòng, diễn giải "VTL: Adjust" + diễn giải CT gốc; các dòng chi tiết bên dưới). Dòng giữ nguyên TK Nợ / Có, đối tượng Nợ / Có (trước đây ghi cùng 1 đối tượng cho cả Nợ và Có), khoản mục, Group cost, Services, Location; số tiền âm; diễn giải thêm "Adjust".
+- Phiếu trích / huỷ trích: tạo phiếu huỷ trích theo cùng quy tắc (giữ Nợ / Có, số tiền âm, "Adjust") thay cho đảo Nợ ↔ Có.
+
 ## 5.12.0
 - Trang mới "Phiếu trích / huỷ trích chi phí" (Sổ sách & phân tích): tạo phiếu trích hoặc huỷ trích theo nội dung & số tiền, xuất file nhập bút toán ERP (GL Journal, .xls 121 cột – phần chung chỉ ở dòng đầu, các dòng sau chỉ có cột chi tiết).
   - Tab 1 Chung: số CT, ngày hạch toán (kỳ tự tính), diễn giải, trạng thái + giá trị mặc định cho dòng (TK Nợ/Có, đối tượng, khoản mục, bộ phận, vị trí, hạn…).

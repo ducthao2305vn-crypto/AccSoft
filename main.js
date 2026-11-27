@@ -321,11 +321,11 @@ async function init() {
     if (!lines.length) throw new Error('Các khoản đã chọn không còn số trích treo để huỷ.');
     const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: `${o.date.slice(0, 7).replace('-', '.')}_HUY_TRICH_AccSoft.xls`, filters: [{ name: 'Excel 97-2003', extensions: ['xls'] }] });
     if (canceled) return null;
-    fs.writeFileSync(filePath, R.XLSX.write(R.reversalErpBook(lines, o), { type: 'buffer', bookType: 'biff8' }));
+    fs.writeFileSync(filePath, R.XLSX.write(R.reversalErpBook(lines, { ...o, byDoc: true }), { type: 'buffer', bookType: 'biff8' }));
     const chk = filePath.replace(/\.xls$/i, '') + '_DoiChieu.xlsx';
     fs.writeFileSync(chk, R.toBuffer(R.reversalCheckBook(lines, o)));
     log.info(`Xuất file huỷ trích ${filePath}: ${lines.length} dòng`); shell.showItemInFolder(filePath);
-    return { file: filePath, check: chk, lines: lines.length, total: lines.reduce((s, r) => s + r.rev, 0) };
+    return { file: filePath, check: chk, lines: lines.length, docs: new Set(lines.map(r => r.doc)).size, total: lines.reduce((s, r) => s + r.rev, 0) };
   });
   handle('report:accrueErp', async (_e, items, o) => { // items: [{id, amt, desc}]
     const src = new Map((await qa('accrualLinesByIds', items.map(x => x.id))).map(r => [r.id, r]));

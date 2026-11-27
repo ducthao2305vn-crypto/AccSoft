@@ -685,3 +685,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - moreMenu(sec): MOREMENU[sec] = id các nút chuyển vào menu "Thao tác khác" (MutationObserver tự gom lại khi trang vẽ lại; giữ nguyên nút và sự kiện).
 - jvoucher.js: COLS = 121 tiêu đề GL Journal (A–J phần chung, K… dòng). jv(hdr JSON, lines JSON) giữ mọi cột kể cả cột ẩn → xuất trùng file gốc. Xuất biff8 (.xls) ở main jv:export.
 - KHÔNG chèn chú thích // giữa dòng mã một dòng dài (đã gây lỗi 2 lần) – dùng \/* *\/.
+- Huỷ trích (quy tắc đơn vị): giữ nguyên TK Nợ\/Có + đối tượng Nợ\/Có + khoản mục của bút toán trích, số tiền ÂM, diễn giải tiền tố "VTL: Adjust"; mỗi số CT trích gốc = 1 phiếu (reversalErpBook byDoc).

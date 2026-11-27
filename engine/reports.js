@@ -36,14 +36,18 @@ function reversalErpBook(lines, o) {
   const { sheet, headers } = require('./gl_journal_headers.json');
   const d8 = String(o.date), dmy = d8.split('-').reverse().join('/'), per = `${d8.slice(0, 4)}_${+d8.slice(5, 7)}`;
   const due = o.due ? String(o.due).split('-').reverse().join('/') : dmy;
-  const aoa = [headers];
-  lines.forEach((r, i) => {
-    const row = new Array(headers.length).fill(null);
-    if (i === 0) { row[1] = o.dept || null; row[2] = o.docType || 'GL Journal (Sub)'; row[3] = o.docNo || null; row[5] = dmy; row[6] = per; row[7] = o.desc || 'VTL: Adjust Estimate expense (AccSoft)'; }
-    const bp = bpVd(r.bpCr || r.bp);
+  const aoa = [headers], pre = o.prefix ?? 'VTL: Adjust ', adj = t => pre + String(t || '').replace(/^VTL[:_\s]*/i, '');
+  // Huỷ trích (o.byDoc): mỗi số chứng từ trích gốc = 1 phiếu: phần chung 1 dòng (diễn giải = Adjust + diễn giải CT gốc), các dòng chi tiết bên dưới.
+  // Trích trước: cả file 1 phiếu như cũ.
+  const L = o.byDoc ? [...lines].sort((p, q) => String(p.doc).localeCompare(String(q.doc)) || String(p.d).localeCompare(String(q.d))) : lines, nDoc = new Set(L.map(r => r.doc)).size;
+  L.forEach((r, i) => {
+    const row = new Array(headers.length).fill(null), first = i === 0 || (o.byDoc && L[i - 1].doc !== r.doc);
+    if (first) { row[1] = o.dept || null; row[2] = o.docType || 'GL Journal (Sub)'; row[3] = o.byDoc && nDoc > 1 ? null : (o.docNo || null); row[5] = dmy; row[6] = per;
+      row[7] = o.byDoc ? (o.desc || adj(r.dsp || r.ds)) : (o.desc || 'VTL: Adjust Estimate expense (AccSoft)'); }
+    const bp = o.byDoc ? null : bpVd(r.bpCr || r.bp);
     const amt = r.out != null ? r.out : -r.rev;
-    Object.assign(row, { 12: due, 13: r.outDesc != null ? r.outDesc : (o.prefix ?? 'VTL: Adjust ') + String(r.ds || '').replace(/^VTL[:_\s]*/i, ''), 14: 0, 15: 0, 16: r.currency || 'USD', 17: 1, 18: vd(r.drName), 19: amt, 20: vd(r.crName), 21: amt,
-      22: bp, 23: bp, 24: vd(r.t), 25: r.deptSub || null, 27: vd(r.grpCost), 29: vd(r.services), 36: vd(r.location), 44: vd(r.project), 46: 1, 47: 0, 51: 'N', 55: 'N' });
+    Object.assign(row, { 12: due, 13: r.outDesc != null ? r.outDesc : adj(r.ds), 14: 0, 15: 0, 16: r.currency || 'USD', 17: 1, 18: vd(r.drName), 19: amt, 20: vd(r.crName), 21: amt,
+      22: o.byDoc ? bpVd(r.bp) : bp, 23: o.byDoc ? bpVd(r.bpCr) : bp, 24: vd(r.t), /* huỷ trích: đối tượng Nợ / Có giữ nguyên như bút toán trích */ 25: r.deptSub || null, 27: vd(r.grpCost), 29: vd(r.services), 36: vd(r.location), 44: vd(r.project), 46: 1, 47: 0, 51: 'N', 55: 'N' });
     aoa.push(row);
   });
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), sheet.slice(0, 31)); return wb;

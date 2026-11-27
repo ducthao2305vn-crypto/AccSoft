@@ -618,7 +618,7 @@ function make(db) {
     for (const g of require('./accrual').match(all, { acc }).groups) {
       if (!want.has(g.key) || g.remain <= 0.005 || !g.accIds.length) continue;
       const rows = all(`SELECT id, document_no doc, account_date d, due_date due, acc_debit_name drName, acc_credit_name crName, amount a, partner_debit bp, partner_credit bpCr, type_of_cost t,
-          description ds, department_sub deptSub, group_cost grpCost, services, location, project, currency, contract, invoice inv, product FROM entries WHERE id IN (${g.accIds.map(() => '?').join(',')}) ORDER BY account_date DESC, id DESC`, ...g.accIds);
+          description ds, description_parent dsp, department_sub deptSub, group_cost grpCost, services, location, project, currency, contract, invoice inv, product FROM entries WHERE id IN (${g.accIds.map(() => '?').join(',')}) ORDER BY account_date DESC, id DESC`, ...g.accIds);
       let left = Math.round(g.remain * 100) / 100;
       for (const r of rows) { if (left <= 0.005) break; const v = Math.min(left, r.a); left = Math.round((left - v) * 100) / 100; out.push({ ...r, rev: Math.round(v * 100) / 100, key: g.key, per: g.per, users: g.users }); }
     }
