@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.10.1
+- Menu: ghim trang hay dùng (rê chuột vào mục menu → ☆), nhóm "★ Đã ghim" và "Gần đây" (5 trang mở gần nhất) ở đầu menu.
+
 ## 5.10.0
 - Bộ lọc mọi trang: giá trị lọc đã lưu không còn trong danh sách lựa chọn (ô chọn hiện "Tất cả" nhưng vẫn lọc) được tự bỏ khi mở trang; nút "↺ Bỏ lọc" chung trên thanh tiêu đề, chỉ hiện khi trang đang lọc khác mặc định (giữ nguyên kỳ / ngày).
 

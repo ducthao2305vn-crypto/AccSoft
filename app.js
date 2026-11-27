@@ -105,8 +105,23 @@ function fltBtn(){let b=document.getElementById('fltClr');if(!b){b=document.crea
     b.onclick=async()=>{for(const r of FREG)if(r.pages.has(PAGE)){for(const k of Object.keys(r.def))if(!FKEEP.has(k)&&!FDATE.has(k))r.o[k]=JSON.parse(JSON.stringify(r.def[k]));ls.set(r.key,r.o)}await VIEWS[PAGE]();fltBtn()};
     const t=document.getElementById('pTitle');t&&t.parentElement&&t.parentElement.appendChild(b)}
   b.style.display=FREG.some(r=>r.pages.has(PAGE)&&Object.keys(r.o).some(k=>(fDiff(r,k)&&!FDATE.has(k))||(Array.isArray(r.o[k])&&!FKEEP.has(k)&&r.o[k].length&&!(r.def[k]||[]).length)))?'':'none'}
+
+// Menu: ghim trang hay dùng (☆ khi rê chuột) + 5 trang mở gần đây – hiện trên cùng menu
+const NAVX={pins:()=>ls.get('navPins',[]),rec:()=>ls.get('navRecent',[])};
+function navExtra(){const nav=document.getElementById('nav');if(!nav)return;
+  nav.querySelectorAll('.grp:not(.navx) button[data-p]').forEach(b=>{if(b.querySelector('.pinS'))return;const s=document.createElement('span');s.className='pinS';s.dataset.pin=b.dataset.p;s.title='Ghim / bỏ ghim lên đầu menu';b.appendChild(s)});
+  const P=NAVX.pins(),orig=p=>nav.querySelector(`.grp:not(.navx) button[data-p="${p}"]`),R=NAVX.rec().filter(p=>!P.includes(p)&&orig(p)).slice(0,5);
+  nav.querySelectorAll('.grp button .pinS').forEach(s=>{s.textContent=P.includes(s.dataset.pin)?'★':'☆';s.classList.toggle('on',P.includes(s.dataset.pin))});
+  let box=document.getElementById('navX');if(!box){box=document.createElement('div');box.id='navX';nav.insertBefore(box,nav.firstChild)}
+  const cl=p=>{const b=orig(p).cloneNode(true);b.classList.toggle('on',p===PAGE);b.removeAttribute('id');b.querySelectorAll('[id],.count').forEach(x=>x.parentNode.removeChild(x));return b.outerHTML};
+  const mk=(L,t)=>L.filter(orig).length?`<div class="sec navxs">${t}</div><div class="grp navx">${L.filter(orig).map(cl).join('')}</div>`:'';
+  box.innerHTML=mk(P,'★ Đã ghim')+mk(R,'Gần đây')}
+document.addEventListener('click',e=>{const s=e.target.closest('#nav .pinS');if(!s)return;e.preventDefault();e.stopPropagation();const p=s.dataset.pin,P=NAVX.pins();ls.set('navPins',P.includes(p)?P.filter(x=>x!==p):[...P,p]);navExtra()},true);
+document.head.insertAdjacentHTML('beforeend','<style>#nav .pinS{margin-left:auto;padding:0 2px 0 6px;opacity:0;color:#98A2B3;font-size:13px}#nav button:hover .pinS,#nav .pinS.on{opacity:1}#nav .pinS.on{color:#F79009}#nav .navx .pinS{display:none}#nav .navxs{cursor:default}</style>');
+setTimeout(navExtra,300);
 async function go(p){{const _b=document.getElementById('lgSelBar');if(_b)_b.remove()}
   PAGE=p;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  try{if(p!=='overview')ls.set('navRecent',[p,...NAVX.rec().filter(x=>x!==p)].slice(0,8));navExtra()}catch{}
   $$('.content>section').forEach(s=>s.classList.toggle('hide',s.id!==p));
   $('#pTitle').textContent=TITLES[p][0];$('#pSub').textContent=TITLES[p][1];$('#pSub').title=TITLES[p][1];$('#content').scrollTop=0;
   await loadWith(p,$('#'+p),VIEWS[p]);
