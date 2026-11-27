@@ -128,7 +128,12 @@ function draftBar(anchor,n,txt,onSave,onCancel){if(!anchor||!anchor.parentNode)r
   b.querySelector('[data-ds]').onclick=onSave;b.querySelector('[data-dx]').onclick=onCancel}
 const fcArgs=()=>({h:FCF.h,model:FCF.model,fromYear:FCF.fromYear,skipPartial:FCF.skipPartial,costByRatio:FCF.costByRatio,bsMode:FCF.bsMode,capexMaint:FCF.capexMaint,inv:FCF.inv,divPct:+FCF.divPct||0,costFloor:FCF.costFloor,fixed:FCF.fixed,fixedBase:FCF.fixedBase,fixedG:+FCF.fixedG||0,fixedKeys:FCF.fixedKeys,adj:{rev:+FCF.adjRev||0,cost:+FCF.adjCost||0},refresh:false});
 // Tính trước ở chế độ nền (sau khi mở app 8 giây): trang Tồn kho và Dự báo dòng tiền – chỉ thực sự tính khi kết quả lưu sẵn đã cũ (vd vừa nạp dữ liệu)
-setTimeout(()=>{try{aq('overview').then(o=>o&&o.dmax&&aq('inventory',o.dmax,'product','l1')).catch(()=>{});aq('fcCompute',fcArgs()).catch(()=>{})}catch{}},8000);
+setTimeout(()=>{try{aq('overview').then(async o=>{if(!o||!o.dmax)return;await aq('inventory',o.dmax,'product','l1').catch(()=>{});
+  // Tuổi nợ: đúng tham số mặc định của trang (ngày dữ liệu cuối, kỳ hạn / cấp / chiều phân tích đang chọn) + chiều đối tượng
+  const ag=[$('#asOf')&&$('#asOf').value||o.dmax,+($('#term')&&$('#term').value)||0,$('#agLevel')&&$('#agLevel').value||'l1'],dim=$('#agDim')&&$('#agDim').value||'bp';
+  await aq('aging',...ag,dim).catch(()=>{});if(dim!=='bp')await aq('aging',...ag,'bp').catch(()=>{});
+  const t=new Date(),p2=P2F.asOf||new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10);await aq('p242Report',{asOf:p2,accs:P2F.accs.split(/[,; ]+/),withIssues:true}).catch(()=>{})}).catch(()=>{});
+  aq('fcCompute',fcArgs()).catch(()=>{})}catch{}},8000);
 async function go(p){{const _b=document.getElementById('lgSelBar');if(_b)_b.remove()}
   PAGE=p;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   try{if(p!=='overview')ls.set('navRecent',[p,...NAVX.rec().filter(x=>x!==p)].slice(0,8));navExtra()}catch{}

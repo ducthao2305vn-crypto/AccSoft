@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.10.4
+- Tuổi nợ (2,8 s → 0,34 s) và Chi phí trả trước 242 (2,2 s → 0,32 s): lưu sẵn kết quả, tự tính trước ở chế độ nền sau khi mở app; tính lại khi dữ liệu hoặc bất kỳ điều chỉnh nào thay đổi.
+
 ## 5.10.3
 - Tồn kho (4 s → 0,45 s) và Dự báo dòng tiền (4,8 s → 0,13 s), trang Dữ liệu (3,9 s → 0,4 s): kết quả tính được lưu sẵn trong DB (giữ qua lần mở app sau), chỉ tính lại khi dữ liệu thay đổi; tự tính trước ở chế độ nền sau khi mở app. Nút tính lại ở trang Dự báo vẫn tính mới.
 
