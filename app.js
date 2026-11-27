@@ -150,7 +150,7 @@ async function go(p){{const _b=document.getElementById('lgSelBar');if(_b)_b.remo
   try{if(staleFix())await VIEWS[p]();fltBtn()}catch{}
 }
 $('#sideRv').onclick=()=>go('errors');
-document.addEventListener('click',e=>{const k=e.target.closest('[data-gg]');if(k){FIL={group:k.dataset.gg};OFF=0;go('errors')}});
+document.addEventListener('click',e=>{const k=e.target.closest('[data-gg]');if(k){FIL={group:k.dataset.gg,status:k.closest('#ovKpi')?'open':undefined};OFF=0;go('errors')}});
 $('#nav').onclick=e=>{const b=e.target.closest('[data-p]');if(b)go(b.dataset.p)};
 document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g)go(g.dataset.go);if(e.target.closest('[data-act=import]'))doImport()});
 /* ---------- Kỳ rà soát lỗi ---------- */
@@ -240,13 +240,14 @@ async function vOverview(){
   const o=await aq('overview');const empty=!o.rows;
   $('#ovEmpty').classList.toggle('hide',!empty);$('#ovBody').classList.toggle('hide',empty);if(empty)return;
   $('#hYear').textContent=o.year||'';$('#hSub').textContent=`Kỳ dữ liệu ${vn(o.dmin)} → ${vn(o.dmax)}`;
-  $('#hRows').textContent=num(o.rows);$('#hDocs').textContent=num(o.docs);$('#hErr').textContent=num(o.errs);$('#hErrL').textContent='cảnh báo · '+rvLabel(o.review).toLowerCase();$('#hHigh').textContent=num(o.high);
-  $('#ovKpi').innerHTML=`<div class="kpi click" data-gg="staff" style="cursor:pointer"><div class="ic" style="background:#EFF4FF;color:#155EEF;border-color:#D1E0FF">${ic('users')}</div><div class="lb">Sai sót nhân viên</div><div class="v">${num(o.byRule.filter(r=>RULE[r.k]?.g==='staff').reduce((s,r)=>s+r.n,0))}</div><div class="s">lỗi thao tác nhập liệu</div></div>`
-    +`<div class="kpi click" data-gg="audit" style="cursor:pointer"><div class="ic" style="background:#F5F3FF;color:#7839EE;border-color:#DDD6FE">${ic('file')}</div><div class="lb">Sai sót dễ bị kiểm toán</div><div class="v">${num(o.byRule.filter(r=>RULE[r.k]?.g==='audit').reduce((s,r)=>s+r.n,0))}</div><div class="s">${num(o.high)} lỗi mức cao (mọi nhóm)</div></div>`
+  $('#hRows').textContent=num(o.rows);$('#hDocs').textContent=num(o.docs);const pDone=o.errs?Math.round((o.errs-o.open)/o.errs*1000)/10:0;$('#hErr').textContent=num(o.open);$('#hErrL').innerHTML=`lỗi chưa xử lý · ${rvLabel(o.review).toLowerCase()}<br><span style="opacity:.8;font-size:12px">trên ${num(o.errs)} cảnh báo · đã xử lý ${pDone}%</span>`;$('#hHigh').textContent=num(o.openH);
+  const hl=$('#hHigh').parentElement;if(hl&&hl.lastChild&&hl.lastChild.nodeType===3)hl.lastChild.textContent='lỗi mức cao chưa xử lý';
+  $('#ovKpi').innerHTML=`<div class="kpi click" data-gg="staff" style="cursor:pointer"><div class="ic" style="background:#EFF4FF;color:#155EEF;border-color:#D1E0FF">${ic('users')}</div><div class="lb">Sai sót nhân viên – chưa xử lý</div><div class="v">${num(o.byRule.filter(r=>RULE[r.k]?.g==='staff').reduce((s,r)=>s+r.open,0))}</div><div class="s">trên ${num(o.byRule.filter(r=>RULE[r.k]?.g==='staff').reduce((s,r)=>s+r.n,0))} lỗi thao tác nhập liệu</div></div>`
+    +`<div class="kpi click" data-gg="audit" style="cursor:pointer"><div class="ic" style="background:#F5F3FF;color:#7839EE;border-color:#DDD6FE">${ic('file')}</div><div class="lb">Sai sót dễ bị kiểm toán – chưa xử lý</div><div class="v">${num(o.byRule.filter(r=>RULE[r.k]?.g==='audit').reduce((s,r)=>s+r.open,0))}</div><div class="s">trên ${num(o.byRule.filter(r=>RULE[r.k]?.g==='audit').reduce((s,r)=>s+r.n,0))} cảnh báo · ${num(o.openH)} mức cao chưa xử lý (mọi nhóm)</div></div>`
     +kpi('blue','coins',`Doanh thu thuần ${o.year||''}`,fmt(o.net),'theo dữ liệu đã nạp')+kpi(o.pat<0?'red':'green','trend',`Lợi nhuận sau thuế ${o.year||''}`,fmt(o.pat),o.pat<0?'lỗ':'lãi');
   const sevC={H:C.err,M:C.brand,L:C.navy};
-  chart('chRule',{type:'bar',data:{labels:o.byRule.map(r=>RULE[r.k]?.n||r.k),datasets:[{data:o.byRule.map(r=>r.n),backgroundColor:o.byRule.map(r=>sevC[r.sev]),barThickness:16}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false}},onClick:(e,el)=>{if(el[0]){FIL={rule:o.byRule[el[0].index].k};go('errors')}}}});
+  const RO=o.byRule.filter(r=>r.open>0);chart('chRule',{type:'bar',data:{labels:RO.map(r=>RULE[r.k]?.n||r.k),datasets:[{label:'Chưa xử lý',data:RO.map(r=>r.open),backgroundColor:RO.map(r=>sevC[r.sev]),barThickness:16}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},onClick:(e,el)=>{if(el[0]){FIL={rule:RO[el[0].index].k,status:'open'};go('errors')}}}});
   chart('chUser',{type:'bar',data:{labels:o.byUser.map(u=>short(u.u)),datasets:[{label:'Dòng lỗi',data:o.byUser.map(u=>u.bad),backgroundColor:C.brand,barThickness:22},{label:'Tổng dòng nhập',data:o.byUser.map(u=>u.total),backgroundColor:C.brand1,barThickness:22}]},
     options:{plugins:{tooltip:{callbacks:{afterBody:i=>'Tỷ lệ lỗi: '+pct(o.byUser[i[0].dataIndex].bad/o.byUser[i[0].dataIndex].total)}}}}});
   chart('chTrend',{data:{labels:o.trend.map(m=>m.k),datasets:[{type:'bar',label:'Doanh thu thuần',data:o.trend.map(m=>m.net),backgroundColor:C.brand,maxBarThickness:32},

@@ -208,15 +208,15 @@ function make(db) {
   function overview() {
     const ES = `FROM ent_sum s WHERE ${SINC}`;
     const b = get(`SELECT sum(n) rows, sum(docs) docs, min(dmin) dmin, max(dmax) dmax ${ES}`);
-    const er = { ...get(`SELECT sum(s.n * (s.sev='H')) high, sum(s.n) n FROM err_sum s ${SW()}`), rows: get(`SELECT sum(s.n) n FROM err_ent s ${SW()}`).n };
+    const er = { ...get(`SELECT sum(s.n * (s.sev='H')) high, sum(s.n) n, sum(s.n * (coalesce(s.st,'open')='open')) open, sum(s.n * (s.sev='H' AND coalesce(s.st,'open')='open')) openH FROM err_sum s ${SW()}`), rows: get(`SELECT sum(s.n) n FROM err_ent s ${SW()}`).n };
     const rvRows = get(`SELECT sum(n) n ${ES}${RV('s')}`).n || 0;
-    const byRule = all(`SELECT s.rule k, max(s.sev) sev, sum(s.n) n FROM err_sum s ${SW()} GROUP BY 1 ORDER BY n DESC`);
+    const byRule = all(`SELECT s.rule k, max(s.sev) sev, sum(s.n) n, sum(s.n * (coalesce(s.st,'open')='open')) open FROM err_sum s ${SW()} GROUP BY 1 ORDER BY open DESC, n DESC`);
     const tot = all(`SELECT u, sum(n) n ${ES}${RV('s')} GROUP BY u`);
     const bad = Object.fromEntries(all(`SELECT s.u u, sum(s.nhm) n FROM err_ent s ${SW()} GROUP BY 1`).map(r => [r.u, r.n]));
     const byUser = tot.map(r => ({ u: r.u, total: r.n, bad: bad[r.u] || 0 })).sort((a, c) => c.bad - a.bad).slice(0, 12);
     const P = pl(), last = P.years.at(-1) || {};
     const trend = P.months.slice(-12);
-    return { ...b, review: reviewPeriod(), rvRows, errRows: er.rows || 0, errs: er.n || 0, high: er.high || 0, byRule, byUser, net: last.net || 0, pat: last.pat || 0, year: last.k, trend };
+    return { ...b, review: reviewPeriod(), rvRows, errRows: er.rows || 0, errs: er.n || 0, high: er.high || 0, open: er.open || 0, openH: er.openH || 0, byRule, byUser, net: last.net || 0, pat: last.pat || 0, year: last.k, trend };
   }
 
   /* ---------- Kết quả kinh doanh ---------- */

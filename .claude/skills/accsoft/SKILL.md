@@ -679,3 +679,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - persist thêm dtxSummary, dtxCompute, ifBuild; tính nền theo DTF.year \/ IFF.year.
 - persist thêm apReport, advReport; apArgs()\/advArgs() dùng chung giữa trang và tính nền (khoá đệm phải trùng tham số).
 - UI: tab chuyển màn hình dùng class ptab (.on), không dùng btn primary. fmt2 cố định 2 số lẻ. Badge trung tính b-out.
+- overview(): open \/ openH (st=open), byRule.open; "chưa xử lý" = trạng thái open (khớp tab Chưa xử lý trang Lỗi).

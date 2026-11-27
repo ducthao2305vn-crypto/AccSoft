@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.11.1
+- Tổng quan nhấn vào lỗi chưa xử lý: số chính = lỗi chưa xử lý (kèm "trên N cảnh báo · đã xử lý x%"), lỗi mức cao chưa xử lý; thẻ Sai sót nhân viên / dễ bị kiểm toán hiện số chưa xử lý; biểu đồ "Lỗi chưa xử lý theo loại" chỉ gồm loại còn lỗi. Bấm thẻ / cột → trang Lỗi nhập liệu, tab Chưa xử lý đúng nhóm / loại.
+
 ## 5.11.0
 - Giao diện: tab chuyển màn hình (Kế hoạch, Phân tích TK, IFRS, trạng thái…) có kiểu riêng (nền nhạt, gạch dưới cam), không còn giống nút hành động; tên tab trang Kế hoạch gọn trên 1 hàng.
 - Tiêu đề trang hiện đủ (tối đa 2 dòng); dòng giải thích hiện 2 dòng kèm "bấm để xem đủ"; tên thẻ số liệu không bị cắt.
