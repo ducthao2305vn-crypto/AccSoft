@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.11.5
+- Tạm ứng: "Biên bản đối chiếu" và "Gửi đối chiếu qua email" gom vào nút "⋯ Thao tác khác ▾"; giữ ngoài Xuất báo cáo Excel, Đã xác nhận, Có chênh lệch.
+
 ## 5.11.4
 - Hàng hoá 15611 và Phải trả 331: hàng nút gọn còn các thao tác chính (Đã khớp, Chưa khớp, Excel / Xuất Word + Excel); các thao tác khác (Xem PDF, PDF, Gửi email đối chiếu, Giao việc, Người ký, Danh mục đối tác, Word / Excel đối chiếu) gom vào nút "⋯ Thao tác khác ▾".
 - Menu: nhóm "Gần đây" còn 3 trang.

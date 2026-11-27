@@ -143,7 +143,7 @@ setTimeout(()=>{try{aq('overview').then(async o=>{if(!o||!o.dmax)return;await aq
     if(String(ADF.acc).startsWith('1412'))ADF.acc='141';if(!ADF.asOf){const ym=(await aq('months')).map(m=>m.ym).sort().at(-1)||new Date().toISOString().slice(0,7);const [y,m]=ym.split('-').map(Number);ADF.asOf=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)}if(!ADF.from)ADF.from=ADF.asOf.slice(0,4)+'-01-01';await aq('advReport',advArgs())}catch{}})()}catch{}},8000);
 
 // Gom các nút ít dùng vào menu "⋯ Thao tác khác ▾" (giữ nguyên nút gốc và sự kiện – chỉ chuyển chỗ). Tự áp dụng lại khi trang vẽ lại.
-const MOREMENU={grec:['grPv','grPdf','grMl','grAsg','grSg','grPi'],ap331:['apPv','apPdf','apAsg','apMl','apPi','apW','apX']};
+const MOREMENU={adv:['adBB','adMail'],grec:['grPv','grPdf','grMl','grAsg','grSg','grPi'],ap331:['apPv','apPdf','apAsg','apMl','apPi','apW','apX']};
 function moreMenu(sec){const ids=MOREMENU[sec],S=document.getElementById(sec);if(!S)return;
   const B=ids.map(i=>document.getElementById(i)).filter(b=>b&&!b.closest('.mm-pop'));if(!B.length)return;
   let w=S.querySelector('.moremenu');
