@@ -1,5 +1,9 @@
 # Lịch sử phiên bản
 
+## 5.11.4
+- Hàng hoá 15611 và Phải trả 331: hàng nút gọn còn các thao tác chính (Đã khớp, Chưa khớp, Excel / Xuất Word + Excel); các thao tác khác (Xem PDF, PDF, Gửi email đối chiếu, Giao việc, Người ký, Danh mục đối tác, Word / Excel đối chiếu) gom vào nút "⋯ Thao tác khác ▾".
+- Menu: nhóm "Gần đây" còn 3 trang.
+
 ## 5.11.3
 - Giao diện thống nhất trên mọi trang: tab chọn màn hình dạng "viên" (Danh mục, Nhân viên, Điều chỉnh dữ liệu, Đối chiếu hoá đơn, IFRS, Phân tích chuyên sâu…) dùng chung kiểu nền nhạt + gạch cam, không còn giống nút hành động.
 - Số trong thẻ số liệu tự thu nhỏ theo bề rộng thẻ, không bị cắt (vd Thuế hoãn lại).

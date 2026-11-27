@@ -110,7 +110,7 @@ function fltBtn(){let b=document.getElementById('fltClr');if(!b){b=document.crea
 const NAVX={pins:()=>ls.get('navPins',[]),rec:()=>ls.get('navRecent',[])};
 function navExtra(){const nav=document.getElementById('nav');if(!nav)return;
   nav.querySelectorAll('.grp:not(.navx) button[data-p]').forEach(b=>{if(b.querySelector('.pinS'))return;const s=document.createElement('span');s.className='pinS';s.dataset.pin=b.dataset.p;s.title='Ghim / bỏ ghim lên đầu menu';b.appendChild(s)});
-  const P=NAVX.pins(),orig=p=>nav.querySelector(`.grp:not(.navx) button[data-p="${p}"]`),R=NAVX.rec().filter(p=>!P.includes(p)&&p!==PAGE&&orig(p)).slice(0,5); // không lặp trang đang mở
+  const P=NAVX.pins(),orig=p=>nav.querySelector(`.grp:not(.navx) button[data-p="${p}"]`),R=NAVX.rec().filter(p=>!P.includes(p)&&p!==PAGE&&orig(p)).slice(0,3); // không lặp trang đang mở
   nav.querySelectorAll('.grp button .pinS').forEach(s=>{s.textContent=P.includes(s.dataset.pin)?'★':'☆';s.classList.toggle('on',P.includes(s.dataset.pin))});
   let box=document.getElementById('navX');if(!box){box=document.createElement('div');box.id='navX';nav.insertBefore(box,nav.firstChild)}
   const cl=p=>{const b=orig(p).cloneNode(true);b.classList.toggle('on',p===PAGE);b.removeAttribute('id');b.querySelectorAll('[id],.count').forEach(x=>x.parentNode.removeChild(x));return b.outerHTML};
@@ -141,6 +141,19 @@ setTimeout(()=>{try{aq('overview').then(async o=>{if(!o||!o.dmax)return;await aq
   // Phải trả 331 & Tạm ứng: mặc định giống trang (331: đầu năm → cuối tháng trước; tạm ứng: đến cuối tháng dữ liệu cuối)
   (async()=>{try{if(!APF.to){const t=new Date();APF.to=new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10)}if(!APF.from)APF.from=APF.to.slice(0,4)+'-01-01';await aq('apReport',apArgs());
     if(String(ADF.acc).startsWith('1412'))ADF.acc='141';if(!ADF.asOf){const ym=(await aq('months')).map(m=>m.ym).sort().at(-1)||new Date().toISOString().slice(0,7);const [y,m]=ym.split('-').map(Number);ADF.asOf=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)}if(!ADF.from)ADF.from=ADF.asOf.slice(0,4)+'-01-01';await aq('advReport',advArgs())}catch{}})()}catch{}},8000);
+
+// Gom các nút ít dùng vào menu "⋯ Thao tác khác ▾" (giữ nguyên nút gốc và sự kiện – chỉ chuyển chỗ). Tự áp dụng lại khi trang vẽ lại.
+const MOREMENU={grec:['grPv','grPdf','grMl','grAsg','grSg','grPi'],ap331:['apPv','apPdf','apAsg','apMl','apPi','apW','apX']};
+function moreMenu(sec){const ids=MOREMENU[sec],S=document.getElementById(sec);if(!S)return;
+  const B=ids.map(i=>document.getElementById(i)).filter(b=>b&&!b.closest('.mm-pop'));if(!B.length)return;
+  let w=S.querySelector('.moremenu');
+  if(!w||!w.isConnected||!w.parentNode.contains(B[0])){w=document.createElement('div');w.className='moremenu';
+    w.innerHTML='<button type="button" class="btn sm mm-btn" title="Các thao tác khác: xem PDF, gửi email, giao việc, danh mục đối tác…">⋯ Thao tác khác ▾</button><div class="mm-pop hide"></div>';B[0].parentNode.insertBefore(w,B[0]);
+    w.querySelector('.mm-btn').onclick=e=>{e.stopPropagation();document.querySelectorAll('.mm-pop').forEach(x=>{if(x!==w.lastChild)x.classList.add('hide')});w.lastChild.classList.toggle('hide')};
+    w.lastChild.addEventListener('click',()=>setTimeout(()=>w.lastChild.classList.add('hide'),0))}
+  B.forEach(b=>w.lastChild.appendChild(b))}
+document.addEventListener('click',e=>{if(!e.target.closest('.moremenu'))document.querySelectorAll('.mm-pop').forEach(x=>x.classList.add('hide'))});
+for(const sec of Object.keys(MOREMENU)){const el=document.getElementById(sec);if(el){let q=0;new MutationObserver(()=>{if(q)return;q=requestAnimationFrame(()=>{q=0;try{moreMenu(sec)}catch{}})}).observe(el,{childList:true,subtree:true})}}
 async function go(p){{const _b=document.getElementById('lgSelBar');if(_b)_b.remove()}
   PAGE=p;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   try{if(p!=='overview')ls.set('navRecent',[p,...NAVX.rec().filter(x=>x!==p)].slice(0,8));navExtra()}catch{}

@@ -408,6 +408,12 @@ body.mini #navFind{display:none}
 .mcard [data-delm]{visibility:hidden}
 .mcard:hover [data-delm],.mcard:focus-within [data-delm]{visibility:visible}
 #dmc table td:nth-child(3),#dmc table th:nth-child(3){min-width:170px}
+.moremenu{position:relative;display:inline-block}
+.mm-pop{position:absolute;z-index:30;top:calc(100% + 4px);left:0;min-width:220px;background:#fff;border:1px solid var(--gray-200);border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.12);padding:6px;display:flex;flex-direction:column;gap:2px}
+.mm-pop.hide{display:none}
+.mm-pop .btn{justify-content:flex-start;width:100%;border:0;background:none!important;box-shadow:none;text-align:left;font-weight:500;color:var(--gray-700)!important}
+.mm-pop .btn:hover{background:#FFF1EB;color:#B93815}
+[data-theme=dark] .mm-pop{background:#1E2228;border-color:#3A3F47}
 </style>
 </head>
 <body>
