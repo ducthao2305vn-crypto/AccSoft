@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.10.7
+- Menu: nhóm "Gần đây" không lặp lại trang đang mở (trước đây có 2 mục cùng sáng).
+
 ## 5.10.6
 - Phải trả 331 (1,9 s → 0,11 s) và Tạm ứng (1,7 s → 0,05 s): lưu sẵn kết quả, tự tính trước ở chế độ nền theo kỳ mặc định; tính lại khi dữ liệu hoặc điều chỉnh thay đổi.
 

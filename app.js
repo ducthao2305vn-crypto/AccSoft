@@ -110,7 +110,7 @@ function fltBtn(){let b=document.getElementById('fltClr');if(!b){b=document.crea
 const NAVX={pins:()=>ls.get('navPins',[]),rec:()=>ls.get('navRecent',[])};
 function navExtra(){const nav=document.getElementById('nav');if(!nav)return;
   nav.querySelectorAll('.grp:not(.navx) button[data-p]').forEach(b=>{if(b.querySelector('.pinS'))return;const s=document.createElement('span');s.className='pinS';s.dataset.pin=b.dataset.p;s.title='Ghim / bỏ ghim lên đầu menu';b.appendChild(s)});
-  const P=NAVX.pins(),orig=p=>nav.querySelector(`.grp:not(.navx) button[data-p="${p}"]`),R=NAVX.rec().filter(p=>!P.includes(p)&&orig(p)).slice(0,5);
+  const P=NAVX.pins(),orig=p=>nav.querySelector(`.grp:not(.navx) button[data-p="${p}"]`),R=NAVX.rec().filter(p=>!P.includes(p)&&p!==PAGE&&orig(p)).slice(0,5); // không lặp trang đang mở
   nav.querySelectorAll('.grp button .pinS').forEach(s=>{s.textContent=P.includes(s.dataset.pin)?'★':'☆';s.classList.toggle('on',P.includes(s.dataset.pin))});
   let box=document.getElementById('navX');if(!box){box=document.createElement('div');box.id='navX';nav.insertBefore(box,nav.firstChild)}
   const cl=p=>{const b=orig(p).cloneNode(true);b.classList.toggle('on',p===PAGE);b.removeAttribute('id');b.querySelectorAll('[id],.count').forEach(x=>x.parentNode.removeChild(x));return b.outerHTML};
