@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## 5.11.0
+- Giao diện: tab chuyển màn hình (Kế hoạch, Phân tích TK, IFRS, trạng thái…) có kiểu riêng (nền nhạt, gạch dưới cam), không còn giống nút hành động; tên tab trang Kế hoạch gọn trên 1 hàng.
+- Tiêu đề trang hiện đủ (tối đa 2 dòng); dòng giải thích hiện 2 dòng kèm "bấm để xem đủ"; tên thẻ số liệu không bị cắt.
+- Số tiền luôn 2 chữ số lẻ, cột số thẳng hàng.
+- Trang Lỗi nhập liệu gọn hơn (bảng lên cao ~135 px): bỏ banner "tháng chưa phân tích" lặp (đã có số trên nút Phân tích dữ liệu, giữ ở Tổng quan), mô tả nhóm lỗi 2 dòng, hàng thao tác hàng loạt ngắn gọn; ô tìm trong danh sách chọn ghi rõ "Tìm mục…".
+- "Ngoài KH" (có thực hiện, không có kế hoạch) màu xám; màu đỏ chỉ dành cho Vượt KH.
+
 ## 5.10.7
 - Menu: nhóm "Gần đây" không lặp lại trang đang mở (trước đây có 2 mục cùng sáng).
 

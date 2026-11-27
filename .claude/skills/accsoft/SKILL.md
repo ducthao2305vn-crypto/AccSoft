@@ -678,3 +678,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - persist thêm aging, p242Report (không eOnly vì phụ thuộc điều chỉnh \/ danh mục). Tính nền trong app.js (setTimeout 8 s) dùng đúng tham số mặc định của trang.
 - persist thêm dtxSummary, dtxCompute, ifBuild; tính nền theo DTF.year \/ IFF.year.
 - persist thêm apReport, advReport; apArgs()\/advArgs() dùng chung giữa trang và tính nền (khoá đệm phải trùng tham số).
+- UI: tab chuyển màn hình dùng class ptab (.on), không dùng btn primary. fmt2 cố định 2 số lẻ. Badge trung tính b-out.
