@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.10.0
+- Bộ lọc mọi trang: giá trị lọc đã lưu không còn trong danh sách lựa chọn (ô chọn hiện "Tất cả" nhưng vẫn lọc) được tự bỏ khi mở trang; nút "↺ Bỏ lọc" chung trên thanh tiêu đề, chỉ hiện khi trang đang lọc khác mặc định (giữ nguyên kỳ / ngày).
+
 ## 5.9.9
 - Tăng tốc nhiều trang (chỉ mục phủ TK nợ / TK có / ngày / số tiền + thống kê chỉ mục, tạo tự động 1 lần khi mở app): Đầu tư 3,1 → 0,3 s; Nhận hàng 3,3 → 0,9 s; Dòng tiền theo đối tượng 1,2 → 0,6 s; Thuế hoãn lại 3,0 → 2,0 s; 331, tạm ứng, IFRS, phân tích TK theo kỳ nhanh hơn 20–40%.
 

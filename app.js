@@ -89,11 +89,28 @@ async function loadWith(p,sec,fn){
   finally{clearInterval(iv);sec.classList.remove('loading');if(my===GOSEQ){const el=performance.now()-t0;PM[p]=Math.round(PM[p]?PM[p]*0.6+el*0.4:el);ls.set('pageMs',PM);
     $('#plBar').style.width='100%';setTimeout(()=>{if(my===GOSEQ)PL.classList.add('hide')},el>250?250:0)}}
 }
+// Bộ lọc lưu lại (localStorage) được đăng ký: biết mặc định + trang nào dùng → tự bỏ giá trị lọc không còn hiển thị trên trang, nút "Bỏ lọc" chung
+const FREG=[];
+function lsF(key,def){const o=Object.assign(JSON.parse(JSON.stringify(def)),ls.get(key,{})),r={key,o,def,pages:new Set()};FREG.push(r);
+  return new Proxy(o,{get(t,k){if(typeof k==='string'&&typeof PAGE==='string')r.pages.add(PAGE);return t[k]}})}
+const FKEEP=new Set(['tab','view','mode','gran','lang','model','basis','kind','cfg','grp','sort','closed','sel','dept0']);
+const FDATE=new Set(['from','to','asOf','year','ym','fromYear','h']); // kỳ / ngày: trang tự điền mặc định, hiển thị rõ trên ô nhập → không tính là "đang lọc", Bỏ lọc giữ nguyên
+const fDiff=(r,k)=>{const v=r.o[k],d=r.def[k];return k in r.def&&!FKEEP.has(k)&&(typeof v==='string'||typeof v==='number')&&String(v)!==''&&String(v)!==String(d??'')};
+function staleFix(){const S=document.querySelector('.content>section:not(.hide)');if(!S)return false;
+  const seen=new Set();S.querySelectorAll('option').forEach(o=>seen.add(o.value));S.querySelectorAll('input,textarea').forEach(i=>seen.add(i.value));
+  S.querySelectorAll('*').forEach(el=>{for(const a of el.attributes)if(a.name.startsWith('data-'))seen.add(a.value)});
+  let ch=false;for(const r of FREG){if(!r.pages.has(PAGE))continue;for(const k of Object.keys(r.o))if(fDiff(r,k)&&!seen.has(String(r.o[k]))){r.o[k]=r.def[k];ch=true}if(ch)ls.set(r.key,r.o)}
+  return ch}
+function fltBtn(){let b=document.getElementById('fltClr');if(!b){b=document.createElement('button');b.id='fltClr';b.className='btn sm ghost';b.title='Đưa mọi bộ lọc của trang này về mặc định';b.textContent='↺ Bỏ lọc';
+    b.onclick=async()=>{for(const r of FREG)if(r.pages.has(PAGE)){for(const k of Object.keys(r.def))if(!FKEEP.has(k)&&!FDATE.has(k))r.o[k]=JSON.parse(JSON.stringify(r.def[k]));ls.set(r.key,r.o)}await VIEWS[PAGE]();fltBtn()};
+    const t=document.getElementById('pTitle');t&&t.parentElement&&t.parentElement.appendChild(b)}
+  b.style.display=FREG.some(r=>r.pages.has(PAGE)&&Object.keys(r.o).some(k=>(fDiff(r,k)&&!FDATE.has(k))||(Array.isArray(r.o[k])&&!FKEEP.has(k)&&r.o[k].length&&!(r.def[k]||[]).length)))?'':'none'}
 async function go(p){{const _b=document.getElementById('lgSelBar');if(_b)_b.remove()}
   PAGE=p;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   $$('.content>section').forEach(s=>s.classList.toggle('hide',s.id!==p));
   $('#pTitle').textContent=TITLES[p][0];$('#pSub').textContent=TITLES[p][1];$('#pSub').title=TITLES[p][1];$('#content').scrollTop=0;
   await loadWith(p,$('#'+p),VIEWS[p]);
+  try{if(staleFix())await VIEWS[p]();fltBtn()}catch{}
 }
 $('#sideRv').onclick=()=>go('errors');
 document.addEventListener('click',e=>{const k=e.target.closest('[data-gg]');if(k){FIL={group:k.dataset.gg};OFF=0;go('errors')}});
@@ -792,7 +809,7 @@ $('#btnRecheck').onclick=()=>runAnalyze(true);
 $('#btnClear').onclick=async ()=>{if(await ask('Xoá TOÀN BỘ dữ liệu hạch toán và cảnh báo? (giữ lại trạng thái/ghi chú và cấu hình mail)'))runT('clear',{})};
 
 /* ---------- Phân tích chuyên sâu ---------- */
-let DP=ls.get('deepTab','reversal');let RCT='';const RCF=Object.assign({q:'',p:'',risk:'',flag:false,type:'',bal:''},ls.get('rcFilter',{}));const RVSEL=new Set();let RVG=[];let RVST='Chưa huỷ trích',RVM=ls.get('rvMode','detail');const DPS=ls.get('deepPick',{});
+let DP=ls.get('deepTab','reversal');let RCT='';const RCF=lsF('rcFilter',{q:'',p:'',risk:'',flag:false,type:'',bal:''});const RVSEL=new Set();let RVG=[];let RVST='Chưa huỷ trích',RVM=ls.get('rvMode','detail');const DPS=ls.get('deepPick',{});
 const flagB=f=>'<div style="display:flex;flex-direction:column;gap:3px;min-width:240px;white-space:normal">'+f.map(([s,t])=>`<span class="badge b-${s}">${esc(t)}</span>`).join('')+'</div>';
 const spark=a=>{const mx=Math.max(...a.map(Math.abs),1);return `<span style="display:inline-flex;gap:1px;align-items:flex-end;height:22px">${a.map((v,i)=>`<i style="width:4px;height:${Math.max(1,Math.abs(v)/mx*22)}px;background:${i===a.length-1?C.brand:v?C.brand3:C.gray}"></i>`).join('')}</span>`};
 const TBLMAX=1000; // bảng quá lớn làm trình duyệt dàn trang rất lâu → chỉ hiển thị 1.000 dòng đầu (xuất Excel để xem đủ)
@@ -1215,7 +1232,7 @@ async function grpEmpty(title,kinds){const st=await aq('catStats'),inData=kinds.
 }
 
 /* ---------- Giao dịch nội bộ: tổng hợp kỳ · số dư · chi tiết · theo năm ---------- */
-const IG=Object.assign({m:'sum',co:'',tt:false,ex:false,years:[],par:'TFU,VTC,STL,VTG',split:true},ls.get('igPick',{}));
+const IG=lsF('igPick',{m:'sum',co:'',tt:false,ex:false,years:[],par:'TFU,VTC,STL,VTG',split:true});
 /* ---- Lưới bút toán nội bộ: lọc / tìm kiếm / loại khỏi nội bộ / gán lại công ty ---- */
 const IGF0={q:'',cat:'',co:'',acc:'',min:'',max:'',fl:'',sort:'d'},IGF={...IGF0};
 function igGrid(host,rows,cos,onChange,opt={}){const Q=x=>host.querySelector(x);if(!opt.keep)Object.assign(IGF,IGF0);
@@ -1377,7 +1394,7 @@ async function vInternal(B,yms){
 }
 
 /* ---------- Danh mục đối tượng ---------- */
-const CATF=Object.assign({q:'',kind:'',off:0},ls.get('catFilter',{}));let CATK={},CATSEL=new Set();
+const CATF=lsF('catFilter',{q:'',kind:'',off:0});let CATK={},CATSEL=new Set();
 const kindBadge=k=>k?`<span class="badge ${k==='NB'||k==='TT'?'b-M':k==='BN_QT'||k==='ROAMING'?'b-H':k==='NV'?'s-fixed':''}" title="${esc(CATK[k]||'')}">${esc(k)}</span>`:'<span class="mut">–</span>';
 async function vCat(){
   const [r,st]=await Promise.all([aq('catList',CATF.q,CATF.kind,CATF.off,200),aq('catStats')]);CATK=r.kinds;
@@ -1516,7 +1533,7 @@ $('#repPdf').onclick=async()=>{try{const f=await api.riskPdf();if(f)alert('Đã 
 
 
 /* ---------- Điều chỉnh trường quản trị: Hợp đồng, Mã vị trí, Biển số xe, Loại dòng tiền (không sửa dữ liệu gốc) ---------- */
-const FAF=Object.assign({from:'',to:'',doc:'',acc:'',bp:'',q:'',field:'contract',val:'',empty:false,cash:false,adjOnly:false,tab:'s'},ls.get('faPick',{}));
+const FAF=lsF('faPick',{from:'',to:'',doc:'',acc:'',bp:'',q:'',field:'contract',val:'',empty:false,cash:false,adjOnly:false,tab:'s'});
 const FAN={contract:'Hợp đồng',location:'Mã vị trí (Location)',plate:'Biển số xe',asset:'Mã tài sản (Asset)',dept:'Phòng ban (Department Sub)',cf:'Loại dòng tiền'};
 const CFC_EN={'01':'Receipts from sales and services','02':'Payments to suppliers','03':'Payments to employees','04':'Interest paid','05':'Corporate income tax paid','06':'Other receipts from operating activities','07':'Other payments for operating activities','21':'Purchase of fixed assets and other long-term assets','22':'Proceeds from disposal of fixed assets','23':'Loans granted / purchase of debt instruments','24':'Collection of loans / sale of debt instruments','25':'Investments in other entities','26':'Proceeds from investments in other entities','27':'Interest, dividends and profits received','31':'Proceeds from share issue / capital contributions','32':'Capital repaid to owners','33':'Proceeds from borrowings','34':'Repayment of borrowings','35':'Finance lease principal paid','36':'Dividends paid to owners'};
 const CFC={'01':'Thu bán hàng, cung cấp dịch vụ','02':'Chi trả người cung cấp','03':'Chi trả người lao động','04':'Lãi vay đã trả','05':'Thuế TNDN đã nộp','06':'Thu khác HĐKD','07':'Chi khác HĐKD','21':'Chi mua sắm TSCĐ, TS dài hạn','22':'Thu thanh lý TSCĐ','23':'Chi cho vay, mua công cụ nợ','24':'Thu hồi cho vay','25':'Chi góp vốn','26':'Thu hồi góp vốn','27':'Thu lãi, cổ tức','31':'Nhận vốn góp','32':'Trả lại vốn góp','33':'Thu đi vay','34':'Trả nợ gốc vay','35':'Trả nợ thuê tài chính','36':'Cổ tức đã trả','61':'Ảnh hưởng tỷ giá'};
@@ -1637,7 +1654,7 @@ async function faHist(){const L=await aq('faList');
 }
 
 /* ---------- Danh mục phòng ban (ánh xạ phòng ban dữ liệu gốc) & khoản mục chi phí ---------- */
-const DMF=Object.assign({tab:'dept',q:'',grp:''},ls.get('dmPick',{}));
+const DMF=lsF('dmPick',{tab:'dept',q:'',grp:''});
 async function vDM(){
   const H=$('#dmBody');ls.set('dmPick',DMF);
   H.innerHTML=`<div class="card"><div class="subbar"><span class="crumb">Danh mục báo cáo</span><div class="subtabs" id="dmTabs">${[['dept','Phòng ban'],['map','Ánh xạ phòng ban dữ liệu gốc'],['cost','Khoản mục chi phí']].map(([k,v])=>`<button data-dmt="${k}" class="${DMF.tab===k?'on':''}">${v}</button>`).join('')}</div>
@@ -1862,7 +1879,7 @@ function txPendBar(){const el=document.getElementById('txPend');if(!el)return;co
     try{for(const [val,xs] of G){await aq('txSetPeriod',xs.map(x=>({id:x.id,side:x.side})),val,'');txMoved(xs,val||xs[0].p0)}TXPEND.clear();await txKeepScroll(vTX)}catch(err){alert(err.message)}};
   document.getElementById('txPUndo').onclick=()=>{TXPEND.clear();txKeepScroll(vTX)};}
 function txMoved(xs,per){const M=window.TXMV||(window.TXMV={ids:new Map()});for(const x of xs)M.ids.set(x.id+'|'+x.side,per)}
-const TXF=Object.assign({grp:true,from:'',to:'',lv:0,tab:'a',q:'',off:false,acc:'',per:'',st:'',fa:'',hideConf:false},ls.get('txPick',{}));const TXST={ok:['Chính xác','b-L'],sus:['Nghi ngờ','b-H'],chk:['Kỳ lệch','b-M'],chg:['Đã đổi kỳ – chờ xác nhận','b-M']};
+const TXF=lsF('txPick',{grp:true,from:'',to:'',lv:0,tab:'a',q:'',off:false,acc:'',per:'',st:'',fa:'',hideConf:false});const TXST={ok:['Chính xác','b-L'],sus:['Nghi ngờ','b-H'],chk:['Kỳ lệch','b-M'],chg:['Đã đổi kỳ – chờ xác nhận','b-M']};
 async function vTX(){const H=$('#txBody');if(!TXF.to){const t=new Date();TXF.to=new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10)}if(!TXF.from)TXF.from=TXF.to.slice(0,4)+'-01-01';ls.set('txPick',TXF);
   H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp…</div>';const r=await aq('txReport',{from:TXF.from,to:TXF.to,level:TXF.lv,all:TXF.tab==='d',acc:TXF.fa}),f=v=>Math.abs(v||0)>0.004?fmt2(v):'',T=r.tot;
   const q=TXF.q.toLowerCase(),okG=g=>(!TXF.off||(Math.abs(g.diff)>0.005&&g.conf!=='ok'))&&(!TXF.zero||(Math.abs(g.diff)<=(+(TXF.ztol??0.49))+1e-9&&(g.credit||g.debit)))&&(!TXF.hideConf||g.conf!=='ok')&&(!q||(g.acc+' '+g.name+' '+g.per).toLowerCase().includes(q));
@@ -1969,7 +1986,7 @@ async function vTX(){const H=$('#txBody');if(!TXF.to){const t=new Date();TXF.to=
     $('#txSet').onclick=()=>{const p=$('#txP').value.trim();if(!/^\d{4}_\d{2}$/.test(p))return alert('Nhập kỳ dạng năm_tháng, vd 2026_03');apply(p)};$('#txReset').onclick=()=>apply('')}
 }
 // ======== Báo cáo tài chính IFRS ========
-const IFF=Object.assign({year:new Date().getFullYear()-1,tab:'sofp',q:'',lv:''},ls.get('ifPick',{}));
+const IFF=lsF('ifPick',{year:new Date().getFullYear()-1,tab:'sofp',q:'',lv:''});
 async function vIF(){const H=$('#ifBody');ls.set('ifPick',IFF);H.innerHTML='<div class="card"><span class="spin"></span> Đang lập báo cáo…</div>';
   const [r,Y]=await Promise.all([aq('ifBuild',IFF.year),aq('ifYears')]),y=r.year,p=y-1,f=v=>{v=Math.round(v||0);return v<0?`(${num(-v)})`:v?num(v):'-'},M=r.meta;
   const tabs=[['sofp','SOFP'],['sopl','SOPL'],['socf','SOCF'],['soce','SOCE'],['notes','Notes'],['tb','TB – bảng cân đối thử'],['lt','Ngắn hạn / dài hạn'],['adj','Điều chỉnh IFRS'],['map','Quy tắc phân loại TK']];
@@ -2061,7 +2078,7 @@ async function vIF(){const H=$('#ifBody');ls.set('ifPick',IFF);H.innerHTML='<div
     $('#ifRS').onclick=async()=>{await aq('ifSetRules',RU);vIF()};$('#ifRR').onclick=async()=>{if(!await ask('Khôi phục quy tắc phân loại mặc định?'))return;await aq('ifResetRules');vIF()}}
 }
 // ======== Thuế TNDN & thuế hoãn lại (Timor-Leste) ========
-const DTF=Object.assign({year:new Date().getFullYear()-1,cfg:false},ls.get('dtPick',{}));
+const DTF=lsF('dtPick',{year:new Date().getFullYear()-1,cfg:false});
 async function vDT(){const H=$('#dtBody');ls.set('dtPick',DTF);H.innerHTML='<div class="card"><span class="spin"></span> Đang tính…</div>';
   const [r,S]=await Promise.all([aq('dtxCompute',DTF.year),aq('dtxSummary')]),C=r.cfg,I=r.input,c=r.cur,f=v=>fmt2(v||0),pc=v=>v==null?'':(v*100).toFixed(1)+'%';
   const ys=[...new Set([...S.map(x=>x.year),+DTF.year])].sort();
@@ -2111,10 +2128,10 @@ async function vDT(){const H=$('#dtBody');ls.set('dtPick',DTF);H.innerHTML='<div
     try{const fn=await api.xlsxSheets(`Thue_TNDN_HoanLai_${r.year}.xlsx`,[['ITR '+r.year,s1],['Doi chieu',s2],['Deferred Tax',s3],['Chi phi thue',s4],['Tong hop cac nam',s5]]);if(fn)alert('Đã xuất: '+fn)}catch(e){alert(e.message)}};
 }
 // ======== Kế hoạch – thực hiện chi phí ========
-const BPF=Object.assign({tab:'cmp',year:new Date().getFullYear(),from:1,to:Math.max(1,new Date().getMonth()),view:'co',dept:'',mon:false,q:'',over:false},ls.get('bpPick',{}));
+const BPF=lsF('bpPick',{tab:'cmp',year:new Date().getFullYear(),from:1,to:Math.max(1,new Date().getMonth()),view:'co',dept:'',mon:false,q:'',over:false});
 
 const prevM=ym=>{let [y,m]=ym.split('-').map(Number);m--;if(!m){m=12;y--}return `${y}-${String(m).padStart(2,'0')}`};
-const BSF=Object.assign({ym:'',banks:[],accs:[],q:'',acc:'',tab:'sk',tol:5,st:'none'},ls.get('bsPick',{}));
+const BSF=lsF('bsPick',{ym:'',banks:[],accs:[],q:'',acc:'',tab:'sk',tol:5,st:'none'});
 async function vBS(){const H=$('#bsBody');H.innerHTML='<div class="card"><span class="spin"></span></div>';
   const [A,M]=await Promise.all([aq('bsAccounts'),aq('bsMonths')]);
   if(!BSF.ym||!M.includes(BSF.ym))BSF.ym=M[0]||new Date().toISOString().slice(0,7);ls.set('bsPick',BSF);
@@ -2180,7 +2197,7 @@ async function vBS(){const H=$('#bsBody');H.innerHTML='<div class="card"><span c
     if(e.target.closest('input'))return;const tr=e.target.closest('[data-bsa]');if(tr){BSF.acc=BSF.acc===tr.dataset.bsa?'':tr.dataset.bsa;vBS()}};
 }
 
-const ORF=Object.assign({gran:'m',from:'',to:'',a:'',b:'',lang:'vn',closed:[]},ls.get('orPick',{}));
+const ORF=lsF('orPick',{gran:'m',from:'',to:'',a:'',b:'',lang:'vn',closed:[]});
 async function vOR(){const H=$('#orBody');H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp…</div>';
   const ms=(await aq('months')).map(m=>m.ym).sort();if(!ORF.to||!ms.includes(ORF.to))ORF.to=ms.at(-1)||'';if(!ORF.from||ORF.from>ORF.to)ORF.from=(ORF.to||'').slice(0,4)+'-01';
   const cmp=[ORF.a,ORF.b].filter(Boolean),r=await aq('orReport',{gran:ORF.gran,from:ORF.from,to:ORF.to,cmp});ls.set('orPick',ORF);
@@ -2233,7 +2250,7 @@ function bpTreeRows(tree,rows){const M=new Map(rows.map(x=>[String(x.code).toUpp
   return out}
 // Ngân sách còn lại / tờ trình (mẫu MAU1): chọn phòng ban → khoản mục; chọn 1 hoặc nhiều khoản mục → KH năm, đã sử dụng, đề xuất, còn lại sau đề xuất
 async function bpStmtTab(H,tabs,yearSel,bind,D){
-  const SF=Object.assign({dept:'',sel:[],prop:0,note:'',lang:'vn',q:''},ls.get('bpStmt',{}));if(!SF.dept&&D[0])SF.dept=D[0].code;
+  const SF=lsF('bpStmt',{dept:'',sel:[],prop:0,note:'',lang:'vn',q:''});if(!SF.dept&&D[0])SF.dept=D[0].code;
   const [r,T]=await Promise.all([aq('bpCompare',{year:BPF.year,from:1,to:BPF.to,view:'dept',dept:SF.dept}),aq('bpTree')]);
   const rows=(r.groups[0]||{rows:[]}).rows.filter(x=>Math.abs(x.PY)+Math.abs(x.A)>0.004).map(x=>({...x,P:x.PY}));
   const TR=bpTreeRows(T,rows),sel=new Set(SF.sel.filter(c=>rows.some(x=>x.code===c))),save=()=>{SF.sel=[...sel];ls.set('bpStmt',SF)},q=SF.q.toLowerCase();
@@ -2279,7 +2296,7 @@ async function bpStmtTab(H,tabs,yearSel,bind,D){
 async function bpNoticeTab(H,tabs,yearSel,bind){
   const [r,HD,ST,TR]=await Promise.all([aq('bpCompare',{year:BPF.year,from:BPF.from,to:BPF.to,view:'bydept',dept:''}),aq('bpHeads'),aq('staffList',{}),aq('bpTree')]);const TRn=(TR||[]).filter(t=>t.code).length;
   const G=new Map(r.groups.map(g=>[g.dept,g])),S=(ST.rows||[]).filter(x=>x.status!=='inactive'),SN=new Map(S.map(x=>[x.code,x]));
-  const pc=(a,p)=>Math.abs(p)>0.004?(a/p*100).toFixed(1)+'%':'–',sel=new Set(ls.get('bpNtSel',[])),NT=Object.assign({lang:'vi',cc:''},ls.get('bpNt',{})),DEF={vi:{subject:'Thông báo tình hình sử dụng chi phí {period} – {dept}',body:''},en:{subject:'Expense utilisation notice {period} – {dept}',body:''}},LG=NT.lang==='en'?'en':'vi';NT[LG]=Object.assign({},DEF[LG],NT[LG]||{});
+  const pc=(a,p)=>Math.abs(p)>0.004?(a/p*100).toFixed(1)+'%':'–',sel=new Set(ls.get('bpNtSel',[])),NT=lsF('bpNt',{lang:'vi',cc:''}),DEF={vi:{subject:'Thông báo tình hình sử dụng chi phí {period} – {dept}',body:''},en:{subject:'Expense utilisation notice {period} – {dept}',body:''}},LG=NT.lang==='en'?'en':'vi';NT[LG]=Object.assign({},DEF[LG],NT[LG]||{});
   const SE=S.map(x=>({...x,email:x.email1||x.email2||''})).filter(x=>x.email),SEM=new Map(SE.map(x=>[x.email.toLowerCase(),x])),ccl=v=>String(v||'').split(/[;,\s]+/).map(x=>x.trim()).filter(x=>/@/.test(x)),chips=(v,k)=>ccl(v).map(m=>{const x=SEM.get(m.toLowerCase());return `<span class="badge" style="margin:2px 4px 2px 0;display:inline-flex;gap:4px;align-items:center" title="${esc(m)}">${esc(x?x.name:m)}<a href="#" data-ccx="${esc(k)}" data-m="${esc(m)}" style="text-decoration:none">×</a></span>`}).join('');
   const rows=HD.map(h=>{const g=G.get(h.dept)||{P:0,A:0,PY:0};return {...h,P:g.P,A:g.A,PY:g.PY,remain:g.PY-g.A,over:g.A>g.P+0.004}}).filter(x=>x.P||x.A||x.PY||x.staff_code);
   const per=`T${r.from}–T${r.to}/${r.year}`;
@@ -2440,7 +2457,7 @@ async function bpPlan(H,tabs,yearSel,D,dsel,bind,Y){const L=await aq('bpList',BP
 const vLoc=()=>vDim('location'),vVeh=()=>vDim('plate'),vDpt=()=>vDim('dept');
 // ======== Tìm chức năng (Ctrl+P): tìm theo tên trang, mô tả, từ khoá, cả các chức năng nằm trong trang (tab, nút) – không phân biệt dấu ========
 // Quỹ khen thưởng – phúc lợi (TK 353 hạch toán chung): tách Khen thưởng / Phúc lợi, năm của quỹ, gom theo số chứng từ – chỉ theo năm
-const FQF=Object.assign({tab:'sum',side:'',typ:'',fy:'',y:'',q:'',only:''},ls.get('fqF',{}));const FQSEL=new Set();const FQOPEN=new Set();const FQLN=new Map();const FQP=new Map();const FQMV=new Set();
+const FQF=lsF('fqF',{tab:'sum',side:'',typ:'',fy:'',y:'',q:'',only:''});const FQSEL=new Set();const FQOPEN=new Set();const FQLN=new Map();const FQP=new Map();const FQMV=new Set();
 const fqNz=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
 const FQT={kt:'Khen thưởng',pl:'Phúc lợi',mix:'Trích chung (tách KT/PL)','':'Chưa phân loại'};
 document.head.insertAdjacentHTML('beforeend','<style>#fqBody .fqlnk{text-decoration:underline dotted;text-underline-offset:3px}#fqBody td[data-fqgo]:hover{background:#FFF1EB!important;color:#B93815}</style>');
@@ -2739,7 +2756,7 @@ window.alert=msg=>{const s=String(msg??'');if(/^Đã huỷ – chưa ghi/.test(s
   let T=0;new MutationObserver(()=>{clearTimeout(T);T=setTimeout(()=>scan(document.body),80)}).observe(document.body,{childList:true,subtree:true});scan(document.body)})();
 
 /* ===== v4.34: Dự báo báo cáo tài chính (B02 + B01) – nhiều mô hình ===== */
-const FCF=Object.assign({inv:[],divPct:0,costFloor:true,fixed:true,fixedBase:'dec',fixedG:0,fixedKeys:[],h:3,model:'ens',fromYear:'',skipPartial:false,costByRatio:false,adjRev:0,adjCost:0,show:'pl'},ls.get('fcPick',{}));
+const FCF=lsF('fcPick',{inv:[],divPct:0,costFloor:true,fixed:true,fixedBase:'dec',fixedG:0,fixedKeys:[],h:3,model:'ens',fromYear:'',skipPartial:false,costByRatio:false,adjRev:0,adjCost:0,show:'pl'});
 async function vFC(refresh){const H=$('#fcBody');H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp lịch sử B01 / B02 theo từng năm và chạy các mô hình dự báo…</div>';
   try{const r=await aq('fcCompute',{h:FCF.h,model:FCF.model,fromYear:FCF.fromYear,skipPartial:FCF.skipPartial,costByRatio:FCF.costByRatio,bsMode:FCF.bsMode,capexMaint:FCF.capexMaint,inv:FCF.inv,divPct:+FCF.divPct||0,costFloor:FCF.costFloor,fixed:FCF.fixed,fixedBase:FCF.fixedBase,fixedG:+FCF.fixedG||0,fixedKeys:FCF.fixedKeys,adj:{rev:+FCF.adjRev||0,cost:+FCF.adjCost||0},refresh:!!refresh});ls.set('fcPick',FCF);fcDraw(r)}
   catch(e){H.innerHTML=`<div class="card neg">Lỗi dự báo: ${esc(e.message)}</div>`}}
@@ -2850,7 +2867,7 @@ function fcMonBS(r,ms){const H=r.bsM.map(x=>`<th class=n style="background:${x.e
 
 // Dự báo giao dịch nội bộ theo công ty / nhóm (mua theo nhóm TK, bán theo doanh thu) – dùng mô hình & số năm đang chọn
 async function fcIG(){const W=$('#fcIG');if(!W)return;const IGP=(typeof IG!=='undefined'&&IG.par)||'TFU,VTC,STL,VTG',G1=IGP.split(',').map(x=>x.trim().toUpperCase()).filter(Boolean),gOf=k=>G1.includes(String(k).toUpperCase())?1:2;
-  const F=Object.assign({co:'',tt:false,ex:true,met:'buyTot',adjB:0,adjS:0,split:true},ls.get('fcIG',{}));
+  const F=lsF('fcIG',{co:'',tt:false,ex:true,met:'buyTot',adjB:0,adjS:0,split:true});
   let r,cos;try{[r,cos]=await Promise.all([aq('fcInternal',{h:FCF.h,model:FCF.model,fromYear:FCF.fromYear,skipPartial:FCF.skipPartial,company:F.co,tt:F.tt,ex:F.ex,adj:{buy:+F.adjB||0,sales:+F.adjS||0}}),aq('grpCompanies',F.tt)])}catch(e){W.innerHTML=`<span class=neg>${esc(e.message)}</span>`;return}
   if(!$('#fcIG'))return;const Y=r.years,FY=r.fy,C=r.cols,cn=k=>(C.find(c=>c[0]===k)||[k,k])[1],M=F.met,pct=v=>v==null?'–':(v*100).toFixed(1)+'%';
   const val=(o,y)=>o.hist[y]?o.hist[y][M]:0,vf=(o,i)=>o.fc[i][M],row=(o,lab,b)=>{const a=Y.map(y=>val(o,y)),f=FY.map((_,i)=>vf(o,i)),g=a.at(-1)&&f.at(-1)/a.at(-1)>0?Math.pow(f.at(-1)/a.at(-1),1/f.length)-1:null;
@@ -2886,7 +2903,7 @@ function fcCFYear(r){if(!r.cfY)return '<div class=mut style="padding:14px">Khôn
 
 
 /* ===== v4.41: Danh mục nhân viên ===== */
-const STF=Object.assign({q:'',dept:'',unit:'',status:'active',contract:'',nationality:''},ls.get('stPick',{}));const STSEL=new Set();
+const STF=lsF('stPick',{q:'',dept:'',unit:'',status:'active',contract:'',nationality:''});const STSEL=new Set();
 async function vStaff(){const H=$('#stBody');ls.set('stPick',STF);if(STF.tab==='bp')return vStaffBp();
   const r=await aq('staffList',{q:STF.q,dept:STF.dept,unit:STF.unit,status:STF.status,contract:STF.contract,nationality:STF.nationality}),F=r.fields,fn=Object.fromEntries(F);
   const sel=(k,lab,all)=>`<label>${lab} <select data-stf="${k}" ${['dept','unit'].includes(k)?'class="srch" data-auto="1"':''} style="max-width:240px"><option value="">${all}</option>${r.facets[k].map(x=>`<option value="${esc(x.v)}" ${STF[k]===x.v?'selected':''}>${esc(k==='status'?(x.v==='inactive'?'Đã nghỉ / ngừng':x.v==='active'?'Đang làm việc':x.v||'(trống)'):x.v||'(trống)')} · ${x.n}</option>`).join('')}</select></label>`;
@@ -2962,7 +2979,7 @@ async function vStaffBp(){const H=$('#stBody');H.innerHTML='<div class="card"><s
 
 
 /* ===== v4.43: Công nợ tạm ứng theo nhân viên & đối chiếu ===== */
-const ADF=Object.assign({asOf:'',from:'',acc:'141',dept:'',only:'open',q:'',over:30,bkm:12,mode:'bp',group:'bp'},ls.get('advPick',{}));const ADSEL=new Set();
+const ADF=lsF('advPick',{asOf:'',from:'',acc:'141',dept:'',only:'open',q:'',over:30,bkm:12,mode:'bp',group:'bp'});const ADSEL=new Set();
 const RCN={sent:['Đã gửi đối chiếu','b-M'],confirmed:['Đã xác nhận','s-fixed'],disputed:['Có chênh lệch','b-H']};
 async function vAdv(){const H=$('#advBody');if(String(ADF.acc).startsWith('1412'))ADF.acc='141';if(!ADF.asOf){const ym=(await aq('months')).map(m=>m.ym).sort().at(-1)||new Date().toISOString().slice(0,7);const [y,m]=ym.split('-').map(Number);ADF.asOf=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)}if(!ADF.from)ADF.from=ADF.asOf.slice(0,4)+'-01-01';ls.set('advPick',ADF);
   H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp công nợ tạm ứng theo nhân viên…</div>';
@@ -3081,7 +3098,7 @@ function askText(msg,def=''){return new Promise(res=>{const w=document.createEle
 
 
 /* ===== v4.44: Danh mục chủ nhà trạm ===== */
-const LLF=Object.assign({q:'',only:'',days:60},ls.get('llPick',{}));
+const LLF=lsF('llPick',{q:'',only:'',days:60});
 async function vLL(){const H=$('#llBody');ls.set('llPick',LLF);H.innerHTML='<div class="card"><span class="spin"></span> Đang dò chủ nhà trạm từ sổ (Nợ 24211 / Có 331)…</div>';
   const r=await aq('llScan',{q:LLF.q,only:LLF.only,days:LLF.days}),R=r.rows,dl=x=>x.daysLeft==null?'':x.daysLeft<0?`<span class=neg>hết hạn ${-x.daysLeft} ngày</span>`:x.daysLeft<=LLF.days?`<span class=neg>còn ${x.daysLeft} ngày</span>`:`còn ${x.daysLeft} ngày`;
   H.innerHTML=`<div class="card"><div class="subbar"><span class="crumb">Danh mục chủ nhà trạm</span><span class="hint">Tự lấy từ sổ: chủ nhà = đối tượng Có 331 khi Nợ 24211; đã trả = Nợ 331 / Có 11x; mã nhà trạm rút từ tên đối tượng / hợp đồng / diễn giải (vd AN0002); kỳ thuê & giá thuê đọc từ diễn giải. Số tài khoản, ngân hàng, SĐT… nhập tay hoặc nạp file.</span></div>
@@ -3127,7 +3144,7 @@ async function llForm(x,r){CUR=-1;const Dw=$('#drawer');Dw.classList.add('full')
 
 
 /* ===== v4.48: Công nợ 138811 / 138812 theo đối tượng ===== */
-const R8F=Object.assign({asOf:'',from:'',acc:'',only:'open',q:'',over:30},ls.get('r88Pick',{}));
+const R8F=lsF('r88Pick',{asOf:'',from:'',acc:'',only:'open',q:'',over:30});
 async function vR88(){const H=$('#r88Body');if(!R8F.asOf){const ym=(await aq('months')).map(m=>m.ym).sort().at(-1)||new Date().toISOString().slice(0,7);const [y,m]=ym.split('-').map(Number);R8F.asOf=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)}if(!R8F.from)R8F.from=R8F.asOf.slice(0,4)+'-01-01';ls.set('r88Pick',R8F);
   H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp công nợ phải thu…</div>';
   const r=await aq('r88Report',{asOf:R8F.asOf,from:R8F.from,acc:R8F.acc,only:R8F.only,q:R8F.q,overDays:R8F.over}),T=r.tot;
@@ -3187,7 +3204,7 @@ async function r88Wrong(){CUR=-1;const L=await aq('r88Wrong');$('#dPane').innerH
 
 
 /* ===== v4.49: Đối chiếu hóa đơn ↔ ERP 138812 ===== */
-const IVF=Object.assign({tab:'cmp',from:'',to:'',basis:'issuecyc',only:'diff',q:'',cq:'',conly:''},ls.get('inv88Pick',{}));if(IVF.basis==='pay')IVF.basis='issuecyc';
+const IVF=lsF('inv88Pick',{tab:'cmp',from:'',to:'',basis:'issuecyc',only:'diff',q:'',cq:'',conly:''});if(IVF.basis==='pay')IVF.basis='issuecyc';
 const IST={ok:['Khớp','s-fixed'],diff:['Chênh lệch','b-H'],inv_only:['Có hóa đơn, ERP chưa ghi','b-H'],erp_only:['ERP có, không có hóa đơn','b-M'],unmapped:['Account chưa map ERP','b-L']};
 async function vInv88(){const H=$('#invBody');ls.set('inv88Pick',IVF);if(!IVF.to){const ym=(await aq('months')).map(m=>m.ym).sort().at(-1)||'';IVF.to=ym;IVF.from=ym?ym.slice(0,4)+'-01':''}
   const tabs=`<div class="subtabs" id="ivTabs" style="margin-left:10px">${[['cmp','Đối chiếu theo tháng'],['map','Map khách hàng ↔ ERP']].map(([k,v])=>`<button data-ivt="${k}" class="${IVF.tab===k?'on':''}">${v}</button>`).join('')}</div>`;
@@ -3322,7 +3339,7 @@ function tcCell(o){const L=o.tcs||[];if(!L.length)return '<td></td>';const all=L
   return `<td style="font-size:11px;max-width:300px" title="${esc(all)}">${L.slice(0,3).map(x=>`<div class=nw style="overflow:hidden;text-overflow:ellipsis">${esc(x.tc||'(trống)')} <span class=mut>${fmt2(x.a)}</span></div>`).join('')}${L.length>3?`<div class=mut>+${L.length-3} loại khác…</div>`:''}</td>`}
 
 /* ===== v4.60.0: Đối chiếu công nợ 331 theo hợp đồng ===== */
-const APF=Object.assign({from:'',to:'',acc:'331',q:'',only:'open',st:''},ls.get('apPick',{}));
+const APF=lsF('apPick',{from:'',to:'',acc:'331',q:'',only:'open',st:''});
 async function vAP(){const H=$('#apBody');if(!APF.to){const t=new Date();APF.to=new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10)}if(!APF.from)APF.from=APF.to.slice(0,4)+'-01-01';
   H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp công nợ 331…</div>';
   const r=await aq('apReport',{from:APF.from,to:APF.to,acc:APF.acc,q:APF.q,only:APF.only,st:APF.st,who:APF.who||''});ls.set('apPick',APF);APR=r;const ASL=await aq('apAssignList',{to:APF.to});
@@ -3355,7 +3372,7 @@ async function vAP(){const H=$('#apBody');if(!APF.to){const t=new Date();APF.to=
   $('#apW').onclick=()=>ex(['docx']);$('#apX').onclick=()=>ex(['xlsx']);$('#apWX').onclick=()=>ex(['docx','xlsx'])}
 let APR=null;
 // ======== Đối chiếu hàng hoá 15611 / vật tư 14121 theo đối tượng ========
-const GRF=Object.assign({kind:'15611',from:'',to:'',acc:'',q:'',only:'open',who:'',st:''},ls.get('grPick',{}));let GRR=null;const GREXP=new Set(); // đối tượng đang mở danh sách mặt hàng (mặc định thu gọn – xem số tổng trước)
+const GRF=lsF('grPick',{kind:'15611',from:'',to:'',acc:'',q:'',only:'open',who:'',st:''});let GRR=null;const GREXP=new Set(); // đối tượng đang mở danh sách mặt hàng (mặc định thu gọn – xem số tổng trước)
 const GRK={'15611':{acc:'15611',vi:'Hàng hoá 15611',en:'Goods 15611'},'14121':{acc:'14121',vi:'Vật tư tạm ứng 14121',en:'Advance materials 14121'}};
 const grO=()=>({kind:GRF.kind,from:GRF.from,to:GRF.to,acc:GRF.acc||GRK[GRF.kind].acc});
 const fq=v=>{v=Math.round((+v||0)*10000)/10000;return Math.abs(v)<1e-9?'<span class=mut>–</span>':v.toLocaleString('en-US',{maximumFractionDigits:4})};
@@ -3632,7 +3649,7 @@ function apSuggest(lines,allC){const nz=t=>String(t||'').toUpperCase().replace(/
   lines.forEach((x,i)=>{const D=nz(x.ds),cur=nz(core(x.c));if(!D)return;const hit=C.find(o=>D.includes(o.k));if(hit&&hit.k!==cur&&!(cur&&cur.includes(hit.k)))R.set(i,hit.c)});return R}
 
 /* ===== v4.67.0: Phân tích sổ chi tiết (ledger) theo tài khoản × đối tượng ===== */
-const LGF=Object.assign({from:'',to:'',acc:'',bp:'',st:'',how:'',re:false,grp:true,sort:'date'},ls.get('lgPick',{}));let LGP={acc:null,list:[]},LGR=null;
+const LGF=lsF('lgPick',{from:'',to:'',acc:'',bp:'',st:'',how:'',re:false,grp:true,sort:'date'});let LGP={acc:null,list:[]},LGR=null;
 const LGST={ok:['Khớp','s-fixed'],check:['Cần phân tích','b-M'],open:['Chưa khớp','b-H']};
 /* Gán mã tài sản hàng loạt bằng Excel: tải mẫu (dòng 211/213/214 chưa có mã) → điền cột "Mã tài sản" → nạp lại */
 async function faAssetTpl(from,to){const acc=prompt('Các TK cần gán mã tài sản (cách nhau dấu phẩy):','211,213,214,241');if(acc==null)return;
@@ -4135,7 +4152,7 @@ async function amtBasisCard(){const W=$('#amtBasis');if(!W)return;const b=await 
 setTimeout(amtBasisCard,1500);
 
 // ======== Dòng tiền thanh toán ========
-const PFF=Object.assign({from:'',to:'',per:'q',by:'',pg:''},ls.get('pfPick',{}));const PFX=new Set(['intl','int','dom','adv','oth','kd','dt','tc','na']);let PFR=null;
+const PFF=lsF('pfPick',{from:'',to:'',per:'q',by:'',pg:''});const PFX=new Set(['intl','int','dom','adv','oth','kd','dt','tc','na']);let PFR=null;
 async function vPF(){const H=$('#pfBody');if(!PFF.to){const t=new Date();PFF.to=new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10)}if(!PFF.from)PFF.from=PFF.to.slice(0,4)+'-01-01';
   H.innerHTML=`<div class="card"><span class="spin"></span> ${TT('Đang tổng hợp dòng tiền…','Summarising cash payments…')}</div>`;
   const r=await aq('pfReport',{...PFF,lang:LANG});PFR=r;ls.set('pfPick',PFF);const P=r.periods,f=v=>v?fmt2(v):'<span class=mut>–</span>',pl=p=>/Q/.test(p)?p.replace('-',' '):p.length===4?p:ymLbl(p);
@@ -4180,7 +4197,7 @@ async function pfDetail(sub,bp,p,bpg=null){CUR=-1;const Dw=$('#drawer');Dw.class
   $('#dClose').onclick=()=>{Dw.classList.remove('full');closeDetail()}}
 
 // ======== Chi phí trả trước 242 – còn lại chưa phân bổ ========
-const P2F=Object.assign({asOf:'',accs:'24211,24218,24228',st:'',view:'cost',q:''},ls.get('p2Pick',{}));let P2R=null;
+const P2F=lsF('p2Pick',{asOf:'',accs:'24211,24218,24228',st:'',view:'cost',q:''});let P2R=null;
 const P2ST={expired:['🔴',TT('Hết kỳ phân bổ nhưng còn dư','Period ended, balance left')],never:['🔴',TT('Chưa phân bổ lần nào','Never amortised')],over:['🟣',TT('Phân bổ vượt số trả trước (hoặc thiếu số dư đầu kỳ)','Amortised more than prepaid (or opening balance missing)')],slow:['🟠',TT('Phân bổ chậm hơn lịch','Behind schedule')],fast:['🔵',TT('Phân bổ nhanh hơn lịch','Ahead of schedule')],noperiod:['⚪',TT('Không xác định được kỳ phân bổ','No amortisation period found')],ok:['🟢',TT('Đúng lịch','On schedule')]};
 async function vP2(){const H=$('#p2Body');if(!P2F.asOf){const t=new Date();P2F.asOf=new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10)}
   H.innerHTML=`<div class="card"><span class="spin"></span></div>`;const r=await aq('p242Report',{asOf:P2F.asOf,accs:P2F.accs.split(/[,; ]+/),withIssues:true});P2R=r;ls.set('p2Pick',P2F);
@@ -4211,7 +4228,7 @@ async function p2Lines(x){CUR=-1;const Dw=$('#drawer');Dw.classList.add('full');
   $('#dClose').onclick=()=>{Dw.classList.remove('full');closeDetail()}}
 
 // ======== Hợp đồng thuê trạm: danh mục · đối chiếu 242 · IFRS 16 ========
-const SLF=Object.assign({tab:'list',q:'',asOf:'',only:'iss'},ls.get('slPick',{}));
+const SLF=lsF('slPick',{tab:'list',q:'',asOf:'',only:'iss'});
 async function vSL(){const H=$('#slBody');if(!SLF.asOf){const t=new Date();SLF.asOf=new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10)}ls.set('slPick',SLF);
   const head=`<div class="card"><div class="subbar"><div class="tabs" id="slT">${[['list',TT('Danh mục hợp đồng','Contract list')],['exp',TT('Sắp hết hạn','Expiring')],['map',TT('Ghép mã ERP','ERP mapping')],['due',TT('Cần thanh toán','Payments due')],['rec',TT('Đối chiếu thanh toán & 242','Payment & 242 check')],['ifrs','IFRS 16'],['ye',TT('Cuối năm: ghi âm & IFRS 16','Year-end: reversal & IFRS 16')]].map(([k,l])=>`<button data-t="${k}" class="${SLF.tab===k?'on':''}">${l}</button>`).join('')}</div><span class="hint">${TT('Giá thuê = "Total amount" của mẫu (USD / tháng). Map: các giá trị cột Contract trong dữ liệu ERP thuộc hợp đồng này.','Rent = "Total amount" (USD / month). Mapping: ERP Contract values that belong to the contract.')}</span></div>
    <div class="filterrow"><input id="slQ" type="search" placeholder="🔍 ${TT('Tìm mã HĐ / mã trạm / đối tượng (Enter)','Search contract / site / partner (Enter)')}" value="${esc(SLF.q)}" style="width:280px">${SLF.tab!=='list'?`<label>${TT('Đến ngày','As of')} <input type="date" id="slD" value="${SLF.asOf}"></label>`:''}${SLF.tab==='rec'?`<label>${TT('Hiện','Show')} <select id="slO"><option value="iss" ${SLF.only==='iss'?'selected':''}>${TT('Có vấn đề','With issues')}</option><option value="unpaid" ${SLF.only==='unpaid'?'selected':''}>${TT('Chưa thanh toán','Unpaid months')}</option><option value="payamt" ${SLF.only==='payamt'?'selected':''}>${TT('Thanh toán sai số tiền','Wrong payment amount')}</option><option value="amo" ${SLF.only==='amo'?'selected':''}>${TT('Sai sót phân bổ 242','242 amortisation errors')}</option><option value="nomap" ${SLF.only==='nomap'?'selected':''}>${TT('Chưa map hạch toán','Not mapped')}</option><option value="" ${!SLF.only?'selected':''}>${TT('Tất cả','All')}</option></select></label>`:''}
