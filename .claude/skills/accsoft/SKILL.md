@@ -676,3 +676,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - draftBar(anchor, n, txt, onSave, onCancel): thanh nháp dùng chung (class draftBar, tìm theo anchor). Bảng nhập nhiều ô dùng nháp + Lưu, không aq() trong onchange.
 - qcache + data_ver (trigger UPDATE\/DELETE entries = e; mỗi lệnh ghi từ giao diện = w, qworker gọi bumpVer khi job.w). persist(name, fn, eOnly) bọc hàm nặng (inventory eOnly, fcCompute); args.refresh bỏ qua đệm. Giữ tối đa 300 kết quả.
 - persist thêm aging, p242Report (không eOnly vì phụ thuộc điều chỉnh \/ danh mục). Tính nền trong app.js (setTimeout 8 s) dùng đúng tham số mặc định của trang.
+- persist thêm dtxSummary, dtxCompute, ifBuild; tính nền theo DTF.year \/ IFF.year.

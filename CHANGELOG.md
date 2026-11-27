@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.10.5
+- Thuế hoãn lại (2,0 s → 0,07 s) và IFRS (2,4 s → 0,1 s): lưu sẵn kết quả, tự tính trước ở chế độ nền cho năm đang chọn; tính lại khi dữ liệu hoặc điều chỉnh thay đổi.
+
 ## 5.10.4
 - Tuổi nợ (2,8 s → 0,34 s) và Chi phí trả trước 242 (2,2 s → 0,32 s): lưu sẵn kết quả, tự tính trước ở chế độ nền sau khi mở app; tính lại khi dữ liệu hoặc bất kỳ điều chỉnh nào thay đổi.
 
