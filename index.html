@@ -501,12 +501,12 @@ body.mini #navFind{display:none}
       <div class="filters">
         <select class="input" id="fMonth"><option value="">Tất cả tháng</option></select>
         <select class="input" id="fSev"><option value="">Mọi mức độ</option><option value="H">Mức cao</option><option value="M">Trung bình</option><option value="L">Thấp</option></select>
-        <select class="input" id="fRule"><option value="">Tất cả loại lỗi</option></select>
-        <select class="input" id="fUser"><option value="">Tất cả người nhập</option></select>
-        <input class="input" id="fText" placeholder="Tìm chứng từ, diễn giải, ghi chú…">
+        <select class="input" id="fRule" data-srch="1"><option value="">Tất cả loại lỗi</option></select>
+        <select class="input" id="fUser" data-srch="1"><option value="">Tất cả người nhập</option></select>
+        <input class="input" id="fText" placeholder="🔍 Số CT, diễn giải, loại lỗi…" title="Tìm theo số chứng từ, diễn giải, đối tượng, nội dung lỗi, ghi chú, tên loại lỗi, người nhập, phòng ban">
       </div>
       <details id="fMore" class="fmore"><summary class="btn sm ghost" style="list-style:none;cursor:pointer;margin-top:8px">＋ Thêm bộ lọc <span id="fMoreN" class="badge b-M hide"></span></summary><div class="filters" style="margin-top:8px">
-        <select class="input" id="fDept"><option value="">Tất cả bộ phận</option></select>
+        <select class="input" id="fDept" data-srch="1"><option value="">Tất cả bộ phận</option></select>
         <input class="input" id="fAcc" placeholder="Tài khoản (vd 627, 331)">
         <input class="input" id="fTcost" list="dlTcost" placeholder="Khoản mục (Type of cost) – gõ mã / tên, hoặc (trống)"><datalist id="dlTcost"></datalist>
         <input class="input" id="fMin" type="number" placeholder="Số tiền từ">

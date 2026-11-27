@@ -65,8 +65,10 @@ function make(db) {
     if (f.status) { w.push(`${STATUS}=?`); a.push(f.status); }
     if (f.statusIn) { w.push(`${STATUS} IN (${f.statusIn.map(() => '?').join(',')})`); a.push(...f.statusIn); }
     if (f.text) {
-      w.push(`(e.document_no LIKE ? OR e.description LIKE ? OR e.partner_debit LIKE ? OR e.partner_credit LIKE ? OR er.msg LIKE ? OR rv.note LIKE ?)`);
-      a.push(...Array(6).fill('%' + f.text + '%'));
+      // một ô tìm: chứng từ, diễn giải, đối tượng, nội dung lỗi, ghi chú, người nhập, phòng ban, tên loại lỗi (textRules do giao diện khớp sẵn)
+      const TR = Array.isArray(f.textRules) ? f.textRules.filter(x => typeof x === 'string').slice(0, 200) : [];
+      w.push(`(e.document_no LIKE ? OR e.description LIKE ? OR e.partner_debit LIKE ? OR e.partner_credit LIKE ? OR er.msg LIKE ? OR rv.note LIKE ? OR er.u LIKE ? OR er.dept LIKE ?${TR.length ? ` OR er.rule IN (${TR.map(() => '?').join(',')})` : ''})`);
+      a.push(...Array(8).fill('%' + f.text + '%'), ...TR);
     }
     const needE = !!(f.tcost || f.acc || (f.min != null && f.min !== '') || (f.max != null && f.max !== '') || f.text);
     return { sql: 'WHERE ' + w.join(' AND '), args: a, from: needE ? FROM : 'FROM errors er' + (f.text ? ' LEFT JOIN reviews rv ON rv.err_key=er.err_key' : '') };

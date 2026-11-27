@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.11.2
+- Trang Lỗi nhập liệu chỉ còn 1 ô tìm: tìm cả số chứng từ, diễn giải, đối tượng, nội dung lỗi, ghi chú, tên loại lỗi, người nhập, phòng ban; bỏ các ô "Tìm mục" phụ gắn vào danh sách Loại lỗi / Người nhập / Phòng ban.
+
 ## 5.11.1
 - Tổng quan nhấn vào lỗi chưa xử lý: số chính = lỗi chưa xử lý (kèm "trên N cảnh báo · đã xử lý x%"), lỗi mức cao chưa xử lý; thẻ Sai sót nhân viên / dễ bị kiểm toán hiện số chưa xử lý; biểu đồ "Lỗi chưa xử lý theo loại" chỉ gồm loại còn lỗi. Bấm thẻ / cột → trang Lỗi nhập liệu, tab Chưa xử lý đúng nhóm / loại.
 

@@ -680,3 +680,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - persist thêm apReport, advReport; apArgs()\/advArgs() dùng chung giữa trang và tính nền (khoá đệm phải trùng tham số).
 - UI: tab chuyển màn hình dùng class ptab (.on), không dùng btn primary. fmt2 cố định 2 số lẻ. Badge trung tính b-out.
 - overview(): open \/ openH (st=open), byRule.open; "chưa xử lý" = trạng thái open (khớp tab Chưa xử lý trang Lỗi).
+- Trang Lỗi: where() text tìm thêm er.u, er.dept và er.rule IN textRules (giao diện khớp tên loại lỗi qua fTextRules). Select fRule\/fUser\/fDept đặt data-srch="1" để không gắn ô tìm phụ.

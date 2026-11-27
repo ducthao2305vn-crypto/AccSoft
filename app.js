@@ -256,7 +256,9 @@ async function vOverview(){
 
 /* ---------- Lỗi nhập liệu ---------- */
 let FIL={},SORT={k:'sev',d:1},OFF=0,VIEW=[],CUR=-1,TOTAL=0;const LIM=200;
-function readFil(){const v=id=>$(id).value;return {group:FIL.group||'',status:FIL.status||'',sev:v('#fSev'),rule:v('#fRule'),user:v('#fUser'),month:v('#fMonth'),dept:v('#fDept'),acc:v('#fAcc').trim(),tcost:(v=>v==='(trống)'?'__none':v)(v('#fTcost').trim()),min:v('#fMin'),max:v('#fMax'),text:v('#fText').trim()}}
+function readFil(){const v=id=>$(id).value;return {group:FIL.group||'',status:FIL.status||'',sev:v('#fSev'),rule:v('#fRule'),user:v('#fUser'),month:v('#fMonth'),dept:v('#fDept'),acc:v('#fAcc').trim(),tcost:(v=>v==='(trống)'?'__none':v)(v('#fTcost').trim()),min:v('#fMin'),max:v('#fMax'),text:v('#fText').trim(),textRules:fTextRules(v('#fText').trim())}}
+// ô tìm duy nhất của trang Lỗi: từ khoá khớp tên loại lỗi → tìm cả các loại lỗi đó
+function fTextRules(t){const n=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');const q=n(t);if(q.length<3)return [];return Object.keys(RULE).filter(k=>n(RULE[k].n).includes(q)||n(k)===q)}
 function fillSel(id,items,label,cur){$(id).innerHTML=`<option value="">${label}</option>`+items.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join('');$(id).value=cur||''}
 // danh sách loại lỗi kèm số lượng theo trạng thái / tháng / người / bộ phận / mức đang lọc; loại không còn cảnh báo thì ẩn
 // khoản mục / người nhập / tháng / bộ phận chỉ hiện giá trị còn cảnh báo theo các bộ lọc đang chọn
