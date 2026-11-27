@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.9.9
+- Tăng tốc nhiều trang (chỉ mục phủ TK nợ / TK có / ngày / số tiền + thống kê chỉ mục, tạo tự động 1 lần khi mở app): Đầu tư 3,1 → 0,3 s; Nhận hàng 3,3 → 0,9 s; Dòng tiền theo đối tượng 1,2 → 0,6 s; Thuế hoãn lại 3,0 → 2,0 s; 331, tạm ứng, IFRS, phân tích TK theo kỳ nhanh hơn 20–40%.
+
 ## 5.9.8
 - Trang Báo cáo # Lịch sử phiên bản thông báo mở nhanh hơn (≈27 s → 5 s với 1,3 triệu bút toán): danh sách lỗi cần khắc phục chọn trước trên bảng lỗi rồi mới nối bút toán. Thuế hoãn lại, IFRS: lấy danh sách năm từ bảng tháng thay vì quét toàn bộ bút toán.
 

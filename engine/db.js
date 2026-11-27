@@ -121,8 +121,11 @@ function open(file, { cleanup = false, light = false } = {}) {
     CREATE INDEX IF NOT EXISTS ix_agg_ym ON agg(ym);
     CREATE INDEX IF NOT EXISTS ix_e_accd ON entries(acc_debit);
     CREATE INDEX IF NOT EXISTS ix_e_accc ON entries(acc_credit);
+    CREATE INDEX IF NOT EXISTS ix_e_cov ON entries(acc_debit, acc_credit, account_date, amount, ym); -- chỉ mục phủ: tổng hợp theo TK / ngày đọc chỉ mục nhỏ thay vì cả bảng
     CREATE INDEX IF NOT EXISTS ix_err_rule ON errors(rule);
     CREATE INDEX IF NOT EXISTS ix_err_key ON errors(err_key);`);
+  // thống kê cho bộ chọn chỉ mục (lấy mẫu, vài giây, chỉ chạy khi chưa có) – thiếu thống kê SQLite hay quét cả bảng
+  try { if (!db.prepare(`SELECT 1 FROM sqlite_master WHERE name='sqlite_stat1'`).get()) db.exec('PRAGMA analysis_limit=2000; ANALYZE;'); } catch { }
   // v3.9: ghi sẵn tháng / người nhập / bộ phận / chứng từ / trạng thái vào bảng lỗi → đếm, lọc lỗi không phải nối với bảng entries (1,5 triệu dòng)
   const xcols = db.prepare('PRAGMA table_info(errors)').all().map(c => c.name);
   for (const c of ['ym', 'u', 'dept', 'doc', 'st']) if (!xcols.includes(c)) db.exec(`ALTER TABLE errors ADD COLUMN ${c} TEXT`);

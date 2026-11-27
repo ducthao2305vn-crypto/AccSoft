@@ -670,3 +670,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - bpnotice.rnd(n): báo cáo hiển thị số nguyên thì làm tròn ở dòng lá trước, tổng = tổng số đã làm tròn.
 - Hiệu năng: lọc TK theo khoảng (acc>='112' AND acc<'113') để dùng ix_e_accd\/ix_e_accc, không dùng LIKE '112%' hay substr(); không trả object lồng (vd t.a chứa a.rows) qua IPC.
 - Rà soát hiệu năng 11\/2026 (1,3 tr bút toán): còn chậm 1,5–4 s ở fcst, inv\/data, grec, ifrs, capex, dtax, aging, p242, ap331, adv do mỗi câu SQL quét toàn bảng (~0,45 s). Hướng xử lý: dùng bảng tổng hợp (fin_mv\/fin_pmv\/agg) hoặc lọc TK theo khoảng; danh sách năm lấy từ months.
+- db.js: ix_e_cov(acc_debit, acc_credit, account_date, amount, ym) + ANALYZE lấy mẫu khi chưa có sqlite_stat1 (thiếu thống kê thì chỉ mục phủ ít tác dụng).
