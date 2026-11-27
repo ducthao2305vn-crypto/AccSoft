@@ -1,5 +1,11 @@
 # Lịch sử phiên bản
 
+## 5.11.3
+- Giao diện thống nhất trên mọi trang: tab chọn màn hình dạng "viên" (Danh mục, Nhân viên, Điều chỉnh dữ liệu, Đối chiếu hoá đơn, IFRS, Phân tích chuyên sâu…) dùng chung kiểu nền nhạt + gạch cam, không còn giống nút hành động.
+- Số trong thẻ số liệu tự thu nhỏ theo bề rộng thẻ, không bị cắt (vd Thuế hoãn lại).
+- Trang Dữ liệu: thẻ tháng gọn hơn (7 tháng/hàng); nút "Xoá tháng" chỉ hiện khi rê chuột vào thẻ tháng.
+- Danh mục phòng ban: cột Mô tả không còn bị bóp 1 chữ/dòng.
+
 ## 5.11.2
 - Trang Lỗi nhập liệu chỉ còn 1 ô tìm: tìm cả số chứng từ, diễn giải, đối tượng, nội dung lỗi, ghi chú, tên loại lỗi, người nhập, phòng ban; bỏ các ô "Tìm mục" phụ gắn vào danh sách Loại lỗi / Người nhập / Phòng ban.
 

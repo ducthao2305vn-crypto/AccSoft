@@ -391,6 +391,23 @@ body.mini #navFind{display:none}
 .badge.b-out{background:#F2F4F7;color:#475467;border-color:#EAECF0}
 #grpTabs small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #report .pendNote,#errors .pendNote{display:none!important}
+
+/* --- UX rà soát các trang 11/2026 --- */
+/* tab chuyển màn hình: một kiểu thống nhất (nền nhạt + gạch cam), không còn "viên thuốc cam đặc" giống nút hành động */
+.subtabs button.on,#dpCtl .tabs button.on{background:#FFF1EB!important;border-color:#FDBA8C!important;color:#B93815!important;box-shadow:inset 0 -2px 0 #FA4700!important}
+.subtabs button.on b,#dpCtl .tabs button.on b{background:#FA4700;color:#fff}
+[data-theme=dark] .subtabs button.on,[data-theme=dark] #dpCtl .tabs button.on{background:#2A1D16!important;color:#FFB38A!important;border-color:#7A3A1A!important}
+/* số trong thẻ số liệu không bị cắt: tự thu nhỏ theo bề rộng thẻ */
+.kpi{min-width:0;container-type:inline-size}
+.kpi .v{white-space:nowrap;overflow:visible;font-size:clamp(15px,9cqi,22px)!important}
+.kpis.compact .kpi .v{font-size:clamp(13px,8cqi,16px)!important}
+/* trang Dữ liệu: thẻ tháng gọn hơn; nút Xoá tháng chỉ hiện khi rê chuột vào thẻ (tránh bấm nhầm, đỡ rối mắt) */
+.month-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.mcard{padding:8px 10px;gap:3px}
+.mcard .m{font-size:14px}
+.mcard [data-delm]{visibility:hidden}
+.mcard:hover [data-delm],.mcard:focus-within [data-delm]{visibility:visible}
+#dmc table td:nth-child(3),#dmc table th:nth-child(3){min-width:170px}
 </style>
 </head>
 <body>
