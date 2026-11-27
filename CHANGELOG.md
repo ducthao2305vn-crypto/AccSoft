@@ -1,5 +1,12 @@
 # Lịch sử phiên bản
 
+## 5.12.0
+- Trang mới "Phiếu trích / huỷ trích chi phí" (Sổ sách & phân tích): tạo phiếu trích hoặc huỷ trích theo nội dung & số tiền, xuất file nhập bút toán ERP (GL Journal, .xls 121 cột – phần chung chỉ ở dòng đầu, các dòng sau chỉ có cột chi tiết).
+  - Tab 1 Chung: số CT, ngày hạch toán (kỳ tự tính), diễn giải, trạng thái + giá trị mặc định cho dòng (TK Nợ/Có, đối tượng, khoản mục, bộ phận, vị trí, hạn…).
+  - Tab 2 Chi tiết: thêm / nhân bản / xoá dòng, dán nhiều dòng từ Excel (Diễn giải ⇥ Số tiền …, tự ghép phần đầu diễn giải phiếu), cột phụ ẩn/hiện, tổng tiền.
+  - Nạp file ERP cũ thành phiếu; sao chép sang tháng sau (đổi ngày, kỳ, tháng trong diễn giải); tạo phiếu huỷ trích (đảo TK Nợ ↔ Có, đối tượng Nợ ↔ Có).
+  - Lưu phiếu có xác nhận, cảnh báo thiếu thông tin trước khi xuất.
+
 ## 5.11.5
 - Tạm ứng: "Biên bản đối chiếu" và "Gửi đối chiếu qua email" gom vào nút "⋯ Thao tác khác ▾"; giữ ngoài Xuất báo cáo Excel, Đã xác nhận, Có chênh lệch.
 

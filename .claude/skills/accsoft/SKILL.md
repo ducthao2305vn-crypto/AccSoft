@@ -683,3 +683,5 @@ await p.evaluate(()=>window.api.q('stats'));
 - Trang Lỗi: where() text tìm thêm er.u, er.dept và er.rule IN textRules (giao diện khớp tên loại lỗi qua fTextRules). Select fRule\/fUser\/fDept đặt data-srch="1" để không gắn ô tìm phụ.
 - CSS: .subtabs button.on \/ #dpCtl .tabs button.on cùng kiểu ptab.on; .kpi .v dùng container query (cqi) để tự co.
 - moreMenu(sec): MOREMENU[sec] = id các nút chuyển vào menu "Thao tác khác" (MutationObserver tự gom lại khi trang vẽ lại; giữ nguyên nút và sự kiện).
+- jvoucher.js: COLS = 121 tiêu đề GL Journal (A–J phần chung, K… dòng). jv(hdr JSON, lines JSON) giữ mọi cột kể cả cột ẩn → xuất trùng file gốc. Xuất biff8 (.xls) ở main jv:export.
+- KHÔNG chèn chú thích // giữa dòng mã một dòng dài (đã gây lỗi 2 lần) – dùng \/* *\/.

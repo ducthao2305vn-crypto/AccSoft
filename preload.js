@@ -53,6 +53,8 @@ contextBridge.exposeInMainWorld('api', {
   grAssignMail: (k, bps, o) => ipcRenderer.invoke('gr:assignMail', k, bps, o),
   bpStmtDocx: o => ipcRenderer.invoke('bp:stmtDocx', o),
   bpTreeImport: () => ipcRenderer.invoke('bp:treeImport'),
+  jvExport: id => ipcRenderer.invoke('jv:export', id),
+  jvImport: () => ipcRenderer.invoke('jv:import'),
   bpNoticePreview: (y, f, t, d, o) => ipcRenderer.invoke('bp:noticePreview', y, f, t, d, o),
   bpNoticeSend: (y, f, t, d, o) => ipcRenderer.invoke('bp:noticeSend', y, f, t, d, o),
   orImportCat: () => ipcRenderer.invoke('or:importCat'),
