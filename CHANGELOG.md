@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.10.2
+- Bảng nhập Kế hoạch ngân sách (tab Kế hoạch) và Kế hoạch đầu tư: sửa ô chỉ ghi nháp (tô vàng), thanh "… đã sửa – chưa lưu" với Lưu (xác nhận 1 lần cho cả đợt) / Huỷ; không còn hỏi / ghi từng ô.
+
 ## 5.10.1
 - Menu: ghim trang hay dùng (rê chuột vào mục menu → ☆), nhóm "★ Đã ghim" và "Gần đây" (5 trang mở gần nhất) ở đầu menu.
 

@@ -673,3 +673,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - db.js: ix_e_cov(acc_debit, acc_credit, account_date, amount, ym) + ANALYZE lấy mẫu khi chưa có sqlite_stat1 (thiếu thống kê thì chỉ mục phủ ít tác dụng).
 - Bộ lọc lưu localStorage khai báo bằng lsF(key, defaults) (đăng ký FREG, ghi nhận trang dùng qua Proxy); go() gọi staleFix() + fltBtn(). Trường FKEEP (tab, view…) và FDATE (from, to, asOf, year…) không bị Bỏ lọc.
 - Menu: navExtra() dựng #navX (ghim ls navPins, gần đây ls navRecent) bằng bản sao nút gốc; gọi trong go().
+- draftBar(anchor, n, txt, onSave, onCancel): thanh nháp dùng chung (class draftBar, tìm theo anchor). Bảng nhập nhiều ô dùng nháp + Lưu, không aq() trong onchange.
