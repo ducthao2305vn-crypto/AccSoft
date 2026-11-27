@@ -479,7 +479,10 @@ function make(db) {
   // chi tiết còn phải khắc phục (chưa xử lý / đang xử lý) của mọi nhân viên – để thông báo, đánh giá
   function todoDetail(minSev, group, month, limit = 5000) {
     const { sql, args } = where({ minSev, group, month, statusIn: ['open', 'doing'] });
-    return all(`SELECT ${ERR_COLS}, e.partner_debit bp, e.partner_credit bpCr ${FROM} ${sql} ORDER BY er.u, ${SEVN}, e.account_date, e.document_no LIMIT ?`, ...args, limit);
+    // chọn trước các lỗi cần lấy chỉ trên bảng errors (không nối 1,3 triệu dòng bút toán để sắp xếp), rồi mới nối bút toán cho đúng số dòng lấy ra
+    const { from: F0 } = where({ minSev, group, month, statusIn: ['open', 'doing'] });
+    return all(`SELECT ${ERR_COLS}, e.partner_debit bp, e.partner_credit bpCr ${FROM} WHERE er.id IN (SELECT er.id ${F0} ${sql} ORDER BY er.u, ${SEVN}, er.ym, er.doc LIMIT ?)
+      ORDER BY er.u, ${SEVN}, e.account_date, e.document_no`, ...args, limit);
   }
 
   /* ---------- Dữ liệu ---------- */

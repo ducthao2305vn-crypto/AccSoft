@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.9.8
+- Trang Báo cáo # Lịch sử phiên bản thông báo mở nhanh hơn (≈27 s → 5 s với 1,3 triệu bút toán): danh sách lỗi cần khắc phục chọn trước trên bảng lỗi rồi mới nối bút toán. Thuế hoãn lại, IFRS: lấy danh sách năm từ bảng tháng thay vì quét toàn bộ bút toán.
+
 ## 5.9.7
 - Sao kê ngân hàng nhanh hơn: tab Ghép ngân hàng ERP 15 s → 0,1 s (truy vấn dùng chỉ mục TK thay vì quét toàn bộ bút toán); tab Đối chiếu 112 khoảng 7 s → 0,7 s (kết quả gửi về giao diện từ 14,7 MB còn 0,2 MB – mỗi giao dịch không còn mang kèm cả sao kê của tài khoản). Kết quả đối chiếu không đổi.
 

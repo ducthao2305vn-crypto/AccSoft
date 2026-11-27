@@ -32,7 +32,8 @@ function make(db, all, FIN) {
   const balAt = ym => { const m = FIN.closeAt(ym); return L => { let s = 0; for (const [a, v] of m) if (isP(a, L)) s += v; return s; }; };
   // Phát sinh trong năm theo cặp TK Nợ / Có (vài nghìn cặp – nhanh)
   const pairs = y => all(`SELECT acc_debit d, acc_credit c, sum(amount) a FROM entries WHERE ym>=? AND ym<=? AND acc_debit NOT LIKE '911%' AND acc_credit NOT LIKE '911%' GROUP BY 1,2`, `${y}-01`, `${y}-12`);
-  const years = () => all(`SELECT DISTINCT substr(ym,1,4) y FROM entries WHERE ym IS NOT NULL ORDER BY 1`).map(r => +r.y);
+  // năm có dữ liệu: lấy từ bảng tháng (vài chục dòng) thay vì quét toàn bộ bút toán
+  const years = () => { const r = all(`SELECT DISTINCT substr(ym,1,4) y FROM months WHERE ym IS NOT NULL ORDER BY 1`); return (r.length ? r : all(`SELECT DISTINCT substr(ym,1,4) y FROM entries WHERE ym IS NOT NULL ORDER BY 1`)).map(x => +x.y); };
 
   function current(y, C, P, lossAvail) {
     const S = f => P.reduce((s, r) => s + (f(r.d, r.c) ? r.a : 0), 0);

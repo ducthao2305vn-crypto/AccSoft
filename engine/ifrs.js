@@ -199,7 +199,8 @@ function make(db, all, FIN, DTX, getSL) {
     return { rows, missing, sched: tot, auto: C.leaseAuto !== false, leaseAccs: C.leaseAccs || [] }; }
   // dùng lịch IFRS 16 cho các dòng nợ thuê: bỏ số nhập tay để lấy theo lịch
   const useSched = (y, keys) => { const m = ltOf(y); for (const k of [].concat(keys || [])) delete m[k]; put('ifrs_lt_' + y, m); return m; };
-  const years = () => all(`SELECT DISTINCT substr(ym,1,4) y FROM entries WHERE ym IS NOT NULL ORDER BY 1`).map(r => +r.y);
+  // năm có dữ liệu: lấy từ bảng tháng (vài chục dòng) thay vì quét toàn bộ bút toán
+  const years = () => { const r = all(`SELECT DISTINCT substr(ym,1,4) y FROM months WHERE ym IS NOT NULL ORDER BY 1`); return (r.length ? r : all(`SELECT DISTINCT substr(ym,1,4) y FROM entries WHERE ym IS NOT NULL ORDER BY 1`)).map(x => +x.y); };
   return { build, tb, ltList, setLt, copyLt, useSched, l16, applyL16, clearL16, years, rules, setRules, resetRules, cfg, setCfg, jeOf, setJe, meta, setMeta, setCfAdj, LINES };
 }
 module.exports = { make, LINES, RULES };

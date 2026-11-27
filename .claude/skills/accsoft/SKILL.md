@@ -669,3 +669,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - vFQ: data-fqgo trên ô tổng hợp → FQF {amt (kt|pl|un: phần >0 của CT, gồm CT trích chung đã tách), side, fy, y, nob (bỏ CT số dư), lbl}.
 - bpnotice.rnd(n): báo cáo hiển thị số nguyên thì làm tròn ở dòng lá trước, tổng = tổng số đã làm tròn.
 - Hiệu năng: lọc TK theo khoảng (acc>='112' AND acc<'113') để dùng ix_e_accd\/ix_e_accc, không dùng LIKE '112%' hay substr(); không trả object lồng (vd t.a chứa a.rows) qua IPC.
+- Rà soát hiệu năng 11\/2026 (1,3 tr bút toán): còn chậm 1,5–4 s ở fcst, inv\/data, grec, ifrs, capex, dtax, aging, p242, ap331, adv do mỗi câu SQL quét toàn bảng (~0,45 s). Hướng xử lý: dùng bảng tổng hợp (fin_mv\/fin_pmv\/agg) hoặc lọc TK theo khoảng; danh sách năm lấy từ months.
