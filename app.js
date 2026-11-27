@@ -126,6 +126,8 @@ function draftBar(anchor,n,txt,onSave,onCancel){if(!anchor||!anchor.parentNode)r
   if(!b){b=document.createElement('div');b.className='card draftBar';b.style.cssText='position:sticky;top:0;z-index:6;border:1px solid #F79009;background:#FFFAEB;padding:10px 14px';anchor.parentNode.insertBefore(b,anchor)}
   b.innerHTML=`<div class="row" style="gap:8px;align-items:center"><b>${n} ${txt} đã sửa – chưa lưu</b><span class="mut s">Ô nền vàng là ô đã sửa. Số tổng cập nhật sau khi Lưu.</span><div style="flex:1"></div><button class="btn sm ghost" data-dx>Huỷ thay đổi</button><button class="btn sm primary" data-ds>Lưu thay đổi</button></div>`;
   b.querySelector('[data-ds]').onclick=onSave;b.querySelector('[data-dx]').onclick=onCancel}
+const advArgs=()=>({asOf:ADF.asOf,from:ADF.from,acc:ADF.acc,dept:ADF.dept,only:ADF.only,q:ADF.q,overDays:ADF.over,backupMonths:ADF.bkm,mode:ADF.mode,group:ADF.group});
+const apArgs=()=>({from:APF.from,to:APF.to,acc:APF.acc,q:APF.q,only:APF.only,st:APF.st,who:APF.who||''});
 const fcArgs=()=>({h:FCF.h,model:FCF.model,fromYear:FCF.fromYear,skipPartial:FCF.skipPartial,costByRatio:FCF.costByRatio,bsMode:FCF.bsMode,capexMaint:FCF.capexMaint,inv:FCF.inv,divPct:+FCF.divPct||0,costFloor:FCF.costFloor,fixed:FCF.fixed,fixedBase:FCF.fixedBase,fixedG:+FCF.fixedG||0,fixedKeys:FCF.fixedKeys,adj:{rev:+FCF.adjRev||0,cost:+FCF.adjCost||0},refresh:false});
 // Tính trước ở chế độ nền (sau khi mở app 8 giây): trang Tồn kho và Dự báo dòng tiền – chỉ thực sự tính khi kết quả lưu sẵn đã cũ (vd vừa nạp dữ liệu)
 setTimeout(()=>{try{aq('overview').then(async o=>{if(!o||!o.dmax)return;await aq('inventory',o.dmax,'product','l1').catch(()=>{});
@@ -135,7 +137,10 @@ setTimeout(()=>{try{aq('overview').then(async o=>{if(!o||!o.dmax)return;await aq
   const t=new Date(),p2=P2F.asOf||new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10);await aq('p242Report',{asOf:p2,accs:P2F.accs.split(/[,; ]+/),withIssues:true}).catch(()=>{})}).catch(()=>{});
   aq('fcCompute',fcArgs()).catch(()=>{});
   // Thuế hoãn lại & IFRS: năm đang chọn (mặc định năm trước)
-  aq('dtxSummary').then(()=>aq('dtxCompute',DTF.year)).then(()=>aq('ifBuild',IFF.year)).catch(()=>{})}catch{}},8000);
+  aq('dtxSummary').then(()=>aq('dtxCompute',DTF.year)).then(()=>aq('ifBuild',IFF.year)).catch(()=>{});
+  // Phải trả 331 & Tạm ứng: mặc định giống trang (331: đầu năm → cuối tháng trước; tạm ứng: đến cuối tháng dữ liệu cuối)
+  (async()=>{try{if(!APF.to){const t=new Date();APF.to=new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10)}if(!APF.from)APF.from=APF.to.slice(0,4)+'-01-01';await aq('apReport',apArgs());
+    if(String(ADF.acc).startsWith('1412'))ADF.acc='141';if(!ADF.asOf){const ym=(await aq('months')).map(m=>m.ym).sort().at(-1)||new Date().toISOString().slice(0,7);const [y,m]=ym.split('-').map(Number);ADF.asOf=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)}if(!ADF.from)ADF.from=ADF.asOf.slice(0,4)+'-01-01';await aq('advReport',advArgs())}catch{}})()}catch{}},8000);
 async function go(p){{const _b=document.getElementById('lgSelBar');if(_b)_b.remove()}
   PAGE=p;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   try{if(p!=='overview')ls.set('navRecent',[p,...NAVX.rec().filter(x=>x!==p)].slice(0,8));navExtra()}catch{}
@@ -3019,7 +3024,7 @@ const ADF=lsF('advPick',{asOf:'',from:'',acc:'141',dept:'',only:'open',q:'',over
 const RCN={sent:['Đã gửi đối chiếu','b-M'],confirmed:['Đã xác nhận','s-fixed'],disputed:['Có chênh lệch','b-H']};
 async function vAdv(){const H=$('#advBody');if(String(ADF.acc).startsWith('1412'))ADF.acc='141';if(!ADF.asOf){const ym=(await aq('months')).map(m=>m.ym).sort().at(-1)||new Date().toISOString().slice(0,7);const [y,m]=ym.split('-').map(Number);ADF.asOf=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)}if(!ADF.from)ADF.from=ADF.asOf.slice(0,4)+'-01-01';ls.set('advPick',ADF);
   H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp công nợ tạm ứng theo nhân viên…</div>';
-  let r;try{r=await aq('advReport',{asOf:ADF.asOf,from:ADF.from,acc:ADF.acc,dept:ADF.dept,only:ADF.only,q:ADF.q,overDays:ADF.over,backupMonths:ADF.bkm,mode:ADF.mode,group:ADF.group})}catch(e){H.innerHTML=`<div class="card neg">${esc(e.message)}</div>`;return}
+  let r;try{r=await aq('advReport',advArgs())}catch(e){H.innerHTML=`<div class="card neg">${esc(e.message)}</div>`;return}
   const T=r.tot,rc=x=>x.recon&&RCN[x.recon.status]?`<span class="badge ${RCN[x.recon.status][1]}" title="${esc((x.recon.note||'')+(x.recon.at?' · '+x.recon.at:''))}">${RCN[x.recon.status][0]}</span>`:'<span class=mut>chưa</span>';
   H.innerHTML=`<div class="card"><div class="subbar"><span class="crumb">Công nợ tạm ứng theo nhân viên</span><span class="hint">Tạm ứng (Nợ ${r.acc}) − hoàn ứng / quyết toán (Có ${r.acc}) · <b>không gồm 1412 tạm ứng vật tư</b> (đã ở Tuổi hàng tồn kho) · ${r.group==='staff'?'gộp các mã đối tượng của cùng nhân viên theo <b>Danh mục nhân viên → Ghép đối tượng công nợ</b>':'<b>mỗi mã đối tượng một dòng</b> (tên giống nhau nhưng mã khác là 2 đối tượng)'} · khoản còn treo tính FIFO ${r.mode==='ar'?'<b>theo đối tượng + đề nghị tạm ứng</b>':'<b>theo đối tượng</b>'}</span></div>
     <div class="filterrow"><label>Từ ngày <input type="date" id="adF" value="${ADF.from}"></label><label>Đến ngày (đối chiếu) <input type="date" id="adT" value="${ADF.asOf}"></label>
@@ -3378,7 +3383,7 @@ function tcCell(o){const L=o.tcs||[];if(!L.length)return '<td></td>';const all=L
 const APF=lsF('apPick',{from:'',to:'',acc:'331',q:'',only:'open',st:''});
 async function vAP(){const H=$('#apBody');if(!APF.to){const t=new Date();APF.to=new Date(t.getFullYear(),t.getMonth(),0).toISOString().slice(0,10)}if(!APF.from)APF.from=APF.to.slice(0,4)+'-01-01';
   H.innerHTML='<div class="card"><span class="spin"></span> Đang tổng hợp công nợ 331…</div>';
-  const r=await aq('apReport',{from:APF.from,to:APF.to,acc:APF.acc,q:APF.q,only:APF.only,st:APF.st,who:APF.who||''});ls.set('apPick',APF);APR=r;const ASL=await aq('apAssignList',{to:APF.to});
+  const r=await aq('apReport',apArgs());ls.set('apPick',APF);APR=r;const ASL=await aq('apAssignList',{to:APF.to});
   const sign=v=>`<span class="${v<-0.004?'neg':''}">${fmt2(v)}</span>`;
   H.innerHTML=`<div class="card"><div class="subbar"><span class="crumb">Đối chiếu công nợ 331 theo hợp đồng</span><span class="hint">Số dư = Có 331 − Nợ 331 theo hợp đồng (đã điều chỉnh) · dương = còn phải trả · âm = ứng trước cho nhà cung cấp (cho ứng trước theo hợp đồng) · nhấn đúp đối tượng để xem giao dịch & sửa hợp đồng</span></div>
    <div class="filterrow"><label>Từ ngày <input type="date" id="apF" value="${APF.from}"></label><label>Đến ngày <input type="date" id="apT" value="${APF.to}"></label><label>Tài khoản <input id="apA" value="${esc(APF.acc)}" style="width:80px"></label>

@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.10.6
+- Phải trả 331 (1,9 s → 0,11 s) và Tạm ứng (1,7 s → 0,05 s): lưu sẵn kết quả, tự tính trước ở chế độ nền theo kỳ mặc định; tính lại khi dữ liệu hoặc điều chỉnh thay đổi.
+
 ## 5.10.5
 - Thuế hoãn lại (2,0 s → 0,07 s) và IFRS (2,4 s → 0,1 s): lưu sẵn kết quả, tự tính trước ở chế độ nền cho năm đang chọn; tính lại khi dữ liệu hoặc điều chỉnh thay đổi.
 

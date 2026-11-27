@@ -677,3 +677,4 @@ await p.evaluate(()=>window.api.q('stats'));
 - qcache + data_ver (trigger UPDATE\/DELETE entries = e; mỗi lệnh ghi từ giao diện = w, qworker gọi bumpVer khi job.w). persist(name, fn, eOnly) bọc hàm nặng (inventory eOnly, fcCompute); args.refresh bỏ qua đệm. Giữ tối đa 300 kết quả.
 - persist thêm aging, p242Report (không eOnly vì phụ thuộc điều chỉnh \/ danh mục). Tính nền trong app.js (setTimeout 8 s) dùng đúng tham số mặc định của trang.
 - persist thêm dtxSummary, dtxCompute, ifBuild; tính nền theo DTF.year \/ IFF.year.
+- persist thêm apReport, advReport; apArgs()\/advArgs() dùng chung giữa trang và tính nền (khoá đệm phải trùng tham số).
