@@ -243,12 +243,12 @@ async function riskPdf() {
   return filePath;
 }
 
+// Mọi file Excel báo cáo / biểu mẫu đi qua đây để có định dạng chuẩn (file nạp lại vào app / ERP: tên khớp XF.RAW → giữ thô)
+function xlsxBuffer(wb, name) { const XF = require('./engine/xlsfmt'); if (XF.RAW.test(path.basename(name || ''))) return R.toBuffer(wb); const w2 = XF.prettify(wb, path.basename(name || '')); return XF.stylize(R.toBuffer(w2), w2); }
 async function saveXlsx(defName, wb) {
   const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: defName, filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
   if (canceled) return null;
-  const XF = require('./engine/xlsfmt'), nm = path.basename(defName || filePath);
-  if (XF.RAW.test(nm)) fs.writeFileSync(filePath, R.toBuffer(wb));
-  else { const w2 = XF.prettify(wb, nm); fs.writeFileSync(filePath, XF.stylize(R.toBuffer(w2), w2)); }
+  fs.writeFileSync(filePath, xlsxBuffer(wb, path.basename(defName || filePath)));
   shell.showItemInFolder(filePath);
   return filePath;
 }
@@ -323,7 +323,7 @@ async function init() {
     if (canceled) return null;
     fs.writeFileSync(filePath, R.XLSX.write(R.reversalErpBook(lines, { ...o, byDoc: true }), { type: 'buffer', bookType: 'biff8' }));
     const chk = filePath.replace(/\.xls$/i, '') + '_DoiChieu.xlsx';
-    fs.writeFileSync(chk, R.toBuffer(R.reversalCheckBook(lines, o)));
+    fs.writeFileSync(chk, xlsxBuffer(R.reversalCheckBook(lines, o), 'AccSoft_DoiChieuHuyTrich.xlsx'));
     log.info(`Xuất file huỷ trích ${filePath}: ${lines.length} dòng`); shell.showItemInFolder(filePath);
     return { file: filePath, check: chk, lines: lines.length, docs: new Set(lines.map(r => r.doc)).size, total: lines.reduce((s, r) => s + r.rev, 0) };
   });
@@ -335,7 +335,7 @@ async function init() {
     if (canceled) return null;
     fs.writeFileSync(filePath, R.XLSX.write(R.reversalErpBook(lines, o), { type: 'buffer', bookType: 'biff8' }));
     const chk = filePath.replace(/\.xls$/i, '') + '_DoiChieu.xlsx';
-    fs.writeFileSync(chk, R.toBuffer(R.accrueCheckBook(lines, o)));
+    fs.writeFileSync(chk, xlsxBuffer(R.accrueCheckBook(lines, o), 'AccSoft_DoiChieuTrichTruoc.xlsx'));
     log.info(`Xuất file trích trước ${filePath}: ${lines.length} dòng`); shell.showItemInFolder(filePath);
     return { file: filePath, check: chk, lines: lines.length, total: lines.reduce((s, r) => s + r.out, 0) };
   });
@@ -416,7 +416,7 @@ async function init() {
     for (const { user, to } of list) msgs.push(await (async () => {
       const rows = await qa('employeeErrors', user, o.minSev, 100000, o.group, o.month || '');
       return { user, rows, to, subject: R.mailSubject(user) + (o.test ? ' (THỬ)' : ''), html: R.mailHtml(user, rows, o),
-        attachment: { name: `AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, base64: R.toBuffer(R.book([['Can khac phuc', rows.map(R.errRow)]])).toString('base64') },
+        attachment: { name: `AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`, base64: xlsxBuffer(R.book([['Can khac phuc', rows.map(R.errRow)]]), `AccSoft_CanKhacPhuc_${R.shortName(user)}.xlsx`).toString('base64') },
         employee: user, count: rows.length };
     })());
     const res = await mailer.sendAll(Q, msgs);
@@ -825,7 +825,7 @@ ${R.map((x, i) => `<tr><td style="${TD}">${i + 1}</td><td style="${TD}"><b>${esc
     for (const k of keys) { const d = await qa('advDetail', k, o), to = d.staff && (d.staff.email1 || d.staff.email2); if (!to) { skip.push(k); continue; }
       const x = advSheets(d, o.company, o.signers), nm = x.name, fill = t => String(t || '').replace(/\{name\}/g, nm).replace(/\{balance\}/g, fmt(d.close)).replace(/\{asOf\}/g, String(d.asOf).split('-').reverse().join('/'));
       const html = advMailHtml(d, (o.signers && o.signers.kind) || 'sum', fill(o.body), I18.lang() === 'en');
-      const fn = `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}`, att = [{ name: fn + '.xlsx', base64: R.toBuffer(aoaBook(x.sheets)).toString('base64') }];
+      const fn = `DoiChieuTamUng_${nm.replace(/[^\w]+/g, '_').slice(0, 40)}_${d.asOf}`, att = [{ name: fn + '.xlsx', base64: xlsxBuffer(aoaBook(x.sheets), fn + '.xlsx').toString('base64') }];
       if (o.pdf !== false) att.push({ name: fn + '.pdf', base64: Buffer.from(await advPdf(d, o.company, o.signers)).toString('base64') });
       const ccl = [...new Set([...String(o.cc || '').split(/[;,]/), ...String(o.defCc ? mailer.getConfig(Q).cc || '' : '').split(/[;,]/)].map(x => x.trim()).filter(x => /@/.test(x) && x.toLowerCase() !== String(to).toLowerCase()))]; // CC = CC nhập khi gửi + CC mặc định trong cấu hình SMTP
       msgs.push({ key: k, to, cc: ccl.length ? ccl.join(', ') : undefined, subject: fill(o.subject), html, employee: nm, count: d.items.length, amount: d.close, attachments: att });

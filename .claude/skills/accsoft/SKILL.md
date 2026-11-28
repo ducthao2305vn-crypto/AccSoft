@@ -686,3 +686,8 @@ await p.evaluate(()=>window.api.q('stats'));
 - jvoucher.js: COLS = 121 tiêu đề GL Journal (A–J phần chung, K… dòng). jv(hdr JSON, lines JSON) giữ mọi cột kể cả cột ẩn → xuất trùng file gốc. Xuất biff8 (.xls) ở main jv:export.
 - KHÔNG chèn chú thích // giữa dòng mã một dòng dài (đã gây lỗi 2 lần) – dùng \/* *\/.
 - Huỷ trích (quy tắc đơn vị): giữ nguyên TK Nợ\/Có + đối tượng Nợ\/Có + khoản mục của bút toán trích, số tiền ÂM, diễn giải tiền tố "VTL: Adjust"; mỗi số CT trích gốc = 1 phiếu (reversalErpBook byDoc).
+- CHUẨN FILE EXCEL XUẤT RA (bắt buộc):
+  1. Báo cáo dạng bảng: dòng 1 = tiêu đề cột → đi qua saveXlsx / xlsxBuffer(wb, name) (prettify + stylize: 3 dòng tiêu đề báo cáo, tiêu đề cột nền cam, số #,##0.00, ngày dd/mm/yyyy, lọc, cố định dòng, co vừa trang in). Thêm tên báo cáo vào TITLE (xlsfmt.js) theo tiền tố tên file.
+  2. Biểu mẫu (dòng 1 chỉ có 1 ô = tên biểu mẫu): prettify tự nhận diện → formify (giữ bố cục). Không đặt thông tin rời (số dư, ghi chú) ở dòng 1 của bảng – để sheet riêng.
+  3. File nạp ERP / nạp lại app: giữ thô (XLSX.write trực tiếp hoặc tên khớp XF.RAW). Mẫu điền rồi nạp lại → thêm tiền tố vào RAW.
+  KHÔNG ghi R.toBuffer(wb) thẳng ra file / đính kèm cho báo cáo – luôn dùng xlsxBuffer.

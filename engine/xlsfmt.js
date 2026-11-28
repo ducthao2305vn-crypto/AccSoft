@@ -22,20 +22,24 @@ const TITLE = [[/^AccSoft_CDPS_DoiTuong/, 'BẢNG CÂN ĐỐI PHÁT SINH THEO Đ
   [/^AccSoft_NoiBo_TheoNam/, 'TỔNG HỢP GIAO DỊCH NỘI BỘ THEO NĂM'], [/^AccSoft_NoiBo_ChiTiet/, 'CHI TIẾT GIAO DỊCH NỘI BỘ'], [/^AccSoft_NoiBo_TongHop/, 'TỔNG HỢP GIAO DỊCH NỘI BỘ'],
   [/^AccSoft_NoiBo_DieuChinh/, 'ĐIỀU CHỈNH ĐỐI TƯỢNG NỘI BỘ'], [/^AccSoft_NoiBo/, 'GIAO DỊCH NỘI BỘ'], [/^AccSoft_PhaiThu/, 'PHÂN TÍCH PHẢI THU THEO ĐỐI TƯỢNG'],
   [/^AccSoft_ThanhToanQuocTe/, 'THANH TOÁN CHO ĐỐI TÁC QUỐC TẾ'], [/^AccSoft_TrichTruoc/, 'TRÍCH TRƯỚC – HUỶ TRÍCH CHI PHÍ PHẢI TRẢ'], [/^AccSoft_TuoiHangTonKho/, 'TUỔI HÀNG TỒN KHO'],
-  [/^AccSoft_TuoiNo/, 'TUỔI NỢ PHẢI THU – PHẢI TRẢ']];
+  [/^AccSoft_TuoiNo/, 'TUỔI NỢ PHẢI THU – PHẢI TRẢ'],
+  [/^AccSoft_DoiChieuHuyTrich/, 'ĐỐI CHIẾU HUỶ TRÍCH – KIỂM TRA TRƯỚC KHI IMPORT ERP'], [/^AccSoft_DoiChieuTrichTruoc/, 'ĐỐI CHIẾU TRÍCH TRƯỚC – KIỂM TRA TRƯỚC KHI IMPORT ERP'], [/^AccSoft_ConPhaiKhacPhuc/, 'DANH SÁCH LỖI CÒN PHẢI KHẮC PHỤC'], [/^AccSoft_BaoCaoKiemTra/, 'BÁO CÁO KẾT QUẢ KIỂM TRA BÚT TOÁN'], [/^AccSoft_KQKD_Mau/, 'KẾT QUẢ KINH DOANH THEO MẪU'], [/^AccSoft_BCTC/, 'BÁO CÁO TÀI CHÍNH'], [/^AccSoft_IFRS16/, 'LỊCH IFRS 16 – HỢP ĐỒNG THUÊ'], [/^AccSoft_IFRS/, 'BÁO CÁO TÀI CHÍNH IFRS'], [/^IFRS16/, 'LỊCH IFRS 16 – HỢP ĐỒNG THUÊ'], [/^AccSoft_ChiPhiViTri/, 'CHI PHÍ THEO VỊ TRÍ'], [/^AccSoft_ChiPhiXe/, 'CHI PHÍ THEO XE'], [/^AccSoft_ChiPhiPhongBan/, 'CHI PHÍ THEO PHÒNG BAN'], [/^BC_PhongBan/, 'BÁO CÁO CHI PHÍ PHÒNG BAN'], [/^BC_DauTu_TheoBoPhan/, 'BÁO CÁO ĐẦU TƯ THEO BỘ PHẬN'], [/^DAUTU_/, 'KẾ HOẠCH – THỰC HIỆN ĐẦU TƯ'], [/^PhanTich_TK_Thue/, 'PHÂN TÍCH TÀI KHOẢN THEO KỲ'], [/^Thue_DangXem/, 'PHÂN TÍCH TÀI KHOẢN – DỮ LIỆU ĐANG XEM'], [/^Thue_TNDN_HoanLai/, 'THUẾ TNDN & THUẾ HOÃN LẠI'], [/^KetQuaHoatDong/, 'KẾT QUẢ HOẠT ĐỘNG'], [/^ToTrinh_NganSach/, 'NGÂN SÁCH CÒN LẠI – TỜ TRÌNH'], [/^KH_TH_ChiPhi/, 'KẾ HOẠCH – THỰC HIỆN CHI PHÍ'], [/^KH_CP/, 'KẾ HOẠCH CHI PHÍ'], [/^QuyKhenThuongPhucLoi/, 'QUỸ KHEN THƯỞNG – PHÚC LỢI'], [/^AccSoft_DuBaoThang/, 'DỰ BÁO TÀI CHÍNH THEO THÁNG'], [/^AccSoft_DuBaoNoiBo/, 'DỰ BÁO GIAO DỊCH NỘI BỘ'], [/^AccSoft_DuBao/, 'DỰ BÁO TÀI CHÍNH'], [/^AccSoft_DanhMucNhanVien/, 'DANH MỤC NHÂN VIÊN'], [/^AccSoft_CongNoTamUng/, 'CÔNG NỢ TẠM ỨNG THEO NHÂN VIÊN'], [/^DoiChieuTamUng/, 'ĐỐI CHIẾU CÔNG NỢ TẠM ỨNG'], [/^AccSoft_ChuNhaTram/, 'DANH SÁCH CHỦ NHÀ TRẠM'], [/^AccSoft_CongNo1388/, 'CÔNG NỢ PHẢI THU 1388'], [/^AccSoft_DoiChieuHoaDon/, 'ĐỐI CHIẾU HOÁ ĐƠN 138812'], [/^AccSoft_TaiSan_KhauHao/, 'TÀI SẢN & KHẤU HAO'], [/^AccSoft_DongTienThanhToan/, 'DÒNG TIỀN THANH TOÁN'], [/^AccSoft_HopDongSapHetHan/, 'HỢP ĐỒNG THUÊ SẮP HẾT HẠN'], [/^AccSoft_TraTruoc/, 'CHI PHÍ TRẢ TRƯỚC 242'], [/^AccSoft_TramCanThanhToan/, 'TRẠM CẦN THANH TOÁN'], [/^SaoKe/, 'SỔ SAO KÊ NGÂN HÀNG'], [/^Bank_Statement/, 'BANK STATEMENT'], [/^BaoCao_LoiDongTien/, 'LỖI DÒNG TIỀN THEO NHÂN VIÊN'], [/^CashFlow_Errors/, 'CASH FLOW ERRORS BY EMPLOYEE'], [/^AccSoft_CongNo/, 'CÔNG NỢ']];
 // File dùng để nạp lại vào ứng dụng / ERP → giữ nguyên định dạng thô
-const RAW = /^AccSoft_MauSoDuDauKy|^DANH_MUC/i;
+const RAW = /^AccSoft_MauSoDuDauKy|^AccSoft_MauGanMaTaiSan|^DANH_MUC/i;
 
 const dmy = s => s.split('-').reverse().join('/');
 function subtitle(name) {
   const base = String(name).replace(/\.xlsx?$/i, '').replace(/^AccSoft_/, '');
-  const ds = [...base.matchAll(/(\d{4})-?(\d{2})(?:-?(\d{2}))?/g)].map(m => m[3] ? `${m[3]}/${m[2]}/${m[1]}` : `${m[2]}/${m[1]}`);
+  // ngày / tháng trong tên file: 2026-10-31 · 20261031 · 2026-10 · 202610 (không đọc lấn sang số kế tiếp; tháng 1–12, ngày 1–31)
+  const ds = []; for (const m of base.matchAll(/(?<!\d)(\d{4})(-?)(\d{2})(?:\2(\d{2}))?(?!\d)/g)) { const y = +m[1], mo = +m[3], d = m[4] ? +m[4] : 0;
+    if (y < 2000 || y > 2100 || mo < 1 || mo > 12 || (m[4] && (d < 1 || d > 31))) continue; ds.push(m[4] ? `${m[4]}/${m[3]}/${m[1]}` : `${m[3]}/${m[1]}`); }
+  if (!ds.length) { const y = base.match(/(?<!\d)(20\d\d)(?!\d)/); if (y) return `Năm ${y[1]}`; }
   return ds.length === 2 ? `Kỳ báo cáo: ${ds[0]} – ${ds[1]}` : ds.length === 1 ? `Tại: ${ds[0]}` : '';
 }
 const isDate = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const serial = v => { const [y, m, d] = v.split('-').map(Number); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 864e5; };
 const CNT = /^(số (dòng|lần|tk|khoản|đối tượng|công ty|chứng từ|mặt hàng|bút toán|lỗi|tháng|giao dịch)|sl\b|số lượng|line$|tuổi|ngày quá hạn|số ngày)/i;
-const NOFMT = /^(năm|tháng|kỳ|mã|tk|số hiệu|tài khoản|line|stt|no\.?)$/i;
+const NOFMT = /^(năm|tháng|kỳ|mã|tk|số hiệu|tài khoản|line|stt|no\.?)$|^(năm|kỳ|tháng|year|period|stt)\b/i;
 const F_AMT = '#,##0.00;[Red]-#,##0.00;"-"', F_CNT = '#,##0;[Red]-#,##0;"-"', F_QTY = '#,##0.##;[Red]-#,##0.##;"-"', F_PCT = '0.0%', F_DATE = 'dd/mm/yyyy';
 const totalRow = r => { const t = r.filter(x => typeof x === 'string' && x.trim()).slice(0, 3).join(' ').trim(); const f = r.find(x => typeof x === 'string' && x.trim()) || ''; return /^(tổng|cộng|total)/i.test(t) || (f.length > 10 && /\s/.test(f) && f === f.toUpperCase() && /[A-ZÀ-Ỹ]/.test(f) && !/_/.test(f)); };
 
@@ -50,6 +54,8 @@ function prettify(wb, fileName) {
     const vn = (SHEET_VN[sn] || sn).slice(0, 31); let name = vn, k = 2; while (names.includes(name)) name = vn.slice(0, 28) + ' ' + k++;
     names.push(name);
     const head = (aoa[0] || []).map(h => h == null ? '' : String(h)), body = aoa.slice(1), nc = Math.max(head.length, ...body.map(r => r.length), 1);
+    // Biểu mẫu (biên bản, tờ trình, mẫu báo cáo…): dòng 1 chỉ có tên biểu mẫu, bảng có nhiều cột → giữ nguyên bố cục, chỉ định dạng (không chèn tiêu đề, không coi dòng 1 là tiêu đề cột)
+    if (nc > 1 && head.filter(x => x.trim()).length === 1 && String(head[0] || '').trim()) { const r = formify(aoa, nc); sheets[name] = r.ws; meta[name] = r.meta; continue; }
     // Kiểu dữ liệu theo cột
     const kind = Array.from({ length: nc }, (_, c) => { const h = head[c] || '', vals = body.map(r => r[c]).filter(v => v != null && v !== '');
       if (!vals.length) return 'txt'; if (vals.every(isDate)) return 'date'; if (!vals.every(v => typeof v === 'number')) return 'txt';
@@ -71,6 +77,31 @@ function prettify(wb, fileName) {
   }
   const out = XLSX.utils.book_new(); for (const n of names) XLSX.utils.book_append_sheet(out, sheets[n], n);
   out.__fmt = meta; return out;
+}
+
+// Biểu mẫu: số tiền #,##0.00; ngày yyyy-mm-dd → ngày; độ rộng cột theo nội dung; gộp ô tên biểu mẫu; ghi nhận dòng tiêu đề / nhãn để in đậm
+function formify(aoa, nc) {
+  const rows = aoa.map(r => Array.from({ length: nc }, (_, c) => r[c] ?? null)), ws = XLSX.utils.aoa_to_sheet(rows), bold = new Set(), heads = new Set();
+  rows.forEach((r, i) => { const t = r.filter(v => v != null && v !== ''), txt = t.filter(v => typeof v === 'string');
+    // dòng toàn chữ in hoa (mục lớn, chữ ký) hoặc dòng tiêu đề bảng ngay trên các dòng có số → in đậm
+    if (txt.length && txt.every(v => v === v.toUpperCase() && /[A-ZÀ-Ỹ]/.test(v))) bold.add(i + 1);
+    if (txt.length >= 3 && txt.length === t.length && rows[i + 1] && rows[i + 1].some(v => typeof v === 'number')) heads.add(i + 1);
+    r.forEach((v, c) => { const a = XLSX.utils.encode_cell({ r: i, c }), cell = ws[a]; if (!cell) return;
+      if (isDate(v)) { cell.t = 'n'; cell.v = serial(v); cell.z = F_DATE; } else if (cell.t === 'n') cell.z = Number.isInteger(v) && Math.abs(v) < 10000 && /năm|year|stt|no\.?$/i.test(String(rows[0][c] || '')) ? undefined : F_AMT; }); });
+  ws['!cols'] = Array.from({ length: nc }, (_, c) => { let w = 6; for (const r of rows.slice(1, 3000)) { const v = r[c]; if (v == null || v === '') continue; if (r.filter(x => x != null && x !== '').length < 2) continue; /* câu dài 1 ô tràn sang phải, không nới cột */
+      const l = typeof v === 'number' ? Math.abs(v).toFixed(2).length + Math.floor(Math.abs(v).toFixed(0).length / 3) + 2 : isDate(v) ? 10 : Math.min(String(v).length, 60); if (l > w) w = l; }
+    return { wch: Math.max(8, Math.min(60, w + 2)) }; });
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nc - 1 } }];
+  return { ws, meta: { form: true, bold, heads, nc, last: rows.length } };
+}
+
+// Chuẩn in: co vừa 1 trang theo chiều ngang (dài thì sang trang dọc), khổ ngang nếu nhiều cột, lề hẹp
+function printFit(x, land) {
+  if (!/<sheetPr/.test(x)) x = x.replace(/(<worksheet[^>]*>)/, '$1<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>'); else x = x.replace(/<sheetPr([^>]*)\/>/, '<sheetPr$1><pageSetUpPr fitToPage="1"/></sheetPr>');
+  x = x.replace(/<pageMargins[^>]*\/>/, '').replace(/<pageSetup[^>]*\/>/, '');
+  const ps = `<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="${land ? 'landscape' : 'portrait'}" fitToWidth="1" fitToHeight="0"/>`;
+  // vị trí hợp lệ theo chuẩn OOXML: sau sheetData / autoFilter / mergeCells, trước drawing / legacyDrawing / tableParts / extLst
+  const m = x.match(/<(drawing|legacyDrawing|tableParts|extLst)\b/); return m ? x.replace(m[0], ps + m[0]) : x.replace('</worksheet>', ps + '</worksheet>');
 }
 
 // Chèn kiểu chữ vào gói xlsx đã ghi
@@ -98,10 +129,14 @@ function stylize(buf, wb) {
     .replace(/<borders count="\d+">[\s\S]*?<\/borders>/, `<borders count="${B0 + newBorders.length}">${borders.body}${newBorders.join('')}</borders>`);
   wb.SheetNames.forEach((n, i) => {
     const p = `/xl/worksheets/sheet${i + 1}.xml`, m = wb.__fmt[n]; let x = get(p); if (!x || !m) return;
+    if (m.form) { x = x.replace(/<c r="([A-Z]+)(\d+)"([^>]*?)(\/?)>/g, (all, col, rs, attrs, sc) => { const r = +rs, s0 = +((attrs.match(/\ss="(\d+)"/) || [, 0])[1]), a = attrs.replace(/\ss="\d+"/, '');
+        const s = r === 1 ? S_T : m.heads.has(r) ? S_H : m.bold.has(r) ? mk(numOf(s0), FB, 0, 0, '') : numOf(s0) ? mk(numOf(s0), FN, 0, 0, '') : null; return s == null ? all : `<c r="${col}${rs}"${a} s="${s}"${sc}>`; });
+      x = x.replace(/<sheetView workbookViewId="0"\s*\/>/, '<sheetView workbookViewId="0" showGridLines="0"/>').replace(/(<row r="1")/, '$1 ht="26" customHeight="1"'); x = printFit(x, m.nc > 6); put(p, x); return; }
     x = x.replace(/<c r="([A-Z]+)(\d+)"([^>]*?)(\/?)>/g, (all, col, rs, attrs, sc) => { const r = +rs, s0 = +((attrs.match(/\ss="(\d+)"/) || [, 0])[1]), a = attrs.replace(/\ss="\d+"/, '');
       let s; if (r === 1) s = S_T; else if (r === 2 || r === 3) s = S_S; else if (r === 5) s = S_H; else if (r > 5 && r <= m.last) s = m.tot.has(r) ? mk(numOf(s0), FB, LT, BD, '') : mk(numOf(s0), FN, 0, BD, numOf(s0) === 0 ? '<alignment vertical="top" wrapText="0"/>' : '');
       else return all; return `<c r="${col}${rs}"${a} s="${s}"${sc}>`; });
     x = x.replace(/<sheetView workbookViewId="0"\s*\/>/, '<sheetView workbookViewId="0" showGridLines="0"><pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A6" sqref="A6"/></sheetView>');
+    x = printFit(x, m.nc > 6);
     x = x.replace(/(<row r="5")/, '$1 ht="32" customHeight="1"').replace(/(<row r="1")/, '$1 ht="24" customHeight="1"');
     put(p, x);
   });

@@ -1,5 +1,14 @@
 # Lịch sử phiên bản
 
+## 5.12.2
+- Chuẩn hoá mọi file Excel xuất ra:
+  - Biểu mẫu (biên bản đối chiếu tạm ứng, mẫu có dòng tên ở đầu) giữ đúng bố cục: tên biểu mẫu in đậm, nhãn / chữ ký in đậm, số tiền #,##0.00, độ rộng cột hợp lý (trước đây bị coi là bảng: dòng tên thành tiêu đề cột, chèn thêm 3 dòng tiêu đề).
+  - Dữ liệu dạng bảng mảng không còn ra tiêu đề cột "0, 1, 2…".
+  - File đối chiếu đi kèm file huỷ trích / trích trước và file Excel đính kèm email nay cũng được định dạng.
+  - Chuẩn in: co vừa 1 trang theo chiều ngang, khổ ngang khi nhiều cột, lề hẹp.
+  - Cột năm / kỳ / tháng không bị định dạng như số tiền (2024 thay vì 2,024.00); kỳ báo cáo đọc đúng từ tên file (01/2026 – 10/2026, Năm 2025); tên báo cáo cụ thể cho từng loại file.
+  - File nhập ERP (GL Journal) và mẫu để nạp lại (số dư đầu kỳ, danh mục, gán mã tài sản) vẫn giữ nguyên dạng thô.
+
 ## 5.12.1
 - Xuất file huỷ trích 335 (Phân tích chuyên sâu → Trích – huỷ trích 335 → chọn khoản "Chưa huỷ trích" → Xuất file huỷ trích): mỗi số chứng từ trích gốc = 1 phiếu (phần chung 1 dòng, diễn giải "VTL: Adjust" + diễn giải CT gốc; các dòng chi tiết bên dưới). Dòng giữ nguyên TK Nợ / Có, đối tượng Nợ / Có (trước đây ghi cùng 1 đối tượng cho cả Nợ và Có), khoản mục, Group cost, Services, Location; số tiền âm; diễn giải thêm "Adjust".
 - Phiếu trích / huỷ trích: tạo phiếu huỷ trích theo cùng quy tắc (giữ Nợ / Có, số tiền âm, "Adjust") thay cho đảo Nợ ↔ Có.

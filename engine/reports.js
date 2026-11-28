@@ -18,7 +18,8 @@ const errRow = e => ({
 });
 function book(sheets) {
   const wb = XLSX.utils.book_new();
-  for (const [name, rows] of sheets) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{ '': 'Không có dữ liệu' }]), name.slice(0, 31));
+  // rows: danh sách bản ghi [{cột: giá trị}] hoặc bảng mảng [[…], […]] (dòng đầu = tiêu đề cột hoặc tên biểu mẫu)
+  for (const [name, rows] of sheets) XLSX.utils.book_append_sheet(wb, !rows.length ? XLSX.utils.json_to_sheet([{ '': 'Không có dữ liệu' }]) : Array.isArray(rows[0]) ? XLSX.utils.aoa_to_sheet(rows) : XLSX.utils.json_to_sheet(rows), name.slice(0, 31));
   return wb;
 }
 const toBuffer = wb => XLSX.write(wb, { type: 'buffer', bookType: 'xlsx', compression: true });
