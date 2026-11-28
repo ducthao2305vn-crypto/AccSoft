@@ -245,6 +245,8 @@ async function riskPdf() {
 
 // Mọi file Excel báo cáo / biểu mẫu đi qua đây để có định dạng chuẩn (file nạp lại vào app / ERP: tên khớp XF.RAW → giữ thô)
 function xlsxBuffer(wb, name) { const XF = require('./engine/xlsfmt'); if (XF.RAW.test(path.basename(name || ''))) return R.toBuffer(wb); const w2 = XF.prettify(wb, path.basename(name || '')); return XF.stylize(R.toBuffer(w2), w2); }
+// văn bản có chữ tiếng Việt (dấu) → chân trang "Trang x / y", ngược lại "Page x / y"
+const hasVi = h => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(String(h).replace(/<[^>]+>/g, ' '));
 async function saveXlsx(defName, wb) {
   const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: defName, filters: [{ name: 'Excel', extensions: ['xlsx'] }] });
   if (canceled) return null;
@@ -679,7 +681,7 @@ ${R.map((x, i) => `<tr><td style="${td}">${i + 1}</td><td style="${td}"><b>${e(x
   const grBase = (kind, bp, r) => `DoiChieu${kind}_${String(GX.pname(bp, r.row.info)).replace(/[^\w\-]+/g, '_').replace(/_+/g, '_').slice(0, 50)}_${String(r.to).replace(/-/g, '')}`;
   async function grFiles(kind, bp, o) { const r = await grData(kind, bp, o), sg = await qa('grSigners'), co = await grCo(bp), B = GX.build[kind];
     const w = new BrowserWindow({ show: false, width: 1200, height: 1400, webPreferences: { sandbox: true } }); let pdf;
-    try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(BRAND.pdfHtml(BRAND.html(B.html(r.row, r, sg, co))))); pdf = Buffer.from(await w.webContents.printToPDF(BRAND.pdfOpts(I18.lang() === 'en', { landscape: true }))); } finally { w.destroy(); }
+    try { await w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(BRAND.pdfHtml(BRAND.html(B.html(r.row, r, sg, co))))); pdf = Buffer.from(await w.webContents.printToPDF(BRAND.pdfOpts(!hasVi(B.html(r.row, r, sg, co)), { landscape: true }))); /* chân trang theo ngôn ngữ biên bản */ } finally { w.destroy(); }
     const base = grBase(kind, bp, r); return { r, base, pdf, xlsx: BRAND.xlsx(await B.xlsx(r.row, r, sg, co), base + '.xlsx', { col: 0 }) }; }
   handle('gr:preview', async (_e, kind, bp, o) => { const f = await grFiles(kind, bp, o), fp = path.join(os.tmpdir(), `${f.base}_${Date.now()}.pdf`); fs.writeFileSync(fp, f.pdf);
     const er = await shell.openPath(fp); if (er) throw new Error(er); setTimeout(() => { try { fs.unlinkSync(fp); } catch { } }, 30 * 60e3).unref?.(); return fp; });

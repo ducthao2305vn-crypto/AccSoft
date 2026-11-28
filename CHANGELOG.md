@@ -1,5 +1,8 @@
 # Lịch sử phiên bản
 
+## 5.12.3
+- Rà soát file Word / PDF: biên bản đối chiếu tạm ứng ghi đúng tên công ty "VIETTEL TIMOR UNIPESSOAL, LDA (Telemor)" (trước bị cắt "UNI, LDA"); tờ trình Word: cột Ghi chú cùng phông Times New Roman với bảng; biên bản hàng hoá 15611 (tiếng Anh) chân trang "Page x / y" theo ngôn ngữ văn bản.
+
 ## 5.12.2
 - Chuẩn hoá mọi file Excel xuất ra:
   - Biểu mẫu (biên bản đối chiếu tạm ứng, mẫu có dòng tên ở đầu) giữ đúng bố cục: tên biểu mẫu in đậm, nhãn / chữ ký in đậm, số tiền #,##0.00, độ rộng cột hợp lý (trước đây bị coi là bảng: dòng tên thành tiêu đề cột, chèn thêm 3 dòng tiêu đề).

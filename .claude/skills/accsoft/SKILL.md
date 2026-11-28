@@ -691,3 +691,4 @@ await p.evaluate(()=>window.api.q('stats'));
   2. Biểu mẫu (dòng 1 chỉ có 1 ô = tên biểu mẫu): prettify tự nhận diện → formify (giữ bố cục). Không đặt thông tin rời (số dư, ghi chú) ở dòng 1 của bảng – để sheet riêng.
   3. File nạp ERP / nạp lại app: giữ thô (XLSX.write trực tiếp hoặc tên khớp XF.RAW). Mẫu điền rồi nạp lại → thêm tiền tố vào RAW.
   KHÔNG ghi R.toBuffer(wb) thẳng ra file / đính kèm cho báo cáo – luôn dùng xlsxBuffer.
+- PDF: chân trang theo ngôn ngữ văn bản – hasVi(html) ở main.js. Ô vàng trong báo cáo Word ĐTRNN là chủ ý (đơn vị tự bổ sung).
